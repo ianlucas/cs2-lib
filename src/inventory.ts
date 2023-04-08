@@ -53,7 +53,10 @@ export class CS_Inventory {
                 equipped.team === team
             );
         });
-        if (relative && CS_Inventory.isWithinLocktime(relative.locktime)) {
+        if (
+            relative !== undefined &&
+            CS_Inventory.isWithinLocktime(relative.locktime)
+        ) {
             if (!item.free && item.id !== relative.id) {
                 throw new Error("item is locked");
             }
