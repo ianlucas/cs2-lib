@@ -3,6 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS_Team } from "./teams";
+import { compare } from "./util";
 
 /**
  * The CS_Item interface is designed for use in client-facing interfaces and
@@ -34,6 +35,21 @@ export interface CS_ItemDefinition {
     stickerid?: number;
 }
 
+type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
+function filterItems(predicate: CS_EconomyPredicate) {
+    return function filter(item: CS_Item) {
+        return (
+            compare(predicate.type, item.type) &&
+            compare(predicate.free, item.free) &&
+            compare(predicate.model, item.model) &&
+            compare(predicate.base, item.base) &&
+            (predicate.team === undefined ||
+                predicate.teams === undefined ||
+                predicate.teams.includes(predicate.team))
+        );
+    };
+}
+
 export class CS_Economy {
     static items: CS_Item[] = [];
     static itemsDef: CS_ItemDefinition[] = [];
@@ -58,5 +74,21 @@ export class CS_Economy {
             throw new Error("item not found");
         }
         return item;
+    }
+
+    static find(predicate: CS_EconomyPredicate) {
+        const item = CS_Economy.items.find(filterItems(predicate));
+        if (item === undefined) {
+            throw new Error("item not found");
+        }
+        return item;
+    }
+
+    static filter(predicate: CS_EconomyPredicate) {
+        const items = CS_Economy.items.filter(filterItems(predicate));
+        if (items.length === 0) {
+            throw new Error("items not found");
+        }
+        return items;
     }
 }

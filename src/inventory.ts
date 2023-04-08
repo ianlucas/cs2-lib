@@ -2,7 +2,7 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy } from "./economy";
+import { CS_Economy, CS_Item } from "./economy";
 import { CS_TEAM_NONE, CS_Team } from "./teams";
 
 export interface CS_InventoryItem {
@@ -41,6 +41,17 @@ export class CS_Inventory {
         this.items = items;
     }
 
+    get({ item, team }: { item: Partial<CS_Item>; team: CS_Team }) {
+        return this.items.find((equipped) => {
+            const other = CS_Economy.getById(equipped.id);
+            return (
+                other.type === item.type &&
+                other.model === item.model &&
+                (equipped.team === team || item.teams === undefined)
+            );
+        });
+    }
+
     equip({ float, id, nametag, seed, stickers, team }: CS_InventoryItem) {
         const item = CS_Economy.getById(id);
         if (item.teams === undefined) {
@@ -49,30 +60,23 @@ export class CS_Inventory {
         if (!CAN_EQUIP.includes(item.type)) {
             throw new Error("you cannot equip this item");
         }
-        const relative = this.items.find((equipped) => {
-            const other = CS_Economy.getById(equipped.id);
-            return (
-                other.type === item.type &&
-                other.model === item.model &&
-                equipped.team === team
-            );
-        });
+        const equipped = this.get({ item, team });
         if (
-            relative !== undefined &&
-            CS_Inventory.isWithinLocktime(relative.locktime)
+            equipped !== undefined &&
+            CS_Inventory.isWithinLocktime(equipped.locktime)
         ) {
-            if (!item.free && item.id !== relative.id) {
+            if (!item.free && item.id !== equipped.id) {
                 throw new Error("item is locked");
             }
             return new CS_Inventory(
                 this.items.map((other) =>
-                    other === relative
+                    other === equipped
                         ? { ...other, unequipped: item.free ? true : undefined }
                         : other
                 )
             );
         }
-        const items = this.items.filter((other) => other !== relative);
+        const items = this.items.filter((other) => other !== equipped);
         if (item.free) {
             return new CS_Inventory(items);
         }
