@@ -1,0 +1,17 @@
+{
+    "name": "cslib",
+    "version": "1.0.0",
+    "description": "Counter-Strike library for TypeScript/JavaScript.",
+    "main": "dist/index.js",
+    "scripts": {
+        "generate": "ts-node --esm scripts/generate.ts"
+    },
+    "author": "Ian Lucas",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^18.15.11",
+        "dotenv": "^16.0.3",
+        "ts-node": "^10.9.1"
+    },
+    "type": "module"
+}
