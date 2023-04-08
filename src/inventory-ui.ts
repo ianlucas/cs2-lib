@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *--------------------------------------------------------------------------------------------*/
+
 import { CS_Economy } from "./economy";
 import { CS_Inventory } from "./inventory";
 import { CS_Team } from "./teams";

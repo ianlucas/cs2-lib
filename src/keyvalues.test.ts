@@ -2,7 +2,7 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import * as KeyValues from "./keyvalues.js";
+import * as KeyValues from "./keyvalues";
 
 test("key value pair", () => {
     expect(KeyValues.parse(`"hello" "world!"`)).toStrictEqual({
