@@ -567,6 +567,9 @@ class GenerateScript {
                     throw new Error("Unable to define a category.");
                 }
                 const name = this.getTranslation(value.item_name);
+                if (name === undefined) {
+                    continue;
+                }
                 const id = this.getId(name);
                 this.stickers.push({
                     category,
