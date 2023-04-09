@@ -12,7 +12,7 @@ export interface CS_InventoryItem {
     nametag?: string;
     seed?: number;
     stattrak?: boolean;
-    stickers?: number[];
+    stickers?: (number | null)[];
     team: CS_Team;
     unequipped?: boolean;
 }
@@ -131,6 +131,9 @@ export class CS_Inventory {
                 throw new Error("invalid stickers");
             }
             for (const sticker of stickers) {
+                if (sticker === null) {
+                    continue;
+                }
                 if (CS_Economy.getById(sticker).type !== "sticker") {
                     throw new Error("invalid stickers");
                 }
