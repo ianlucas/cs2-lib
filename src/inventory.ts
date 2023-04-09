@@ -11,6 +11,7 @@ export interface CS_InventoryItem {
     locktime?: number;
     nametag?: string;
     seed?: number;
+    stattrak?: boolean;
     stickers?: number[];
     team: CS_Team;
     unequipped?: boolean;
@@ -20,10 +21,10 @@ const CAN_EQUIP = ["glove", "melee", "musickit", "weapon"];
 const HAS_FLOAT = ["glove", "melee", "weapon"];
 const HAS_NAMETAG = ["melee", "weapon"];
 const HAS_SEED = ["glove", "melee"];
+const HAS_STATTRAK = ["melee", "weapon"];
 const HAS_STICKERS = ["weapon"];
 
-export const nametagRE =
-    /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\\,.?:;'_][A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\\,.?:;'_\s|]{0,19}$/;
+export const nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 
 export class CS_Inventory {
     static locktime: number = 0;
@@ -52,7 +53,15 @@ export class CS_Inventory {
         });
     }
 
-    equip({ float, id, nametag, seed, stickers, team }: CS_InventoryItem) {
+    equip({
+        float,
+        id,
+        nametag,
+        seed,
+        stattrak,
+        stickers,
+        team
+    }: CS_InventoryItem) {
         const item = CS_Economy.getById(id);
         if (item.teams === undefined) {
             team = CS_TEAM_NONE;
@@ -117,12 +126,18 @@ export class CS_Inventory {
                 throw new Error("invalid nametag");
             }
         }
+        if (stattrak === true) {
+            if (!HAS_STATTRAK.includes(item.type)) {
+                throw new Error("invalid stattrak");
+            }
+        }
         return new CS_Inventory(
             items.concat({
                 float,
                 id: item.id,
                 nametag,
                 seed,
+                stattrak,
                 stickers,
                 team,
                 locktime: CS_Inventory.locktime > 0 ? Date.now() : undefined
