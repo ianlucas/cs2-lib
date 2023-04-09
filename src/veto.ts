@@ -33,7 +33,7 @@ export class CS_Veto {
             throw new Error("you need to provide 7 maps to veto.");
         }
         if (actions !== undefined && actions.length !== 6) {
-            throw new Error("ou need to provide 6 actions to veto.");
+            throw new Error("you need to provide 6 actions to veto.");
         }
         this.maps = maps.map((map) => ({
             mapname: map.mapname,
