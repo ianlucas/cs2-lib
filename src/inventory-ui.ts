@@ -6,6 +6,44 @@ import { CS_Economy } from "./economy";
 import { CS_Inventory } from "./inventory";
 import { CS_Team } from "./teams";
 
+export const CS_ITEM_CATEGORIES = [
+    {
+        label: "Pistol",
+        category: "secondary",
+        unique: false
+    },
+    {
+        label: "SMG",
+        category: "smg",
+        unique: false
+    },
+    {
+        label: "Heavy",
+        category: "heavy",
+        unique: false
+    },
+    {
+        label: "Rifle",
+        category: "rifle",
+        unique: false
+    },
+    {
+        label: "Knife",
+        category: "melee",
+        unique: true
+    },
+    {
+        label: "Glove",
+        category: "glove",
+        unique: true
+    },
+    {
+        label: "Music Kit",
+        category: "musickit",
+        unique: true
+    }
+];
+
 export class CS_InventoryUI extends CS_Inventory {
     private getTypeFromCategory(category: string) {
         const type = CS_Economy.items.find(
@@ -29,6 +67,7 @@ export class CS_InventoryUI extends CS_Inventory {
             }
             return [
                 CS_Economy.find({
+                    category,
                     free: true,
                     team,
                     type
@@ -64,6 +103,7 @@ export class CS_InventoryUI extends CS_Inventory {
         if (item && CS_Inventory.isWithinLocktime(item.locktime)) {
             return [
                 CS_Economy.find({
+                    category,
                     free: true,
                     team,
                     type
@@ -72,7 +112,9 @@ export class CS_InventoryUI extends CS_Inventory {
             ];
         }
         return CS_Economy.filter({
-            base: true,
+            base: model ? undefined : true,
+            category,
+            free: model && type === "glove" ? false : undefined,
             model,
             team,
             type

@@ -6,7 +6,8 @@
         "module": "ESNext",
         "moduleResolution": "node",
         "outDir": "dist",
-        "strict": true
+        "strict": true,
+        "target": "ESNext"
     },
     "include": ["src/index.ts"]
 }

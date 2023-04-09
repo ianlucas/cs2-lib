@@ -43,9 +43,10 @@ function filterItems(predicate: CS_EconomyPredicate) {
             compare(predicate.free, item.free) &&
             compare(predicate.model, item.model) &&
             compare(predicate.base, item.base) &&
+            compare(predicate.category, item.category) &&
             (predicate.team === undefined ||
-                predicate.teams === undefined ||
-                predicate.teams.includes(predicate.team))
+                item.teams === undefined ||
+                item.teams.includes(predicate.team))
         );
     };
 }

@@ -489,6 +489,7 @@ class GenerateScript {
                 const id = this.getId(name);
                 const musicid = Number(musicId);
                 this.musicKits.push({
+                    base: true,
                     category: "musickit",
                     free: musicid === 1 ? true : undefined,
                     id,

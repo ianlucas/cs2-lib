@@ -38,7 +38,7 @@ export class CS_Inventory {
         return ms !== undefined && Date.now() - ms < CS_Inventory.locktime;
     }
 
-    constructor(items: CS_InventoryItem[]) {
+    constructor(items: CS_InventoryItem[] = []) {
         this.items = items;
     }
 
@@ -135,12 +135,12 @@ export class CS_Inventory {
             items.concat({
                 float,
                 id: item.id,
+                locktime: CS_Inventory.locktime > 0 ? Date.now() : undefined,
                 nametag,
                 seed,
                 stattrak,
                 stickers,
-                team,
-                locktime: CS_Inventory.locktime > 0 ? Date.now() : undefined
+                team
             })
         );
     }
