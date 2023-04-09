@@ -2,7 +2,14 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy, CS_Item } from "./economy";
+import {
+    CS_Economy,
+    CS_Item,
+    CS_MAX_FLOAT,
+    CS_MAX_SEED,
+    CS_MIN_FLOAT,
+    CS_MIN_SEED
+} from "./economy";
 import { CS_TEAM_NONE, CS_Team } from "./teams";
 
 export interface CS_InventoryItem {
@@ -17,29 +24,14 @@ export interface CS_InventoryItem {
     unequipped?: boolean;
 }
 
-export const CAN_EQUIP_ITEM = ["glove", "melee", "musickit", "weapon"];
-export const ITEM_HAS_FLOAT = ["glove", "melee", "weapon"];
-export const ITEM_HAS_NAMETAG = ["melee", "weapon"];
-export const ITEM_HAS_SEED = ["glove", "melee"];
-export const ITEM_HAS_STATTRAK = ["melee", "weapon"];
-export const ITEM_HAS_STICKERS = ["weapon"];
+export const CS_EQUIPABLE_ITEMS = ["glove", "melee", "musickit", "weapon"];
+export const CS_FLOATABLE_ITEMS = ["glove", "melee", "weapon"];
+export const CS_NAMETAGGABLE_ITEMS = ["melee", "weapon"];
+export const CS_SEEDABLE_ITEMS = ["glove", "melee"];
+export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon"];
+export const CS_STICKERABLE_ITEMS = ["weapon"];
 
-export const CS_MIN_FLOAT = 0.000001;
-export const CS_MAX_FLOAT = 0.999999;
-export const CS_MIN_FACTORY_NEW_FLOAT = CS_MIN_FLOAT;
-export const CS_MAX_FACTORY_NEW_FLOAT = 0.07;
-export const CS_MIN_MINIMAL_WEAR_FLOAT = 0.070001;
-export const CS_MAX_MINIMAL_WEAR_FLOAT = 0.15;
-export const CS_MIN_FIELD_TESTED_FLOAT = 0.150001;
-export const CS_MAX_FIELD_TESTED_FLOAT = 0.37;
-export const CS_MIN_WELL_WORN_FLOAT = 0.370001;
-export const CS_MAX_WELL_WORN_FLOAT = 0.44;
-export const CS_MIN_BATTLE_SCARRED_FLOAT = 0.440001;
-export const CS_MAX_BATTLE_SCARRED_FLOAT = CS_MAX_FLOAT;
-export const CS_MIN_SEED = 1;
-export const CS_MAX_SEED = 1000;
-
-export const nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
+export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 
 export class CS_Inventory {
     static locktime: number = 0;
@@ -81,7 +73,7 @@ export class CS_Inventory {
         if (item.teams === undefined) {
             team = CS_TEAM_NONE;
         }
-        if (!CAN_EQUIP_ITEM.includes(item.type)) {
+        if (!CS_EQUIPABLE_ITEMS.includes(item.type)) {
             throw new Error("you cannot equip this item");
         }
         const equipped = this.get({ item, team });
@@ -108,7 +100,7 @@ export class CS_Inventory {
             return items;
         }
         if (float !== undefined) {
-            if (!ITEM_HAS_FLOAT.includes(item.type)) {
+            if (!CS_FLOATABLE_ITEMS.includes(item.type)) {
                 throw new Error("invalid float");
             }
             if (float < CS_MIN_FLOAT || float > CS_MAX_FLOAT) {
@@ -116,7 +108,7 @@ export class CS_Inventory {
             }
         }
         if (seed !== undefined) {
-            if (!ITEM_HAS_SEED.includes(item.type)) {
+            if (!CS_SEEDABLE_ITEMS.includes(item.type)) {
                 throw new Error("invalid seed");
             }
             if (seed < CS_MIN_SEED || seed > CS_MAX_SEED) {
@@ -124,7 +116,7 @@ export class CS_Inventory {
             }
         }
         if (stickers !== undefined) {
-            if (!ITEM_HAS_STICKERS.includes(item.type)) {
+            if (!CS_STICKERABLE_ITEMS.includes(item.type)) {
                 throw new Error("invalid stickers");
             }
             if (stickers.length > 4) {
@@ -140,15 +132,15 @@ export class CS_Inventory {
             }
         }
         if (nametag !== undefined) {
-            if (!ITEM_HAS_NAMETAG.includes(item.type)) {
+            if (!CS_NAMETAGGABLE_ITEMS.includes(item.type)) {
                 throw new Error("invalid nametag");
             }
-            if (!nametagRE.test(nametag)) {
+            if (!CS_nametagRE.test(nametag)) {
                 throw new Error("invalid nametag");
             }
         }
         if (stattrak === true) {
-            if (!ITEM_HAS_STATTRAK.includes(item.type)) {
+            if (!CS_STATTRAKABLE_ITEMS.includes(item.type)) {
                 throw new Error("invalid stattrak");
             }
         }

@@ -6,7 +6,13 @@ import { CS_Economy } from "./economy";
 import { CS_Inventory } from "./inventory";
 import { CS_Team } from "./teams";
 
-export const CS_ITEM_CATEGORIES = [
+interface CS_CategoryMenuItem {
+    category: string;
+    label: string;
+    unique: boolean;
+}
+
+export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
     {
         label: "Pistol",
         category: "secondary",
@@ -53,6 +59,10 @@ export class CS_InventoryUI extends CS_Inventory {
             throw new Error("type not found");
         }
         return type;
+    }
+
+    static create() {
+        return new CS_Inventory().items;
     }
 
     getEquipped({ category, team }: { category: string; team: CS_Team }) {

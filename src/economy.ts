@@ -35,6 +35,21 @@ export interface CS_ItemDefinition {
     stickerid?: number;
 }
 
+export const CS_MIN_FLOAT = 0.000001;
+export const CS_MAX_FLOAT = 0.999999;
+export const CS_MIN_FACTORY_NEW_FLOAT = CS_MIN_FLOAT;
+export const CS_MAX_FACTORY_NEW_FLOAT = 0.07;
+export const CS_MIN_MINIMAL_WEAR_FLOAT = 0.070001;
+export const CS_MAX_MINIMAL_WEAR_FLOAT = 0.15;
+export const CS_MIN_FIELD_TESTED_FLOAT = 0.150001;
+export const CS_MAX_FIELD_TESTED_FLOAT = 0.37;
+export const CS_MIN_WELL_WORN_FLOAT = 0.370001;
+export const CS_MAX_WELL_WORN_FLOAT = 0.44;
+export const CS_MIN_BATTLE_SCARRED_FLOAT = 0.440001;
+export const CS_MAX_BATTLE_SCARRED_FLOAT = CS_MAX_FLOAT;
+export const CS_MIN_SEED = 1;
+export const CS_MAX_SEED = 1000;
+
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 function filterItems(predicate: CS_EconomyPredicate) {
     return function filter(item: CS_Item) {
