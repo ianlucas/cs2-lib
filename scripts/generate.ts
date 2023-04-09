@@ -443,7 +443,7 @@ class GenerateScript {
             const def = this.itemDefs.find(
                 (item) =>
                     value.icon_path.indexOf(
-                        format("%s_%s", item.classname, paintKit.className)
+                        format("/%s_%s", item.classname, paintKit.className)
                     ) > -1
             );
             if (!def) {
@@ -595,7 +595,31 @@ class GenerateScript {
             ...this.paints,
             ...this.musicKits,
             ...this.stickers
-        ];
+        ].sort((a, b) => {
+            const aTop = a.base || a.free;
+            const bTop = b.base || b.free;
+            if (aTop && !bTop) {
+                return -1;
+            }
+            if (!aTop && bTop) {
+                return 1;
+            }
+            if (aTop && bTop) {
+                if (a.free && !b.free) {
+                    return -1;
+                }
+                if (!a.free && b.free) {
+                    return 1;
+                }
+            }
+            if (a.name < b.name) {
+                return -1;
+            }
+            if (a.name > b.name) {
+                return 1;
+            }
+            return 0;
+        });
         writeJson("dist/parsed-items-game.json", this.itemsFile);
         writeJson("dist/weapon-attributes.json", this.weaponsAttributes);
         writeJson("dist/items.json", items);
