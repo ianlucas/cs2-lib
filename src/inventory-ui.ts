@@ -74,16 +74,21 @@ export class CS_InventoryUI extends CS_Inventory {
                 })
             ];
         }
-        return CS_Economy.filter({ type, free: true }).map((defaultItem) => {
-            const item = this.get({
-                item: { model: defaultItem.model, type },
-                team
-            });
-            if (item !== undefined && !item.unequipped) {
-                return CS_Economy.getById(item.id);
+        return CS_Economy.filter({ type, category, free: true, team }).map(
+            (defaultItem) => {
+                const item = this.get({
+                    item: {
+                        model: defaultItem.model,
+                        type
+                    },
+                    team
+                });
+                if (item !== undefined && !item.unequipped) {
+                    return CS_Economy.getById(item.id);
+                }
+                return defaultItem;
             }
-            return defaultItem;
-        });
+        );
     }
 
     getEquippable({
@@ -106,6 +111,7 @@ export class CS_InventoryUI extends CS_Inventory {
                 CS_Economy.find({
                     category,
                     free: true,
+                    model,
                     team,
                     type
                 }),
