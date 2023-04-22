@@ -2,7 +2,7 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Map } from "./maps";
+import { CS_Map } from "./maps.js";
 
 export const CS_VETO_AVAILABLE = 0;
 export const CS_VETO_PICK = 1;
@@ -135,6 +135,10 @@ export class CS_Veto {
             throw new Error("unable to get random mapname.");
         }
         return this.choose(mapname);
+    }
+
+    getState() {
+        return this.maps;
     }
 
     getMaps() {

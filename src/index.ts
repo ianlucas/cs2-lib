@@ -2,11 +2,11 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-export * from "./economy";
-export * from "./items";
-export * from "./keyvalues";
-export * from "./loadout";
-export * from "./loadout-ui";
-export * from "./maps";
-export * from "./teams";
-export * from "./veto";
+export * from "./economy.js";
+export * from "./items.js";
+export * from "./keyvalues.js";
+export * from "./loadout.js";
+export * from "./loadout-ui.js";
+export * from "./maps.js";
+export * from "./teams.js";
+export * from "./veto.js";

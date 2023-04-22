@@ -9,8 +9,8 @@ import {
     CS_MAX_SEED,
     CS_MIN_FLOAT,
     CS_MIN_SEED
-} from "./economy";
-import { CS_TEAM_NONE, CS_Team } from "./teams";
+} from "./economy.js";
+import { CS_TEAM_NONE, CS_Team } from "./teams.js";
 
 export interface CS_LoadoutItem {
     float?: number;
