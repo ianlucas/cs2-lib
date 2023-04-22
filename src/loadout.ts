@@ -12,7 +12,7 @@ import {
 } from "./economy";
 import { CS_TEAM_NONE, CS_Team } from "./teams";
 
-export interface CS_InventoryItem {
+export interface CS_LoadoutItem {
     float?: number;
     id: number;
     locktime?: number;
@@ -33,19 +33,19 @@ export const CS_STICKERABLE_ITEMS = ["weapon"];
 
 export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 
-export class CS_Inventory {
+export class CS_Loadout {
     static locktime: number = 0;
-    items: CS_InventoryItem[] = [];
+    items: CS_LoadoutItem[] = [];
 
     static setLocktime(seconds: number) {
-        CS_Inventory.locktime = 1000 * seconds;
+        CS_Loadout.locktime = 1000 * seconds;
     }
 
     static isWithinLocktime(ms?: number) {
-        return ms !== undefined && Date.now() - ms < CS_Inventory.locktime;
+        return ms !== undefined && Date.now() - ms < CS_Loadout.locktime;
     }
 
-    constructor(items: CS_InventoryItem[] = []) {
+    constructor(items: CS_LoadoutItem[] = []) {
         this.items = items;
     }
 
@@ -78,7 +78,7 @@ export class CS_Inventory {
         stattrak,
         stickers,
         team
-    }: CS_InventoryItem) {
+    }: CS_LoadoutItem) {
         const item = CS_Economy.getById(id);
         if (item.teams === undefined) {
             team = CS_TEAM_NONE;
@@ -89,7 +89,7 @@ export class CS_Inventory {
         const equipped = this.get({ item, team });
         if (
             equipped !== undefined &&
-            CS_Inventory.isWithinLocktime(equipped.locktime)
+            CS_Loadout.isWithinLocktime(equipped.locktime)
         ) {
             if (!item.free && item.id !== equipped.id) {
                 throw new Error("item is locked");
@@ -103,7 +103,7 @@ export class CS_Inventory {
         const items = this.items.filter(
             (other) =>
                 other !== equipped &&
-                (CS_Inventory.isWithinLocktime(other.locktime) ||
+                (CS_Loadout.isWithinLocktime(other.locktime) ||
                     !other.unequipped)
         );
         if (item.free) {
@@ -157,7 +157,7 @@ export class CS_Inventory {
         return items.concat({
             float,
             id: item.id,
-            locktime: CS_Inventory.locktime > 0 ? Date.now() : undefined,
+            locktime: CS_Loadout.locktime > 0 ? Date.now() : undefined,
             nametag,
             seed,
             stattrak,
@@ -166,7 +166,7 @@ export class CS_Inventory {
         });
     }
 
-    safeEquip(item: CS_InventoryItem) {
+    safeEquip(item: CS_LoadoutItem) {
         try {
             return this.equip(item);
         } catch {
@@ -225,7 +225,7 @@ export class CS_Inventory {
             team
         });
         const isGlove = type === "glove";
-        if (item && CS_Inventory.isWithinLocktime(item.locktime)) {
+        if (item && CS_Loadout.isWithinLocktime(item.locktime)) {
             return [
                 CS_Economy.find({
                     category,
