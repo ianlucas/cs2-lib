@@ -80,12 +80,12 @@ export class CS_Veto {
         return this.maps.filter((map) => map.value === CS_VETO_AVAILABLE);
     }
 
-    private getAvailableMapnames() {
-        return this.getAvailableMaps().map((map) => map.mapname);
-    }
-
     private getMap(mapname: string) {
         return this.maps.find((map) => map.mapname === mapname);
+    }
+
+    private getAvailableMapnames() {
+        return this.getAvailableMaps().map((map) => map.mapname);
     }
 
     getCurrentTeam() {
@@ -143,5 +143,9 @@ export class CS_Veto {
         }
         const available = this.getAvailableMapnames();
         return [...this.pickedMaps, ...available];
+    }
+
+    done() {
+        return this.actions.length === 0;
     }
 }
