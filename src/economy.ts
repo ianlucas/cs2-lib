@@ -66,6 +66,50 @@ function filterItems(predicate: CS_EconomyPredicate) {
     };
 }
 
+interface CS_CategoryMenuItem {
+    category: string;
+    label: string;
+    unique: boolean;
+}
+
+export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
+    {
+        label: "Pistol",
+        category: "secondary",
+        unique: false
+    },
+    {
+        label: "SMG",
+        category: "smg",
+        unique: false
+    },
+    {
+        label: "Heavy",
+        category: "heavy",
+        unique: false
+    },
+    {
+        label: "Rifle",
+        category: "rifle",
+        unique: false
+    },
+    {
+        label: "Knife",
+        category: "melee",
+        unique: true
+    },
+    {
+        label: "Glove",
+        category: "glove",
+        unique: true
+    },
+    {
+        label: "Music Kit",
+        category: "musickit",
+        unique: true
+    }
+];
+
 export class CS_Economy {
     static items: CS_Item[] = [];
     static itemsDef: CS_ItemDefinition[] = [];
