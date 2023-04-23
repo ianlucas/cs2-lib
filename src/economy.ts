@@ -66,7 +66,7 @@ function filterItems(predicate: CS_EconomyPredicate) {
     };
 }
 
-interface CS_CategoryMenuItem {
+export interface CS_CategoryMenuItem {
     category: string;
     label: string;
     unique: boolean;
