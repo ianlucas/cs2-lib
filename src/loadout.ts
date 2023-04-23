@@ -37,11 +37,11 @@ export class CS_Loadout {
     static locktime: number = 0;
     items: CS_LoadoutItem[] = [];
 
-    static setLocktime(seconds: number) {
+    static setLockTime(seconds: number) {
         CS_Loadout.locktime = 1000 * seconds;
     }
 
-    static isWithinLocktime(ms?: number) {
+    static isWithinLockTime(ms?: number) {
         return ms !== undefined && Date.now() - ms < CS_Loadout.locktime;
     }
 
@@ -89,25 +89,27 @@ export class CS_Loadout {
         const equipped = this.get({ item, team });
         if (
             equipped !== undefined &&
-            CS_Loadout.isWithinLocktime(equipped.locktime)
+            CS_Loadout.isWithinLockTime(equipped.locktime)
         ) {
             if (!item.free && item.id !== equipped.id) {
                 throw new Error("item is locked");
             }
-            return this.items.map((other) =>
-                other === equipped
-                    ? { ...other, unequipped: item.free ? true : undefined }
-                    : other
+            return new CS_Loadout(
+                this.items.map((other) =>
+                    other === equipped
+                        ? { ...other, unequipped: item.free ? true : undefined }
+                        : other
+                )
             );
         }
         const items = this.items.filter(
             (other) =>
                 other !== equipped &&
-                (CS_Loadout.isWithinLocktime(other.locktime) ||
+                (CS_Loadout.isWithinLockTime(other.locktime) ||
                     !other.unequipped)
         );
         if (item.free) {
-            return items;
+            return new CS_Loadout(items);
         }
         if (float !== undefined) {
             if (!CS_FLOATABLE_ITEMS.includes(item.type)) {
@@ -154,23 +156,25 @@ export class CS_Loadout {
                 throw new Error("invalid stattrak");
             }
         }
-        return items.concat({
-            float,
-            id: item.id,
-            locktime: CS_Loadout.locktime > 0 ? Date.now() : undefined,
-            nametag,
-            seed,
-            stattrak,
-            stickers,
-            team
-        });
+        return new CS_Loadout(
+            items.concat({
+                float,
+                id: item.id,
+                locktime: CS_Loadout.locktime > 0 ? Date.now() : undefined,
+                nametag,
+                seed,
+                stattrak,
+                stickers,
+                team
+            })
+        );
     }
 
     safeEquip(item: CS_LoadoutItem) {
         try {
             return this.equip(item);
         } catch {
-            return this.items;
+            return this;
         }
     }
 
@@ -225,7 +229,7 @@ export class CS_Loadout {
             team
         });
         const isGlove = type === "glove";
-        if (item && CS_Loadout.isWithinLocktime(item.locktime)) {
+        if (item && CS_Loadout.isWithinLockTime(item.locktime)) {
             return [
                 CS_Economy.find({
                     category,
