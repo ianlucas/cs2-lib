@@ -27,10 +27,11 @@ export interface CS_Item {
  * item and can be used for integration with Sourcemod.
  */
 export interface CS_ItemDefinition {
-    ismelee?: boolean;
     classname?: string;
     def?: number;
     id: number;
+    isglove?: boolean;
+    ismelee?: boolean;
     musicid?: number;
     paintid?: number;
     stickerid?: number;

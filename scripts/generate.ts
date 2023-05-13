@@ -392,6 +392,7 @@ class GenerateScript {
                     classname: value.name,
                     def: Number(itemDef),
                     id,
+                    isglove: true,
                     paintid: value.baseitem === "1" ? undefined : 0
                 });
             }
