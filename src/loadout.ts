@@ -2,14 +2,7 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import {
-    CS_Economy,
-    CS_Item,
-    CS_MAX_FLOAT,
-    CS_MAX_SEED,
-    CS_MIN_FLOAT,
-    CS_MIN_SEED
-} from "./economy.js";
+import { CS_Economy, CS_Item } from "./economy.js";
 import { CS_TEAM_NONE, CS_Team } from "./teams.js";
 
 export interface CS_LoadoutItem {
@@ -25,13 +18,6 @@ export interface CS_LoadoutItem {
 }
 
 export const CS_EQUIPABLE_ITEMS = ["glove", "melee", "musickit", "weapon"];
-export const CS_FLOATABLE_ITEMS = ["glove", "melee", "weapon"];
-export const CS_NAMETAGGABLE_ITEMS = ["melee", "weapon"];
-export const CS_SEEDABLE_ITEMS = ["glove", "melee"];
-export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon"];
-export const CS_STICKERABLE_ITEMS = ["weapon"];
-
-export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 
 export class CS_Loadout {
     static locktime: number = 0;
@@ -112,49 +98,19 @@ export class CS_Loadout {
             return new CS_Loadout(items);
         }
         if (float !== undefined) {
-            if (!CS_FLOATABLE_ITEMS.includes(item.type)) {
-                throw new Error("invalid float");
-            }
-            if (float < CS_MIN_FLOAT || float > CS_MAX_FLOAT) {
-                throw new Error("invalid float");
-            }
+            CS_Economy.validateFloat(item, float);
         }
         if (seed !== undefined) {
-            if (!CS_SEEDABLE_ITEMS.includes(item.type)) {
-                throw new Error("invalid seed");
-            }
-            if (seed < CS_MIN_SEED || seed > CS_MAX_SEED) {
-                throw new Error("invalid seed");
-            }
+            CS_Economy.validateSeed(item, seed);
         }
         if (stickers !== undefined) {
-            if (!CS_STICKERABLE_ITEMS.includes(item.type)) {
-                throw new Error("invalid stickers");
-            }
-            if (stickers.length > 4) {
-                throw new Error("invalid stickers");
-            }
-            for (const sticker of stickers) {
-                if (sticker === null) {
-                    continue;
-                }
-                if (CS_Economy.getById(sticker).type !== "sticker") {
-                    throw new Error("invalid stickers");
-                }
-            }
+            CS_Economy.validateStickers(item, stickers);
         }
         if (nametag !== undefined) {
-            if (!CS_NAMETAGGABLE_ITEMS.includes(item.type)) {
-                throw new Error("invalid nametag");
-            }
-            if (!CS_nametagRE.test(nametag)) {
-                throw new Error("invalid nametag");
-            }
+            CS_Economy.validateNametag(item, nametag);
         }
-        if (stattrak === true) {
-            if (!CS_STATTRAKABLE_ITEMS.includes(item.type)) {
-                throw new Error("invalid stattrak");
-            }
+        if (stattrak !== undefined) {
+            CS_Economy.validateStattrak(item, stattrak);
         }
         return new CS_Loadout(
             items.concat({

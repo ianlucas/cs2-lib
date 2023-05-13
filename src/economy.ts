@@ -49,6 +49,12 @@ export const CS_MIN_BATTLE_SCARRED_FLOAT = 0.440001;
 export const CS_MAX_BATTLE_SCARRED_FLOAT = CS_MAX_FLOAT;
 export const CS_MIN_SEED = 1;
 export const CS_MAX_SEED = 1000;
+export const CS_FLOATABLE_ITEMS = ["glove", "melee", "weapon"];
+export const CS_NAMETAGGABLE_ITEMS = ["melee", "weapon"];
+export const CS_SEEDABLE_ITEMS = ["glove", "melee"];
+export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon"];
+export const CS_STICKERABLE_ITEMS = ["weapon"];
+export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 function filterItems(predicate: CS_EconomyPredicate) {
@@ -158,5 +164,91 @@ export class CS_Economy {
             throw new Error("items not found");
         }
         return items;
+    }
+
+    static hasFloat(item: CS_Item) {
+        return CS_FLOATABLE_ITEMS.includes(item.type);
+    }
+
+    static validateFloat(item: CS_Item, float: number) {
+        if (!CS_Economy.hasFloat(item)) {
+            throw new Error("invalid float");
+        }
+        if (float < CS_MIN_FLOAT || float > CS_MAX_FLOAT) {
+            throw new Error("invalid float");
+        }
+    }
+
+    static hasSeed(item: CS_Item) {
+        return CS_SEEDABLE_ITEMS.includes(item.type);
+    }
+
+    static validateSeed(item: CS_Item, seed: number) {
+        if (!CS_Economy.hasSeed(item)) {
+            throw new Error("invalid seed");
+        }
+        if (seed < CS_MIN_SEED || seed > CS_MAX_SEED) {
+            throw new Error("invalid seed");
+        }
+    }
+
+    static hasStickers(item: CS_Item) {
+        return CS_STICKERABLE_ITEMS.includes(item.type);
+    }
+
+    static validateStickers(item: CS_Item, stickers: (number | null)[]) {
+        if (!CS_Economy.hasStickers(item)) {
+            throw new Error("invalid stickers");
+        }
+        if (stickers.length > 4) {
+            throw new Error("invalid stickers");
+        }
+        for (const sticker of stickers) {
+            if (sticker === null) {
+                continue;
+            }
+            if (CS_Economy.getById(sticker).type !== "sticker") {
+                throw new Error("invalid stickers");
+            }
+        }
+    }
+
+    static hasNametag(item: CS_Item) {
+        return CS_NAMETAGGABLE_ITEMS.includes(item.type);
+    }
+
+    static validateNametag(item: CS_Item, nametag: string) {
+        if (!CS_Economy.hasNametag(item)) {
+            throw new Error("invalid nametag");
+        }
+        if (!CS_nametagRE.test(nametag)) {
+            throw new Error("invalid nametag");
+        }
+    }
+
+    static hasStattrak(item: CS_Item) {
+        return CS_STATTRAKABLE_ITEMS.includes(item.type);
+    }
+
+    static validateStattrak(item: CS_Item, stattrak: boolean) {
+        if (stattrak === true && !CS_Economy.hasStattrak(item)) {
+            throw new Error("invalid stattrak");
+        }
+    }
+
+    static getFloatLabel(float: number) {
+        if (float <= CS_MAX_FACTORY_NEW_FLOAT) {
+            return "FactoryNew";
+        }
+        if (float <= CS_MAX_MINIMAL_WEAR_FLOAT) {
+            return "MinimalWear";
+        }
+        if (float <= CS_MAX_FIELD_TESTED_FLOAT) {
+            return "FieldTested";
+        }
+        if (float <= CS_MAX_WELL_WORN_FLOAT) {
+            return "WellWorn";
+        }
+        return "BattleScarred";
     }
 }
