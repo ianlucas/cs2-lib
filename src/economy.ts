@@ -30,8 +30,6 @@ export interface CS_ItemDefinition {
     classname?: string;
     def?: number;
     id: number;
-    isglove?: boolean;
-    ismelee?: boolean;
     musicid?: number;
     paintid?: number;
     stickerid?: number;
