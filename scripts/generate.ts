@@ -177,7 +177,7 @@ class GenerateScript {
         this.ids = this.readIds();
         this.parsePrefabs();
         this.parseWeapons();
-        this.parseKnives();
+        this.parseMelees();
         this.parseGloves();
         this.parsePaintRarity();
         this.parsePaintKits();
@@ -203,7 +203,7 @@ class GenerateScript {
     readLanguage() {
         const contents = readFileSync(
             format(LANGUAGE_PATH, this.language),
-            "utf8" // "utf16le" on CSGO
+            "utf16le" // "utf16le" on CSGO
         );
         return KeyValues.parse(contents) as CSGO_LanguageFile;
     }
@@ -303,13 +303,13 @@ class GenerateScript {
                     classname: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: -1
+                    paintid: undefined
                 });
             }
         }
     }
 
-    parseKnives() {
+    parseMelees() {
         for (const item of this.itemsFile.items_game.items) {
             for (const [itemDef, value] of Object.entries(item)) {
                 if (
@@ -347,7 +347,8 @@ class GenerateScript {
                     classname: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: value.baseitem === "1" ? -1 : 0
+                    ismelee: true,
+                    paintid: value.baseitem === "1" ? undefined : 0
                 });
             }
         }
@@ -391,7 +392,7 @@ class GenerateScript {
                     classname: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: value.baseitem === "1" ? -1 : 0
+                    paintid: value.baseitem === "1" ? undefined : 0
                 });
             }
         }

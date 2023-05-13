@@ -27,6 +27,7 @@ export interface CS_Item {
  * item and can be used for integration with Sourcemod.
  */
 export interface CS_ItemDefinition {
+    ismelee?: boolean;
     classname?: string;
     def?: number;
     id: number;
@@ -130,6 +131,14 @@ export class CS_Economy {
 
     static getById(id: number) {
         const item = CS_Economy.itemsMap.get(id);
+        if (item === undefined) {
+            throw new Error("item not found");
+        }
+        return item;
+    }
+
+    static getDefById(id: number) {
+        const item = CS_Economy.itemsDefMap.get(id);
         if (item === undefined) {
             throw new Error("item not found");
         }
