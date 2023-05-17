@@ -17,6 +17,17 @@ export interface CS_LoadoutItem {
     unequipped?: boolean;
 }
 
+export interface CS_LoadoutQueryItems {
+    csItem: CS_Item;
+    loadoutItem?: CS_LoadoutItem;
+}
+
+export interface CS_LoadoutQuery {
+    equippable: boolean;
+    items: CS_LoadoutQueryItems[];
+    locked?: boolean;
+}
+
 export const CS_EQUIPABLE_ITEMS = ["glove", "melee", "musickit", "weapon"];
 
 export class CS_Loadout {
@@ -134,7 +145,13 @@ export class CS_Loadout {
         }
     }
 
-    getEquipped({ category, team }: { category: string; team: CS_Team }) {
+    getEquipped({
+        category,
+        team
+    }: {
+        category: string;
+        team: CS_Team;
+    }): CS_LoadoutQuery {
         const type = this.getTypeFromCategory(category);
         if (type !== "weapon") {
             const item = this.get({
@@ -142,19 +159,39 @@ export class CS_Loadout {
                 team
             });
             if (item !== undefined && !item.unequipped) {
-                return [CS_Economy.getById(item.id)];
+                return {
+                    equippable: false,
+                    items: [
+                        {
+                            csItem: CS_Economy.getById(item.id),
+                            loadoutItem: item
+                        }
+                    ]
+                };
             }
-            return [
-                CS_Economy.find({
-                    category,
-                    free: true,
-                    team,
-                    type
-                })
-            ];
+            return {
+                equippable: false,
+                items: [
+                    {
+                        csItem: CS_Economy.find({
+                            category,
+                            free: true,
+                            team,
+                            type
+                        }),
+                        loadoutItem: undefined
+                    }
+                ]
+            };
         }
-        return CS_Economy.filter({ type, category, free: true, team }).map(
-            (defaultItem) => {
+        return {
+            equippable: false,
+            items: CS_Economy.filter({
+                type,
+                category,
+                free: true,
+                team
+            }).map((defaultItem) => {
                 const item = this.get({
                     item: {
                         model: defaultItem.model,
@@ -163,11 +200,17 @@ export class CS_Loadout {
                     team
                 });
                 if (item !== undefined && !item.unequipped) {
-                    return CS_Economy.getById(item.id);
+                    return {
+                        csItem: CS_Economy.getById(item.id),
+                        loadoutItem: item
+                    };
                 }
-                return defaultItem;
-            }
-        );
+                return {
+                    csItem: defaultItem,
+                    loadoutItem: undefined
+                };
+            })
+        };
     }
 
     getEquippable({
@@ -178,32 +221,52 @@ export class CS_Loadout {
         category: string;
         model?: string;
         team: CS_Team;
-    }) {
+    }): CS_LoadoutQuery {
         const type = this.getTypeFromCategory(category);
         const item = this.get({
             item: { type, model },
             team
         });
         const isGlove = type === "glove";
+        const isMusicKit = type === "musickit";
         if (item && CS_Loadout.isWithinLockTime(item.locktime)) {
-            return [
-                CS_Economy.find({
-                    category,
-                    free: true,
-                    model,
-                    team,
-                    type
-                }),
-                CS_Economy.getById(item.id)
-            ];
+            return {
+                equippable: true,
+                items: [
+                    {
+                        csItem: CS_Economy.find({
+                            category,
+                            free: true,
+                            model,
+                            team,
+                            type
+                        })
+                    },
+                    {
+                        csItem: CS_Economy.getById(item.id),
+                        loadoutItem: item
+                    }
+                ],
+                locked: true
+            };
         }
-        return CS_Economy.filter({
-            base:
-                model && !isGlove ? undefined : model && isGlove ? false : true,
-            category,
-            model,
-            team,
-            type
-        });
+        return {
+            equippable: model !== undefined || isMusicKit,
+            items: CS_Economy.filter({
+                base:
+                    model && !isGlove
+                        ? undefined
+                        : model && isGlove
+                        ? false
+                        : true,
+                category,
+                model,
+                team,
+                type
+            }).map((item) => ({
+                csItem: item
+            })),
+            locked: false
+        };
     }
 }

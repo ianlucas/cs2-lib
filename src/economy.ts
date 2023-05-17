@@ -121,11 +121,25 @@ export class CS_Economy {
     static itemsDef: CS_ItemDefinition[] = [];
     static itemsMap: Map<number, CS_Item> = new Map();
     static itemsDefMap: Map<number, CS_ItemDefinition> = new Map();
+    static stickerCategories: string[] = [];
+    static stickers: CS_Item[];
 
     static setItems(items: CS_Item[]) {
+        CS_Economy.stickers = [];
+        CS_Economy.stickerCategories = [];
         CS_Economy.items = items;
         CS_Economy.itemsMap.clear();
-        items.forEach((item) => CS_Economy.itemsMap.set(item.id, item));
+        items.forEach((item) => {
+            CS_Economy.itemsMap.set(item.id, item);
+            if (item.type === "sticker") {
+                CS_Economy.stickers.push(item);
+                if (
+                    CS_Economy.stickerCategories.indexOf(item.category) === -1
+                ) {
+                    CS_Economy.stickerCategories.push(item.category);
+                }
+            }
+        });
     }
 
     static setItemsDef(itemDefs: CS_ItemDefinition[]) {
@@ -250,5 +264,13 @@ export class CS_Economy {
             return "WellWorn";
         }
         return "BattleScarred";
+    }
+
+    getStickerCategories() {
+        return CS_Economy.stickerCategories;
+    }
+
+    getStickers() {
+        return CS_Economy.stickers;
     }
 }
