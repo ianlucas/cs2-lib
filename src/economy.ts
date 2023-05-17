@@ -140,6 +140,7 @@ export class CS_Economy {
                 }
             }
         });
+        CS_Economy.stickerCategories.sort();
     }
 
     static setItemsDef(itemDefs: CS_ItemDefinition[]) {
@@ -266,11 +267,11 @@ export class CS_Economy {
         return "BattleScarred";
     }
 
-    getStickerCategories() {
+    static getStickerCategories() {
         return CS_Economy.stickerCategories;
     }
 
-    getStickers() {
+    static getStickers() {
         return CS_Economy.stickers;
     }
 }
