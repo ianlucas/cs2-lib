@@ -253,18 +253,18 @@ export class CS_Economy {
 
     static getFloatLabel(float: number) {
         if (float <= CS_MAX_FACTORY_NEW_FLOAT) {
-            return "FactoryNew";
+            return "FN";
         }
         if (float <= CS_MAX_MINIMAL_WEAR_FLOAT) {
-            return "MinimalWear";
+            return "MW";
         }
         if (float <= CS_MAX_FIELD_TESTED_FLOAT) {
-            return "FieldTested";
+            return "FT";
         }
         if (float <= CS_MAX_WELL_WORN_FLOAT) {
-            return "WellWorn";
+            return "WW";
         }
-        return "BattleScarred";
+        return "BS";
     }
 
     static getStickerCategories() {
