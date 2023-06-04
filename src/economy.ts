@@ -55,6 +55,8 @@ export const CS_SEEDABLE_ITEMS = ["weapon", "melee"];
 export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon"];
 export const CS_STICKERABLE_ITEMS = ["weapon"];
 export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
+export const CS_MIN_STICKER_FLOAT = 0;
+export const CS_MAX_STICKER_FLOAT = 0.9;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 function filterItems(predicate: CS_EconomyPredicate) {
