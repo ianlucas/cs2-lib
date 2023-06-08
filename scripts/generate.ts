@@ -219,7 +219,7 @@ class GenerateScript {
         const sha1 = hashSum.digest("hex");
         return format(
             "https://steamcdn-a.akamaihd.net/apps/730/icons/%s.%s.png",
-            file,
+            file.toLowerCase(),
             sha1
         );
     }
