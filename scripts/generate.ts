@@ -153,7 +153,7 @@ const UNCATEGORIZED_STICKERS = [
 class GenerateScript {
     language: string;
     itemsFile: CSGO_ItemsFile;
-    languageFile: CSGO_LanguageFile;
+    languageFile: Record<string, string>;
     prefabs: { [prefabName: string]: CSGO_Prefab } = {};
     items: CS_Item[] = [];
     paints: CS_Item[] = [];
@@ -205,11 +205,25 @@ class GenerateScript {
             format(LANGUAGE_PATH, this.language),
             "utf16le" // "utf16le" on CSGO
         );
-        return KeyValues.parse(contents) as CSGO_LanguageFile;
+        const parsed = KeyValues.parse(contents) as CSGO_LanguageFile;
+        const strings: Record<string, string> = {};
+        for (const key of Object.keys(parsed.lang.Tokens)) {
+            const lowerCaseKey = key.toLowerCase();
+            if (strings[lowerCaseKey] !== undefined) {
+                throw new Error(
+                    format(
+                        "Duplicate key for %s on language file.",
+                        lowerCaseKey
+                    )
+                );
+            }
+            strings[lowerCaseKey] = parsed.lang.Tokens[key];
+        }
+        return strings;
     }
 
     getTranslation(token: string) {
-        return this.languageFile.lang.Tokens[token.substring(1)];
+        return this.languageFile[token.substring(1).toLowerCase()];
     }
 
     getCdnUrl(file: string) {
@@ -411,9 +425,14 @@ class GenerateScript {
                 if (!value.description_tag || value.name === "default") {
                     continue;
                 }
+                const name = this.getTranslation(value.description_tag);
+                if (name === undefined) {
+                    console.log(value);
+                    throw new Error("Unable to name an item.");
+                }
                 this.paintKits.push({
                     className: value.name,
-                    name: this.getTranslation(value.description_tag),
+                    name,
                     rarity: this.paintKitRarity[value.name],
                     value: Number(paintKit)
                 });
@@ -623,6 +642,7 @@ class GenerateScript {
             }
             return 0;
         });
+        writeJson("dist/language.json", this.languageFile);
         writeJson("dist/parsed-items-game.json", this.itemsFile);
         writeJson("dist/weapon-attributes.json", this.weaponsAttributes);
         writeJson("dist/items.json", items);
