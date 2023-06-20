@@ -56,6 +56,18 @@ export const CS_VERTIGO_MAP: CS_Map = {
     image: "/de_vertigo.jpg"
 };
 
+export const CS_OLD_CBBLE_MAP: CS_Map = {
+    mapname: "workshop/855577410/de_cbble",
+    name: "Cobblestone",
+    image: "/855577410_de_cbble.jpg"
+};
+
+export const CS_OLD_CACHE_MAP: CS_Map = {
+    mapname: "workshop/951327114/de_cache",
+    name: "Cache",
+    image: "/951327114_de_cache.jpg"
+};
+
 export const CS_ACTIVE_MAP_POOL = [
     CS_ANCIENT_MAP,
     CS_ANUBIS_MAP,
@@ -65,3 +77,11 @@ export const CS_ACTIVE_MAP_POOL = [
     CS_OVERPASS_MAP,
     CS_VERTIGO_MAP
 ];
+
+export function CS_getMapCommand(map: CS_Map) {
+    const matches = map.mapname.match(/workshop\/(\d+)\/[\w_]+/);
+    if (matches) {
+        return `host_workshop_map ${matches[1]}`;
+    }
+    return `changelevel ${map.mapname}`;
+}
