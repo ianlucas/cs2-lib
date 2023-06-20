@@ -78,6 +78,19 @@ export const CS_ACTIVE_MAP_POOL = [
     CS_VERTIGO_MAP
 ];
 
+export const CS_ALL_MAPS = [
+    CS_ANCIENT_MAP,
+    CS_ANUBIS_MAP,
+    CS_DUST2_MAP,
+    CS_INFERNO_MAP,
+    CS_MIRAGE_MAP,
+    CS_NUKE_MAP,
+    CS_OLD_CACHE_MAP,
+    CS_OLD_CBBLE_MAP,
+    CS_OVERPASS_MAP,
+    CS_VERTIGO_MAP
+];
+
 export function CS_getMapCommand(map: CS_Map) {
     const matches = map.mapname.match(/workshop\/(\d+)\/[\w_]+/);
     if (matches) {
