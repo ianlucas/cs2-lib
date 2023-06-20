@@ -91,7 +91,7 @@ export const CS_ALL_MAPS = [
     CS_VERTIGO_MAP
 ];
 
-export function CS_getMapCommand(map: CS_Map | string) {
+export function CS_getChangeLevelCommand(map: CS_Map | string) {
     const mapstring = typeof map === "string" ? map : map.mapname;
     const matches = mapstring.match(/workshop\/(\d+)\/[\w_]+/);
     if (matches) {
