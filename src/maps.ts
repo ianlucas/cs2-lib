@@ -91,10 +91,11 @@ export const CS_ALL_MAPS = [
     CS_VERTIGO_MAP
 ];
 
-export function CS_getMapCommand(map: CS_Map) {
-    const matches = map.mapname.match(/workshop\/(\d+)\/[\w_]+/);
+export function CS_getMapCommand(map: CS_Map | string) {
+    const mapstring = typeof map === "string" ? map : map.mapname;
+    const matches = mapstring.match(/workshop\/(\d+)\/[\w_]+/);
     if (matches) {
         return `host_workshop_map ${matches[1]}`;
     }
-    return `changelevel ${map.mapname}`;
+    return `changelevel ${mapstring}`;
 }
