@@ -517,7 +517,11 @@ class GenerateScript {
                 id,
                 image: this.getCdnUrl(value.icon_path + "_large"),
                 name,
-                rarity: this.getRarityColor(paintKit.rarity ?? item.rarity)
+                rarity: this.getRarityColor(
+                    ["melee", "glove"].includes(item.type)
+                        ? item.rarity ?? paintKit.rarity
+                        : paintKit.rarity ?? item.rarity
+                )
             });
             this.itemDefs.push({
                 ...def,
@@ -544,7 +548,7 @@ class GenerateScript {
                     id,
                     image: this.getCdnUrl(value.image_inventory),
                     name,
-                    rarity: this.getRarityColor("uncommon"),
+                    rarity: "#ffffff",
                     type: "musickit"
                 });
                 this.itemDefs.push({
