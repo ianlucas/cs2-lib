@@ -94,6 +94,11 @@ interface CSGO_ItemsFile {
                 };
             };
         };
+        client_loot_lists: {
+            [setName: string]: {
+                [itemName: string]: string;
+            };
+        }[];
         colors: {
             [key: string]: {
                 hex_color: string;
@@ -170,6 +175,7 @@ class GenerateScript {
     musicKits: CS_Item[] = [];
     stickers: CS_Item[] = [];
     itemDefs: CS_ItemDefinition[] = [];
+    itemRarities: { [itemName: string]: string } = {};
     paintKitRarity: { [paintName: string]: string } = {};
     paintKits: {
         className: string;
@@ -195,6 +201,15 @@ class GenerateScript {
         this.parseMusicKits();
         this.parseStickers();
         this.writeFiles();
+    }
+
+    match(haystack: string, needles: string[], separator: string = "") {
+        for (const needle of needles) {
+            if (haystack.indexOf(`${separator}${needle}`) > -1) {
+                return needle;
+            }
+        }
+        return undefined;
     }
 
     readIds() {
@@ -297,6 +312,28 @@ class GenerateScript {
             }
         }
         return "#ffffff";
+    }
+
+    getItemRarityColor(
+        itemNames: string[],
+        className: string,
+        defaultTo?: string
+    ) {
+        let rarity = "";
+        for (const itemName of itemNames) {
+            rarity = this.itemRarities[`${itemName}:${className}`];
+            if (rarity !== undefined) {
+                break;
+            }
+        }
+        if (!rarity && !defaultTo) {
+            console.warn(
+                "Unable to find rarity for %s and %s",
+                itemNames.join(","),
+                className
+            );
+        }
+        return this.getRarityColor(rarity || defaultTo);
     }
 
     parseWeapons() {
@@ -443,9 +480,25 @@ class GenerateScript {
     }
 
     parsePaintRarity() {
+        const rarities = Object.keys(this.itemsFile.items_game.rarities);
         for (const item of this.itemsFile.items_game.paint_kits_rarity) {
             for (const [paintName, rarity] of Object.entries(item)) {
                 this.paintKitRarity[paintName] = rarity;
+            }
+        }
+        for (const sets of this.itemsFile.items_game.client_loot_lists) {
+            for (const [setName, items] of Object.entries(sets)) {
+                const rarity = this.match(setName, rarities, "_");
+                if (rarity) {
+                    for (const [itemName, value] of Object.entries(items)) {
+                        const matches = itemName.match(/^\[([^\]]+)\](.*)$/);
+                        if (!matches) {
+                            continue;
+                        }
+                        this.itemRarities[`${matches[1]}:${matches[2]}`] =
+                            rarity;
+                    }
+                }
             }
         }
     }
@@ -520,11 +573,13 @@ class GenerateScript {
                 id,
                 image: this.getCdnUrl(value.icon_path + "_large"),
                 name,
-                rarity: this.getRarityColor(
-                    ["melee", "glove"].includes(item.type)
-                        ? item.rarity ?? paintKit.rarity
-                        : paintKit.rarity ?? item.rarity
-                )
+                rarity: ["melee", "glove"].includes(item.type)
+                    ? this.getRarityColor(item.rarity ?? paintKit.rarity)
+                    : this.getItemRarityColor(
+                          [paintKit.className],
+                          def.classname!,
+                          paintKit.rarity
+                      )
             });
             this.itemDefs.push({
                 ...def,
@@ -627,6 +682,9 @@ class GenerateScript {
                     continue;
                 }
                 const id = this.getId(name);
+                const itemName = value.item_name.substring(
+                    value.item_name.indexOf("#StickerKit_") + 12
+                );
                 this.stickers.push({
                     category,
                     id,
@@ -637,8 +695,10 @@ class GenerateScript {
                         )
                     ),
                     name,
-                    rarity: this.getRarityColor(
-                        value.item_rarity ?? "uncommon"
+                    rarity: this.getItemRarityColor(
+                        [itemName, value.name],
+                        "sticker",
+                        value.item_rarity
                     ),
                     type: "sticker"
                 });
@@ -684,6 +744,7 @@ class GenerateScript {
         writeJson("dist/language.json", this.languageFile);
         writeJson("dist/parsed-items-game.json", this.itemsFile);
         writeJson("dist/weapon-attributes.json", this.weaponsAttributes);
+        writeJson("dist/item-rarities.json", this.itemRarities);
         writeJson("dist/items.json", items);
         writeJson("dist/item-defs.json", this.itemDefs);
         writeJson("dist/ids.json", this.ids);
