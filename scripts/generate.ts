@@ -337,7 +337,7 @@ class GenerateScript {
                           ),
                     model: value.name.replace("weapon_", ""),
                     name,
-                    rarity: this.getRarityColor(prefab.item_rarity),
+                    rarity: "#ffffff",
                     teams,
                     type: "weapon"
                 });
@@ -425,7 +425,10 @@ class GenerateScript {
                         : format("/%s.png", value.name),
                     model: value.name,
                     name,
-                    rarity: this.getRarityColor("ancient"),
+                    rarity:
+                        value.baseitem === "1"
+                            ? "#ffffff"
+                            : this.getRarityColor("ancient"),
                     teams,
                     type: "glove"
                 });
