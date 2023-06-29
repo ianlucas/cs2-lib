@@ -94,6 +94,11 @@ interface CSGO_ItemsFile {
                 };
             };
         };
+        colors: {
+            [key: string]: {
+                hex_color: string;
+            };
+        };
         items: {
             [itemDef: string]: {
                 name: string;
@@ -123,6 +128,11 @@ interface CSGO_ItemsFile {
         prefabs: {
             [prefabName: string]: CSGO_Prefab;
         }[];
+        rarities: {
+            [key: string]: {
+                color: string;
+            };
+        };
         sticker_kits: {
             [stickerId: string]: {
                 name: string;
@@ -271,6 +281,24 @@ class GenerateScript {
         }
     }
 
+    getRarityColor(rarity?: string) {
+        if (!rarity) {
+            return "#ffffff";
+        }
+        if (rarity.charAt(0) === "#") {
+            return rarity;
+        }
+        const rarirtyColor = this.itemsFile.items_game.rarities[rarity]?.color;
+        if (rarirtyColor) {
+            const colorHex =
+                this.itemsFile.items_game.colors[rarirtyColor]?.hex_color;
+            if (colorHex) {
+                return colorHex;
+            }
+        }
+        return "#ffffff";
+    }
+
     parseWeapons() {
         for (const item of this.itemsFile.items_game.items) {
             for (const [itemDef, value] of Object.entries(item)) {
@@ -309,7 +337,7 @@ class GenerateScript {
                           ),
                     model: value.name.replace("weapon_", ""),
                     name,
-                    rarity: prefab.item_rarity,
+                    rarity: this.getRarityColor(prefab.item_rarity),
                     teams,
                     type: "weapon"
                 });
@@ -353,7 +381,7 @@ class GenerateScript {
                     image: this.getCdnUrl(value.image_inventory),
                     model: value.name.replace("weapon_", ""),
                     name,
-                    rarity: prefab.item_rarity,
+                    rarity: this.getRarityColor(prefab.item_rarity),
                     teams,
                     type: "melee"
                 });
@@ -397,7 +425,7 @@ class GenerateScript {
                         : format("/%s.png", value.name),
                     model: value.name,
                     name,
-                    rarity: "ancient",
+                    rarity: this.getRarityColor("ancient"),
                     teams,
                     type: "glove"
                 });
@@ -433,7 +461,9 @@ class GenerateScript {
                 this.paintKits.push({
                     className: value.name,
                     name,
-                    rarity: this.paintKitRarity[value.name],
+                    rarity: this.getRarityColor(
+                        this.paintKitRarity[value.name]
+                    ),
                     value: Number(paintKit)
                 });
             }
@@ -487,7 +517,7 @@ class GenerateScript {
                 id,
                 image: this.getCdnUrl(value.icon_path + "_large"),
                 name,
-                rarity: paintKit.rarity ?? item.rarity
+                rarity: this.getRarityColor(paintKit.rarity ?? item.rarity)
             });
             this.itemDefs.push({
                 ...def,
@@ -514,7 +544,7 @@ class GenerateScript {
                     id,
                     image: this.getCdnUrl(value.image_inventory),
                     name,
-                    rarity: "uncommon",
+                    rarity: this.getRarityColor("uncommon"),
                     type: "musickit"
                 });
                 this.itemDefs.push({
@@ -600,7 +630,9 @@ class GenerateScript {
                         )
                     ),
                     name,
-                    rarity: value.item_rarity ?? "uncommon",
+                    rarity: this.getRarityColor(
+                        value.item_rarity ?? "uncommon"
+                    ),
                     type: "sticker"
                 });
                 this.itemDefs.push({
