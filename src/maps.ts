@@ -56,6 +56,12 @@ export const CS_VERTIGO_MAP: CS_Map = {
     image: "/de_vertigo.jpg"
 };
 
+export const CS_TRAIN_MAP: CS_Map = {
+    mapname: "de_train",
+    name: "Train",
+    image: "/de_train.jpg"
+};
+
 export const CS_OLD_CBBLE_MAP: CS_Map = {
     mapname: "workshop/855577410/de_cbble",
     name: "Cobblestone",
@@ -85,6 +91,7 @@ export const CS_ALL_MAPS = [
     CS_INFERNO_MAP,
     CS_MIRAGE_MAP,
     CS_NUKE_MAP,
+    CS_TRAIN_MAP,
     CS_OLD_CACHE_MAP,
     CS_OLD_CBBLE_MAP,
     CS_OVERPASS_MAP,
