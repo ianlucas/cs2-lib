@@ -238,7 +238,7 @@ export class CS_Economy {
         if (!CS_Economy.hasNametag(item)) {
             throw new Error("invalid nametag");
         }
-        if (!CS_nametagRE.test(nametag)) {
+        if (!CS_nametagRE.test(nametag.trim())) {
             throw new Error("invalid nametag");
         }
     }
