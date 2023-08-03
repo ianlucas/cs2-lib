@@ -108,5 +108,7 @@ export function CS_getChangeLevelCommand(map: CS_Map | string) {
 }
 
 export function CS_getMapnameName(mapname: string) {
-    return CS_ALL_MAPS.find((map) => map.mapname === mapname)?.name ?? "???";
+    return (
+        CS_ALL_MAPS.find((map) => map.mapname.includes(mapname))?.name ?? "???"
+    );
 }
