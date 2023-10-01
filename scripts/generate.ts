@@ -6,7 +6,13 @@ import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { format } from "util";
-import { CS_Item, CS_ItemDefinition } from "../src/economy.js";
+import {
+    CS_DEFAULT_GENERATED_HEAVY,
+    CS_DEFAULT_GENERATED_LIGHT,
+    CS_DEFAULT_GENERATED_MEDIUM,
+    CS_Item,
+    CS_ItemDefinition
+} from "../src/economy.js";
 import * as KeyValues from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "../src/teams.js";
 import {
@@ -750,11 +756,11 @@ class GenerateScript {
         wears.forEach((wear) => {
             switch (wear) {
                 case "heavy":
-                    return (localimage |= 0b001);
+                    return (localimage |= CS_DEFAULT_GENERATED_HEAVY);
                 case "medium":
-                    return (localimage |= 0b010);
+                    return (localimage |= CS_DEFAULT_GENERATED_MEDIUM);
                 case "light":
-                    return (localimage |= 0b100);
+                    return (localimage |= CS_DEFAULT_GENERATED_LIGHT);
             }
         });
 

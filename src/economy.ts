@@ -57,6 +57,9 @@ export const CS_STICKERABLE_ITEMS = ["weapon"];
 export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 export const CS_MIN_STICKER_FLOAT = 0;
 export const CS_MAX_STICKER_FLOAT = 0.9;
+export const CS_DEFAULT_GENERATED_HEAVY = 0b001;
+export const CS_DEFAULT_GENERATED_MEDIUM = 0b010;
+export const CS_DEFAULT_GENERATED_LIGHT = 0b100;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 function filterItems(predicate: CS_EconomyPredicate) {

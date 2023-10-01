@@ -2,7 +2,16 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy, CS_Item } from "./economy.js";
+import {
+    CS_DEFAULT_GENERATED_HEAVY,
+    CS_DEFAULT_GENERATED_LIGHT,
+    CS_DEFAULT_GENERATED_MEDIUM,
+    CS_Economy,
+    CS_Item,
+    CS_MIN_FIELD_TESTED_FLOAT,
+    CS_MIN_FLOAT,
+    CS_MIN_MINIMAL_WEAR_FLOAT
+} from "./economy.js";
 import { CS_TEAM_NONE, CS_Team } from "./teams.js";
 
 export interface CS_LoadoutItem {
@@ -43,6 +52,37 @@ export class CS_Loadout {
         return ms !== undefined && Date.now() - ms < CS_Loadout.locktime;
     }
 
+    static resolveImage(
+        csItem: CS_Item,
+        loadoutItem: CS_LoadoutItem,
+        baseUrl: string
+    ) {
+        if (csItem.localimage === undefined) {
+            return csItem.image;
+        }
+        if (loadoutItem.float === undefined) {
+            return csItem.image;
+        }
+        const hasLight = csItem.localimage & CS_DEFAULT_GENERATED_LIGHT;
+        const hasMedium = csItem.localimage & CS_DEFAULT_GENERATED_MEDIUM;
+        const hasHeavy = csItem.localimage & CS_DEFAULT_GENERATED_HEAVY;
+        if (loadoutItem.float >= CS_MIN_MINIMAL_WEAR_FLOAT && hasLight) {
+            return `${baseUrl}/${csItem.id}_light.png`;
+        }
+        if (loadoutItem.float >= CS_MIN_FIELD_TESTED_FLOAT && hasMedium) {
+            return `${baseUrl}/${csItem.id}_medium.png`;
+        }
+        if (loadoutItem.float >= CS_MIN_FLOAT && hasHeavy) {
+            return `${baseUrl}/${csItem.id}_heavy.png`;
+        }
+        // If don't have the proper float to display, we are going to the get
+        // the highest quality we have or fall back to legacy image (from CSGO).
+        if (hasLight) {
+            return `${baseUrl}/${csItem.id}_light.png`;
+        }
+        return csItem.image;
+    }
+
     constructor(items: CS_LoadoutItem[] = []) {
         this.items = items;
     }
@@ -66,6 +106,27 @@ export class CS_Loadout {
                 (equipped.team === team || other.teams === undefined)
             );
         });
+    }
+
+    getAll(team?: CS_Team) {
+        const items = this.items.map((loadoutItem) => {
+            const csItem = CS_Economy.getById(loadoutItem.id);
+            if (
+                team !== undefined &&
+                csItem.teams !== undefined &&
+                loadoutItem.team !== team
+            ) {
+                return undefined;
+            }
+            return {
+                csItem,
+                loadoutItem
+            };
+        });
+        return items.filter(Boolean) as Exclude<
+            (typeof items)[number],
+            undefined
+        >[];
     }
 
     equip({
