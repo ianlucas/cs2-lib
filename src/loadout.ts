@@ -69,10 +69,18 @@ export class CS_Loadout {
         if (loadoutItem.float >= CS_MIN_MINIMAL_WEAR_FLOAT && hasLight) {
             return `${baseUrl}/${csItem.id}_light.png`;
         }
-        if (loadoutItem.float >= CS_MIN_FIELD_TESTED_FLOAT && hasMedium) {
+        if (
+            loadoutItem.float >= CS_MIN_FIELD_TESTED_FLOAT &&
+            loadoutItem.float < CS_MIN_MINIMAL_WEAR_FLOAT &&
+            hasMedium
+        ) {
             return `${baseUrl}/${csItem.id}_medium.png`;
         }
-        if (loadoutItem.float >= CS_MIN_FLOAT && hasHeavy) {
+        if (
+            loadoutItem.float >= CS_MIN_FLOAT &&
+            loadoutItem.float < CS_MIN_FIELD_TESTED_FLOAT &&
+            hasHeavy
+        ) {
             return `${baseUrl}/${csItem.id}_heavy.png`;
         }
         // If don't have the proper float to display, we are going to the get
