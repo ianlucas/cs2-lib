@@ -198,12 +198,14 @@ class GenerateScript {
     }[] = [];
     weaponsAttributes: { [key: string]: CSGO_WeaponAttributes } = {};
     ids: string[] = [];
+    itemImages: Record<string, string[]>;
 
     constructor({ language }: { language?: string }) {
         this.language = language ?? "english";
         this.itemsFile = this.readItems();
         this.languageFile = this.readLanguage();
         this.ids = this.readIds();
+        this.itemImages = this.readItemImages();
         this.parsePrefabs();
         this.parseWeapons();
         this.parseMelees();
@@ -231,6 +233,14 @@ class GenerateScript {
             "utf-8"
         );
         return JSON.parse(contents) as string[];
+    }
+
+    readItemImages() {
+        const contents = readFileSync(
+            resolve(process.cwd(), "dist/item-images.json"),
+            "utf-8"
+        );
+        return JSON.parse(contents) as Record<string, string[]>;
     }
 
     readItems() {
@@ -774,6 +784,18 @@ class GenerateScript {
         return localimage;
     }
 
+    writeItemImages(items: CS_Item[]) {
+        for (const item of items) {
+            const id = String(item.id);
+            const urls = this.itemImages[id] ?? ([] as string[]);
+            if (!urls.includes(item.image)) {
+                urls.push(item.image);
+            }
+            this.itemImages[id] = urls;
+        }
+        writeJson("dist/item-images.json", this.itemImages);
+    }
+
     writeFiles() {
         const items = [
             ...this.items,
@@ -810,6 +832,7 @@ class GenerateScript {
         writeJson("dist/weapon-attributes.json", this.weaponsAttributes);
         writeJson("dist/item-rarities.json", this.itemRarities);
         writeJson("dist/items.json", items);
+        this.writeItemImages(items);
         writeJson(
             "dist/item-defs.json",
             this.itemDefs.map((itemDef) => ({
