@@ -3,13 +3,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
+import { copyFileSync, existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { format } from "util";
 import { CS_Item, CS_ItemDefinition } from "../src/economy.js";
 import * as KeyValues from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "../src/teams.js";
-import { IMAGES_PATH, ITEMS_PATH, LANGUAGE_PATH } from "./env.js";
+import {
+    CS2_IMAGES_PATH,
+    IMAGES_PATH,
+    ITEMS_PATH,
+    LANGUAGE_PATH
+} from "./env.js";
 import { replaceInFile, writeJson } from "./util.js";
 
 interface CSGO_WeaponAttributes {
@@ -174,7 +179,9 @@ class GenerateScript {
     paints: CS_Item[] = [];
     musicKits: CS_Item[] = [];
     stickers: CS_Item[] = [];
-    itemDefs: CS_ItemDefinition[] = [];
+    itemDefs: (CS_ItemDefinition & {
+        className?: string;
+    })[] = [];
     itemRarities: { [itemName: string]: string } = {};
     paintKitRarity: { [paintName: string]: string } = {};
     paintKits: {
@@ -379,7 +386,7 @@ class GenerateScript {
                     type: "weapon"
                 });
                 this.itemDefs.push({
-                    classname: value.name,
+                    className: value.name,
                     def: Number(itemDef),
                     id,
                     paintid: undefined
@@ -423,7 +430,7 @@ class GenerateScript {
                     type: "melee"
                 });
                 this.itemDefs.push({
-                    classname: value.name,
+                    className: value.name,
                     def: Number(itemDef),
                     id,
                     paintid: value.baseitem === "1" ? undefined : 0
@@ -470,7 +477,7 @@ class GenerateScript {
                     type: "glove"
                 });
                 this.itemDefs.push({
-                    classname: value.name,
+                    className: value.name,
                     def: Number(itemDef),
                     id,
                     paintid: value.baseitem === "1" ? undefined : 0
@@ -548,7 +555,7 @@ class GenerateScript {
             const def = this.itemDefs.find(
                 (item) =>
                     value.icon_path.indexOf(
-                        format("/%s_%s", item.classname, paintKit.className)
+                        format("/%s_%s", item.className, paintKit.className)
                     ) > -1
             );
             if (!def) {
@@ -572,12 +579,17 @@ class GenerateScript {
                 free: undefined,
                 id,
                 image: this.getCdnUrl(value.icon_path + "_large"),
+                localimage: this.getLocalImage(
+                    def.className,
+                    paintKit.className,
+                    id
+                ),
                 name,
                 rarity: ["melee", "glove"].includes(item.type)
                     ? this.getRarityColor(item.rarity ?? paintKit.rarity)
                     : this.getItemRarityColor(
                           [paintKit.className],
-                          def.classname!,
+                          def.className!,
                           paintKit.rarity
                       )
             });
@@ -710,6 +722,52 @@ class GenerateScript {
         }
     }
 
+    getLocalImage(
+        className: string | undefined,
+        paintClassName: string | undefined,
+        id: number
+    ) {
+        const wears = ["heavy", "medium", "light"];
+        if (!className || !paintClassName) {
+            return undefined;
+        }
+        let localimage = 0;
+        wears.filter((wear) => {
+            const imagePath = resolve(
+                CS2_IMAGES_PATH,
+                `econ/default_generated/${className}_${paintClassName}_${wear}_png.png`
+            );
+            if (existsSync(imagePath)) {
+                copyFileSync(
+                    imagePath,
+                    resolve(process.cwd(), `dist/econ-images/${id}_${wear}.png`)
+                );
+                return true;
+            }
+            return false;
+        });
+
+        wears.forEach((wear) => {
+            switch (wear) {
+                case "heavy":
+                    return (localimage |= 0b001);
+                case "medium":
+                    return (localimage |= 0b010);
+                case "light":
+                    return (localimage |= 0b100);
+            }
+        });
+
+        if (wears.length === 0) {
+            console.log(
+                `no local image for id ${id}, ${className}+${paintClassName}`
+            );
+            return undefined;
+        }
+
+        return localimage;
+    }
+
     writeFiles() {
         const items = [
             ...this.items,
@@ -746,7 +804,13 @@ class GenerateScript {
         writeJson("dist/weapon-attributes.json", this.weaponsAttributes);
         writeJson("dist/item-rarities.json", this.itemRarities);
         writeJson("dist/items.json", items);
-        writeJson("dist/item-defs.json", this.itemDefs);
+        writeJson(
+            "dist/item-defs.json",
+            this.itemDefs.map((itemDef) => ({
+                ...itemDef,
+                className: undefined
+            }))
+        );
         writeJson("dist/ids.json", this.ids);
         replaceInFile(
             "src/items.ts",

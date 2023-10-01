@@ -15,6 +15,7 @@ export interface CS_Item {
     free?: boolean;
     id: number;
     image: string;
+    localimage?: number;
     model?: string;
     name: string;
     rarity: string;
@@ -27,7 +28,6 @@ export interface CS_Item {
  * item and can be used for integration with Sourcemod.
  */
 export interface CS_ItemDefinition {
-    classname?: string;
     def?: number;
     id: number;
     musicid?: number;
