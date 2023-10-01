@@ -25,7 +25,7 @@ export interface CS_Item {
 
 /**
  * The CS_ItemDefinition interface contains more technical information about an
- * item and can be used for integration with Sourcemod.
+ * item and can be used for integration with SourceMod.
  */
 export interface CS_ItemDefinition {
     def?: number;
