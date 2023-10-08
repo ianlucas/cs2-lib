@@ -216,18 +216,33 @@ export class CS_Economy {
         return CS_STICKERABLE_ITEMS.includes(item.type);
     }
 
-    static validateStickers(item: CS_Item, stickers: (number | null)[]) {
+    static validateStickers(
+        item: CS_Item,
+        stickers: (number | null)[],
+        stickerswear: (number | null)[] = []
+    ) {
         if (!CS_Economy.hasStickers(item)) {
             throw new Error("invalid stickers");
         }
         if (stickers.length > 4) {
             throw new Error("invalid stickers");
         }
-        for (const sticker of stickers) {
+        for (const [index, sticker] of stickers.entries()) {
             if (sticker === null) {
+                if (stickerswear[index] !== undefined) {
+                    throw new Error("invalid stickers");
+                }
                 continue;
             }
             if (CS_Economy.getById(sticker).type !== "sticker") {
+                throw new Error("invalid stickers");
+            }
+            const wear = stickerswear[index];
+            if (
+                typeof wear === "number" &&
+                wear < CS_MIN_STICKER_FLOAT &&
+                wear > CS_MAX_STICKER_FLOAT
+            ) {
                 throw new Error("invalid stickers");
             }
         }
