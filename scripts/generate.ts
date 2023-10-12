@@ -395,6 +395,7 @@ class GenerateScript {
                         : this.getCdnUrl(
                               format("econ/weapons/base_weapons/%s", value.name)
                           ),
+                    localimage: this.getBaseLocalImage(value.name, id),
                     model: value.name.replace("weapon_", ""),
                     name,
                     rarity: "#ffffff",
@@ -439,6 +440,7 @@ class GenerateScript {
                     free: value.baseitem === "1" ? true : undefined,
                     id,
                     image: this.getCdnUrl(value.image_inventory),
+                    localimage: this.getBaseLocalImage(value.name, id),
                     model: value.name.replace("weapon_", ""),
                     name,
                     rarity: this.getRarityColor(prefab.item_rarity),
@@ -595,7 +597,7 @@ class GenerateScript {
                 free: undefined,
                 id,
                 image: this.getCdnUrl(value.icon_path + "_large"),
-                localimage: this.getLocalImage(
+                localimage: this.getPaintLocalImage(
                     def.className,
                     paintKit.className,
                     id
@@ -738,7 +740,22 @@ class GenerateScript {
         }
     }
 
-    getLocalImage(
+    getBaseLocalImage(className: string, id: number) {
+        const imagePath = resolve(
+            CS2_IMAGES_PATH,
+            `econ/weapons/base_weapons/${className}_png.png`
+        );
+        if (existsSync(imagePath)) {
+            copyFileSync(
+                imagePath,
+                resolve(process.cwd(), `dist/econ-images/${id}.png`)
+            );
+            return 0b111;
+        }
+        return 0;
+    }
+
+    getPaintLocalImage(
         className: string | undefined,
         paintClassName: string | undefined,
         id: number
