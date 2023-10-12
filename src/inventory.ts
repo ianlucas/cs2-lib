@@ -1,14 +1,4 @@
-import {
-    CS_DEFAULT_GENERATED_HEAVY,
-    CS_DEFAULT_GENERATED_LIGHT,
-    CS_DEFAULT_GENERATED_MEDIUM,
-    CS_Economy,
-    CS_MAX_FIELD_TESTED_FLOAT,
-    CS_MAX_MINIMAL_WEAR_FLOAT,
-    CS_MIN_FIELD_TESTED_FLOAT,
-    CS_MIN_FLOAT,
-    CS_MIN_MINIMAL_WEAR_FLOAT
-} from "./economy.js";
+import { CS_Economy } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 
 export interface CS_InventoryItem {
