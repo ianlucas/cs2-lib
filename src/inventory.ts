@@ -33,33 +33,6 @@ export class CS_Inventory {
         this.limit = limit;
     }
 
-    static resolveImage(inventoryItem: CS_InventoryItem, baseUrl: string) {
-        const csItem = CS_Economy.getById(inventoryItem.id);
-        if (csItem.localimage === undefined) {
-            return csItem.image;
-        }
-        const hasLight = csItem.localimage & CS_DEFAULT_GENERATED_LIGHT;
-        if (inventoryItem.float === undefined) {
-            if (hasLight) {
-                return `${baseUrl}/${csItem.id}_light.png`;
-            }
-            return csItem.image;
-        }
-
-        const hasMedium = csItem.localimage & CS_DEFAULT_GENERATED_MEDIUM;
-        const hasHeavy = csItem.localimage & CS_DEFAULT_GENERATED_HEAVY;
-        if (inventoryItem.float < CS_MAX_MINIMAL_WEAR_FLOAT && hasLight) {
-            return `${baseUrl}/${csItem.id}_light.png`;
-        }
-        if (inventoryItem.float < CS_MAX_FIELD_TESTED_FLOAT && hasMedium) {
-            return `${baseUrl}/${csItem.id}_medium.png`;
-        }
-        if (hasHeavy) {
-            return `${baseUrl}/${csItem.id}_heavy.png`;
-        }
-        return csItem.image;
-    }
-
     canAddNewItem() {
         return this.items.length < this.limit;
     }

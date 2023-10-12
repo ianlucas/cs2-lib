@@ -294,4 +294,34 @@ export class CS_Economy {
     static getStickers() {
         return CS_Economy.stickers;
     }
+
+    static resolveImageSrc(baseUrl: string, id: number, float?: number) {
+        const csItem = CS_Economy.getById(id);
+        if (csItem.localimage === undefined) {
+            return csItem.image;
+        }
+        if (csItem.base) {
+            return `${baseUrl}/${id}.png`;
+        }
+        const hasLight = csItem.localimage & CS_DEFAULT_GENERATED_LIGHT;
+        const url = `${baseUrl}/${id}`;
+        if (float === undefined) {
+            if (hasLight) {
+                return `${url}_light.png`;
+            }
+            return csItem.image;
+        }
+        const hasMedium = csItem.localimage & CS_DEFAULT_GENERATED_MEDIUM;
+        const hasHeavy = csItem.localimage & CS_DEFAULT_GENERATED_HEAVY;
+        if (float < CS_MAX_MINIMAL_WEAR_FLOAT && hasLight) {
+            return `${url}_light.png`;
+        }
+        if (float < CS_MAX_FIELD_TESTED_FLOAT && hasMedium) {
+            return `${url}_medium.png`;
+        }
+        if (hasHeavy) {
+            return `${url}_heavy.png`;
+        }
+        return csItem.image;
+    }
 }
