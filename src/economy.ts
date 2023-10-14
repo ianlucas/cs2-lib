@@ -316,10 +316,10 @@ export class CS_Economy {
         }
         const hasMedium = csItem.localimage & CS_DEFAULT_GENERATED_MEDIUM;
         const hasHeavy = csItem.localimage & CS_DEFAULT_GENERATED_HEAVY;
-        if (float < CS_MAX_MINIMAL_WEAR_FLOAT && hasLight) {
+        if (float < 1 / 3 && hasLight) {
             return `${url}_light.png`;
         }
-        if (float < CS_MAX_FIELD_TESTED_FLOAT && hasMedium) {
+        if (float < 2 / 3 && hasMedium) {
             return `${url}_medium.png`;
         }
         if (hasHeavy) {
