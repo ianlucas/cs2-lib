@@ -163,4 +163,8 @@ export class CS_Inventory {
             csItem: CS_Economy.getById(inventoryItem.id)
         }));
     }
+
+    getItems() {
+        return this.items;
+    }
 }
