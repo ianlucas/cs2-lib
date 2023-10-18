@@ -384,7 +384,9 @@ class GenerateScript {
                 const teams = Object.keys(prefab.used_by_classes).map(
                     this.getCS_Team
                 );
-                const id = this.getId(this.getTeamDesc(teams) + name);
+                const id = this.getId(
+                    this.getTeamDesc(teams) + prefab.item_name
+                );
                 this.items.push({
                     base: true,
                     category,
@@ -433,7 +435,9 @@ class GenerateScript {
                 const teams = Object.keys(value.used_by_classes).map(
                     this.getCS_Team
                 );
-                const id = this.getId(this.getTeamDesc(teams) + name);
+                const id = this.getId(
+                    this.getTeamDesc(teams) + value.item_name
+                );
                 this.items.push({
                     base: true,
                     category: "melee",
@@ -476,7 +480,9 @@ class GenerateScript {
                 const teams = Object.keys(value.used_by_classes).map(
                     this.getCS_Team
                 );
-                const id = this.getId(this.getTeamDesc(teams) + name);
+                const id = this.getId(
+                    this.getTeamDesc(teams) + value.item_name
+                );
                 this.items.push({
                     base: true,
                     category: "glove",
@@ -590,7 +596,9 @@ class GenerateScript {
                 continue;
             }
             const name = format("%s | %s", item.name, paintKit.name);
-            const id = this.getId(name + paintKit.value);
+            const id = this.getId(
+                `${def.className}_${paintKit.className}_${paintKit.value}`
+            );
             this.paints.push({
                 ...item,
                 base: undefined,
@@ -627,7 +635,7 @@ class GenerateScript {
                     continue;
                 }
                 const name = this.getTranslation(value.loc_name);
-                const id = this.getId(name);
+                const id = this.getId(value.loc_name);
                 const musicid = Number(musicId);
                 this.musicKits.push({
                     base: true,
@@ -711,7 +719,7 @@ class GenerateScript {
                 if (name === undefined) {
                     continue;
                 }
-                const id = this.getId(name);
+                const id = this.getId(value.item_name);
                 const itemName = value.item_name.substring(
                     value.item_name.indexOf("#StickerKit_") + 12
                 );
@@ -736,6 +744,13 @@ class GenerateScript {
                     id,
                     stickerid: Number(stickerId)
                 });
+            }
+        }
+    }
+
+    parsePatches() {
+        for (const item of this.itemsFile.items_game.sticker_kits) {
+            for (const [stickerId, value] of Object.entries(item)) {
             }
         }
     }
