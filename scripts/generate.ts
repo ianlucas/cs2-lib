@@ -636,7 +636,7 @@ class GenerateScript {
                     id,
                     image: this.getCdnUrl(value.image_inventory),
                     name,
-                    rarity: "#ffffff",
+                    rarity: "#4b69ff",
                     type: "musickit"
                 });
                 this.itemDefs.push({
