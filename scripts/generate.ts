@@ -793,6 +793,7 @@ class GenerateScript {
                             value.patch_material + "_large"
                         )
                     ),
+                    teams: [CS_TEAM_CT, CS_TEAM_T],
                     name,
                     rarity: this.getItemRarityColor(
                         [itemName, value.name],

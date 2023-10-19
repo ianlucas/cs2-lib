@@ -1,6 +1,15 @@
 import { CS_Economy } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 
+export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
+    "weapon",
+    "glove",
+    "melee",
+    "musickit",
+    "agent",
+    "patch"
+];
+
 export interface CS_InventoryItem {
     equipped?: boolean;
     equippedCT?: boolean;
@@ -92,6 +101,9 @@ export class CS_Inventory {
             return this;
         }
         const csItem = CS_Economy.getById(item.id);
+        if (!CS_INVENTORY_EQUIPPABLE_ITEMS.includes(csItem.type)) {
+            return this;
+        }
         if (team === undefined && csItem.teams !== undefined) {
             return this;
         }
