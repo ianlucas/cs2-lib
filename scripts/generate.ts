@@ -398,7 +398,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + prefab.item_name
+                    this.getTeamDesc(teams) + prefab.item_name + "_weapon"
                 );
                 this.items.push({
                     base: true,
@@ -449,7 +449,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + value.item_name
+                    this.getTeamDesc(teams) + value.item_name + "_melee"
                 );
                 this.items.push({
                     base: true,
@@ -494,7 +494,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + value.item_name
+                    this.getTeamDesc(teams) + value.item_name + "_glove"
                 );
                 this.items.push({
                     base: true,
@@ -613,7 +613,7 @@ class GenerateScript {
             }
             const name = format("%s | %s", item.name, paintKit.name);
             const id = this.getId(
-                `${def.className}_${paintKit.className}_${paintKit.value}`
+                `${def.className}_${paintKit.className}_${paintKit.value}_paint`
             );
             this.paints.push({
                 ...item,
@@ -651,7 +651,7 @@ class GenerateScript {
                     continue;
                 }
                 const name = this.getTranslation(value.loc_name);
-                const id = this.getId(value.loc_name);
+                const id = this.getId(`${value.loc_name}_${musicId}_musickit`);
                 const musicid = Number(musicId);
                 this.musicKits.push({
                     base: true,
@@ -735,7 +735,9 @@ class GenerateScript {
                 if (name === undefined) {
                     continue;
                 }
-                const id = this.getId(value.item_name);
+                const id = this.getId(
+                    `${value.item_name}_${stickerId}_stickers`
+                );
                 const itemName = value.item_name.substring(
                     value.item_name.indexOf("#StickerKit_") + 12
                 );
@@ -774,7 +776,7 @@ class GenerateScript {
                 if (name === undefined) {
                     continue;
                 }
-                const id = this.getId(value.item_name);
+                const id = this.getId(`${value.item_name}_${patchId}_patch`);
                 const itemName = value.item_name.substring(
                     value.item_name.indexOf("#PatchKit_") + 10
                 );
@@ -814,7 +816,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + value.item_name
+                    this.getTeamDesc(teams) + value.item_name + "_agent"
                 );
                 this.items.push({
                     category: "agent",
@@ -853,7 +855,7 @@ class GenerateScript {
                     continue;
                 }
                 const name = this.getTranslation(value.item_name);
-                const id = this.getId(value.item_name);
+                const id = this.getId(`${itemDef}_${value.item_name}_pin`);
                 this.items.push({
                     category: "pin",
                     id,

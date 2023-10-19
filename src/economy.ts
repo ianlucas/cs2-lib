@@ -124,8 +124,28 @@ export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
         unique: true
     },
     {
+        label: "Sticker",
+        category: "sticker",
+        unique: true
+    },
+    {
+        label: "Agent",
+        category: "agent",
+        unique: true
+    },
+    {
+        label: "Patch",
+        category: "patch",
+        unique: true
+    },
+    {
         label: "Music Kit",
         category: "musickit",
+        unique: true
+    },
+    {
+        label: "Pin",
+        category: "pin",
         unique: true
     }
 ];
