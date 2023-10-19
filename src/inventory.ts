@@ -7,7 +7,8 @@ export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
     "melee",
     "musickit",
     "agent",
-    "patch"
+    "patch",
+    "pin"
 ];
 
 export interface CS_InventoryItem {
