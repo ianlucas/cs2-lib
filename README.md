@@ -15,14 +15,14 @@ Refer to the generated documentation in `./docs` directory.
 
 ## Feature Overview
 
-- [x] Economy Items - Weapon Skins
-- [x] Economy Items - Weapon Stickers
-- [x] Economy Items - Knives
-- [x] Economy Items - Gloves
-- [x] Economy Items - Music Kits
-- [ ] Economy Items - Grafitti
-- [ ] Economy Items - Agents
-- [ ] Economy Items - Agent Patches
-- [ ] Economy Items - Pins
-- [x] Misc - Teams
-- [x] Misc - Active Pool Maps
+-   [x] Economy Items - Weapon Skins
+-   [x] Economy Items - Weapon Stickers
+-   [x] Economy Items - Knives
+-   [x] Economy Items - Gloves
+-   [x] Economy Items - Music Kits
+-   [ ] Economy Items - Grafitti
+-   [x] Economy Items - Agents
+-   [x] Economy Items - Agent Patches
+-   [ ] Economy Items - Pins
+-   [x] Misc - Teams
+-   [x] Misc - Active Pool Maps
