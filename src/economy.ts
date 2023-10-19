@@ -27,7 +27,8 @@ export interface CS_Item {
         | "sticker"
         | "weapon"
         | "patch"
-        | "agent";
+        | "agent"
+        | "pin";
 }
 
 /**

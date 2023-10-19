@@ -125,6 +125,14 @@ interface CSGO_ItemsFile {
                 used_by_classes: Record<CS_Team, number>;
                 item_name: string;
                 item_rarity: string;
+                tool?: {
+                    use_string?: string;
+                };
+                attributes?: {
+                    ["set supply crate series"]?: {
+                        attribute_class?: string;
+                    };
+                };
             };
         }[];
         music_definitions: {
@@ -219,6 +227,7 @@ class GenerateScript {
         this.parseStickers();
         this.parsePatches();
         this.parseAgents();
+        this.parsePins();
         this.writeFiles();
     }
 
@@ -819,6 +828,40 @@ class GenerateScript {
                     ),
                     teams,
                     type: "agent"
+                });
+                this.itemDefs.push({
+                    className: value.name,
+                    def: Number(itemDef),
+                    id,
+                    paintid: undefined
+                });
+            }
+        }
+    }
+
+    parsePins() {
+        for (const item of this.itemsFile.items_game.items) {
+            for (const [itemDef, value] of Object.entries(item)) {
+                if (
+                    value.image_inventory === undefined ||
+                    value.item_name === undefined ||
+                    value.image_inventory.indexOf("/status_icons/") === -1 ||
+                    value.tool?.use_string === "#ConsumeItem" ||
+                    value.attributes?.["set supply crate series"]
+                        ?.attribute_class === "supply_crate_series"
+                ) {
+                    continue;
+                }
+                const name = this.getTranslation(value.item_name);
+                const id = this.getId(value.item_name);
+                this.items.push({
+                    category: "pin",
+                    id,
+                    image: this.getCdnUrl(value.image_inventory),
+                    name,
+                    rarity: this.getRarityColor(value.item_rarity),
+                    teams: undefined,
+                    type: "pin"
                 });
                 this.itemDefs.push({
                     className: value.name,
