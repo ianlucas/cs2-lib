@@ -23,6 +23,6 @@ Refer to the generated documentation in `./docs` directory.
 -   [ ] Economy Items - Grafitti
 -   [x] Economy Items - Agents
 -   [x] Economy Items - Agent Patches
--   [ ] Economy Items - Pins
+-   [x] Economy Items - Pins
 -   [x] Misc - Teams
 -   [x] Misc - Active Pool Maps

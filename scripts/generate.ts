@@ -23,6 +23,8 @@ import {
 } from "./env.js";
 import { replaceInFile, writeJson } from "./util.js";
 
+const EXPECT_UNIQUE_IDS = false;
+
 interface CSGO_WeaponAttributes {
     "magazine model": string;
     "heat per shot": string;
@@ -214,7 +216,7 @@ class GenerateScript {
         this.language = language ?? "english";
         this.itemsFile = this.readItems();
         this.languageFile = this.readLanguage();
-        this.ids = this.readIds();
+        this.ids = EXPECT_UNIQUE_IDS ? [] : this.readIds();
         this.itemImages = this.readItemImages();
         this.parsePrefabs();
         this.parseWeapons();
@@ -320,6 +322,8 @@ class GenerateScript {
         if (idx === -1) {
             this.ids.push(name);
             return this.ids.length - 1;
+        } else if (EXPECT_UNIQUE_IDS) {
+            throw new Error(`not unique ${name}`);
         }
         return idx;
     }
@@ -332,9 +336,9 @@ class GenerateScript {
         }
     }
 
-    getRarityColor(rarity?: string) {
+    getRarityColor(rarity?: string, fallback = "#ffffff") {
         if (!rarity) {
-            return "#ffffff";
+            return fallback;
         }
         if (rarity.charAt(0) === "#") {
             return rarity;
@@ -347,7 +351,7 @@ class GenerateScript {
                 return colorHex;
             }
         }
-        return "#ffffff";
+        return fallback;
     }
 
     getItemRarityColor(
@@ -842,6 +846,7 @@ class GenerateScript {
     }
 
     parsePins() {
+        const pinFilter = [] as string[];
         for (const item of this.itemsFile.items_game.items) {
             for (const [itemDef, value] of Object.entries(item)) {
                 if (
@@ -850,10 +855,13 @@ class GenerateScript {
                     value.image_inventory.indexOf("/status_icons/") === -1 ||
                     value.tool?.use_string === "#ConsumeItem" ||
                     value.attributes?.["set supply crate series"]
-                        ?.attribute_class === "supply_crate_series"
+                        ?.attribute_class === "supply_crate_series" ||
+                    value.item_name.indexOf("#CSGO_TournamentPass") === 0 ||
+                    pinFilter.includes(value.item_name)
                 ) {
                     continue;
                 }
+                pinFilter.push(value.item_name);
                 const name = this.getTranslation(value.item_name);
                 const id = this.getId(`${itemDef}_${value.item_name}_pin`);
                 this.items.push({
@@ -861,7 +869,7 @@ class GenerateScript {
                     id,
                     image: this.getCdnUrl(value.image_inventory),
                     name,
-                    rarity: this.getRarityColor(value.item_rarity),
+                    rarity: this.getRarityColor(value.item_rarity, "#eb4b4b"),
                     teams: undefined,
                     type: "pin"
                 });
