@@ -124,6 +124,7 @@ interface CSGO_ItemsFile {
                 image_inventory: string;
                 used_by_classes: Record<CS_Team, number>;
                 item_name: string;
+                item_rarity: string;
             };
         }[];
         music_definitions: {
@@ -156,6 +157,7 @@ interface CSGO_ItemsFile {
                 tournament_event_id: string;
                 sticker_material: string;
                 item_rarity: string;
+                patch_material: string;
             };
         }[];
     };
@@ -210,11 +212,13 @@ class GenerateScript {
         this.parseWeapons();
         this.parseMelees();
         this.parseGloves();
-        this.parsePaintRarity();
+        this.parseRarity();
         this.parsePaintKits();
         this.parsePaints();
         this.parseMusicKits();
         this.parseStickers();
+        this.parsePatches();
+        this.parseAgents();
         this.writeFiles();
     }
 
@@ -510,7 +514,7 @@ class GenerateScript {
         }
     }
 
-    parsePaintRarity() {
+    parseRarity() {
         const rarities = Object.keys(this.itemsFile.items_game.rarities);
         for (const item of this.itemsFile.items_game.paint_kits_rarity) {
             for (const [paintName, rarity] of Object.entries(item)) {
@@ -522,6 +526,9 @@ class GenerateScript {
                 const rarity = this.match(setName, rarities, "_");
                 if (rarity) {
                     for (const [itemName, value] of Object.entries(items)) {
+                        if (itemName.indexOf("customplayer_") === 0) {
+                            this.itemRarities[`${itemName}:agent`] = rarity;
+                        }
                         const matches = itemName.match(/^\[([^\]]+)\](.*)$/);
                         if (!matches) {
                             continue;
@@ -750,7 +757,75 @@ class GenerateScript {
 
     parsePatches() {
         for (const item of this.itemsFile.items_game.sticker_kits) {
-            for (const [stickerId, value] of Object.entries(item)) {
+            for (const [patchId, value] of Object.entries(item)) {
+                if (value.item_name.indexOf("#PatchKit") !== 0) {
+                    continue;
+                }
+                const name = this.getTranslation(value.item_name);
+                if (name === undefined) {
+                    continue;
+                }
+                const id = this.getId(value.item_name);
+                const itemName = value.item_name.substring(
+                    value.item_name.indexOf("#PatchKit_") + 10
+                );
+                this.items.push({
+                    category: "patch",
+                    id,
+                    image: this.getCdnUrl(
+                        format(
+                            "econ/patches/%s",
+                            value.patch_material + "_large"
+                        )
+                    ),
+                    name,
+                    rarity: this.getItemRarityColor(
+                        [itemName, value.name],
+                        "patch",
+                        value.item_rarity
+                    ),
+                    type: "patch"
+                });
+                this.itemDefs.push({
+                    id,
+                    patchid: Number(patchId)
+                });
+            }
+        }
+    }
+
+    parseAgents() {
+        for (const item of this.itemsFile.items_game.items) {
+            for (const [itemDef, value] of Object.entries(item)) {
+                if (value.prefab !== "customplayertradable") {
+                    continue;
+                }
+                const name = this.getTranslation(value.item_name);
+                const teams = Object.keys(value.used_by_classes).map(
+                    this.getCS_Team
+                );
+                const id = this.getId(
+                    this.getTeamDesc(teams) + value.item_name
+                );
+                this.items.push({
+                    category: "agent",
+                    id,
+                    image: this.getCdnUrl(value.image_inventory),
+                    name,
+                    rarity: this.getItemRarityColor(
+                        [value.name],
+                        "patch",
+                        value.item_rarity
+                    ),
+                    teams,
+                    type: "agent"
+                });
+                this.itemDefs.push({
+                    className: value.name,
+                    def: Number(itemDef),
+                    id,
+                    paintid: undefined
+                });
             }
         }
     }

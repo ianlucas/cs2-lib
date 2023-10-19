@@ -20,7 +20,14 @@ export interface CS_Item {
     name: string;
     rarity: string;
     teams?: CS_Team[];
-    type: "glove" | "melee" | "musickit" | "sticker" | "weapon";
+    type:
+        | "glove"
+        | "melee"
+        | "musickit"
+        | "sticker"
+        | "weapon"
+        | "patch"
+        | "agent";
 }
 
 /**
@@ -33,6 +40,7 @@ export interface CS_ItemDefinition {
     musicid?: number;
     paintid?: number;
     stickerid?: number;
+    patchid?: number;
 }
 
 export const CS_MIN_FLOAT = 0.000001;
