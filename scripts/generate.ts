@@ -424,7 +424,7 @@ class GenerateScript {
                     className: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: undefined
+                    itemid: undefined
                 });
             }
         }
@@ -471,7 +471,7 @@ class GenerateScript {
                     className: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: value.baseitem === "1" ? undefined : 0
+                    itemid: value.baseitem === "1" ? undefined : 0
                 });
             }
         }
@@ -520,7 +520,7 @@ class GenerateScript {
                     className: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: value.baseitem === "1" ? undefined : 0
+                    itemid: value.baseitem === "1" ? undefined : 0
                 });
             }
         }
@@ -639,7 +639,7 @@ class GenerateScript {
             this.itemDefs.push({
                 ...def,
                 id,
-                paintid: paintKit.value
+                itemid: paintKit.value
             });
         }
     }
@@ -653,11 +653,11 @@ class GenerateScript {
                 }
                 const name = this.getTranslation(value.loc_name);
                 const id = this.getId(`musickit_${musicId}`);
-                const musicid = Number(musicId);
+                const itemid = Number(musicId);
                 this.musicKits.push({
                     base: true,
                     category: "musickit",
-                    free: musicid === 1 ? true : undefined,
+                    free: itemid === 1 ? true : undefined,
                     id,
                     image: this.getCdnUrl(value.image_inventory),
                     name,
@@ -666,7 +666,7 @@ class GenerateScript {
                 });
                 this.itemDefs.push({
                     id,
-                    musicid
+                    itemid
                 });
             }
         }
@@ -759,7 +759,7 @@ class GenerateScript {
                 });
                 this.itemDefs.push({
                     id,
-                    stickerid: Number(stickerId)
+                    itemid: Number(stickerId)
                 });
             }
         }
@@ -799,7 +799,7 @@ class GenerateScript {
                 });
                 this.itemDefs.push({
                     id,
-                    patchid: Number(patchId)
+                    itemid: Number(patchId)
                 });
             }
         }
@@ -835,7 +835,7 @@ class GenerateScript {
                     className: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: undefined
+                    itemid: undefined
                 });
             }
         }
@@ -873,7 +873,7 @@ class GenerateScript {
                     className: value.name,
                     def: Number(itemDef),
                     id,
-                    paintid: undefined
+                    itemid: undefined
                 });
             }
         }
