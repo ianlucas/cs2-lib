@@ -2,16 +2,7 @@
  *  Copyright (c) Ian Lucas. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import {
-    CS_DEFAULT_GENERATED_HEAVY,
-    CS_DEFAULT_GENERATED_LIGHT,
-    CS_DEFAULT_GENERATED_MEDIUM,
-    CS_Economy,
-    CS_Item,
-    CS_MIN_FIELD_TESTED_FLOAT,
-    CS_MIN_FLOAT,
-    CS_MIN_MINIMAL_WEAR_FLOAT
-} from "./economy.js";
+import { CS_Economy, CS_Item } from "./economy.js";
 import { CS_TEAM_NONE, CS_Team } from "./teams.js";
 
 export interface CS_LoadoutItem {
