@@ -23,8 +23,6 @@ import {
 } from "./env.js";
 import { replaceInFile, writeJson } from "./util.js";
 
-const EXPECT_UNIQUE_IDS = false;
-
 interface CSGO_WeaponAttributes {
     "magazine model": string;
     "heat per shot": string;
@@ -210,13 +208,14 @@ class GenerateScript {
     }[] = [];
     weaponsAttributes: { [key: string]: CSGO_WeaponAttributes } = {};
     ids: string[] = [];
+    uniqueIds: string[] = [];
     itemImages: Record<string, string[]>;
 
     constructor({ language }: { language?: string }) {
         this.language = language ?? "english";
         this.itemsFile = this.readItems();
         this.languageFile = this.readLanguage();
-        this.ids = EXPECT_UNIQUE_IDS ? [] : this.readIds();
+        this.ids = this.readIds();
         this.itemImages = this.readItemImages();
         this.parsePrefabs();
         this.parseWeapons();
@@ -312,18 +311,18 @@ class GenerateScript {
     }
 
     getTeamDesc(teams: CS_Team[]) {
-        return `${teams
-            .map((team) => (team === CS_TEAM_CT ? "CT" : "TR"))
-            .join(" and ")}'s `;
+        return teams.join("_");
     }
 
     getId(name: string) {
+        if (this.uniqueIds.indexOf(name) !== -1) {
+            throw new Error(`${name} is NOT unique.`);
+        }
+        this.uniqueIds.push(name);
         const idx = this.ids.indexOf(name);
         if (idx === -1) {
             this.ids.push(name);
             return this.ids.length - 1;
-        } else if (EXPECT_UNIQUE_IDS) {
-            throw new Error(`not unique ${name}`);
         }
         return idx;
     }
@@ -402,7 +401,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + prefab.item_name + "_weapon"
+                    `weapon_${this.getTeamDesc(teams)}_${itemDef}`
                 );
                 this.items.push({
                     base: true,
@@ -453,7 +452,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + value.item_name + "_melee"
+                    `melee_${this.getTeamDesc(teams)}_${itemDef}`
                 );
                 this.items.push({
                     base: true,
@@ -498,7 +497,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + value.item_name + "_glove"
+                    `glove_${this.getTeamDesc(teams)}_${itemDef}`
                 );
                 this.items.push({
                     base: true,
@@ -616,9 +615,7 @@ class GenerateScript {
                 continue;
             }
             const name = format("%s | %s", item.name, paintKit.name);
-            const id = this.getId(
-                `${def.className}_${paintKit.className}_${paintKit.value}_paint`
-            );
+            const id = this.getId(`paint_${def.def}_${paintKit.value}`);
             this.paints.push({
                 ...item,
                 base: undefined,
@@ -655,7 +652,7 @@ class GenerateScript {
                     continue;
                 }
                 const name = this.getTranslation(value.loc_name);
-                const id = this.getId(`${value.loc_name}_${musicId}_musickit`);
+                const id = this.getId(`musickit_${musicId}`);
                 const musicid = Number(musicId);
                 this.musicKits.push({
                     base: true,
@@ -739,9 +736,7 @@ class GenerateScript {
                 if (name === undefined) {
                     continue;
                 }
-                const id = this.getId(
-                    `${value.item_name}_${stickerId}_stickers`
-                );
+                const id = this.getId(`sticker_${stickerId}`);
                 const itemName = value.item_name.substring(
                     value.item_name.indexOf("#StickerKit_") + 12
                 );
@@ -780,7 +775,7 @@ class GenerateScript {
                 if (name === undefined) {
                     continue;
                 }
-                const id = this.getId(`${value.item_name}_${patchId}_patch`);
+                const id = this.getId(`patch_${patchId}`);
                 const itemName = value.item_name.substring(
                     value.item_name.indexOf("#PatchKit_") + 10
                 );
@@ -821,7 +816,7 @@ class GenerateScript {
                     this.getCS_Team
                 );
                 const id = this.getId(
-                    this.getTeamDesc(teams) + value.item_name + "_agent"
+                    `agent_${this.getTeamDesc(teams)}_${itemDef}`
                 );
                 this.items.push({
                     category: "agent",
@@ -864,7 +859,7 @@ class GenerateScript {
                 }
                 pinFilter.push(value.item_name);
                 const name = this.getTranslation(value.item_name);
-                const id = this.getId(`${itemDef}_${value.item_name}_pin`);
+                const id = this.getId(`pin_${itemDef}`);
                 this.items.push({
                     category: "pin",
                     id,
