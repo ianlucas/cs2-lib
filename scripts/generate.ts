@@ -23,73 +23,12 @@ import {
 } from "./env.js";
 import { replaceInFile, writeJson } from "./util.js";
 
-interface CSGO_WeaponAttributes {
-    "magazine model": string;
-    "heat per shot": string;
-    "addon scale": string;
-    "tracer frequency": string;
-    "primary clip size": string;
-    "primary default clip size": string;
-    "secondary default clip size": string;
-    "is full auto": string;
-    "max player speed": string;
-    "in game price": string;
-    "armor ratio": string;
-    "crosshair min distance": string;
-    "crosshair delta distance": string;
-    cycletime: string | string[];
-    "model right handed": string;
-    penetration: string;
-    damage: string;
-    "headshot multiplier": string;
-    range: string;
-    "range modifier": string;
-    bullets: string;
-    "flinch velocity modifier large": string;
-    "flinch velocity modifier small": string;
-    spread: string;
-    "inaccuracy crouch": string;
-    "inaccuracy stand": string;
-    "inaccuracy jump initial": string;
-    "inaccuracy jump apex": string;
-    "inaccuracy jump": string;
-    "inaccuracy land": string;
-    "inaccuracy ladder": string;
-    "inaccuracy fire": string;
-    "inaccuracy move": string;
-    "recovery time crouch": string;
-    "recovery time stand": string;
-    "recoil angle": string;
-    "recoil angle variance": string;
-    "recoil magnitude": string;
-    "recoil magnitude variance": string;
-    "recoil seed": string;
-    "primary reserve ammo max": string;
-    "weapon weight": string;
-    "rumble effect": string;
-    "inaccuracy crouch alt": string;
-    "inaccuracy fire alt": string;
-    "inaccuracy jump alt": string;
-    "inaccuracy ladder alt": string;
-    "inaccuracy land alt": string;
-    "inaccuracy move alt": string;
-    "inaccuracy stand alt": string;
-    "max player speed alt": string;
-    "recoil angle variance alt": string;
-    "recoil magnitude alt": string;
-    "recoil magnitude variance alt": string;
-    "recovery time crouch final": string;
-    "recovery time stand final": string;
-    "spread alt": string;
-}
-
 interface CSGO_Prefab {
     prefab: string;
     item_class: string;
     item_name: string;
     item_rarity: string;
     image_inventory: string;
-    attributes: CSGO_WeaponAttributes;
     used_by_classes: Record<CS_Team, number>;
     visuals: {
         weapon_type: string;
@@ -206,7 +145,6 @@ class GenerateScript {
         name: string;
         rarity: string;
     }[] = [];
-    weaponsAttributes: { [key: string]: CSGO_WeaponAttributes } = {};
     ids: string[] = [];
     uniqueIds: string[] = [];
     itemImages: Record<string, string[]>;
@@ -395,7 +333,6 @@ class GenerateScript {
                         format('Unable to find prefab for "%s".', value.prefab)
                     );
                 }
-                this.weaponsAttributes[itemDef] = prefab.attributes;
                 const name = this.getTranslation(prefab.item_name);
                 const teams = Object.keys(prefab.used_by_classes).map(
                     this.getCS_Team
@@ -985,7 +922,6 @@ class GenerateScript {
         });
         writeJson("dist/language.json", this.languageFile);
         writeJson("dist/parsed-items-game.json", this.itemsFile);
-        writeJson("dist/weapon-attributes.json", this.weaponsAttributes);
         writeJson("dist/item-rarities.json", this.itemRarities);
         writeJson("dist/items.json", items);
         this.writeItemImages(items);
