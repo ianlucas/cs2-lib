@@ -139,7 +139,7 @@ export const CS_STICKERABLE_ITEMS = ["weapon"];
 /**
  * Regular expression for validating nametags.
  */
-export const CS_nametagRE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
+export const CS_NAMETAG_RE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 
 /**
  * Minimum float value for stickers.
@@ -506,7 +506,7 @@ export function CS_validateNametag(
     if (forItem !== undefined && !CS_hasNametag(forItem)) {
         throw new Error("invalid nametag");
     }
-    if (!CS_nametagRE.test(nametag)) {
+    if (!CS_NAMETAG_RE.test(nametag)) {
         throw new Error("invalid nametag");
     }
     return true;

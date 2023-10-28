@@ -15,12 +15,16 @@
 <li><a href="../modules.html">cslib</a></li>
 <li><a href="CS_Veto.html">CS_Veto</a></li></ul>
 <h1>Class CS_Veto</h1></div>
+<section class="tsd-panel tsd-comment">
+<div class="tsd-comment tsd-typography"><p>Represents a veto process for Counter-Strike maps.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></section>
 <section class="tsd-panel tsd-hierarchy">
 <h4>Hierarchy</h4>
 <ul class="tsd-hierarchy">
 <li><span class="target">CS_Veto</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L20">veto.ts:20</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L24">veto.ts:24</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -55,35 +59,49 @@
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="constructor.new_CS_Veto"><span class="tsd-kind-constructor-signature">new CS_<wbr/>Veto</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">type</span>, <span class="tsd-kind-parameter">maps</span>, <span class="tsd-kind-parameter">actions</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="CS_Veto.html" class="tsd-signature-type tsd-kind-class">CS_Veto</a><a href="#constructor.new_CS_Veto" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Create a CS_Veto instance.</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li>
-<h5><span class="tsd-kind-parameter">type</span>: <a href="../types/CS_VetoType.html" class="tsd-signature-type tsd-kind-type-alias">CS_VetoType</a></h5></li>
+<h5><span class="tsd-kind-parameter">type</span>: <a href="../types/CS_VetoType.html" class="tsd-signature-type tsd-kind-type-alias">CS_VetoType</a></h5>
+<div class="tsd-comment tsd-typography"><p>The type of veto process (&quot;bo1&quot;, &quot;bo3&quot;, &quot;bo5&quot;, or &quot;custom&quot;).</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li>
 <li>
-<h5><span class="tsd-kind-parameter">maps</span>: <a href="../interfaces/CS_Map.html" class="tsd-signature-type tsd-kind-interface">CS_Map</a><span class="tsd-signature-symbol">[]</span></h5></li>
+<h5><span class="tsd-kind-parameter">maps</span>: <a href="../interfaces/CS_Map.html" class="tsd-signature-type tsd-kind-interface">CS_Map</a><span class="tsd-signature-symbol">[]</span></h5>
+<div class="tsd-comment tsd-typography"><p>An array of maps to veto (must provide 7 maps).</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li>
 <li>
-<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">actions</span>: <a href="../types/CS_VetoValue.html" class="tsd-signature-type tsd-kind-type-alias">CS_VetoValue</a><span class="tsd-signature-symbol">[]</span></h5></li></ul></div>
-<h4 class="tsd-returns-title">Returns <a href="CS_Veto.html" class="tsd-signature-type tsd-kind-class">CS_Veto</a></h4><aside class="tsd-sources">
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">actions</span>: <a href="../types/CS_VetoValue.html" class="tsd-signature-type tsd-kind-type-alias">CS_VetoValue</a><span class="tsd-signature-symbol">[]</span></h5>
+<div class="tsd-comment tsd-typography"><p>An array of veto actions (optional, but required for &quot;custom&quot; type).</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="CS_Veto.html" class="tsd-signature-type tsd-kind-class">CS_Veto</a></h4>
+<div class="tsd-comment tsd-typography">
+<h4>Throws</h4><p>Throws an error if the input is invalid.</p>
+</div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L25">veto.ts:25</a></li></ul></aside></li></ul></section></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L37">veto.ts:37</a></li></ul></aside></li></ul></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="actions" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>actions</span><a href="#actions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">actions</span><span class="tsd-signature-symbol">:</span> <a href="../types/CS_VetoValue.html" class="tsd-signature-type tsd-kind-type-alias">CS_VetoValue</a><span class="tsd-signature-symbol">[]</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L22">veto.ts:22</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L26">veto.ts:26</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="maps" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>maps</span><a href="#maps" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">maps</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS_VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS_VetoMap</a><span class="tsd-signature-symbol">[]</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L21">veto.ts:21</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L25">veto.ts:25</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="pickedMaps" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>picked<wbr/>Maps</span><a href="#pickedMaps" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">picked<wbr/>Maps</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> = []</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L23">veto.ts:23</a></li></ul></aside></section></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L27">veto.ts:27</a></li></ul></aside></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Methods</h2>
 <section class="tsd-panel tsd-member"><a id="choose" class="tsd-anchor"></a>
@@ -91,22 +109,33 @@
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="choose.choose-1"><span class="tsd-kind-call-signature">choose</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">mapname</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><a href="#choose.choose-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Choose a map for veto.</p>
+</div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li>
-<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">mapname</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">mapname</span>: <span class="tsd-signature-type">string</span></h5>
+<div class="tsd-comment tsd-typography"><p>The name of the map to choose (optional for random selection).</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><p>Returns true if the map was successfully chosen, false otherwise.</p>
+
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L95">veto.ts:95</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L118">veto.ts:118</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="done" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>done</span><a href="#done" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="done.done-1"><span class="tsd-kind-call-signature">done</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><a href="#done.done-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
+<div class="tsd-comment tsd-typography"><p>Check if the veto process is done (no more actions remaining).</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><p>Returns true if the veto process is done, false otherwise.</p>
+
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L152">veto.ts:152</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L196">veto.ts:196</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="getAvailableMapnames" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Available<wbr/>Mapnames</span><a href="#getAvailableMapnames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -114,7 +143,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L87">veto.ts:87</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L99">veto.ts:99</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="getAvailableMaps" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Available<wbr/>Maps</span><a href="#getAvailableMaps" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -122,15 +151,19 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/CS_VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS_VetoMap</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L79">veto.ts:79</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L91">veto.ts:91</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="getCurrentTeam" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>get<wbr/>Current<wbr/>Team</span><a href="#getCurrentTeam" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="getCurrentTeam.getCurrentTeam-1"><span class="tsd-kind-call-signature">get<wbr/>Current<wbr/>Team</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><a href="#getCurrentTeam.getCurrentTeam-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
+<div class="tsd-comment tsd-typography"><p>Get the current team making a veto action.</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><p>The current team (0 or 1).</p>
+
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L91">veto.ts:91</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L108">veto.ts:108</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="getMap" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>get<wbr/>Map</span><a href="#getMap" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -143,31 +176,45 @@
 <h5><span class="tsd-kind-parameter">mapname</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><a href="../interfaces/CS_VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS_VetoMap</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L83">veto.ts:83</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L95">veto.ts:95</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="getMaps" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>get<wbr/>Maps</span><a href="#getMaps" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="getMaps.getMaps-1"><span class="tsd-kind-call-signature">get<wbr/>Maps</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#getMaps.getMaps-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
+<div class="tsd-comment tsd-typography"><p>Get the list of maps in the order they were picked.</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><p>An array of map names in the order they were picked.</p>
+
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L144">veto.ts:144</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L183">veto.ts:183</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="getState" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>get<wbr/>State</span><a href="#getState" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="getState.getState-1"><span class="tsd-kind-call-signature">get<wbr/>State</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/CS_VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS_VetoMap</a><span class="tsd-signature-symbol">[]</span><a href="#getState.getState-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
-<h4 class="tsd-returns-title">Returns <a href="../interfaces/CS_VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS_VetoMap</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
+<div class="tsd-comment tsd-typography"><p>Get the current state of map vetoes.</p>
+</div>
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/CS_VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS_VetoMap</a><span class="tsd-signature-symbol">[]</span></h4><p>An array of CS_VetoMap objects representing the current state of maps.</p>
+
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L140">veto.ts:140</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L174">veto.ts:174</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="random" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>random</span><a href="#random" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="tsd-signature tsd-anchor-link" id="random.random-1"><span class="tsd-kind-call-signature">random</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><a href="#random.random-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
 <li class="tsd-description">
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
+<div class="tsd-comment tsd-typography"><p>Choose a random available map for veto.</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><p>Returns true if a map was successfully chosen, false if no maps are available.</p>
+
+<div class="tsd-comment tsd-typography">
+<h4>Throws</h4><p>Throws an error if a random map cannot be chosen.</p>
+</div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/f94a8ce/src/veto.ts#L127">veto.ts:127</a></li></ul></aside></li></ul></section></section></div>
+<li>Defined in <a href="https://github.com/ianlucas/cslib/blob/e8979ad/src/veto.ts#L156">veto.ts:156</a></li></ul></aside></li></ul></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -204,14 +251,12 @@
 <nav class="tsd-navigation"><a href="../modules.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-4"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-namespace)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.33 16V7.24H10.77L13.446 14.74C13.43 14.54 13.41 14.296 13.386 14.008C13.37 13.712 13.354 13.404 13.338 13.084C13.33 12.756 13.326 12.448 13.326 12.16V7.24H14.37V16H12.93L10.266 8.5C10.282 8.692 10.298 8.936 10.314 9.232C10.33 9.52 10.342 9.828 10.35 10.156C10.366 10.476 10.374 10.784 10.374 11.08V16H9.33Z" fill="var(--color-text)"></path></g></svg><span>cslib</span></a>
 <ul class="tsd-small-nested-navigation">
 <li><a href="CS_Economy.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-128"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-class)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M11.898 16.1201C11.098 16.1201 10.466 15.8961 10.002 15.4481C9.53803 15.0001 9.30603 14.3841 9.30603 13.6001V9.64012C9.30603 8.85612 9.53803 8.24012 10.002 7.79212C10.466 7.34412 11.098 7.12012 11.898 7.12012C12.682 7.12012 13.306 7.34812 13.77 7.80412C14.234 8.25212 14.466 8.86412 14.466 9.64012H13.386C13.386 9.14412 13.254 8.76412 12.99 8.50012C12.734 8.22812 12.37 8.09212 11.898 8.09212C11.426 8.09212 11.054 8.22412 10.782 8.48812C10.518 8.75212 10.386 9.13212 10.386 9.62812V13.6001C10.386 14.0961 10.518 14.4801 10.782 14.7521C11.054 15.0161 11.426 15.1481 11.898 15.1481C12.37 15.1481 12.734 15.0161 12.99 14.7521C13.254 14.4801 13.386 14.0961 13.386 13.6001H14.466C14.466 14.3761 14.234 14.9921 13.77 15.4481C13.306 15.8961 12.682 16.1201 11.898 16.1201Z" fill="var(--color-text)"></path></g></svg><span>CS_<wbr/>Economy</span></a></li>
-<li><a href="CS_Loadout.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>CS_<wbr/>Loadout</span></a></li>
+<li><a href="CS_Inventory.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>CS_<wbr/>Inventory</span></a></li>
 <li><a href="CS_Veto.html" class="current"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>CS_<wbr/>Veto</span></a></li>
 <li><a href="../interfaces/CS_CategoryMenuItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-256"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-interface)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.51 16V15.016H11.298V8.224H9.51V7.24H14.19V8.224H12.402V15.016H14.19V16H9.51Z" fill="var(--color-text)"></path></g></svg><span>CS_<wbr/>Category<wbr/>Menu<wbr/>Item</span></a></li>
+<li><a href="../interfaces/CS_InventoryItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Inventory<wbr/>Item</span></a></li>
 <li><a href="../interfaces/CS_Item.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Item</span></a></li>
 <li><a href="../interfaces/CS_ItemDefinition.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Item<wbr/>Definition</span></a></li>
-<li><a href="../interfaces/CS_LoadoutItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Loadout<wbr/>Item</span></a></li>
-<li><a href="../interfaces/CS_LoadoutQuery.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Loadout<wbr/>Query</span></a></li>
-<li><a href="../interfaces/CS_LoadoutQueryItems.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Loadout<wbr/>Query<wbr/>Items</span></a></li>
 <li><a href="../interfaces/CS_Map.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Map</span></a></li>
 <li><a href="../interfaces/CS_VetoMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>CS_<wbr/>Veto<wbr/>Map</span></a></li>
 <li><a href="../types/CS_Team.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-4194304"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-type-alias)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M11.31 16V8.224H8.91V7.24H14.79V8.224H12.39V16H11.31Z" fill="var(--color-text)"></path></g></svg><span>CS_<wbr/>Team</span></a></li>
@@ -222,10 +267,13 @@
 <li><a href="../variables/CS_ANCIENT_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>ANCIENT_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_ANUBIS_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>ANUBIS_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_CATEGORY_MENU.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>CATEGORY_<wbr/>MENU</span></a></li>
+<li><a href="../variables/CS_DEFAULT_GENERATED_HEAVY.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>DEFAULT_<wbr/>GENERATED_<wbr/>HEAVY</span></a></li>
+<li><a href="../variables/CS_DEFAULT_GENERATED_LIGHT.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>DEFAULT_<wbr/>GENERATED_<wbr/>LIGHT</span></a></li>
+<li><a href="../variables/CS_DEFAULT_GENERATED_MEDIUM.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>DEFAULT_<wbr/>GENERATED_<wbr/>MEDIUM</span></a></li>
 <li><a href="../variables/CS_DUST2_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>DUST2_<wbr/>MAP</span></a></li>
-<li><a href="../variables/CS_EQUIPABLE_ITEMS.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>EQUIPABLE_<wbr/>ITEMS</span></a></li>
 <li><a href="../variables/CS_FLOATABLE_ITEMS.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>FLOATABLE_<wbr/>ITEMS</span></a></li>
 <li><a href="../variables/CS_INFERNO_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>INFERNO_<wbr/>MAP</span></a></li>
+<li><a href="../variables/CS_INVENTORY_EQUIPPABLE_ITEMS.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>INVENTORY_<wbr/>EQUIPPABLE_<wbr/>ITEMS</span></a></li>
 <li><a href="../variables/CS_ITEMS.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>ITEMS</span></a></li>
 <li><a href="../variables/CS_ITEM_DEFS.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>ITEM_<wbr/>DEFS</span></a></li>
 <li><a href="../variables/CS_MAX_BATTLE_SCARRED_FLOAT.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>MAX_<wbr/>BATTLE_<wbr/>SCARRED_<wbr/>FLOAT</span></a></li>
@@ -246,6 +294,7 @@
 <li><a href="../variables/CS_MIN_WELL_WORN_FLOAT.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>MIN_<wbr/>WELL_<wbr/>WORN_<wbr/>FLOAT</span></a></li>
 <li><a href="../variables/CS_MIRAGE_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>MIRAGE_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_NAMETAGGABLE_ITEMS.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>NAMETAGGABLE_<wbr/>ITEMS</span></a></li>
+<li><a href="../variables/CS_NAMETAG_RE.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>NAMETAG_<wbr/>RE</span></a></li>
 <li><a href="../variables/CS_NUKE_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>NUKE_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_OLD_CACHE_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>OLD_<wbr/>CACHE_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_OLD_CBBLE_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>OLD_<wbr/>CBBLE_<wbr/>MAP</span></a></li>
@@ -256,14 +305,34 @@
 <li><a href="../variables/CS_TEAM_CT.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>TEAM_<wbr/>CT</span></a></li>
 <li><a href="../variables/CS_TEAM_NONE.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>TEAM_<wbr/>NONE</span></a></li>
 <li><a href="../variables/CS_TEAM_T.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>TEAM_<wbr/>T</span></a></li>
+<li><a href="../variables/CS_TRAIN_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>TRAIN_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_VERTIGO_MAP.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>VERTIGO_<wbr/>MAP</span></a></li>
 <li><a href="../variables/CS_VETO_AVAILABLE.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>VETO_<wbr/>AVAILABLE</span></a></li>
 <li><a href="../variables/CS_VETO_BAN.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>VETO_<wbr/>BAN</span></a></li>
 <li><a href="../variables/CS_VETO_PICK.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>VETO_<wbr/>PICK</span></a></li>
-<li><a href="../variables/CS_nametagRE.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-32"></use></svg><span>CS_<wbr/>nametagRE</span></a></li>
-<li><a href="../functions/CS_getChangeLevelCommand.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-64"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-function)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.39 16V7.24H14.55V8.224H10.446V11.128H14.238V12.112H10.47V16H9.39Z" fill="var(--color-text)"></path></g></svg><span>CS_<wbr/>get<wbr/>Change<wbr/>Level<wbr/>Command</span></a></li>
+<li><a href="../functions/CS_filterItems.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-64"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-function)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.39 16V7.24H14.55V8.224H10.446V11.128H14.238V12.112H10.47V16H9.39Z" fill="var(--color-text)"></path></g></svg><span>CS_<wbr/>filter<wbr/>Items</span></a></li>
+<li><a href="../functions/CS_findItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>find<wbr/>Item</span></a></li>
+<li><a href="../functions/CS_getChangeLevelCommand.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>get<wbr/>Change<wbr/>Level<wbr/>Command</span></a></li>
+<li><a href="../functions/CS_getFloatLabel.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>get<wbr/>Float<wbr/>Label</span></a></li>
+<li><a href="../functions/CS_getMapnameName.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>get<wbr/>Mapname<wbr/>Name</span></a></li>
+<li><a href="../functions/CS_getStickerCategories.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>get<wbr/>Sticker<wbr/>Categories</span></a></li>
+<li><a href="../functions/CS_getStickers.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>get<wbr/>Stickers</span></a></li>
 <li><a href="../functions/CS_getTeamLabel.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>get<wbr/>Team<wbr/>Label</span></a></li>
+<li><a href="../functions/CS_hasFloat.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>has<wbr/>Float</span></a></li>
+<li><a href="../functions/CS_hasNametag.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>has<wbr/>Nametag</span></a></li>
+<li><a href="../functions/CS_hasSeed.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>has<wbr/>Seed</span></a></li>
+<li><a href="../functions/CS_hasStatTrak.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>has<wbr/>Stat<wbr/>Trak</span></a></li>
+<li><a href="../functions/CS_hasStickers.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>has<wbr/>Stickers</span></a></li>
+<li><a href="../functions/CS_resolveItemImage.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>resolve<wbr/>Item<wbr/>Image</span></a></li>
+<li><a href="../functions/CS_safeValidateFloat.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>safe<wbr/>Validate<wbr/>Float</span></a></li>
+<li><a href="../functions/CS_safeValidateNametag.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>safe<wbr/>Validate<wbr/>Nametag</span></a></li>
+<li><a href="../functions/CS_safeValidateSeed.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>safe<wbr/>Validate<wbr/>Seed</span></a></li>
 <li><a href="../functions/CS_toggleTeam.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>toggle<wbr/>Team</span></a></li>
+<li><a href="../functions/CS_validateFloat.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>validate<wbr/>Float</span></a></li>
+<li><a href="../functions/CS_validateNametag.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>validate<wbr/>Nametag</span></a></li>
+<li><a href="../functions/CS_validateSeed.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>validate<wbr/>Seed</span></a></li>
+<li><a href="../functions/CS_validateStatTrak.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>validate<wbr/>Stat<wbr/>Trak</span></a></li>
+<li><a href="../functions/CS_validateStickers.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>CS_<wbr/>validate<wbr/>Stickers</span></a></li>
 <li><a href="../functions/parse.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>parse</span></a></li></ul></nav></div></div></div>
 <div class="tsd-generator">
 <p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>

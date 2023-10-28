@@ -1,28 +1,32 @@
 # cslib
 
-This is a TypeScript library for Counter-Strike-related tasks, primarily focused on handling economy items and miscellaneous elements like maps. It also provides utility classes like `CS_Veto` and `CS_Loadout`, which are beneficial for developing matchmaking systems or advanced interfaces.
+This is a TypeScript library for Counter-Strike-related applications.
 
-## Getting Started
+## `CS_Economy` class
 
-If you plan to use `CS_Economy` and/or `CS_Loadout`, you need to set up the items to be used. Place the following code snippet at the beginning of your project:
+Before using `CS_Economy` class or related functions, you need to set the items:
 
 ```typescript
-import { CS_Economy, CS_ITEMS } from "cslib";
-CS_Economy.setItems(CS_ITEMS);
+import { CS_Economy, CS_ITEMS, CS_ITEM_DEFS } from "cslib";
+
+CS_Economy.setItems(CS_ITEMS, CS_ITEM_DEFS);
 ```
 
-Refer to the generated documentation in `./docs` directory.
+Usually `CS_ITEM_DEFS` is not included in the client bundle.
 
 ## Feature Overview
 
+-   [ ] Economy Items - Cases
+-   [ ] Economy Items - Grafitti
+-   [ ] Economy Items - Tools
+-   [x] Economy Items - Agent Patches
+-   [x] Economy Items - Agents
+-   [x] Economy Items - Gloves
+-   [x] Economy Items - Knives
+-   [x] Economy Items - Music Kits
+-   [x] Economy Items - Pins
 -   [x] Economy Items - Weapon Skins
 -   [x] Economy Items - Weapon Stickers
--   [x] Economy Items - Knives
--   [x] Economy Items - Gloves
--   [x] Economy Items - Music Kits
--   [ ] Economy Items - Grafitti
--   [x] Economy Items - Agents
--   [x] Economy Items - Agent Patches
--   [x] Economy Items - Pins
--   [x] Misc - Teams
 -   [x] Misc - Active Pool Maps
+-   [x] Misc - Teams
+-   [x] Misc - Veto
