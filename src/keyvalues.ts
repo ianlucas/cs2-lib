@@ -4,7 +4,11 @@
 
 type KeyValue = [string, string | KeyValue[]];
 
-export function parse(data: string) {
+/**
+ * A simple Valve Key Value parser.
+ * @return {any}
+ */
+export function parse(data: string): any {
     data = data.replace(/\[[\$!][^\]]+\]/g, "");
     let index = 0;
 

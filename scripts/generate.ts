@@ -920,18 +920,16 @@ class GenerateScript {
             }
             return 0;
         });
+        const itemsDefs = this.itemDefs.map((itemDef) => ({
+            ...itemDef,
+            className: undefined
+        }));
         writeJson("dist/language.json", this.languageFile);
         writeJson("dist/parsed-items-game.json", this.itemsFile);
         writeJson("dist/item-rarities.json", this.itemRarities);
         writeJson("dist/items.json", items);
         this.writeItemImages(items);
-        writeJson(
-            "dist/item-defs.json",
-            this.itemDefs.map((itemDef) => ({
-                ...itemDef,
-                className: undefined
-            }))
-        );
+        writeJson("dist/item-defs.json", itemsDefs);
         writeJson("dist/ids.json", this.ids);
         replaceInFile(
             "src/items.ts",
@@ -941,7 +939,7 @@ class GenerateScript {
         replaceInFile(
             "src/items.ts",
             /CS_ItemDefinition\[\] = [^;]+;/,
-            format("CS_ItemDefinition[] = %s;", JSON.stringify(this.itemDefs))
+            format("CS_ItemDefinition[] = %s;", JSON.stringify(itemsDefs))
         );
     }
 }
