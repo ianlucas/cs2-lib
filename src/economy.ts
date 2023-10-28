@@ -286,7 +286,7 @@ export class CS_Economy {
     /**
      * Array of Counter-Strike sticker items.
      */
-    static stickers: CS_Item[];
+    static stickers: CS_Item[] = [];
 
     /**
      * Set the Counter-Strike items and their definitions.
@@ -297,6 +297,7 @@ export class CS_Economy {
         CS_Economy.categories.clear();
         CS_Economy.items = items;
         CS_Economy.itemMap.clear();
+        CS_Economy.stickers = [];
         items.forEach((item) => {
             CS_Economy.itemMap.set(item.id, item);
             if (item.type === "sticker") {
