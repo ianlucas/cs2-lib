@@ -1,5 +1,5 @@
 {
-    "name": "cslib",
+    "name": "@ianlucas/cslib",
     "version": "1.0.0",
     "description": "Counter-Strike.",
     "main": "dist/index.js",
