@@ -12,7 +12,7 @@ import { CS_Economy, CS_ITEMS, CS_ITEM_DEFS } from "cslib";
 CS_Economy.setItems(CS_ITEMS, CS_ITEM_DEFS);
 ```
 
-Usually `CS_ITEM_DEFS` is not included in the client bundle.
+Normally, it is not necessary to import `CS_ITEM_DEFS` into the client bundle.
 
 ## Feature Overview
 
