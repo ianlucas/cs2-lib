@@ -1,8 +1,15 @@
 {
     "name": "@ianlucas/cslib",
+    "private": false,
     "version": "1.0.0",
     "description": "Counter-Strike.",
     "main": "dist/index.js",
+    "repository": {
+        "url": "https://github.com/ianlucas/cslib"
+    },
+    "bugs": {
+        "url": "https://github.com/ianlucas/cslib/issues"
+    },
     "scripts": {
         "test": "jest",
         "generate": "ts-node --esm scripts/generate.ts",
