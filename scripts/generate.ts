@@ -23,6 +23,7 @@ import {
     LANGUAGE_PATH
 } from "./env.js";
 import { replaceInFile, writeJson } from "./util.js";
+import fetch from "node-fetch";
 
 interface CSGO_Prefab {
     prefab: string;
@@ -45,6 +46,13 @@ interface CSGO_ItemsFile {
                 };
             };
         };
+        item_sets: {
+            [setName: string]: {
+                items: {
+                    [itemId: string]: string;
+                };
+            };
+        }[];
         client_loot_lists: {
             [setName: string]: {
                 [itemName: string]: string;
@@ -57,26 +65,36 @@ interface CSGO_ItemsFile {
         };
         items: {
             [itemDef: string]: {
-                name: string;
-                prefab: string;
-                baseitem: string;
-                item_sub_position?: string;
-                image_inventory: string;
-                used_by_classes: Record<CS_Team, number>;
-                item_name: string;
-                item_rarity: string;
-                tool?: {
-                    use_string?: string;
-                };
                 attributes?: {
                     ["set supply crate series"]?: {
                         attribute_class?: string;
+                        value?: string;
+                    };
+                };
+                baseitem: string;
+                image_inventory: string;
+                image_unusual_item?: string;
+                item_name: string;
+                item_rarity: string;
+                item_sub_position?: string;
+                name: string;
+                prefab: string;
+                used_by_classes: Record<CS_Team, number>;
+                tool?: {
+                    type?: string;
+                    use_string?: string;
+                };
+
+                tags?: {
+                    ItemSet?: {
+                        tag_value?: string;
                     };
                 };
             };
         }[];
         music_definitions: {
             [musicId: string]: {
+                name: string;
                 loc_name: string;
                 image_inventory: string;
             };
@@ -98,6 +116,9 @@ interface CSGO_ItemsFile {
                 color: string;
             };
         };
+        revolving_loot_lists: {
+            [resolveId: string]: string;
+        }[];
         sticker_kits: {
             [stickerId: string]: {
                 name: string;
@@ -105,7 +126,7 @@ interface CSGO_ItemsFile {
                 tournament_event_id: string;
                 sticker_material: string;
                 item_rarity: string;
-                patch_material: string;
+                patch_material?: string;
             };
         }[];
     };
@@ -125,6 +146,8 @@ const UNCATEGORIZED_STICKERS = [
     "community_mix01",
     "danger_zone"
 ];
+
+const itemRE = /^\[([^\]]+)\](.*)$/;
 
 class GenerateScript {
     language: string;
@@ -149,6 +172,8 @@ class GenerateScript {
     ids: string[] = [];
     uniqueIds: string[] = [];
     itemImages: Record<string, string[]>;
+    caseContents: Record<string, number> = {};
+    caseRareItem: Record<string, number> = {};
 
     constructor({ language }: { language?: string }) {
         this.language = language ?? "english";
@@ -156,6 +181,10 @@ class GenerateScript {
         this.languageFile = this.readLanguage();
         this.ids = this.readIds();
         this.itemImages = this.readItemImages();
+        this.run();
+    }
+
+    async run() {
         this.parsePrefabs();
         this.parseWeapons();
         this.parseMelees();
@@ -168,6 +197,7 @@ class GenerateScript {
         this.parsePatches();
         this.parseAgents();
         this.parsePins();
+        await this.parseCases();
         this.writeFiles();
     }
 
@@ -411,6 +441,7 @@ class GenerateScript {
                     id,
                     itemid: value.baseitem === "1" ? undefined : 0
                 });
+                this.caseRareItem[`${name} vanilla`.toLowerCase()] = id;
             }
         }
     }
@@ -479,7 +510,7 @@ class GenerateScript {
                         if (itemName.indexOf("customplayer_") === 0) {
                             this.itemRarities[`${itemName}:agent`] = rarity;
                         }
-                        const matches = itemName.match(/^\[([^\]]+)\](.*)$/);
+                        const matches = itemName.match(itemRE);
                         if (!matches) {
                             continue;
                         }
@@ -579,6 +610,12 @@ class GenerateScript {
                 id,
                 itemid: paintKit.value
             });
+            this.addCaseContent(`[${paintKit.className}]${def.className}`, id);
+            this.caseRareItem[
+                `${item.name} ${paintKit.name}`
+                    .replace(/[^\d\w\s]/g, "")
+                    .toLowerCase()
+            ] = id;
         }
     }
 
@@ -606,6 +643,7 @@ class GenerateScript {
                     id,
                     itemid
                 });
+                this.addCaseContent(`[${value.name}]musickit`, id);
             }
         }
     }
@@ -699,6 +737,7 @@ class GenerateScript {
                     id,
                     itemid: Number(stickerId)
                 });
+                this.addCaseContent(`[${value.name}]sticker`, id);
             }
         }
     }
@@ -706,7 +745,10 @@ class GenerateScript {
     parsePatches() {
         for (const item of this.itemsFile.items_game.sticker_kits) {
             for (const [patchId, value] of Object.entries(item)) {
-                if (value.item_name.indexOf("#PatchKit") !== 0) {
+                if (
+                    value.item_name.indexOf("#PatchKit") !== 0 &&
+                    value.patch_material === undefined
+                ) {
                     continue;
                 }
                 const name = this.getTranslation(value.item_name);
@@ -739,6 +781,7 @@ class GenerateScript {
                     id,
                     itemid: Number(patchId)
                 });
+                this.addCaseContent(`[${value.name}]patch`, id);
             }
         }
     }
@@ -780,25 +823,23 @@ class GenerateScript {
     }
 
     parsePins() {
-        const pinFilter = [] as string[];
         for (const item of this.itemsFile.items_game.items) {
             for (const [itemDef, value] of Object.entries(item)) {
                 if (
                     value.image_inventory === undefined ||
                     value.item_name === undefined ||
-                    value.image_inventory.indexOf("/status_icons/") === -1 ||
+                    !value.image_inventory.includes("/status_icons/") ||
                     value.tool?.use_string === "#ConsumeItem" ||
                     value.attributes?.["set supply crate series"]
                         ?.attribute_class === "supply_crate_series" ||
-                    value.item_name.indexOf("#CSGO_TournamentPass") === 0 ||
-                    pinFilter.includes(value.item_name)
+                    value.item_name.indexOf("#CSGO_TournamentPass") === 0
                 ) {
                     continue;
                 }
-                pinFilter.push(value.item_name);
                 const name = this.getTranslation(value.item_name);
                 const id = this.getId(`pin_${itemDef}`);
                 this.items.push({
+                    altname: value.name,
                     category: "pin",
                     id,
                     image: this.getCdnUrl(value.image_inventory),
@@ -813,8 +854,226 @@ class GenerateScript {
                     id,
                     itemid: undefined
                 });
+                this.addCaseContent(value.name, id);
             }
         }
+    }
+
+    async parseCases() {
+        /*
+            "item_name": "#CSGO_crate_esports_2013_winter",
+            "item_description": "#CSGO_crate_esports_2013_winter_desc",
+            "name": "crate_esports_2013_winter",
+            "image_inventory": "econ/weapon_cases/crate_esports_2013_14",
+            "prefab": "weapon_case",
+        */
+        /**
+         * We're going to deviate from the objective of this parsing as I'm
+         * unable to find how to know which items are rare in each case from
+         * items_game.txt, so we're going to use this API for getting them.
+         */
+        const cases = (await (
+            await fetch(
+                "https://spacerulerwill.github.io/CS2-API/api/cases.json"
+            )
+        ).json()) as {
+            [key: string]: {
+                formattedName: string;
+                skins: {
+                    "rare-item"?: string[];
+                };
+            };
+        };
+        const rareContents: Record<string, number[] | undefined> = {};
+        for (const aCase of Object.values(cases)) {
+            if (
+                !aCase.skins["rare-item"] ||
+                aCase.skins["rare-item"].length === 0
+            ) {
+                continue;
+            }
+            rareContents[aCase.formattedName] = aCase.skins["rare-item"].map(
+                (item) => {
+                    if (this.caseRareItem[item] === undefined) {
+                        throw new Error(`unable to find ${item}`);
+                    }
+                    return this.caseRareItem[item];
+                }
+            );
+        }
+        const lootlist = {} as Record<
+            string,
+            (typeof this.itemsFile.items_game.client_loot_lists)[number][string]
+        >;
+        for (const itemSet of this.itemsFile.items_game.client_loot_lists) {
+            for (const setName of Object.keys(itemSet)) {
+                lootlist[setName] = itemSet[setName];
+            }
+        }
+        const getItems = (lootlistKey: string, items: string[] = []) => {
+            if (!lootlist[lootlistKey]) {
+                console.warn(`not found loot list key ${lootlistKey}`);
+                return [];
+            }
+            const keys = Object.keys(lootlist[lootlistKey]);
+            for (const key of keys) {
+                if (!this.caseContents[key]) {
+                    getItems(key, items);
+                } else {
+                    items.push(key);
+                }
+            }
+            return items;
+        };
+        for (const item of this.itemsFile.items_game.items) {
+            for (const [itemDef, value] of Object.entries(item)) {
+                if (
+                    value.image_inventory === undefined ||
+                    (value.prefab !== "weapon_case" &&
+                        value.attributes?.["set supply crate series"]
+                            ?.attribute_class !== "supply_crate_series") ||
+                    !value.image_inventory.includes("econ/weapon_cases") ||
+                    value.tool?.type === "gift"
+                ) {
+                    continue;
+                }
+                const contents = [] as number[];
+                const resolveId =
+                    value.attributes?.["set supply crate series"]?.value;
+                if (resolveId === undefined) {
+                    throw new Error(`resolveId not found ${value.name}`);
+                }
+                let resolvedName = undefined as string | undefined;
+                for (const resolver of this.itemsFile.items_game
+                    .revolving_loot_lists) {
+                    if (resolver[resolveId]) {
+                        resolvedName = resolver[resolveId];
+                        break;
+                    }
+                }
+                if (resolvedName === undefined) {
+                    throw new Error(`not found resolver for ${value.name}`);
+                }
+                for (const itemName of getItems(resolvedName)) {
+                    if (itemName.includes("]spray")) {
+                        continue;
+                    }
+                    if (!this.caseContents[itemName]) {
+                        throw new Error(`item not found ${itemName}`);
+                    }
+                    contents.push(this.caseContents[itemName]);
+                }
+                if (contents.length === 0) {
+                    console.warn(`no items found for ${resolvedName}`);
+                }
+                if (contents.length > 0) {
+                    const name = this.getTranslation(value.item_name);
+                    const id = this.getId(`case_${itemDef}`);
+                    const rarecontents = rareContents[name];
+                    this.items.push({
+                        category: "case",
+                        contents,
+                        id,
+                        image: this.getCdnUrl(value.image_inventory),
+                        rareimage:
+                            value.image_unusual_item !== undefined
+                                ? this.getCaseRareImage(
+                                      value.image_unusual_item,
+                                      id
+                                  )
+                                : rarecontents !== undefined &&
+                                  rarecontents?.length > 0
+                                ? 2
+                                : undefined,
+                        name,
+                        rarecontents,
+                        rarity: "#b0c3d9",
+                        teams: undefined,
+                        type: "case"
+                    });
+                    this.itemDefs.push({
+                        def: Number(itemDef),
+                        id
+                    });
+                }
+                // let lookupList = undefined as string[] | undefined;
+                // for (const itemSet of this.itemsFile.items_game
+                //     .client_loot_lists) {
+                //     if (itemSet[resolvedName]) {
+                //         lookupList = Object.keys(itemSet);
+                //         break;
+                //     }
+                // }
+                // if (lookupList === undefined) {
+                //     throw new Error(`not found lookup list for ${value.name}`);
+                // }
+                // for (const itemSet of this.itemsFile.items_game
+                //     .client_loot_lists) {
+                //     for (const lookup of lookupList) {
+                //         if (itemSet[lookup]) {
+                //             for (const itemName of Object.keys(
+                //                 itemSet[lookup]
+                //             )) {
+                // if (!this.caseContents[itemName]) {
+                //     throw new Error(
+                //         `item not found ${itemName}, lookup is ${lookup}`
+                //     );
+                // }
+                // contents.push(this.caseContents[itemName]);
+                //             }
+                //         }
+                //     }
+                // }
+                // if (contents.length === 0) {
+                //     throw new Error(`contents not found for ${value.name}`);
+                // }
+                // const contents = [] as number[];
+                // const tagValue = value.tags?.ItemSet?.tag_value;
+                // for (const itemSet of this.itemsFile.items_game.item_sets) {
+                //     for (const [setName, set] of Object.entries(itemSet)) {
+                //         if (
+                //             setName.includes(`${value.name}_`) ||
+                //             setName === value.name ||
+                //             setName === tagValue
+                //         ) {
+                //             for (const itemName of Object.keys(set.items)) {
+                //                 if (this.caseContents[itemName] === undefined) {
+                //                     throw new Error(
+                //                         `item not found ${itemName}`
+                //                     );
+                //                 }
+                //                 contents.push(this.caseContents[itemName]);
+                //             }
+                //         }
+                //     }
+                // }
+                // const foundItemsOnSet = contents.length > 0;
+                // for (const itemSet of this.itemsFile.items_game
+                //     .client_loot_lists) {
+                //     for (const [setName, set] of Object.entries(itemSet)) {
+                //         if (setName.includes(`${value.name}_`)) {
+                //             for (const itemName of Object.keys(set)) {
+                //                 if (
+                //                     this.caseContents[itemName] === undefined &&
+                //                     !foundItemsOnSet
+                //                 ) {
+                //                     throw new Error(
+                //                         `item not found ${itemName}`
+                //                     );
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+            }
+        }
+    }
+
+    addCaseContent(key: string, value: number) {
+        if (this.caseContents[key] !== undefined) {
+            throw new Error(`duplicate item found ${key}`);
+        }
+        this.caseContents[key] = value;
     }
 
     getBaseLocalImage(className: string, id: number) {
@@ -822,14 +1081,29 @@ class GenerateScript {
             CS2_IMAGES_PATH,
             `econ/weapons/base_weapons/${className}_png.png`
         );
+        const destPath = resolve(process.cwd(), `dist/images/${id}.png`);
+        if (existsSync(destPath)) {
+            return 0b111;
+        }
         if (existsSync(imagePath)) {
-            copyFileSync(
-                imagePath,
-                resolve(process.cwd(), `dist/econ-images/${id}.png`)
-            );
+            copyFileSync(imagePath, destPath);
             return 0b111;
         }
         return 0;
+    }
+
+    getCaseRareImage(file: string, id: number) {
+        const imagePath = resolve(CS2_IMAGES_PATH, `${file}_png.png`);
+        const destFile = `${id}_rare.png`;
+        const destPath = resolve(process.cwd(), `dist/images/${destFile}`);
+        if (existsSync(destPath)) {
+            return 1;
+        }
+        if (existsSync(imagePath)) {
+            copyFileSync(imagePath, destPath);
+            return 1;
+        }
+        return undefined;
     }
 
     getPaintLocalImage(
@@ -847,11 +1121,15 @@ class GenerateScript {
                 CS2_IMAGES_PATH,
                 `econ/default_generated/${className}_${paintClassName}_${wear}_png.png`
             );
+            const destPath = resolve(
+                process.cwd(),
+                `dist/images/${id}_${wear}.png`
+            );
+            if (existsSync(destPath)) {
+                return true;
+            }
             if (existsSync(imagePath)) {
-                copyFileSync(
-                    imagePath,
-                    resolve(process.cwd(), `dist/econ-images/${id}_${wear}.png`)
-                );
+                copyFileSync(imagePath, destPath);
                 return true;
             }
             return false;

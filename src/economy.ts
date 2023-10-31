@@ -11,18 +11,23 @@ import { compare, safe } from "./util.js";
  * contains generic information about a particular item.
  */
 export interface CS_Item {
+    altname?: string;
     base?: boolean;
     category: string;
+    contents?: number[];
     free?: boolean;
     id: number;
     image: string;
     localimage?: number;
     model?: string;
     name: string;
+    rarecontents?: number[];
+    rareimage?: number;
     rarity: string;
     teams?: CS_Team[];
     type:
         | "agent"
+        | "case"
         | "glove"
         | "melee"
         | "musickit"
@@ -256,6 +261,11 @@ export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
     {
         label: "Pin",
         category: "pin",
+        unique: true
+    },
+    {
+        label: "Case",
+        category: "case",
         unique: true
     }
 ];
