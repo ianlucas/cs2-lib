@@ -637,3 +637,27 @@ export function CS_resolveItemImage(
     }
     return csItem.image;
 }
+
+/**
+ * Resolve the rare image URL for a case.
+ * @param {string} baseUrl - The base URL for images.
+ * @param {CS_Item | number} csItem - The Counter-Strike item or its ID.
+ * @returns {string} - The resolved image URL.
+ */
+export function CS_resolveCaseRareImage(
+    baseUrl: string,
+    csItem: CS_Item | number
+): string {
+    csItem = typeof csItem === "number" ? CS_Economy.getById(csItem) : csItem;
+    const { id, type, rareimage } = csItem;
+    if (type !== "case") {
+        throw new Error("item is not a case");
+    }
+    if (rareimage === undefined) {
+        throw new Error("case does not have rare items");
+    }
+    if (rareimage === 1) {
+        return `${baseUrl}/${id}_rare.png`;
+    }
+    return `${baseUrl}/default_rare_item.png`;
+}
