@@ -860,13 +860,6 @@ class GenerateScript {
     }
 
     async parseCases() {
-        /*
-            "item_name": "#CSGO_crate_esports_2013_winter",
-            "item_description": "#CSGO_crate_esports_2013_winter_desc",
-            "name": "crate_esports_2013_winter",
-            "image_inventory": "econ/weapon_cases/crate_esports_2013_14",
-            "prefab": "weapon_case",
-        */
         /**
          * We're going to deviate from the objective of this parsing as I'm
          * unable to find how to know which items are rare in each case from
@@ -996,75 +989,6 @@ class GenerateScript {
                         id
                     });
                 }
-                // let lookupList = undefined as string[] | undefined;
-                // for (const itemSet of this.itemsFile.items_game
-                //     .client_loot_lists) {
-                //     if (itemSet[resolvedName]) {
-                //         lookupList = Object.keys(itemSet);
-                //         break;
-                //     }
-                // }
-                // if (lookupList === undefined) {
-                //     throw new Error(`not found lookup list for ${value.name}`);
-                // }
-                // for (const itemSet of this.itemsFile.items_game
-                //     .client_loot_lists) {
-                //     for (const lookup of lookupList) {
-                //         if (itemSet[lookup]) {
-                //             for (const itemName of Object.keys(
-                //                 itemSet[lookup]
-                //             )) {
-                // if (!this.caseContents[itemName]) {
-                //     throw new Error(
-                //         `item not found ${itemName}, lookup is ${lookup}`
-                //     );
-                // }
-                // contents.push(this.caseContents[itemName]);
-                //             }
-                //         }
-                //     }
-                // }
-                // if (contents.length === 0) {
-                //     throw new Error(`contents not found for ${value.name}`);
-                // }
-                // const contents = [] as number[];
-                // const tagValue = value.tags?.ItemSet?.tag_value;
-                // for (const itemSet of this.itemsFile.items_game.item_sets) {
-                //     for (const [setName, set] of Object.entries(itemSet)) {
-                //         if (
-                //             setName.includes(`${value.name}_`) ||
-                //             setName === value.name ||
-                //             setName === tagValue
-                //         ) {
-                //             for (const itemName of Object.keys(set.items)) {
-                //                 if (this.caseContents[itemName] === undefined) {
-                //                     throw new Error(
-                //                         `item not found ${itemName}`
-                //                     );
-                //                 }
-                //                 contents.push(this.caseContents[itemName]);
-                //             }
-                //         }
-                //     }
-                // }
-                // const foundItemsOnSet = contents.length > 0;
-                // for (const itemSet of this.itemsFile.items_game
-                //     .client_loot_lists) {
-                //     for (const [setName, set] of Object.entries(itemSet)) {
-                //         if (setName.includes(`${value.name}_`)) {
-                //             for (const itemName of Object.keys(set)) {
-                //                 if (
-                //                     this.caseContents[itemName] === undefined &&
-                //                     !foundItemsOnSet
-                //                 ) {
-                //                     throw new Error(
-                //                         `item not found ${itemName}`
-                //                     );
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
             }
         }
     }
