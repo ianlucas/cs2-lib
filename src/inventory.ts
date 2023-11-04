@@ -177,10 +177,10 @@ export class CS_Inventory {
     /**
      * Equip an item in the inventory at a specified index.
      * @param {number} at - The index of the item to equip.
-     * @param {CS_Team} [team] - The team to which the item should be equipped (optional).
+     * @param {CS_Team} [csTeam] - The team to which the item should be equipped (optional).
      * @returns {CS_Inventory} - A new inventory with the item equipped or the original inventory if the operation is not allowed.
      */
-    equip(at: number, team?: CS_Team): CS_Inventory {
+    equip(at: number, csTeam?: CS_Team): CS_Inventory {
         const item = this.items[at];
         if (!item) {
             return this;
@@ -188,20 +188,20 @@ export class CS_Inventory {
         if (item.equipped) {
             return this;
         }
-        if (team === CS_TEAM_CT && item.equippedCT) {
+        if (csTeam === CS_TEAM_CT && item.equippedCT) {
             return this;
         }
-        if (team === CS_TEAM_T && item.equippedT) {
+        if (csTeam === CS_TEAM_T && item.equippedT) {
             return this;
         }
         const csItem = CS_Economy.getById(item.id);
         if (!CS_INVENTORY_EQUIPPABLE_ITEMS.includes(csItem.type)) {
             return this;
         }
-        if (team === undefined && csItem.teams !== undefined) {
+        if (csTeam === undefined && csItem.teams !== undefined) {
             return this;
         }
-        if (team !== undefined && !csItem.teams?.includes(team)) {
+        if (csTeam !== undefined && !csItem.teams?.includes(csTeam)) {
             return this;
         }
         return new CS_Inventory(
@@ -209,10 +209,11 @@ export class CS_Inventory {
                 if (index === at) {
                     return {
                         ...current,
-                        equipped: team === undefined ? true : undefined,
+                        equipped: csTeam === undefined ? true : undefined,
                         equippedCT:
-                            team === CS_TEAM_CT ? true : current.equippedCT,
-                        equippedT: team === CS_TEAM_T ? true : current.equippedT
+                            csTeam === CS_TEAM_CT ? true : current.equippedCT,
+                        equippedT:
+                            csTeam === CS_TEAM_T ? true : current.equippedT
                     };
                 }
                 const currentCsItem = CS_Economy.getById(current.id);
@@ -224,13 +225,13 @@ export class CS_Inventory {
                     return {
                         ...current,
                         equipped:
-                            team === undefined ? undefined : current.equipped,
+                            csTeam === undefined ? undefined : current.equipped,
                         equippedCT:
-                            team === CS_TEAM_CT
+                            csTeam === CS_TEAM_CT
                                 ? undefined
                                 : current.equippedCT,
                         equippedT:
-                            team === CS_TEAM_T ? undefined : current.equippedT
+                            csTeam === CS_TEAM_T ? undefined : current.equippedT
                     };
                 }
                 return current;
@@ -242,10 +243,10 @@ export class CS_Inventory {
     /**
      * Unequip an item in the inventory at a specified index.
      * @param {number} at - The index of the item to unequip.
-     * @param {CS_Team} [team] - The team from which the item should be unequipped (optional).
+     * @param {CS_Team} [csTeam] - The team from which the item should be unequipped (optional).
      * @returns {CS_Inventory} - A new inventory with the item unequipped or the original inventory if the operation is not allowed.
      */
-    unequip(at: number, team?: CS_Team): CS_Inventory {
+    unequip(at: number, csTeam?: CS_Team): CS_Inventory {
         if (!this.items[at]) {
             return this;
         }
@@ -255,11 +256,11 @@ export class CS_Inventory {
                     return {
                         ...item,
                         equipped:
-                            team === undefined ? undefined : item.equipped,
+                            csTeam === undefined ? undefined : item.equipped,
                         equippedCT:
-                            team === CS_TEAM_CT ? undefined : item.equippedCT,
+                            csTeam === CS_TEAM_CT ? undefined : item.equippedCT,
                         equippedT:
-                            team === CS_TEAM_T ? undefined : item.equippedT
+                            csTeam === CS_TEAM_T ? undefined : item.equippedT
                     };
                 }
                 return item;

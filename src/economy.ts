@@ -378,11 +378,11 @@ export function CS_filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
 
 /**
  * Check if a Counter-Strike item has a float value.
- * @param {CS_Item} item - The Counter-Strike item to check.
+ * @param {CS_Item} csItem - The Counter-Strike item to check.
  * @returns {boolean} - `true` if the item has a float value, `false` otherwise.
  */
-export function CS_hasFloat(item: CS_Item): boolean {
-    return CS_FLOATABLE_ITEMS.includes(item.type);
+export function CS_hasFloat(csItem: CS_Item): boolean {
+    return CS_FLOATABLE_ITEMS.includes(csItem.type);
 }
 
 /**
@@ -413,11 +413,11 @@ export const CS_safeValidateFloat = safe(CS_validateFloat);
 
 /**
  * Check if a Counter-Strike item has a seed value.
- * @param {CS_Item} item - The Counter-Strike item to check.
+ * @param {CS_Item} csItem - The Counter-Strike item to check.
  * @returns {boolean} - `true` if the item has a seed value, `false` otherwise.
  */
-export function CS_hasSeed(item: CS_Item): boolean {
-    return CS_SEEDABLE_ITEMS.includes(item.type);
+export function CS_hasSeed(csItem: CS_Item): boolean {
+    return CS_SEEDABLE_ITEMS.includes(csItem.type);
 }
 
 /**
@@ -448,26 +448,26 @@ export const CS_safeValidateSeed = safe(CS_validateSeed);
 
 /**
  * Check if a Counter-Strike item can have stickers.
- * @param {CS_Item} item - The Counter-Strike item to check.
+ * @param {CS_Item} csItem - The Counter-Strike item to check.
  * @returns {boolean} - `true` if the item can have stickers, `false` otherwise.
  */
-export function CS_hasStickers(item: CS_Item): boolean {
-    return CS_STICKERABLE_ITEMS.includes(item.type);
+export function CS_hasStickers(csItem: CS_Item): boolean {
+    return CS_STICKERABLE_ITEMS.includes(csItem.type);
 }
 
 /**
  * Validate stickers for a Counter-Strike item.
- * @param {CS_Item} item - The Counter-Strike item for which stickers are being validated.
+ * @param {CS_Item} csItem - The Counter-Strike item for which stickers are being validated.
  * @param {(number | null)[]} stickers - An array of sticker IDs, with null values for empty slots.
  * @param {(number | null)[]} [stickerswear] - An array of sticker wear values (optional).
  * @returns {boolean} - `true` if the stickers are valid, otherwise throws an error.
  */
 export function CS_validateStickers(
-    item: CS_Item,
+    csItem: CS_Item,
     stickers: (number | null)[],
     stickerswear: (number | null)[] = []
 ): boolean {
-    if (!CS_hasStickers(item)) {
+    if (!CS_hasStickers(csItem)) {
         throw new Error("item does not have seed");
     }
     if (stickers.length > 4) {
@@ -498,11 +498,11 @@ export function CS_validateStickers(
 
 /**
  * Check if a Counter-Strike item can have a nametag.
- * @param {CS_Item} item - The Counter-Strike item to check.
+ * @param {CS_Item} csItem - The Counter-Strike item to check.
  * @returns {boolean} - `true` if the item can have a nametag, `false` otherwise.
  */
-export function CS_hasNametag(item: CS_Item): boolean {
-    return CS_NAMETAGGABLE_ITEMS.includes(item.type);
+export function CS_hasNametag(csItem: CS_Item): boolean {
+    return CS_NAMETAGGABLE_ITEMS.includes(csItem.type);
 }
 
 /**
@@ -533,11 +533,11 @@ export const CS_safeValidateNametag = safe(CS_validateNametag);
 
 /**
  * Check if a Counter-Strike item can have StatTrak.
- * @param {CS_Item} item - The Counter-Strike item to check.
+ * @param {CS_Item} csItem - The Counter-Strike item to check.
  * @returns {boolean} - `true` if the item can be StatTrak, `false` otherwise.
  */
-export function CS_hasStatTrak(item: CS_Item): boolean {
-    return CS_STATTRAKABLE_ITEMS.includes(item.type);
+export function CS_hasStatTrak(csItem: CS_Item): boolean {
+    return CS_STATTRAKABLE_ITEMS.includes(csItem.type);
 }
 
 /**
