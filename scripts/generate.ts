@@ -11,8 +11,7 @@ import {
     CS_DEFAULT_GENERATED_HEAVY,
     CS_DEFAULT_GENERATED_LIGHT,
     CS_DEFAULT_GENERATED_MEDIUM,
-    CS_Item,
-    CS_ItemDefinition
+    CS_Item
 } from "../src/economy.js";
 import * as KeyValues from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "../src/teams.js";
@@ -24,6 +23,12 @@ import {
 } from "./env.js";
 import { replaceInFile, writeJson } from "./util.js";
 import fetch from "node-fetch";
+
+interface CS_ItemDefinition {
+    def?: number;
+    id: number;
+    itemid?: number;
+}
 
 interface CSGO_Prefab {
     prefab: string;
@@ -374,6 +379,7 @@ class GenerateScript {
                 this.items.push({
                     base: true,
                     category,
+                    def: Number(itemDef),
                     free: true,
                     id,
                     image: prefab.image_inventory
@@ -381,6 +387,7 @@ class GenerateScript {
                         : this.getCdnUrl(
                               format("econ/weapons/base_weapons/%s", value.name)
                           ),
+                    itemid: undefined,
                     localimage: this.getBaseLocalImage(value.name, id),
                     model: value.name.replace("weapon_", ""),
                     name,
@@ -425,9 +432,11 @@ class GenerateScript {
                 this.items.push({
                     base: true,
                     category: "melee",
+                    def: Number(itemDef),
                     free: value.baseitem === "1" ? true : undefined,
                     id,
                     image: this.getCdnUrl(value.image_inventory),
+                    itemid: value.baseitem === "1" ? undefined : 0,
                     localimage: this.getBaseLocalImage(value.name, id),
                     model: value.name.replace("weapon_", ""),
                     name,
@@ -471,11 +480,13 @@ class GenerateScript {
                 this.items.push({
                     base: true,
                     category: "glove",
+                    def: Number(itemDef),
                     free: value.baseitem === "1" ? true : undefined,
                     id,
                     image: value.image_inventory
                         ? this.getCdnUrl(value.image_inventory)
                         : format("/%s.png", value.name),
+                    itemid: value.baseitem === "1" ? undefined : 0,
                     model: value.name,
                     name,
                     rarity:
@@ -1138,11 +1149,6 @@ class GenerateScript {
             "src/items.ts",
             /CS_Item\[\] = [^;]+;/,
             format("CS_Item[] = %s;", JSON.stringify(items))
-        );
-        replaceInFile(
-            "src/items.ts",
-            /CS_ItemDefinition\[\] = [^;]+;/,
-            format("CS_ItemDefinition[] = %s;", JSON.stringify(itemsDefs))
         );
     }
 }

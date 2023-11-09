@@ -15,9 +15,11 @@ export interface CS_Item {
     base?: boolean;
     category: string;
     contents?: number[];
+    def?: number;
     free?: boolean;
     id: number;
     image: string;
+    itemid?: number;
     localimage?: number;
     model?: string;
     name: string;
@@ -35,16 +37,6 @@ export interface CS_Item {
         | "pin"
         | "sticker"
         | "weapon";
-}
-
-/**
- * The CS_ItemDefinition interface contains more technical information about an
- * item and can be used for integration with SourceMod.
- */
-export interface CS_ItemDefinition {
-    def?: number;
-    id: number;
-    itemid?: number;
 }
 
 /**
@@ -279,17 +271,9 @@ export class CS_Economy {
      */
     static items: CS_Item[] = [];
     /**
-     * Array of all Counter-Strike item definitions.
-     */
-    static definitions: CS_ItemDefinition[] = [];
-    /**
      * Map of Counter-Strike item IDs to their corresponding items.
      */
     static itemMap: Map<number, CS_Item> = new Map();
-    /**
-     * Map of Counter-Strike item definition IDs to their corresponding definitions.
-     */
-    static definitionMap: Map<number, CS_ItemDefinition> = new Map();
     /**
      * Set of Counter-Strike sticker categories.
      */
@@ -302,9 +286,8 @@ export class CS_Economy {
     /**
      * Set the Counter-Strike items and their definitions.
      * @param {CS_Item[]} items - An array of Counter-Strike items.
-     * @param {CS_ItemDefinition[]} [definitions] - An array of Counter-Strike item definitions (optional).
      */
-    static setItems(items: CS_Item[], definitions: CS_ItemDefinition[] = []) {
+    static initialize(items: CS_Item[]) {
         CS_Economy.categories.clear();
         CS_Economy.items = items;
         CS_Economy.itemMap.clear();
@@ -316,11 +299,6 @@ export class CS_Economy {
                 CS_Economy.categories.add(item.category);
             }
         });
-        CS_Economy.definitions = definitions;
-        CS_Economy.definitionMap.clear();
-        definitions.forEach((item) =>
-            CS_Economy.definitionMap.set(item.id, item)
-        );
     }
 
     /**
@@ -330,19 +308,6 @@ export class CS_Economy {
      */
     static getById(id: number): CS_Item {
         const item = CS_Economy.itemMap.get(id);
-        if (item === undefined) {
-            throw new Error("item not found");
-        }
-        return item;
-    }
-
-    /**
-     * Get a Counter-Strike item definition by its ID.
-     * @param {number} id - The ID of the Counter-Strike item definition to retrieve.
-     * @returns {CS_ItemDefinition} - The Counter-Strike item definition.
-     */
-    static getDefById(id: number): CS_ItemDefinition {
-        const item = CS_Economy.definitionMap.get(id);
         if (item === undefined) {
             throw new Error("item not found");
         }
