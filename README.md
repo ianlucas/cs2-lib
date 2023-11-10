@@ -12,8 +12,6 @@ import { CS_Economy, CS_ITEMS } from "cslib";
 CS_Economy.initialize(CS_ITEMS);
 ```
 
-Normally, it is not necessary to import `CS_ITEM_DEFS` into the client bundle.
-
 ## Feature Overview
 
 -   [ ] Economy Items - Grafitti
