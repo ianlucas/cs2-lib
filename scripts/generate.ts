@@ -4,146 +4,36 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createHash } from "crypto";
-import { copyFileSync, existsSync, readFileSync } from "fs";
+import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
-import { format } from "util";
-import {
-    CS_DEFAULT_GENERATED_HEAVY,
-    CS_DEFAULT_GENERATED_LIGHT,
-    CS_DEFAULT_GENERATED_MEDIUM,
-    CS_Item
-} from "../src/economy.js";
-import * as KeyValues from "../src/keyvalues.js";
-import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "../src/teams.js";
+import { CS_Item, CS_RARE_IMAGE_CUSTOM } from "../src/economy.js";
+import { CS_parseValveKeyValue } from "../src/keyvalues.js";
+import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
 import {
     CS2_IMAGES_PATH,
     IMAGES_PATH,
     ITEMS_PATH,
     LANGUAGE_PATH
 } from "./env.js";
+import {
+    CS_CsgoLanguageTXT,
+    CS_ItemsGameTXT,
+    ClientLootListRecord,
+    ItemsRecord,
+    LanguagesRecord,
+    PaintKitsProps,
+    PrefabsRecord,
+    RevolvingLootListRecord,
+    SafeRaritiesRecord,
+    StickerKitsRecord,
+    UnsafeRaritiesRecord
+} from "./generate-types.js";
+import { CaseRareItems } from "./generate-case-rare-items.js";
 import { replaceInFile, writeJson } from "./util.js";
-import fetch from "node-fetch";
 
-interface CS_ItemDefinition {
-    def?: number;
-    id: number;
-    itemid?: number;
-}
-
-interface CSGO_Prefab {
-    prefab: string;
-    item_class: string;
-    item_name: string;
-    item_rarity: string;
-    image_inventory: string;
-    used_by_classes: Record<CS_Team, number>;
-    visuals: {
-        weapon_type: string;
-    };
-}
-
-interface CSGO_ItemsFile {
-    items_game: {
-        alternate_icons2: {
-            weapon_icons: {
-                [key: string]: {
-                    icon_path: string;
-                };
-            };
-        };
-        item_sets: {
-            [setName: string]: {
-                items: {
-                    [itemId: string]: string;
-                };
-            };
-        }[];
-        client_loot_lists: {
-            [setName: string]: {
-                [itemName: string]: string;
-            };
-        }[];
-        colors: {
-            [key: string]: {
-                hex_color: string;
-            };
-        };
-        items: {
-            [itemDef: string]: {
-                attributes?: {
-                    ["set supply crate series"]?: {
-                        attribute_class?: string;
-                        value?: string;
-                    };
-                };
-                baseitem: string;
-                image_inventory: string;
-                image_unusual_item?: string;
-                item_name: string;
-                item_rarity: string;
-                item_sub_position?: string;
-                name: string;
-                prefab: string;
-                used_by_classes: Record<CS_Team, number>;
-                tool?: {
-                    type?: string;
-                    use_string?: string;
-                };
-
-                tags?: {
-                    ItemSet?: {
-                        tag_value?: string;
-                    };
-                };
-            };
-        }[];
-        music_definitions: {
-            [musicId: string]: {
-                name: string;
-                loc_name: string;
-                image_inventory: string;
-            };
-        }[];
-        paint_kits: {
-            [identifier: string]: {
-                description_tag: string;
-                name: string;
-            };
-        }[];
-        paint_kits_rarity: {
-            [paintName: string]: string;
-        }[];
-        prefabs: {
-            [prefabName: string]: CSGO_Prefab;
-        }[];
-        rarities: {
-            [key: string]: {
-                color: string;
-            };
-        };
-        revolving_loot_lists: {
-            [resolveId: string]: string;
-        }[];
-        sticker_kits: {
-            [stickerId: string]: {
-                name: string;
-                item_name: string;
-                tournament_event_id: string;
-                sticker_material: string;
-                item_rarity: string;
-                patch_material?: string;
-            };
-        }[];
-    };
-}
-
-interface CSGO_LanguageFile {
-    lang: {
-        Tokens: { [key: string]: string };
-    };
-}
-
-const UNCATEGORIZED_STICKERS = [
+const lootItemRE = /^\[([^\]]+)\](.*)$/;
+const econLocalImageSuffixes = ["heavy", "medium", "light"];
+const uncategorizedStickers = [
     "standard",
     "stickers2",
     "community02",
@@ -152,1007 +42,1009 @@ const UNCATEGORIZED_STICKERS = [
     "danger_zone"
 ];
 
-const itemRE = /^\[([^\]]+)\](.*)$/;
-
 class GenerateScript {
-    language: string;
-    itemsFile: CSGO_ItemsFile;
-    languageFile: Record<string, string>;
-    prefabs: { [prefabName: string]: CSGO_Prefab } = {};
-    items: CS_Item[] = [];
-    paints: CS_Item[] = [];
-    musicKits: CS_Item[] = [];
-    stickers: CS_Item[] = [];
-    itemDefs: (CS_ItemDefinition & {
-        className?: string;
-    })[] = [];
-    itemRarities: { [itemName: string]: string } = {};
-    paintKitRarity: { [paintName: string]: string } = {};
-    paintKits: {
-        className: string;
-        value: number;
-        name: string;
-        rarity: string;
-    }[] = [];
-    ids: string[] = [];
-    uniqueIds: string[] = [];
-    itemImages: Record<string, string[]>;
-    caseContents: Record<string, number> = {};
-    caseRareItem: Record<string, number> = {};
+    clientLootList: ClientLootListRecord = null!;
+    ids: ReturnType<InstanceType<typeof GenerateScript>["readIdsJSON"]> = null!;
+    items: ItemsRecord = null!;
+    itemsGameParsed: CS_ItemsGameTXT = null!;
+    itemsRaritiesColorHex: SafeRaritiesRecord = null!;
+    languages: LanguagesRecord = null!;
+    paintKits: PaintKitsProps[] = null!;
+    paintKitsRaritiesColorHex: SafeRaritiesRecord = null!;
+    prefabs: PrefabsRecord = null!;
+    raritiesColorHex: UnsafeRaritiesRecord = null!;
+    revolvingLootList: RevolvingLootListRecord = null!;
+    stickerKits: StickerKitsRecord = null!;
+    translations: LanguagesRecord = null!;
 
-    constructor({ language }: { language?: string }) {
-        this.language = language ?? "english";
-        this.itemsFile = this.readItems();
-        this.languageFile = this.readLanguage();
-        this.ids = this.readIds();
-        this.itemImages = this.readItemImages();
-        this.run();
+    baseItems: (CS_Item & {
+        className?: string;
+        nameToken: string;
+    })[] = [];
+    generatedItems: CS_Item[] = [];
+
+    caseItems = new Map<string, number>();
+    caseRareItems = new CaseRareItems();
+
+    constructor() {
+        console.log("generate script initialized.");
     }
 
     async run() {
-        this.parsePrefabs();
+        await this.caseRareItems.fetch();
+
+        this.ids = this.readIdsJSON();
+        this.readCsgoLanguageTXT();
+        this.readItemsGameTXT();
+
         this.parseWeapons();
         this.parseMelees();
         this.parseGloves();
-        this.parseRarity();
-        this.parsePaintKits();
-        this.parsePaints();
+        this.parseSkins();
         this.parseMusicKits();
         this.parseStickers();
-        this.parsePatches();
         this.parseAgents();
+        this.parsePatches();
         this.parsePins();
-        await this.parseCases();
-        this.writeFiles();
+        this.parseCases();
+
+        this.persist();
     }
 
-    match(haystack: string, needles: string[], separator: string = "") {
-        for (const needle of needles) {
-            if (haystack.indexOf(`${separator}${needle}`) > -1) {
-                return needle;
+    readIdsJSON() {
+        const path = resolve(process.cwd(), "dist/ids.json");
+        const ids = (
+            existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : []
+        ) as string[];
+        const uniqueIds = [] as string[];
+        return {
+            get(identifier: string) {
+                if (uniqueIds.indexOf(identifier) > -1) {
+                    throw new Error(`${identifier} is not unique.`);
+                }
+                uniqueIds.push(identifier);
+                const index = ids.indexOf(identifier);
+                if (index === -1) {
+                    ids.push(identifier);
+                    return ids.length - 1;
+                }
+                return index;
+            },
+
+            getAll() {
+                return ids;
+            }
+        };
+    }
+
+    readCsgoLanguageTXT() {
+        const languages = {} as LanguagesRecord;
+        const translations = {} as LanguagesRecord;
+        const files = readdirSync(LANGUAGE_PATH);
+        const fileRE = /csgo_([^\._]+)\.txt$/;
+        for (const file of files) {
+            const matches = file.match(fileRE);
+            if (!matches) {
+                continue;
+            }
+            const [, language] = matches;
+            const contents = readFileSync(
+                resolve(LANGUAGE_PATH, file),
+                "utf-8"
+            );
+            languages[language] = {};
+            translations[language] = {};
+            const kv = languages[language];
+            console.log(`parsing csgo_${language}.txt...`);
+            const parsed = CS_parseValveKeyValue<CS_CsgoLanguageTXT>(contents);
+            for (const key of Object.keys(parsed.lang.Tokens)) {
+                const k = key.toLowerCase();
+                if (kv[k] !== undefined) {
+                    throw new Error(
+                        `duplicate key for ${k} on ${language} language file.`
+                    );
+                }
+                kv[k] = parsed.lang.Tokens[key];
             }
         }
-        return undefined;
-    }
-
-    readIds() {
-        const contents = readFileSync(
-            resolve(process.cwd(), "dist/ids.json"),
-            "utf-8"
+        if (Object.keys(languages).length === 0) {
+            throw new Error("check your language directory.");
+        }
+        if (languages.english === undefined) {
+            throw new Error("csgo_english.txt file not found.");
+        }
+        this.languages = languages;
+        this.translations = translations;
+        console.log(
+            `loaded the following languages: ${Object.keys(languages)}.`
         );
-        return JSON.parse(contents) as string[];
     }
 
-    readItemImages() {
-        const contents = readFileSync(
-            resolve(process.cwd(), "dist/item-images.json"),
-            "utf-8"
-        );
-        return JSON.parse(contents) as Record<string, string[]>;
-    }
-
-    readItems() {
+    readItemsGameTXT() {
         const contents = readFileSync(ITEMS_PATH, "utf-8");
-        return KeyValues.parse(contents) as CSGO_ItemsFile;
+        const parsed = CS_parseValveKeyValue<CS_ItemsGameTXT>(contents);
+
+        this.clientLootList = {};
+        this.items = {};
+        this.itemsGameParsed = parsed;
+        this.itemsRaritiesColorHex = {};
+        this.paintKits = [];
+        this.paintKitsRaritiesColorHex = {};
+        this.prefabs = {};
+        this.raritiesColorHex = {};
+        this.revolvingLootList = {};
+        this.stickerKits = {};
+
+        for (const kv of parsed.items_game.prefabs) {
+            for (const [prefabKey, prefabProps] of Object.entries(kv)) {
+                this.prefabs[prefabKey] = prefabProps;
+            }
+        }
+        for (const kv of parsed.items_game.items) {
+            for (const [itemIndex, itemProps] of Object.entries(kv)) {
+                this.items[itemIndex] = itemProps;
+            }
+        }
+        for (const [rarityKey, rarityProps] of Object.entries(
+            parsed.items_game.rarities
+        )) {
+            if (rarityProps.color) {
+                const colorHex =
+                    parsed.items_game.colors[rarityProps.color]?.hex_color;
+                if (colorHex) {
+                    this.raritiesColorHex[rarityKey] = colorHex;
+                }
+            }
+        }
+        const raritiesKeys = Object.keys(this.raritiesColorHex);
+        if (!raritiesKeys.includes("default")) {
+            throw new Error(`color default not found.`);
+        }
+        if (!raritiesKeys.includes("common")) {
+            throw new Error(`color common not found.`);
+        }
+        if (!raritiesKeys.includes("rare")) {
+            throw new Error(`color rare not found.`);
+        }
+        for (const kv of parsed.items_game.paint_kits_rarity) {
+            for (const [paintKitKey, rarityKey] of Object.entries(kv)) {
+                if (this.raritiesColorHex[rarityKey]) {
+                    this.paintKitsRaritiesColorHex[paintKitKey] =
+                        this.raritiesColorHex[rarityKey];
+                } else {
+                    console.log(
+                        `unable to find color for rarity ${rarityKey}.`
+                    );
+                }
+            }
+        }
+        for (const kv of parsed.items_game.client_loot_lists) {
+            for (const [clientLootListKey, clientLootList] of Object.entries(
+                kv
+            )) {
+                // Mapping rarities for items inside loot lists.  Looks like
+                // this is the actual rarity of the item, then we fallback to
+                // paint, or rarity defined in the item itself.
+                const rarityKey = raritiesKeys.find((rarityKey) =>
+                    clientLootListKey.includes(`_${rarityKey}`)
+                );
+                if (rarityKey) {
+                    for (const itemOrClientLootListKey of Object.keys(
+                        clientLootList
+                    )) {
+                        if (
+                            itemOrClientLootListKey.includes("customplayer_") ||
+                            itemOrClientLootListKey.match(lootItemRE)
+                        ) {
+                            this.itemsRaritiesColorHex[
+                                itemOrClientLootListKey
+                            ] = this.raritiesColorHex[rarityKey];
+                        }
+                    }
+                }
+            }
+        }
+        for (const kv of parsed.items_game.paint_kits) {
+            /* @TODO: update "Key" to "Index" if it is a number. */
+            for (const [paintKitKey, paintKitProps] of Object.entries(kv)) {
+                if (
+                    !paintKitProps.description_tag ||
+                    paintKitProps.name === "default"
+                ) {
+                    continue;
+                }
+                this.paintKits.push({
+                    className: paintKitProps.name,
+                    name: this.requireTranslation(
+                        paintKitProps.description_tag
+                    ),
+                    nameToken: paintKitProps.description_tag,
+                    rarityColorHex: this.getRarityColorHex([
+                        paintKitProps.name
+                    ]),
+                    itemid: Number(paintKitKey)
+                });
+            }
+        }
+        for (const kv of parsed.items_game.sticker_kits) {
+            for (const [stickerIndex, stickerProps] of Object.entries(kv)) {
+                this.stickerKits[stickerIndex] = stickerProps;
+            }
+        }
+        for (const kv of parsed.items_game.client_loot_lists) {
+            for (const [
+                clientLootListKey,
+                clientLootListItems
+            ] of Object.entries(kv)) {
+                this.clientLootList[clientLootListKey] = clientLootListItems;
+            }
+        }
+        for (const kv of parsed.items_game.revolving_loot_lists) {
+            for (const [
+                revolvingLootListKey,
+                clientLootListKey
+            ] of Object.entries(kv)) {
+                this.revolvingLootList[revolvingLootListKey] =
+                    clientLootListKey;
+            }
+        }
     }
 
-    readLanguage() {
-        const contents = readFileSync(
-            format(LANGUAGE_PATH, this.language),
-            "utf16le" // "utf16le" on CSGO
-        );
-        const parsed = KeyValues.parse(contents) as CSGO_LanguageFile;
-        const strings: Record<string, string> = {};
-        for (const key of Object.keys(parsed.lang.Tokens)) {
-            const lowerCaseKey = key.toLowerCase();
-            if (strings[lowerCaseKey] !== undefined) {
-                throw new Error(
-                    format(
-                        "Duplicate key for %s on language file.",
-                        lowerCaseKey
-                    )
+    parseWeapons() {
+        console.log("parsing weapons...");
+        const categoryRE = /(c4|[^\d]+)/;
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (itemProps.baseitem !== "1" || !itemProps.item_sub_position) {
+                continue;
+            }
+            const matches = itemProps.item_sub_position.match(categoryRE);
+            if (!matches) {
+                continue;
+            }
+            const [, category] = matches;
+            if (category === "equipment") {
+                continue;
+            }
+            const prefab = this.getPrefab(itemProps.prefab);
+            const name = this.requireTranslation(prefab.item_name);
+            const teams = this.getTeams(prefab.used_by_classes);
+            const id = this.ids.get(`weapon_${teams.join("_")}_${itemIndex}`);
+            this.addTranslation(id, prefab.item_name);
+
+            this.baseItems.push({
+                base: true,
+                category,
+                className: itemProps.name,
+                def: Number(itemIndex),
+                free: true,
+                id,
+                image: prefab.image_inventory
+                    ? this.getCDNUrl(prefab.image_inventory)
+                    : this.getCDNUrl(
+                          `econ/weapons/base_weapons/${itemProps.name}`
+                      ),
+                itemid: undefined,
+                localimage: this.getBaseLocalImage(id, itemProps.name),
+                model: itemProps.name.replace("weapon_", ""),
+                name,
+                nameToken: prefab.item_name,
+                rarity: this.raritiesColorHex.default,
+                teams,
+                type: "weapon"
+            });
+        }
+        console.log("parsed weapons.");
+    }
+
+    parseMelees() {
+        console.log("parsing melees...");
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (
+                (itemProps.prefab === "melee" && itemProps.baseitem !== "1") ||
+                itemProps.prefab?.indexOf("melee") === -1 ||
+                itemProps.prefab?.indexOf("noncustomizable") > -1 ||
+                !itemProps.used_by_classes
+            ) {
+                continue;
+            }
+            const prefab = this.getPrefab(itemProps.prefab);
+            const name = this.requireTranslation(itemProps.item_name);
+            const teams = this.getTeams(itemProps.used_by_classes);
+            const id = this.ids.get(`melee_${teams.join("_")}_${itemIndex}`);
+            this.addTranslation(id, itemProps.item_name);
+
+            this.baseItems.push({
+                base: true,
+                category: "melee",
+                className: itemProps.name,
+                def: Number(itemIndex),
+                free: itemProps.baseitem === "1" ? true : undefined,
+                id,
+                image: this.getCDNUrl(itemProps.image_inventory),
+                itemid: itemProps.baseitem === "1" ? undefined : 0,
+                localimage: this.getBaseLocalImage(id, itemProps.name),
+                model: itemProps.name.replace("weapon_", ""),
+                name,
+                nameToken: itemProps.item_name,
+                rarity: this.getRarityColorHex(
+                    [prefab.item_rarity],
+                    this.raritiesColorHex.default
+                ),
+                teams,
+                type: "melee"
+            });
+        }
+        console.log("parsed melees.");
+    }
+
+    parseGloves() {
+        console.log("parse gloves...");
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (
+                itemProps.prefab?.indexOf("hands") === -1 ||
+                !itemProps.used_by_classes
+            ) {
+                continue;
+            }
+            const name = this.requireTranslation(itemProps.item_name);
+            const teams = this.getTeams(itemProps.used_by_classes);
+            const id = this.ids.get(`glove_${teams.join("_")}_${itemIndex}`);
+            this.addTranslation(id, itemProps.item_name);
+
+            this.baseItems.push({
+                base: true,
+                category: "glove",
+                className: itemProps.name,
+                def: Number(itemIndex),
+                free: itemProps.baseitem === "1" ? true : undefined,
+                id,
+                image: itemProps.image_inventory
+                    ? this.getCDNUrl(itemProps.image_inventory)
+                    : `/${itemProps.name}.png`,
+                itemid: itemProps.baseitem === "1" ? undefined : 0,
+                localimage: this.getBaseLocalImage(id, itemProps.name),
+                model: itemProps.name,
+                name,
+                nameToken: itemProps.item_name,
+                rarity:
+                    itemProps.baseitem === "1"
+                        ? this.raritiesColorHex.default
+                        : this.getRarityColorHex(["ancient"]),
+                teams,
+                type: "glove"
+            });
+        }
+        console.log("parsed gloves.");
+    }
+
+    parseSkins() {
+        console.log("parse skins...");
+        for (const { icon_path: iconPath } of Object.values(
+            this.itemsGameParsed.items_game.alternate_icons2.weapon_icons
+        )) {
+            if (!iconPath.match(/light$/)) {
+                continue;
+            }
+            const paintKit = this.paintKits.find((paintKit) =>
+                iconPath.includes(`_${paintKit.className}_light`)
+            );
+            if (!paintKit) {
+                console.log(`unable to find paint kit for ${iconPath}.`);
+                continue;
+            }
+            const parentItem = this.baseItems.find(({ className }) =>
+                iconPath.includes(`/${className}_${paintKit.className}`)
+            );
+            if (!parentItem) {
+                console.log(`unable to find parent item for ${iconPath}.`);
+                continue;
+            }
+            const itemKey = `[${paintKit.className}]${parentItem.className}`;
+            const name = `${parentItem.name} | ${paintKit.name}`;
+            const id = this.ids.get(
+                `paint_${parentItem.def}_${paintKit.itemid}`
+            );
+            this.addTranslation(id, parentItem.nameToken, paintKit.nameToken);
+
+            this.generatedItems.push({
+                ...parentItem,
+                base: undefined,
+                free: undefined,
+                id,
+                itemid: paintKit.itemid,
+                image: this.getCDNUrl(`${iconPath}_large`),
+                localimage: this.getEconLocalImage(
+                    id,
+                    parentItem.className,
+                    paintKit.className
+                ),
+                name,
+                rarity: ["melee", "glove"].includes(parentItem.type)
+                    ? this.getRarityColorHex([
+                          parentItem.rarity,
+                          paintKit.rarityColorHex
+                      ])
+                    : this.getRarityColorHex([itemKey, paintKit.rarityColorHex])
+            });
+
+            this.addCaseItem(itemKey, id);
+        }
+        console.log("parsed skins.");
+    }
+
+    parseMusicKits() {
+        console.log("parse music kits...");
+        for (const kv of this.itemsGameParsed.items_game.music_definitions) {
+            for (const [musicIndex, musicProps] of Object.entries(kv)) {
+                if (musicIndex === "2") {
+                    // Skip duplicated CS:GO default music kit.
+                    continue;
+                }
+                const itemKey = `[${musicProps.name}]musickit`;
+                const name = this.requireTranslation(musicProps.loc_name);
+                const id = this.ids.get(`musickit_${musicIndex}`);
+                this.addTranslation(id, musicProps.loc_name);
+
+                this.generatedItems.push({
+                    base: true,
+                    category: "musickit",
+                    free: musicIndex === "1" ? true : undefined,
+                    id,
+                    image: this.getCDNUrl(musicProps.image_inventory),
+                    itemid: Number(musicIndex),
+                    name,
+                    rarity: this.raritiesColorHex.rare,
+                    type: "musickit"
+                });
+
+                this.addCaseItem(itemKey, id);
+            }
+        }
+        console.log("parsed music kits.");
+    }
+
+    parseStickers() {
+        console.log("parse stickers...");
+        for (const [stickerIndex, stickerProps] of Object.entries(
+            this.stickerKits
+        )) {
+            if (
+                stickerProps.name === "default" ||
+                stickerProps.item_name.indexOf("SprayKit") > -1 ||
+                stickerProps.name.indexOf("spray_") > -1 ||
+                stickerProps.name.indexOf("patch_") > -1 ||
+                stickerProps.sticker_material.indexOf("_graffiti") > -1
+            ) {
+                continue;
+            }
+            let category = "";
+            const [folder] = stickerProps.sticker_material.split("/");
+            if (folder === "alyx") {
+                category = this.findTranslation(
+                    "#CSGO_crate_sticker_pack_hlalyx_capsule"
                 );
             }
-            strings[lowerCaseKey] = parsed.lang.Tokens[key];
+            if (uncategorizedStickers.indexOf(folder) > -1) {
+                category = "Valve";
+            }
+            if (!category) {
+                category = this.findTranslation(
+                    `#CSGO_sticker_crate_key_${folder}`
+                );
+            }
+            if (!category) {
+                category = this.findTranslation(
+                    `#CSGO_crate_sticker_pack_${folder}`
+                );
+            }
+            if (!category) {
+                category = this.findTranslation(
+                    `#CSGO_crate_sticker_pack_${folder}_capsule`
+                );
+            }
+            if (stickerProps.tournament_event_id) {
+                category = this.findTranslation(
+                    `#CSGO_Tournament_Event_NameShort_${stickerProps.tournament_event_id}`
+                );
+                if (!category) {
+                    throw new Error(
+                        `unable to find the short name for tournament ${stickerProps.tournament_event_id}.`
+                    );
+                }
+            }
+            if (!category) {
+                throw new Error(
+                    `unable to define a category for ${stickerProps.item_name}.`
+                );
+            }
+            const name = this.findTranslation(stickerProps.item_name);
+            if (name === undefined) {
+                console.log(
+                    `unable to find translation for ${stickerProps.item_name}.`
+                );
+                continue;
+            }
+            const id = this.ids.get(`sticker_${stickerIndex}`);
+            const itemKey = `[${stickerProps.name}]sticker`;
+            this.addTranslation(id, stickerProps.item_name);
+
+            this.generatedItems.push({
+                category,
+                id,
+                image: this.getCDNUrl(
+                    `econ/stickers/${stickerProps.sticker_material}_large`
+                ),
+                itemid: Number(stickerIndex),
+                name,
+                rarity: this.getRarityColorHex([
+                    itemKey,
+                    `[${stickerProps.name}]sticker`,
+                    stickerProps.item_rarity
+                ]),
+                type: "sticker"
+            });
+
+            this.addCaseItem(itemKey, id);
         }
-        return strings;
+        console.log("parsed stickers.");
     }
 
-    getTranslation(token: string) {
-        return this.languageFile[token.substring(1).toLowerCase()];
+    parsePatches() {
+        console.log("parse patches...");
+        for (const [patchIndex, patchProps] of Object.entries(
+            this.stickerKits
+        )) {
+            if (
+                patchProps.item_name.indexOf("#PatchKit") !== 0 &&
+                patchProps.patch_material === undefined
+            ) {
+                continue;
+            }
+            const name = this.requireTranslation(patchProps.item_name);
+            if (!name) {
+                console.log(`unable to find name for ${patchProps.item_name}.`);
+                continue;
+            }
+            const id = this.ids.get(`patch_${patchIndex}`);
+            const itemKey = `[${patchProps.name}]patch`;
+            this.addTranslation(id, patchProps.item_name);
+
+            this.generatedItems.push({
+                category: "patch",
+                id,
+                image: this.getCDNUrl(
+                    `econ/patches/${patchProps.patch_material}_large`
+                ),
+                itemid: Number(patchIndex),
+                teams: [CS_TEAM_CT, CS_TEAM_T],
+                name,
+                rarity: this.getRarityColorHex([
+                    itemKey,
+                    `[${patchProps.name}]patch`,
+                    patchProps.item_rarity
+                ]),
+                type: "patch"
+            });
+
+            this.addCaseItem(itemKey, id);
+        }
+        console.log("parsed patches.");
     }
 
-    getCdnUrl(file: string) {
+    parseAgents() {
+        console.log("parsing agents...");
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (itemProps.prefab !== "customplayertradable") {
+                continue;
+            }
+            const name = this.requireTranslation(itemProps.item_name);
+            const teams = this.getTeams(itemProps.used_by_classes);
+            const id = this.ids.get(`agent_${teams.join("_")}_${itemIndex}`);
+            this.addTranslation(id, itemProps.item_name);
+
+            this.generatedItems.push({
+                category: "agent",
+                def: Number(itemIndex),
+                id,
+                image: this.getCDNUrl(itemProps.image_inventory),
+                itemid: undefined,
+                name,
+                rarity: this.getRarityColorHex([
+                    itemProps.name,
+                    itemProps.item_rarity
+                ]),
+                teams,
+                type: "agent"
+            });
+        }
+        console.log("parsed agents.");
+    }
+
+    parsePins() {
+        console.log("parsing pins...");
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (
+                itemProps.image_inventory === undefined ||
+                itemProps.item_name === undefined ||
+                !itemProps.image_inventory.includes("/status_icons/") ||
+                itemProps.tool?.use_string === "#ConsumeItem" ||
+                itemProps.attributes?.["set supply crate series"]
+                    ?.attribute_class === "supply_crate_series" ||
+                itemProps.item_name.indexOf("#CSGO_TournamentPass") === 0
+            ) {
+                continue;
+            }
+            const name = this.requireTranslation(itemProps.item_name);
+            const id = this.ids.get(`pin_${itemIndex}`);
+            this.addTranslation(id, itemProps.item_name);
+
+            this.generatedItems.push({
+                altname: itemProps.name,
+                category: "pin",
+                def: Number(itemIndex),
+                id,
+                image: this.getCDNUrl(itemProps.image_inventory),
+                itemid: undefined,
+                name,
+                rarity: this.getRarityColorHex([
+                    itemProps.item_rarity,
+                    "ancient"
+                ]),
+                teams: undefined,
+                type: "pin"
+            });
+
+            this.addCaseItem(itemProps.name, id);
+        }
+        console.log("parsed pins.");
+    }
+
+    parseCases() {
+        console.log("parsing cases...");
+        this.caseRareItems.populate(this.baseItems, this.generatedItems);
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (
+                itemProps.image_inventory === undefined ||
+                (itemProps.prefab !== "weapon_case" &&
+                    itemProps.attributes?.["set supply crate series"]
+                        ?.attribute_class !== "supply_crate_series") ||
+                !itemProps.image_inventory.includes("econ/weapon_cases") ||
+                itemProps.tool?.type === "gift"
+            ) {
+                continue;
+            }
+            const contents = [] as number[];
+            const revolvingLootListKey =
+                itemProps.attributes?.["set supply crate series"]?.value;
+            if (!revolvingLootListKey) {
+                throw new Error(
+                    `revolving loot list key not found for ${itemProps.name}.`
+                );
+            }
+            const clientLootListKey =
+                this.revolvingLootList[revolvingLootListKey];
+            if (!clientLootListKey) {
+                throw new Error(
+                    `client loot list key not found for ${itemProps.name}`
+                );
+            }
+            for (const itemKey of this.getClientLootListItems(
+                clientLootListKey
+            )) {
+                if (itemKey.includes("]spray")) {
+                    // We're not parsing sprays yet.
+                    continue;
+                }
+                if (!this.caseItems.has(itemKey)) {
+                    throw new Error(`item ${itemKey} not found.`);
+                }
+                contents.push(this.caseItems.get(itemKey)!);
+            }
+            if (contents.length === 0) {
+                console.log(`no items found for ${itemProps.name}.`);
+            }
+            if (contents.length > 0) {
+                const name = this.requireTranslation(itemProps.item_name);
+                const id = this.ids.get(`case_${itemIndex}`);
+                const rarecontents = this.caseRareItems.get(name);
+                this.addTranslation(id, itemProps.item_name);
+
+                this.generatedItems.push({
+                    category: "case",
+                    contents,
+                    def: Number(itemIndex),
+                    id,
+                    image: this.getCDNUrl(itemProps.image_inventory),
+                    rarecontents,
+                    rareimage:
+                        itemProps.image_unusual_item !== undefined
+                            ? this.getCaseRareImage(
+                                  id,
+                                  itemProps.image_unusual_item
+                              )
+                            : rarecontents !== undefined &&
+                              rarecontents?.length > 0
+                            ? 2
+                            : undefined,
+                    name,
+                    rarity: this.raritiesColorHex.common,
+                    teams: undefined,
+                    type: "case"
+                });
+            }
+        }
+        console.log("parsed cases.");
+    }
+
+    persist() {
+        const items = [...this.baseItems, ...this.generatedItems]
+            .sort((a, b) => {
+                const aTop = a.base || a.free;
+                const bTop = b.base || b.free;
+                if (aTop && !bTop) {
+                    return -1;
+                }
+                if (!aTop && bTop) {
+                    return 1;
+                }
+                if (aTop && bTop) {
+                    if (a.free && !b.free) {
+                        return -1;
+                    }
+                    if (!a.free && b.free) {
+                        return 1;
+                    }
+                }
+                if (a.name < b.name) {
+                    return -1;
+                }
+                if (a.name > b.name) {
+                    return 1;
+                }
+                return 0;
+            })
+            .map((item) => ({
+                ...item,
+                className: undefined,
+                nameToken: undefined
+            }));
+
+        writeJson("dist/parsed-items-game.json", this.itemsGameParsed);
+        console.log("generated dist/parsed-items-game.json.");
+        writeJson("dist/items.json", items);
+        console.log("generated dist/items.json.");
+        writeJson("dist/ids.json", this.ids.getAll());
+        console.log("generated dist/ids.json.");
+
+        for (const [language, translations] of Object.entries(
+            this.translations
+        )) {
+            writeJson(`dist/items-${language}.json`, translations);
+            console.log(`generated dist/items-${language}.json.`);
+        }
+
+        replaceInFile(
+            "src/items.ts",
+            /CS_Item\[\] = [^;]+;/,
+            `CS_Item[] = ${JSON.stringify(items)};`
+        );
+        console.log("updated src/items.json.");
+        console.log("script completed.");
+    }
+
+    addTranslation(id: number, ...keys: string[]) {
+        for (const [language, tokens] of Object.entries(this.languages)) {
+            if (language === "english") {
+                continue;
+            }
+            this.translations[language][id] = keys
+                .map((key) => {
+                    key = key.substring(1).toLowerCase();
+                    const translation = tokens[key];
+                    if (!translation) {
+                        console.log(
+                            `translation not found for ${key} for ${language}.`
+                        );
+                    }
+                    return translation || this.languages.english[key];
+                })
+                .join(" | ");
+        }
+    }
+
+    requireTranslation(key: string, language = "english") {
+        const translation =
+            this.languages[language][key.substring(1).toLowerCase()];
+        if (!translation) {
+            throw new Error(`unable to find translation for ${key}.`);
+        }
+        return translation;
+    }
+
+    findTranslation(key: string, language = "english") {
+        return this.languages[language][key.substring(1).toLowerCase()];
+    }
+
+    getTeams(teams: Record<string, string>) {
+        return Object.keys(teams).map((team) => {
+            switch (team) {
+                case "counter-terrorists":
+                    return CS_TEAM_CT;
+                case "terrorists":
+                    return CS_TEAM_T;
+            }
+            throw new Error(`unknown team ${team}.`);
+        });
+    }
+
+    // Looks like this doesn't work on CS2 files extracted by Source 2 Viewer.
+    // Need to check this on next case launch.
+    getCDNUrl(file: string) {
         const buffer = readFileSync(resolve(IMAGES_PATH, file + ".png"));
         const hashSum = createHash("sha1");
         hashSum.update(buffer);
         const sha1 = hashSum.digest("hex");
-        return format(
-            "https://steamcdn-a.akamaihd.net/apps/730/icons/%s.%s.png",
-            file.toLowerCase(),
-            sha1
-        );
+        return `https://steamcdn-a.akamaihd.net/apps/730/icons/${file.toLowerCase()}.${sha1}.png`;
     }
 
-    getCS_Team(team: string) {
-        switch (team) {
-            case "counter-terrorists":
-                return CS_TEAM_CT;
-            case "terrorists":
-                return CS_TEAM_T;
-        }
-        throw new Error(format('Unknown team "%s"', team));
-    }
-
-    getTeamDesc(teams: CS_Team[]) {
-        return teams.join("_");
-    }
-
-    getId(name: string) {
-        if (this.uniqueIds.indexOf(name) !== -1) {
-            throw new Error(`${name} is NOT unique.`);
-        }
-        this.uniqueIds.push(name);
-        const idx = this.ids.indexOf(name);
-        if (idx === -1) {
-            this.ids.push(name);
-            return this.ids.length - 1;
-        }
-        return idx;
-    }
-
-    parsePrefabs() {
-        for (const item of this.itemsFile.items_game.prefabs) {
-            for (const [key, value] of Object.entries(item)) {
-                this.prefabs[key] = value;
-            }
-        }
-    }
-
-    getRarityColor(rarity?: string, fallback = "#ffffff") {
-        if (!rarity) {
-            return fallback;
-        }
-        if (rarity.charAt(0) === "#") {
-            return rarity;
-        }
-        const rarirtyColor = this.itemsFile.items_game.rarities[rarity]?.color;
-        if (rarirtyColor) {
-            const colorHex =
-                this.itemsFile.items_game.colors[rarirtyColor]?.hex_color;
-            if (colorHex) {
-                return colorHex;
-            }
-        }
-        return fallback;
-    }
-
-    getItemRarityColor(
-        itemNames: string[],
-        className: string,
-        defaultTo?: string
-    ) {
-        let rarity = "";
-        for (const itemName of itemNames) {
-            rarity = this.itemRarities[`${itemName}:${className}`];
-            if (rarity !== undefined) {
-                break;
-            }
-        }
-        if (!rarity && !defaultTo) {
-            console.warn(
-                "Unable to find rarity for %s and %s",
-                itemNames.join(","),
-                className
-            );
-        }
-        return this.getRarityColor(rarity || defaultTo);
-    }
-
-    parseWeapons() {
-        for (const item of this.itemsFile.items_game.items) {
-            for (const [itemDef, value] of Object.entries(item)) {
-                if (value.baseitem !== "1" || !value.item_sub_position) {
-                    continue;
-                }
-                const matches = value.item_sub_position.match(/(c4|[^\d]+)/);
-                if (!matches) {
-                    continue;
-                }
-                const category = matches[1];
-                if (category === "equipment") {
-                    continue;
-                }
-                const prefab = this.prefabs[value.prefab];
-                if (!prefab) {
-                    throw new Error(
-                        format('Unable to find prefab for "%s".', value.prefab)
-                    );
-                }
-                const name = this.getTranslation(prefab.item_name);
-                const teams = Object.keys(prefab.used_by_classes).map(
-                    this.getCS_Team
-                );
-                const id = this.getId(
-                    `weapon_${this.getTeamDesc(teams)}_${itemDef}`
-                );
-                this.items.push({
-                    base: true,
-                    category,
-                    def: Number(itemDef),
-                    free: true,
-                    id,
-                    image: prefab.image_inventory
-                        ? this.getCdnUrl(prefab.image_inventory)
-                        : this.getCdnUrl(
-                              format("econ/weapons/base_weapons/%s", value.name)
-                          ),
-                    itemid: undefined,
-                    localimage: this.getBaseLocalImage(value.name, id),
-                    model: value.name.replace("weapon_", ""),
-                    name,
-                    rarity: "#ffffff",
-                    teams,
-                    type: "weapon"
-                });
-                this.itemDefs.push({
-                    className: value.name,
-                    def: Number(itemDef),
-                    id,
-                    itemid: undefined
-                });
-            }
-        }
-    }
-
-    parseMelees() {
-        for (const item of this.itemsFile.items_game.items) {
-            for (const [itemDef, value] of Object.entries(item)) {
-                if (
-                    (value.prefab === "melee" && value.baseitem !== "1") ||
-                    value.prefab?.indexOf("melee") === -1 ||
-                    value.prefab?.indexOf("noncustomizable") > -1 ||
-                    !value.used_by_classes
-                ) {
-                    continue;
-                }
-                const prefab = this.prefabs[value.prefab];
-                if (!prefab) {
-                    throw new Error(
-                        format("Unable to find prefab for %s", value.prefab)
-                    );
-                }
-                const name = this.getTranslation(value.item_name);
-                const teams = Object.keys(value.used_by_classes).map(
-                    this.getCS_Team
-                );
-                const id = this.getId(
-                    `melee_${this.getTeamDesc(teams)}_${itemDef}`
-                );
-                this.items.push({
-                    base: true,
-                    category: "melee",
-                    def: Number(itemDef),
-                    free: value.baseitem === "1" ? true : undefined,
-                    id,
-                    image: this.getCdnUrl(value.image_inventory),
-                    itemid: value.baseitem === "1" ? undefined : 0,
-                    localimage: this.getBaseLocalImage(value.name, id),
-                    model: value.name.replace("weapon_", ""),
-                    name,
-                    rarity: this.getRarityColor(prefab.item_rarity),
-                    teams,
-                    type: "melee"
-                });
-                this.itemDefs.push({
-                    className: value.name,
-                    def: Number(itemDef),
-                    id,
-                    itemid: value.baseitem === "1" ? undefined : 0
-                });
-                this.caseRareItem[`${name} vanilla`.toLowerCase()] = id;
-            }
-        }
-    }
-
-    parseGloves() {
-        for (const item of this.itemsFile.items_game.items) {
-            for (const [itemDef, value] of Object.entries(item)) {
-                if (
-                    value.prefab?.indexOf("hands") === -1 ||
-                    !value.used_by_classes
-                ) {
-                    continue;
-                }
-                const prefab = this.prefabs[value.prefab];
-                if (!prefab) {
-                    throw new Error(
-                        format("Unable to find prefab for %s", value.prefab)
-                    );
-                }
-                const name = this.getTranslation(value.item_name);
-                const teams = Object.keys(value.used_by_classes).map(
-                    this.getCS_Team
-                );
-                const id = this.getId(
-                    `glove_${this.getTeamDesc(teams)}_${itemDef}`
-                );
-                this.items.push({
-                    base: true,
-                    category: "glove",
-                    def: Number(itemDef),
-                    free: value.baseitem === "1" ? true : undefined,
-                    id,
-                    image: value.image_inventory
-                        ? this.getCdnUrl(value.image_inventory)
-                        : format("/%s.png", value.name),
-                    itemid: value.baseitem === "1" ? undefined : 0,
-                    model: value.name,
-                    name,
-                    rarity:
-                        value.baseitem === "1"
-                            ? "#ffffff"
-                            : this.getRarityColor("ancient"),
-                    teams,
-                    type: "glove"
-                });
-                this.itemDefs.push({
-                    className: value.name,
-                    def: Number(itemDef),
-                    id,
-                    itemid: value.baseitem === "1" ? undefined : 0
-                });
-            }
-        }
-    }
-
-    parseRarity() {
-        const rarities = Object.keys(this.itemsFile.items_game.rarities);
-        for (const item of this.itemsFile.items_game.paint_kits_rarity) {
-            for (const [paintName, rarity] of Object.entries(item)) {
-                this.paintKitRarity[paintName] = rarity;
-            }
-        }
-        for (const sets of this.itemsFile.items_game.client_loot_lists) {
-            for (const [setName, items] of Object.entries(sets)) {
-                const rarity = this.match(setName, rarities, "_");
-                if (rarity) {
-                    for (const [itemName, value] of Object.entries(items)) {
-                        if (itemName.indexOf("customplayer_") === 0) {
-                            this.itemRarities[`${itemName}:agent`] = rarity;
-                        }
-                        const matches = itemName.match(itemRE);
-                        if (!matches) {
-                            continue;
-                        }
-                        this.itemRarities[`${matches[1]}:${matches[2]}`] =
-                            rarity;
-                    }
-                }
-            }
-        }
-    }
-
-    parsePaintKits() {
-        for (const item of this.itemsFile.items_game.paint_kits) {
-            for (const [paintKit, value] of Object.entries(item)) {
-                if (!value.description_tag || value.name === "default") {
-                    continue;
-                }
-                const name = this.getTranslation(value.description_tag);
-                if (name === undefined) {
-                    console.log(value);
-                    throw new Error("Unable to name an item.");
-                }
-                this.paintKits.push({
-                    className: value.name,
-                    name,
-                    rarity: this.getRarityColor(
-                        this.paintKitRarity[value.name]
-                    ),
-                    value: Number(paintKit)
-                });
-            }
-        }
-    }
-
-    parsePaints() {
-        for (const [key, value] of Object.entries(
-            this.itemsFile.items_game.alternate_icons2.weapon_icons
-        )) {
-            if (!value.icon_path.match(/light$/)) {
-                continue;
-            }
-            const paintKit = this.paintKits.find(
-                (paintKit) =>
-                    value.icon_path.indexOf(
-                        format("_%s_light", paintKit.className)
-                    ) > -1
-            );
-            if (!paintKit) {
-                console.warn(
-                    format("Unable to find paint kit for %s", value.icon_path)
-                );
-                continue;
-            }
-            const def = this.itemDefs.find(
-                (item) =>
-                    value.icon_path.indexOf(
-                        format("/%s_%s", item.className, paintKit.className)
-                    ) > -1
-            );
-            if (!def) {
-                console.warn(
-                    format("Unable to find item for %s", value.icon_path)
-                );
-                continue;
-            }
-            const item = this.items.find((item) => item.id === def.id);
-            if (!item) {
-                console.warn(
-                    format("Unable to find item for %s", value.icon_path)
-                );
-                continue;
-            }
-            const name = format("%s | %s", item.name, paintKit.name);
-            const id = this.getId(`paint_${def.def}_${paintKit.value}`);
-            this.paints.push({
-                ...item,
-                base: undefined,
-                free: undefined,
-                id,
-                image: this.getCdnUrl(value.icon_path + "_large"),
-                localimage: this.getPaintLocalImage(
-                    def.className,
-                    paintKit.className,
-                    id
-                ),
-                name,
-                rarity: ["melee", "glove"].includes(item.type)
-                    ? this.getRarityColor(item.rarity ?? paintKit.rarity)
-                    : this.getItemRarityColor(
-                          [paintKit.className],
-                          def.className!,
-                          paintKit.rarity
-                      )
-            });
-            this.itemDefs.push({
-                ...def,
-                id,
-                itemid: paintKit.value
-            });
-            this.addCaseContent(`[${paintKit.className}]${def.className}`, id);
-            this.caseRareItem[
-                `${item.name} ${paintKit.name}`
-                    .replace(/[^\d\w\s]/g, "")
-                    .toLowerCase()
-            ] = id;
-        }
-    }
-
-    parseMusicKits() {
-        for (const item of this.itemsFile.items_game.music_definitions) {
-            for (const [musicId, value] of Object.entries(item)) {
-                if (musicId === "2") {
-                    // Skip duplicated CS:GO default music kit.
-                    continue;
-                }
-                const name = this.getTranslation(value.loc_name);
-                const id = this.getId(`musickit_${musicId}`);
-                const itemid = Number(musicId);
-                this.musicKits.push({
-                    base: true,
-                    category: "musickit",
-                    free: itemid === 1 ? true : undefined,
-                    id,
-                    image: this.getCdnUrl(value.image_inventory),
-                    name,
-                    rarity: "#4b69ff",
-                    type: "musickit"
-                });
-                this.itemDefs.push({
-                    id,
-                    itemid
-                });
-                this.addCaseContent(`[${value.name}]musickit`, id);
-            }
-        }
-    }
-
-    parseStickers() {
-        for (const item of this.itemsFile.items_game.sticker_kits) {
-            for (const [stickerId, value] of Object.entries(item)) {
-                if (
-                    value.name === "default" ||
-                    value.item_name.indexOf("SprayKit") > -1 ||
-                    value.name.indexOf("spray_") > -1 ||
-                    value.name.indexOf("patch_") > -1 ||
-                    value.sticker_material.indexOf("_graffiti") > -1
-                ) {
-                    continue;
-                }
-                let category: string = "";
-                if (!value.sticker_material) {
-                    console.log(value);
-                }
-                const [folder] = value.sticker_material.split("/");
-                if (folder === "alyx") {
-                    category = this.getTranslation(
-                        "#CSGO_crate_sticker_pack_hlalyx_capsule"
-                    );
-                }
-                if (UNCATEGORIZED_STICKERS.indexOf(folder) > -1) {
-                    category = "Valve";
-                }
-                if (!category) {
-                    category = this.getTranslation(
-                        format("#CSGO_sticker_crate_key_%s", folder)
-                    );
-                }
-                if (!category) {
-                    category = this.getTranslation(
-                        format("#CSGO_crate_sticker_pack_%s", folder)
-                    );
-                }
-                if (!category) {
-                    category = this.getTranslation(
-                        format("#CSGO_crate_sticker_pack_%s_capsule", folder)
-                    );
-                }
-                if (value.tournament_event_id) {
-                    category = this.getTranslation(
-                        format(
-                            "#CSGO_Tournament_Event_NameShort_%s",
-                            value.tournament_event_id
-                        )
-                    );
-                    if (!category) {
-                        throw new Error(
-                            format(
-                                "Unable to find the short name for tournament %s.",
-                                value.tournament_event_id
-                            )
-                        );
-                    }
-                }
-                if (!category) {
-                    console.log(value);
-                    throw new Error("Unable to define a category.");
-                }
-                const name = this.getTranslation(value.item_name);
-                if (name === undefined) {
-                    continue;
-                }
-                const id = this.getId(`sticker_${stickerId}`);
-                const itemName = value.item_name.substring(
-                    value.item_name.indexOf("#StickerKit_") + 12
-                );
-                this.stickers.push({
-                    category,
-                    id,
-                    image: this.getCdnUrl(
-                        format(
-                            "econ/stickers/%s",
-                            value.sticker_material + "_large"
-                        )
-                    ),
-                    name,
-                    rarity: this.getItemRarityColor(
-                        [itemName, value.name],
-                        "sticker",
-                        value.item_rarity
-                    ),
-                    type: "sticker"
-                });
-                this.itemDefs.push({
-                    id,
-                    itemid: Number(stickerId)
-                });
-                this.addCaseContent(`[${value.name}]sticker`, id);
-            }
-        }
-    }
-
-    parsePatches() {
-        for (const item of this.itemsFile.items_game.sticker_kits) {
-            for (const [patchId, value] of Object.entries(item)) {
-                if (
-                    value.item_name.indexOf("#PatchKit") !== 0 &&
-                    value.patch_material === undefined
-                ) {
-                    continue;
-                }
-                const name = this.getTranslation(value.item_name);
-                if (name === undefined) {
-                    continue;
-                }
-                const id = this.getId(`patch_${patchId}`);
-                const itemName = value.item_name.substring(
-                    value.item_name.indexOf("#PatchKit_") + 10
-                );
-                this.items.push({
-                    category: "patch",
-                    id,
-                    image: this.getCdnUrl(
-                        format(
-                            "econ/patches/%s",
-                            value.patch_material + "_large"
-                        )
-                    ),
-                    teams: [CS_TEAM_CT, CS_TEAM_T],
-                    name,
-                    rarity: this.getItemRarityColor(
-                        [itemName, value.name],
-                        "patch",
-                        value.item_rarity
-                    ),
-                    type: "patch"
-                });
-                this.itemDefs.push({
-                    id,
-                    itemid: Number(patchId)
-                });
-                this.addCaseContent(`[${value.name}]patch`, id);
-            }
-        }
-    }
-
-    parseAgents() {
-        for (const item of this.itemsFile.items_game.items) {
-            for (const [itemDef, value] of Object.entries(item)) {
-                if (value.prefab !== "customplayertradable") {
-                    continue;
-                }
-                const name = this.getTranslation(value.item_name);
-                const teams = Object.keys(value.used_by_classes).map(
-                    this.getCS_Team
-                );
-                const id = this.getId(
-                    `agent_${this.getTeamDesc(teams)}_${itemDef}`
-                );
-                this.items.push({
-                    category: "agent",
-                    id,
-                    image: this.getCdnUrl(value.image_inventory),
-                    name,
-                    rarity: this.getItemRarityColor(
-                        [value.name],
-                        "patch",
-                        value.item_rarity
-                    ),
-                    teams,
-                    type: "agent"
-                });
-                this.itemDefs.push({
-                    className: value.name,
-                    def: Number(itemDef),
-                    id,
-                    itemid: undefined
-                });
-            }
-        }
-    }
-
-    parsePins() {
-        for (const item of this.itemsFile.items_game.items) {
-            for (const [itemDef, value] of Object.entries(item)) {
-                if (
-                    value.image_inventory === undefined ||
-                    value.item_name === undefined ||
-                    !value.image_inventory.includes("/status_icons/") ||
-                    value.tool?.use_string === "#ConsumeItem" ||
-                    value.attributes?.["set supply crate series"]
-                        ?.attribute_class === "supply_crate_series" ||
-                    value.item_name.indexOf("#CSGO_TournamentPass") === 0
-                ) {
-                    continue;
-                }
-                const name = this.getTranslation(value.item_name);
-                const id = this.getId(`pin_${itemDef}`);
-                this.items.push({
-                    altname: value.name,
-                    category: "pin",
-                    id,
-                    image: this.getCdnUrl(value.image_inventory),
-                    name,
-                    rarity: this.getRarityColor(value.item_rarity, "#eb4b4b"),
-                    teams: undefined,
-                    type: "pin"
-                });
-                this.itemDefs.push({
-                    className: value.name,
-                    def: Number(itemDef),
-                    id,
-                    itemid: undefined
-                });
-                this.addCaseContent(value.name, id);
-            }
-        }
-    }
-
-    async parseCases() {
-        /**
-         * We're going to deviate from the objective of this parsing as I'm
-         * unable to find how to know which items are rare in each case from
-         * items_game.txt, so we're going to use this API for getting them.
-         */
-        const cases = (await (
-            await fetch(
-                "https://spacerulerwill.github.io/CS2-API/api/cases.json"
-            )
-        ).json()) as {
-            [key: string]: {
-                formattedName: string;
-                skins: {
-                    "rare-item"?: string[];
-                };
-            };
-        };
-        const rareContents: Record<string, number[] | undefined> = {};
-        for (const aCase of Object.values(cases)) {
-            if (
-                !aCase.skins["rare-item"] ||
-                aCase.skins["rare-item"].length === 0
-            ) {
-                continue;
-            }
-            rareContents[aCase.formattedName] = aCase.skins["rare-item"].map(
-                (item) => {
-                    if (this.caseRareItem[item] === undefined) {
-                        throw new Error(`unable to find ${item}`);
-                    }
-                    return this.caseRareItem[item];
-                }
-            );
-        }
-        const lootlist = {} as Record<
-            string,
-            (typeof this.itemsFile.items_game.client_loot_lists)[number][string]
-        >;
-        for (const itemSet of this.itemsFile.items_game.client_loot_lists) {
-            for (const setName of Object.keys(itemSet)) {
-                lootlist[setName] = itemSet[setName];
-            }
-        }
-        const getItems = (lootlistKey: string, items: string[] = []) => {
-            if (!lootlist[lootlistKey]) {
-                console.warn(`not found loot list key ${lootlistKey}`);
-                return [];
-            }
-            const keys = Object.keys(lootlist[lootlistKey]);
-            for (const key of keys) {
-                if (!this.caseContents[key]) {
-                    getItems(key, items);
-                } else {
-                    items.push(key);
-                }
-            }
-            return items;
-        };
-        for (const item of this.itemsFile.items_game.items) {
-            for (const [itemDef, value] of Object.entries(item)) {
-                if (
-                    value.image_inventory === undefined ||
-                    (value.prefab !== "weapon_case" &&
-                        value.attributes?.["set supply crate series"]
-                            ?.attribute_class !== "supply_crate_series") ||
-                    !value.image_inventory.includes("econ/weapon_cases") ||
-                    value.tool?.type === "gift"
-                ) {
-                    continue;
-                }
-                const contents = [] as number[];
-                const resolveId =
-                    value.attributes?.["set supply crate series"]?.value;
-                if (resolveId === undefined) {
-                    throw new Error(`resolveId not found ${value.name}`);
-                }
-                let resolvedName = undefined as string | undefined;
-                for (const resolver of this.itemsFile.items_game
-                    .revolving_loot_lists) {
-                    if (resolver[resolveId]) {
-                        resolvedName = resolver[resolveId];
-                        break;
-                    }
-                }
-                if (resolvedName === undefined) {
-                    throw new Error(`not found resolver for ${value.name}`);
-                }
-                for (const itemName of getItems(resolvedName)) {
-                    if (itemName.includes("]spray")) {
-                        continue;
-                    }
-                    if (!this.caseContents[itemName]) {
-                        throw new Error(`item not found ${itemName}`);
-                    }
-                    contents.push(this.caseContents[itemName]);
-                }
-                if (contents.length === 0) {
-                    console.warn(`no items found for ${resolvedName}`);
-                }
-                if (contents.length > 0) {
-                    const name = this.getTranslation(value.item_name);
-                    const id = this.getId(`case_${itemDef}`);
-                    const rarecontents = rareContents[name];
-                    this.items.push({
-                        category: "case",
-                        contents,
-                        id,
-                        image: this.getCdnUrl(value.image_inventory),
-                        rareimage:
-                            value.image_unusual_item !== undefined
-                                ? this.getCaseRareImage(
-                                      value.image_unusual_item,
-                                      id
-                                  )
-                                : rarecontents !== undefined &&
-                                  rarecontents?.length > 0
-                                ? 2
-                                : undefined,
-                        name,
-                        rarecontents,
-                        rarity: "#b0c3d9",
-                        teams: undefined,
-                        type: "case"
-                    });
-                    this.itemDefs.push({
-                        def: Number(itemDef),
-                        id
-                    });
-                }
-            }
-        }
-    }
-
-    addCaseContent(key: string, value: number) {
-        if (this.caseContents[key] !== undefined) {
-            throw new Error(`duplicate item found ${key}`);
-        }
-        this.caseContents[key] = value;
-    }
-
-    getBaseLocalImage(className: string, id: number) {
+    getBaseLocalImage(id: number, className: string) {
         const imagePath = resolve(
             CS2_IMAGES_PATH,
             `econ/weapons/base_weapons/${className}_png.png`
         );
         const destPath = resolve(process.cwd(), `dist/images/${id}.png`);
         if (existsSync(destPath)) {
-            return 0b111;
+            return true;
         }
         if (existsSync(imagePath)) {
             copyFileSync(imagePath, destPath);
-            return 0b111;
-        }
-        return 0;
-    }
-
-    getCaseRareImage(file: string, id: number) {
-        const imagePath = resolve(CS2_IMAGES_PATH, `${file}_png.png`);
-        const destFile = `${id}_rare.png`;
-        const destPath = resolve(process.cwd(), `dist/images/${destFile}`);
-        if (existsSync(destPath)) {
-            return 1;
-        }
-        if (existsSync(imagePath)) {
-            copyFileSync(imagePath, destPath);
-            return 1;
+            return true;
         }
         return undefined;
     }
 
-    getPaintLocalImage(
+    getEconLocalImage(
+        id: number,
         className: string | undefined,
-        paintClassName: string | undefined,
-        id: number
+        paintClassName: string | undefined
     ) {
-        const wears = ["heavy", "medium", "light"];
         if (!className || !paintClassName) {
             return undefined;
         }
-        let localimage = 0;
-        wears.filter((wear) => {
-            const imagePath = resolve(
-                CS2_IMAGES_PATH,
-                `econ/default_generated/${className}_${paintClassName}_${wear}_png.png`
-            );
-            const destPath = resolve(
-                process.cwd(),
-                `dist/images/${id}_${wear}.png`
-            );
-            if (existsSync(destPath)) {
-                return true;
-            }
-            if (existsSync(imagePath)) {
-                copyFileSync(imagePath, destPath);
-                return true;
-            }
-            return false;
-        });
-
-        wears.forEach((wear) => {
-            switch (wear) {
-                case "heavy":
-                    return (localimage |= CS_DEFAULT_GENERATED_HEAVY);
-                case "medium":
-                    return (localimage |= CS_DEFAULT_GENERATED_MEDIUM);
-                case "light":
-                    return (localimage |= CS_DEFAULT_GENERATED_LIGHT);
-            }
-        });
-
-        if (wears.length === 0) {
-            console.log(
-                `no local image for id ${id}, ${className}+${paintClassName}`
-            );
-            return undefined;
-        }
-
-        return localimage;
-    }
-
-    writeItemImages(items: CS_Item[]) {
-        for (const item of items) {
-            const id = String(item.id);
-            const urls = this.itemImages[id] ?? ([] as string[]);
-            if (!urls.includes(item.image)) {
-                urls.push(item.image);
-            }
-            this.itemImages[id] = urls;
-        }
-        writeJson("dist/item-images.json", this.itemImages);
-    }
-
-    writeFiles() {
-        const items = [
-            ...this.items,
-            ...this.paints,
-            ...this.musicKits,
-            ...this.stickers
-        ].sort((a, b) => {
-            const aTop = a.base || a.free;
-            const bTop = b.base || b.free;
-            if (aTop && !bTop) {
-                return -1;
-            }
-            if (!aTop && bTop) {
-                return 1;
-            }
-            if (aTop && bTop) {
-                if (a.free && !b.free) {
-                    return -1;
-                }
-                if (!a.free && b.free) {
-                    return 1;
-                }
-            }
-            if (a.name < b.name) {
-                return -1;
-            }
-            if (a.name > b.name) {
-                return 1;
-            }
-            return 0;
-        });
-        const itemsDefs = this.itemDefs.map((itemDef) => ({
-            ...itemDef,
-            className: undefined
-        }));
-        writeJson("dist/language.json", this.languageFile);
-        writeJson("dist/parsed-items-game.json", this.itemsFile);
-        writeJson("dist/item-rarities.json", this.itemRarities);
-        writeJson("dist/items.json", items);
-        this.writeItemImages(items);
-        writeJson("dist/item-defs.json", itemsDefs);
-        writeJson("dist/ids.json", this.ids);
-        replaceInFile(
-            "src/items.ts",
-            /CS_Item\[\] = [^;]+;/,
-            format("CS_Item[] = %s;", JSON.stringify(items))
+        return (
+            econLocalImageSuffixes
+                .filter((suffix) => {
+                    const src = resolve(
+                        CS2_IMAGES_PATH,
+                        `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`
+                    );
+                    const dest = resolve(
+                        process.cwd(),
+                        `dist/images/${id}_${suffix}.png`
+                    );
+                    if (existsSync(src)) {
+                        copyFileSync(src, dest);
+                        return true;
+                    }
+                    return false;
+                })
+                .map((suffix, index, found) => {
+                    // I'm confident this logic will never be executed, but
+                    // let's keep it here.
+                    if (
+                        found.length < econLocalImageSuffixes.length &&
+                        index === found.length - 1
+                    ) {
+                        console.log(`missing local image for id ${id}.`);
+                        const src = resolve(
+                            process.cwd(),
+                            `dist/images/${id}_${suffix}.png`
+                        );
+                        for (const otherSuffix of econLocalImageSuffixes) {
+                            if (!found.includes(otherSuffix)) {
+                                const dest = resolve(
+                                    process.cwd(),
+                                    `dist/images/${id}_${otherSuffix}.png`
+                                );
+                                if (existsSync(src)) {
+                                    copyFileSync(src, dest);
+                                    console.log(
+                                        `had to copy ${suffix} to ${otherSuffix} for id ${id}.`
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    return suffix;
+                }).length > 0 || undefined
         );
+    }
+
+    getPrefab(prefabKey: string) {
+        const prefab = this.prefabs[prefabKey];
+        if (!prefab) {
+            throw new Error(`unable to find prefab for ${prefabKey}`);
+        }
+        return prefab;
+    }
+
+    getRarityColorHex(keywords: (string | undefined)[], defaultTo?: string) {
+        let colorHex =
+            defaultTo !== undefined
+                ? defaultTo.charAt(0) === "#"
+                    ? defaultTo
+                    : this.raritiesColorHex[defaultTo] ?? ""
+                : "";
+        for (const keyword of keywords) {
+            if (!keyword) {
+                continue;
+            }
+            if (keyword.charAt(0) === "#") {
+                colorHex = keyword;
+                break;
+            }
+            if (this.itemsRaritiesColorHex[keyword]) {
+                colorHex = this.itemsRaritiesColorHex[keyword]!;
+                break;
+            }
+            if (this.paintKitsRaritiesColorHex[keyword]) {
+                colorHex = this.paintKitsRaritiesColorHex[keyword]!;
+                break;
+            }
+            if (this.raritiesColorHex[keyword]) {
+                colorHex = this.raritiesColorHex[keyword];
+                break;
+            }
+        }
+        if (!colorHex && !defaultTo) {
+            console.log(`unable to find rarity for ${keywords.join(",")}.`);
+        }
+        if (!colorHex) {
+            colorHex = this.raritiesColorHex.default;
+        }
+        return colorHex;
+    }
+
+    addCaseItem(itemKey: string, id: number) {
+        if (this.caseItems.has(itemKey)) {
+            throw new Error(`duplicate found for ${itemKey}.`);
+        }
+        this.caseItems.set(itemKey, id);
+    }
+
+    getClientLootListItems(clientLootListKey: string, items: string[] = []) {
+        if (!this.clientLootList[clientLootListKey]) {
+            console.log(
+                `unable to find loot list for key ${clientLootListKey}.`
+            );
+            return [];
+        }
+        const itemOrClientLootListKeys = Object.keys(
+            this.clientLootList[clientLootListKey]
+        );
+        for (const itemOrClientLootListKey of itemOrClientLootListKeys) {
+            // At this point, `caseItemMap` should be populated with all economy
+            // items that can be retrieved from cases.
+            if (!this.caseItems.has(itemOrClientLootListKey)) {
+                // If we did not find, that means that it's probably a reference
+                // to another loot list...
+                this.getClientLootListItems(itemOrClientLootListKey, items);
+            } else {
+                items.push(itemOrClientLootListKey);
+            }
+        }
+        return items;
+    }
+
+    getCaseRareImage(id: number, path: string) {
+        const src = resolve(CS2_IMAGES_PATH, `${path}_png.png`);
+        const dest = resolve(process.cwd(), `dist/images/${id}_rare.png`);
+        if (existsSync(src)) {
+            copyFileSync(src, dest);
+            return CS_RARE_IMAGE_CUSTOM;
+        }
+        return undefined;
     }
 }
 
-new GenerateScript({
-    language: "english"
-});
+new GenerateScript().run();

@@ -12,7 +12,7 @@
     },
     "scripts": {
         "test": "jest",
-        "generate": "ts-node --esm scripts/generate.ts",
+        "generate": "ts-node --esm scripts/generate.ts > dist/generate-log.txt",
         "build": "tsc",
         "build-docs": "typedoc src/index.ts"
     },

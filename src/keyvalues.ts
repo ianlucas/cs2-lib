@@ -9,7 +9,7 @@ type KeyValue = [string, string | KeyValue[]];
  * A simple Valve Key Value parser.
  * @return {any}
  */
-export function parse(data: string): any {
+export function CS_parseValveKeyValue<T = any>(data: string) {
     data = data.replace(/\[[\$!][^\]]+\]/g, "");
     let index = 0;
 
@@ -29,13 +29,16 @@ export function parse(data: string): any {
         if (data[index] === '"') {
             index += 1;
             let value = "";
-            while (
-                data[index] &&
-                (data[index] !== '"' ||
-                    (data[index] === '"' && data[index - 1] === "\\"))
-            ) {
-                value += data[index];
-                index += 1;
+            while (data[index] && data[index] !== '"') {
+                while (data[index] && data[index] === "\\") {
+                    index += 1;
+                    value += data[index];
+                    index += 1;
+                }
+                if (data[index] !== '"') {
+                    value += data[index];
+                    index += 1;
+                }
             }
             if (data[index] !== '"') {
                 throw new Error("Bad end of string.");
@@ -57,7 +60,12 @@ export function parse(data: string): any {
         if (data[index] === "}") {
             return "";
         }
-        console.log(data[index]);
+        console.log(
+            data.substring(Math.max(0, index - 64), index) +
+                data[index] +
+                data.substring(index + 1, Math.min(data.length, index + 63))
+        );
+        console.log("".padStart(64, " ") + "^");
         throw new Error(`Unexpected character at index ${index}.`);
     }
 
@@ -95,5 +103,5 @@ export function parse(data: string): any {
         }, context);
     }
 
-    return walk({}, parsePairs());
+    return walk({}, parsePairs()) as T;
 }
