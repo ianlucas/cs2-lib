@@ -7,20 +7,20 @@ This is a TypeScript library for Counter-Strike-related applications.
 Before using `CS_Economy` class or related functions, you need to set the items:
 
 ```typescript
-import { CS_Economy, CS_ITEMS, CS_ITEM_DEFS } from "cslib";
+import { CS_Economy, CS_ITEMS } from "cslib";
 
-CS_Economy.setItems(CS_ITEMS, CS_ITEM_DEFS);
+CS_Economy.initialize(CS_ITEMS);
 ```
 
 Normally, it is not necessary to import `CS_ITEM_DEFS` into the client bundle.
 
 ## Feature Overview
 
--   [ ] Economy Items - Cases
 -   [ ] Economy Items - Grafitti
 -   [ ] Economy Items - Tools
 -   [x] Economy Items - Agent Patches
 -   [x] Economy Items - Agents
+-   [x] Economy Items - Cases
 -   [x] Economy Items - Gloves
 -   [x] Economy Items - Knives
 -   [x] Economy Items - Music Kits
