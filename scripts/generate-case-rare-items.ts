@@ -27,6 +27,7 @@ export class CaseRareItems {
     populated: Record<string, number[]> = {};
 
     async fetch() {
+        console.warn("fetching case rare items dependency...");
         const response = (await (
             await fetch(spacerulerwill_CS2_API_URL)
         ).json()) as SpacerulerwillCS2APIResponse;
@@ -39,6 +40,7 @@ export class CaseRareItems {
             }
             this.cases[caseProps.formattedName] = caseProps.skins["rare-item"];
         }
+        console.warn("fetch successful.");
     }
 
     populate(baseItems: CS_Item[], generatedItems: CS_Item[]) {

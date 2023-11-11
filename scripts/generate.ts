@@ -67,7 +67,7 @@ class GenerateScript {
     caseRareItems = new CaseRareItems();
 
     constructor() {
-        console.log("generate script initialized.");
+        console.warn("generate script initialized.");
     }
 
     async run() {
@@ -135,7 +135,7 @@ class GenerateScript {
             languages[language] = {};
             translations[language] = {};
             const kv = languages[language];
-            console.log(`parsing csgo_${language}.txt...`);
+            console.warn(`parsing csgo_${language}.txt...`);
             const parsed = CS_parseValveKeyValue<CS_CsgoLanguageTXT>(contents);
             for (const key of Object.keys(parsed.lang.Tokens)) {
                 const k = key.toLowerCase();
@@ -155,7 +155,7 @@ class GenerateScript {
         }
         this.languages = languages;
         this.translations = translations;
-        console.log(
+        console.warn(
             `loaded the following languages: ${Object.keys(languages)}.`
         );
     }
@@ -291,7 +291,7 @@ class GenerateScript {
     }
 
     parseWeapons() {
-        console.log("parsing weapons...");
+        console.warn("parsing weapons...");
         const categoryRE = /(c4|[^\d]+)/;
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (itemProps.baseitem !== "1" || !itemProps.item_sub_position) {
@@ -309,7 +309,7 @@ class GenerateScript {
             const name = this.requireTranslation(prefab.item_name);
             const teams = this.getTeams(prefab.used_by_classes);
             const id = this.ids.get(`weapon_${teams.join("_")}_${itemIndex}`);
-            this.addTranslation(id, prefab.item_name);
+            this.addTranslation(id, name, prefab.item_name);
 
             this.baseItems.push({
                 base: true,
@@ -333,11 +333,11 @@ class GenerateScript {
                 type: "weapon"
             });
         }
-        console.log("parsed weapons.");
+        console.warn("parsed weapons.");
     }
 
     parseMelees() {
-        console.log("parsing melees...");
+        console.warn("parsing melees...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
                 (itemProps.prefab === "melee" && itemProps.baseitem !== "1") ||
@@ -351,7 +351,7 @@ class GenerateScript {
             const name = this.requireTranslation(itemProps.item_name);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`melee_${teams.join("_")}_${itemIndex}`);
-            this.addTranslation(id, itemProps.item_name);
+            this.addTranslation(id, name, itemProps.item_name);
 
             this.baseItems.push({
                 base: true,
@@ -374,11 +374,11 @@ class GenerateScript {
                 type: "melee"
             });
         }
-        console.log("parsed melees.");
+        console.warn("parsed melees.");
     }
 
     parseGloves() {
-        console.log("parse gloves...");
+        console.warn("parse gloves...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
                 itemProps.prefab?.indexOf("hands") === -1 ||
@@ -389,7 +389,7 @@ class GenerateScript {
             const name = this.requireTranslation(itemProps.item_name);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`glove_${teams.join("_")}_${itemIndex}`);
-            this.addTranslation(id, itemProps.item_name);
+            this.addTranslation(id, name, itemProps.item_name);
 
             this.baseItems.push({
                 base: true,
@@ -414,11 +414,11 @@ class GenerateScript {
                 type: "glove"
             });
         }
-        console.log("parsed gloves.");
+        console.warn("parsed gloves.");
     }
 
     parseSkins() {
-        console.log("parse skins...");
+        console.warn("parse skins...");
         for (const { icon_path: iconPath } of Object.values(
             this.itemsGameParsed.items_game.alternate_icons2.weapon_icons
         )) {
@@ -444,7 +444,12 @@ class GenerateScript {
             const id = this.ids.get(
                 `paint_${parentItem.def}_${paintKit.itemid}`
             );
-            this.addTranslation(id, parentItem.nameToken, paintKit.nameToken);
+            this.addTranslation(
+                id,
+                name,
+                parentItem.nameToken,
+                paintKit.nameToken
+            );
 
             this.generatedItems.push({
                 ...parentItem,
@@ -469,11 +474,11 @@ class GenerateScript {
 
             this.addCaseItem(itemKey, id);
         }
-        console.log("parsed skins.");
+        console.warn("parsed skins.");
     }
 
     parseMusicKits() {
-        console.log("parse music kits...");
+        console.warn("parse music kits...");
         for (const kv of this.itemsGameParsed.items_game.music_definitions) {
             for (const [musicIndex, musicProps] of Object.entries(kv)) {
                 if (musicIndex === "2") {
@@ -483,7 +488,7 @@ class GenerateScript {
                 const itemKey = `[${musicProps.name}]musickit`;
                 const name = this.requireTranslation(musicProps.loc_name);
                 const id = this.ids.get(`musickit_${musicIndex}`);
-                this.addTranslation(id, musicProps.loc_name);
+                this.addTranslation(id, name, musicProps.loc_name);
 
                 this.generatedItems.push({
                     base: true,
@@ -500,11 +505,11 @@ class GenerateScript {
                 this.addCaseItem(itemKey, id);
             }
         }
-        console.log("parsed music kits.");
+        console.warn("parsed music kits.");
     }
 
     parseStickers() {
-        console.log("parse stickers...");
+        console.warn("parse stickers...");
         for (const [stickerIndex, stickerProps] of Object.entries(
             this.stickerKits
         )) {
@@ -566,7 +571,7 @@ class GenerateScript {
             }
             const id = this.ids.get(`sticker_${stickerIndex}`);
             const itemKey = `[${stickerProps.name}]sticker`;
-            this.addTranslation(id, stickerProps.item_name);
+            this.addTranslation(id, name, stickerProps.item_name);
 
             this.generatedItems.push({
                 category,
@@ -586,11 +591,11 @@ class GenerateScript {
 
             this.addCaseItem(itemKey, id);
         }
-        console.log("parsed stickers.");
+        console.warn("parsed stickers.");
     }
 
     parsePatches() {
-        console.log("parse patches...");
+        console.warn("parse patches...");
         for (const [patchIndex, patchProps] of Object.entries(
             this.stickerKits
         )) {
@@ -607,7 +612,7 @@ class GenerateScript {
             }
             const id = this.ids.get(`patch_${patchIndex}`);
             const itemKey = `[${patchProps.name}]patch`;
-            this.addTranslation(id, patchProps.item_name);
+            this.addTranslation(id, name, patchProps.item_name);
 
             this.generatedItems.push({
                 category: "patch",
@@ -628,11 +633,11 @@ class GenerateScript {
 
             this.addCaseItem(itemKey, id);
         }
-        console.log("parsed patches.");
+        console.warn("parsed patches.");
     }
 
     parseAgents() {
-        console.log("parsing agents...");
+        console.warn("parsing agents...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (itemProps.prefab !== "customplayertradable") {
                 continue;
@@ -640,7 +645,7 @@ class GenerateScript {
             const name = this.requireTranslation(itemProps.item_name);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`agent_${teams.join("_")}_${itemIndex}`);
-            this.addTranslation(id, itemProps.item_name);
+            this.addTranslation(id, name, itemProps.item_name);
 
             this.generatedItems.push({
                 category: "agent",
@@ -657,11 +662,11 @@ class GenerateScript {
                 type: "agent"
             });
         }
-        console.log("parsed agents.");
+        console.warn("parsed agents.");
     }
 
     parsePins() {
-        console.log("parsing pins...");
+        console.warn("parsing pins...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
                 itemProps.image_inventory === undefined ||
@@ -676,7 +681,7 @@ class GenerateScript {
             }
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.ids.get(`pin_${itemIndex}`);
-            this.addTranslation(id, itemProps.item_name);
+            this.addTranslation(id, name, itemProps.item_name);
 
             this.generatedItems.push({
                 altname: itemProps.name,
@@ -696,11 +701,11 @@ class GenerateScript {
 
             this.addCaseItem(itemProps.name, id);
         }
-        console.log("parsed pins.");
+        console.warn("parsed pins.");
     }
 
     parseCases() {
-        console.log("parsing cases...");
+        console.warn("parsing cases...");
         this.caseRareItems.populate(this.baseItems, this.generatedItems);
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
@@ -747,7 +752,7 @@ class GenerateScript {
                 const name = this.requireTranslation(itemProps.item_name);
                 const id = this.ids.get(`case_${itemIndex}`);
                 const rarecontents = this.caseRareItems.get(name);
-                this.addTranslation(id, itemProps.item_name);
+                this.addTranslation(id, name, itemProps.item_name);
 
                 this.generatedItems.push({
                     category: "case",
@@ -773,7 +778,7 @@ class GenerateScript {
                 });
             }
         }
-        console.log("parsed cases.");
+        console.warn("parsed cases.");
     }
 
     persist() {
@@ -810,17 +815,17 @@ class GenerateScript {
             }));
 
         writeJson("dist/parsed-items-game.json", this.itemsGameParsed);
-        console.log("generated dist/parsed-items-game.json.");
+        console.warn("generated dist/parsed-items-game.json.");
         writeJson("dist/items.json", items);
-        console.log("generated dist/items.json.");
+        console.warn("generated dist/items.json.");
         writeJson("dist/ids.json", this.ids.getAll());
-        console.log("generated dist/ids.json.");
+        console.warn("generated dist/ids.json.");
 
         for (const [language, translations] of Object.entries(
             this.translations
         )) {
             writeJson(`dist/items-${language}.json`, translations);
-            console.log(`generated dist/items-${language}.json.`);
+            console.warn(`generated dist/items-${language}.json.`);
         }
 
         replaceInFile(
@@ -828,27 +833,34 @@ class GenerateScript {
             /CS_Item\[\] = [^;]+;/,
             `CS_Item[] = ${JSON.stringify(items)};`
         );
-        console.log("updated src/items.json.");
-        console.log("script completed.");
+        console.warn("updated src/items.ts.");
+        console.warn("script completed.");
     }
 
-    addTranslation(id: number, ...keys: string[]) {
+    addTranslation(id: number, englishName: string, ...keys: string[]) {
         for (const [language, tokens] of Object.entries(this.languages)) {
             if (language === "english") {
                 continue;
             }
-            this.translations[language][id] = keys
+            const translatedName = keys
                 .map((key) => {
                     key = key.substring(1).toLowerCase();
                     const translation = tokens[key];
                     if (!translation) {
                         console.log(
-                            `translation not found for ${key} for ${language}.`
+                            `translation of ${key} not found for ${language}.`
                         );
                     }
                     return translation || this.languages.english[key];
                 })
                 .join(" | ");
+
+            if (translatedName !== englishName) {
+                console.log(
+                    `skipped translation of ${keys} for ${language} (same as english).`
+                );
+                this.translations[language][id] = translatedName;
+            }
         }
     }
 
