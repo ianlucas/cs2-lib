@@ -92,8 +92,7 @@ export function CS_parseValveKeyValue<T = any>(data: string) {
             if (object[key] && !Array.isArray(object[key])) {
                 object[key] = [object[key]];
             }
-            const newValue =
-                typeof value === "string" ? value : walk({}, value);
+            const newValue = typeof value === "string" ? value : walk({}, value);
             if (Array.isArray(object[key])) {
                 object[key].push(newValue);
             } else {

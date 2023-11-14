@@ -13,15 +13,7 @@ import {
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 
-export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
-    "weapon",
-    "glove",
-    "melee",
-    "musickit",
-    "agent",
-    "patch",
-    "pin"
-];
+export const CS_INVENTORY_EQUIPPABLE_ITEMS = ["weapon", "glove", "melee", "musickit", "agent", "patch", "pin"];
 
 export interface CS_InventoryItem {
     equipped?: boolean;
@@ -133,28 +125,20 @@ export class CS_Inventory {
                     return {
                         ...current,
                         equipped: csTeam === undefined ? true : undefined,
-                        equippedCT:
-                            csTeam === CS_TEAM_CT ? true : current.equippedCT,
-                        equippedT:
-                            csTeam === CS_TEAM_T ? true : current.equippedT
+                        equippedCT: csTeam === CS_TEAM_CT ? true : current.equippedCT,
+                        equippedT: csTeam === CS_TEAM_T ? true : current.equippedT
                     };
                 }
                 const currentCsItem = CS_Economy.getById(current.id);
                 if (
                     currentCsItem.type === csItem.type &&
-                    (csItem.type !== "weapon" ||
-                        currentCsItem.model === csItem.model)
+                    (csItem.type !== "weapon" || currentCsItem.model === csItem.model)
                 ) {
                     return {
                         ...current,
-                        equipped:
-                            csTeam === undefined ? undefined : current.equipped,
-                        equippedCT:
-                            csTeam === CS_TEAM_CT
-                                ? undefined
-                                : current.equippedCT,
-                        equippedT:
-                            csTeam === CS_TEAM_T ? undefined : current.equippedT
+                        equipped: csTeam === undefined ? undefined : current.equipped,
+                        equippedCT: csTeam === CS_TEAM_CT ? undefined : current.equippedCT,
+                        equippedT: csTeam === CS_TEAM_T ? undefined : current.equippedT
                     };
                 }
                 return current;
@@ -172,12 +156,9 @@ export class CS_Inventory {
                 if (at === index) {
                     return {
                         ...item,
-                        equipped:
-                            csTeam === undefined ? undefined : item.equipped,
-                        equippedCT:
-                            csTeam === CS_TEAM_CT ? undefined : item.equippedCT,
-                        equippedT:
-                            csTeam === CS_TEAM_T ? undefined : item.equippedT
+                        equipped: csTeam === undefined ? undefined : item.equipped,
+                        equippedCT: csTeam === CS_TEAM_CT ? undefined : item.equippedCT,
+                        equippedT: csTeam === CS_TEAM_T ? undefined : item.equippedT
                     };
                 }
                 return item;
@@ -276,23 +257,17 @@ export class CS_MutableInventory {
         for (const [index, current] of this.items.entries()) {
             if (index === at) {
                 current.equipped = csTeam === undefined ? true : undefined;
-                current.equippedCT =
-                    csTeam === CS_TEAM_CT ? true : current.equippedCT;
-                current.equippedT =
-                    csTeam === CS_TEAM_T ? true : current.equippedT;
+                current.equippedCT = csTeam === CS_TEAM_CT ? true : current.equippedCT;
+                current.equippedT = csTeam === CS_TEAM_T ? true : current.equippedT;
             }
             const currentCsItem = CS_Economy.getById(current.id);
             if (
                 currentCsItem.type === csItem.type &&
-                (csItem.type !== "weapon" ||
-                    currentCsItem.model === csItem.model)
+                (csItem.type !== "weapon" || currentCsItem.model === csItem.model)
             ) {
-                current.equipped =
-                    csTeam === undefined ? undefined : current.equipped;
-                current.equippedCT =
-                    csTeam === CS_TEAM_CT ? undefined : current.equippedCT;
-                current.equippedT =
-                    csTeam === CS_TEAM_T ? undefined : current.equippedT;
+                current.equipped = csTeam === undefined ? undefined : current.equipped;
+                current.equippedCT = csTeam === CS_TEAM_CT ? undefined : current.equippedCT;
+                current.equippedT = csTeam === CS_TEAM_T ? undefined : current.equippedT;
             }
         }
         return true;

@@ -39,11 +39,7 @@ test("bo3", () => {
     expect(veto.getCurrentTeam()).toBe(1);
     expect(veto.choose("de_overpass")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
-    expect(veto.getMaps()).toStrictEqual([
-        "de_ancient",
-        "de_anubis",
-        "de_mirage"
-    ]);
+    expect(veto.getMaps()).toStrictEqual(["de_ancient", "de_anubis", "de_mirage"]);
 });
 
 test("bo5", () => {
@@ -61,13 +57,7 @@ test("bo5", () => {
     expect(veto.getCurrentTeam()).toBe(1);
     expect(veto.choose("de_overpass")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
-    expect(veto.getMaps()).toStrictEqual([
-        "de_ancient",
-        "de_anubis",
-        "de_inferno",
-        "de_overpass",
-        "de_mirage"
-    ]);
+    expect(veto.getMaps()).toStrictEqual(["de_ancient", "de_anubis", "de_inferno", "de_overpass", "de_mirage"]);
 });
 
 test("custom", () => {
@@ -92,11 +82,7 @@ test("custom", () => {
     expect(veto.getCurrentTeam()).toBe(1);
     expect(veto.choose("de_overpass")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
-    expect(veto.getMaps()).toStrictEqual([
-        "de_nuke",
-        "de_vertigo",
-        "de_mirage"
-    ]);
+    expect(veto.getMaps()).toStrictEqual(["de_nuke", "de_vertigo", "de_mirage"]);
 });
 
 test("random", () => {

@@ -54,34 +54,13 @@ export class CS_Veto {
         }));
         switch (type) {
             case "bo1":
-                this.actions = [
-                    CS_VETO_BAN,
-                    CS_VETO_BAN,
-                    CS_VETO_BAN,
-                    CS_VETO_BAN,
-                    CS_VETO_BAN,
-                    CS_VETO_BAN
-                ];
+                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN];
                 break;
             case "bo3":
-                this.actions = [
-                    CS_VETO_BAN,
-                    CS_VETO_BAN,
-                    CS_VETO_PICK,
-                    CS_VETO_PICK,
-                    CS_VETO_BAN,
-                    CS_VETO_BAN
-                ];
+                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_BAN, CS_VETO_BAN];
                 break;
             case "bo5":
-                this.actions = [
-                    CS_VETO_BAN,
-                    CS_VETO_BAN,
-                    CS_VETO_PICK,
-                    CS_VETO_PICK,
-                    CS_VETO_PICK,
-                    CS_VETO_PICK
-                ];
+                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_PICK];
                 break;
             case "custom":
                 this.actions = actions!;

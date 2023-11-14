@@ -27,16 +27,7 @@ export interface CS_Item {
     rareimage?: number;
     rarity: string;
     teams?: CS_Team[];
-    type:
-        | "agent"
-        | "case"
-        | "glove"
-        | "melee"
-        | "musickit"
-        | "patch"
-        | "pin"
-        | "sticker"
-        | "weapon";
+    type: "agent" | "case" | "glove" | "melee" | "musickit" | "patch" | "pin" | "sticker" | "weapon";
 }
 
 /**
@@ -175,9 +166,7 @@ function filterItems(predicate: CS_EconomyPredicate) {
             compare(predicate.model, item.model) &&
             compare(predicate.base, item.base) &&
             compare(predicate.category, item.category) &&
-            (predicate.team === undefined ||
-                item.teams === undefined ||
-                item.teams.includes(predicate.team))
+            (predicate.team === undefined || item.teams === undefined || item.teams.includes(predicate.team))
         );
     };
 }
@@ -471,10 +460,7 @@ export function CS_hasNametag(csItem: CS_Item): boolean {
  * @param {CS_Item} [forItem] - The Counter-Strike item for which the nametag is being validated (optional).
  * @returns {boolean} - `true` if the nametag is valid, otherwise throws an error.
  */
-export function CS_validateNametag(
-    nametag: string,
-    forItem?: CS_Item
-): boolean {
+export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean {
     if (forItem !== undefined && !CS_hasNametag(forItem)) {
         throw new Error("invalid nametag");
     }
@@ -506,10 +492,7 @@ export function CS_hasStatTrak(csItem: CS_Item): boolean {
  * @param {CS_Item} forItem - The Counter-Strike item for which StatTrak status is being validated.
  * @returns {boolean} - `true` if the StatTrak status is valid, otherwise throws an error.
  */
-export function CS_validateStatTrak(
-    stattrak: boolean,
-    forItem: CS_Item
-): boolean {
+export function CS_validateStatTrak(stattrak: boolean, forItem: CS_Item): boolean {
     if (stattrak === true && !CS_hasStatTrak(forItem)) {
         throw new Error("invalid stattrak");
     }
@@ -560,13 +543,8 @@ export function CS_getStickers(): CS_Item[] {
  * @param {number} [float] - The float value of the item (optional).
  * @returns {string} - The resolved image URL.
  */
-export function CS_resolveItemImage(
-    baseUrl: string,
-    csItem: CS_Item | number,
-    float?: number
-): string {
-    const { base, id, image, localimage } =
-        typeof csItem === "number" ? CS_Economy.getById(csItem) : csItem;
+export function CS_resolveItemImage(baseUrl: string, csItem: CS_Item | number, float?: number): string {
+    const { base, id, image, localimage } = typeof csItem === "number" ? CS_Economy.getById(csItem) : csItem;
     if (!localimage) {
         if (image.charAt(0) === "/") {
             return `${baseUrl}${image}`;
@@ -597,10 +575,7 @@ export function CS_resolveItemImage(
  * @param {CS_Item | number} csItem - The Counter-Strike item or its ID.
  * @returns {string} - The resolved image URL.
  */
-export function CS_resolveCaseRareImage(
-    baseUrl: string,
-    csItem: CS_Item | number
-): string {
+export function CS_resolveCaseRareImage(baseUrl: string, csItem: CS_Item | number): string {
     csItem = typeof csItem === "number" ? CS_Economy.getById(csItem) : csItem;
     const { id, type, rareimage } = csItem;
     if (type !== "case") {
