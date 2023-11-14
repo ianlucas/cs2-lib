@@ -12,11 +12,7 @@ export function writeJson(path: string, contents: any) {
     writeFileSync(file, stringified, "utf-8");
 }
 
-export function replaceInFile(
-    path: string,
-    pattern: RegExp,
-    replaceValue: string
-) {
+export function replaceInFile(path: string, pattern: RegExp, replaceValue: string) {
     const file = readFileSync(path, "utf-8");
     writeFileSync(path, file.replace(pattern, replaceValue), "utf-8");
 }

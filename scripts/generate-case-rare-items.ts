@@ -10,8 +10,7 @@
 import fetch from "node-fetch";
 import { CS_Item } from "../src/economy";
 
-const spacerulerwill_CS2_API_URL =
-    "https://spacerulerwill.github.io/CS2-API/api/cases.json";
+const spacerulerwill_CS2_API_URL = "https://spacerulerwill.github.io/CS2-API/api/cases.json";
 
 interface SpacerulerwillCS2APIResponse {
     [caseKey: string]: {
@@ -28,14 +27,9 @@ export class CaseRareItems {
 
     async fetch() {
         console.warn("fetching case rare items dependency...");
-        const response = (await (
-            await fetch(spacerulerwill_CS2_API_URL)
-        ).json()) as SpacerulerwillCS2APIResponse;
+        const response = (await (await fetch(spacerulerwill_CS2_API_URL)).json()) as SpacerulerwillCS2APIResponse;
         for (const caseProps of Object.values(response)) {
-            if (
-                !caseProps.skins["rare-item"] ||
-                caseProps.skins["rare-item"].length === 0
-            ) {
+            if (!caseProps.skins["rare-item"] || caseProps.skins["rare-item"].length === 0) {
                 continue;
             }
             this.cases[caseProps.formattedName] = caseProps.skins["rare-item"];

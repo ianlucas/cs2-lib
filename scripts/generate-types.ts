@@ -121,8 +121,7 @@ export type LanguagesRecord = Record<string, Record<string, string>> & {
     english: Record<string, string>;
 };
 
-export type PrefabProps =
-    CS_ItemsGameTXT["items_game"]["prefabs"][number][string];
+export type PrefabProps = CS_ItemsGameTXT["items_game"]["prefabs"][number][string];
 export type PrefabsRecord = Record<string, PrefabProps>;
 export type ItemProps = CS_ItemsGameTXT["items_game"]["items"][number][string];
 export type ItemsRecord = Record<string, ItemProps>;
@@ -135,10 +134,8 @@ export type PaintKitsProps = {
 };
 export type SafeRaritiesRecord = Record<string, string | undefined>;
 export type UnsafeRaritiesRecord = Record<string, string>;
-export type StickerKitsProps =
-    CS_ItemsGameTXT["items_game"]["sticker_kits"][number][string];
+export type StickerKitsProps = CS_ItemsGameTXT["items_game"]["sticker_kits"][number][string];
 export type StickerKitsRecord = Record<string, StickerKitsProps>;
-export type ClientLootListItems =
-    CS_ItemsGameTXT["items_game"]["client_loot_lists"][number][string];
+export type ClientLootListItems = CS_ItemsGameTXT["items_game"]["client_loot_lists"][number][string];
 export type ClientLootListRecord = Record<string, ClientLootListItems>;
 export type RevolvingLootListRecord = Record<string, string>;
