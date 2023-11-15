@@ -5,7 +5,7 @@
 
 import {
     CS_Economy,
-    CS_validateFloat,
+    CS_validateWear,
     CS_validateNametag,
     CS_validateSeed,
     CS_validateStatTrak,
@@ -19,13 +19,13 @@ export interface CS_InventoryItem {
     equipped?: boolean;
     equippedCT?: boolean;
     equippedT?: boolean;
-    float?: number;
     id: number;
     nametag?: string;
     seed?: number;
-    stattrak?: boolean;
+    stattrak?: number;
     stickers?: (number | null)[];
-    stickersfloat?: (number | null)[];
+    stickerswear?: (number | null)[];
+    wear?: number;
 }
 
 export class CS_Inventory {
@@ -46,14 +46,14 @@ export class CS_Inventory {
             return this;
         }
         const csItem = CS_Economy.getById(item.id);
-        if (item.float !== undefined) {
-            CS_validateFloat(item.float, csItem);
+        if (item.wear !== undefined) {
+            CS_validateWear(item.wear, csItem);
         }
         if (item.seed !== undefined) {
             CS_validateSeed(item.seed, csItem);
         }
         if (item.stickers !== undefined) {
-            CS_validateStickers(csItem, item.stickers, item.stickersfloat);
+            CS_validateStickers(csItem, item.stickers, item.stickerswear);
         }
         if (item.nametag !== undefined) {
             CS_validateNametag(item.nametag, csItem);
@@ -190,14 +190,14 @@ export class CS_MutableInventory {
             return false;
         }
         const csItem = CS_Economy.getById(item.id);
-        if (item.float !== undefined) {
-            CS_validateFloat(item.float, csItem);
+        if (item.wear !== undefined) {
+            CS_validateWear(item.wear, csItem);
         }
         if (item.seed !== undefined) {
             CS_validateSeed(item.seed, csItem);
         }
         if (item.stickers !== undefined) {
-            CS_validateStickers(csItem, item.stickers, item.stickersfloat);
+            CS_validateStickers(csItem, item.stickers, item.stickerswear);
         }
         if (item.nametag !== undefined) {
             CS_validateNametag(item.nametag, csItem);

@@ -5,10 +5,6 @@
 
 type KeyValue = [string, string | KeyValue[]];
 
-/**
- * A simple Valve Key Value parser.
- * @return {any}
- */
 export function CS_parseValveKeyValue<T = any>(data: string) {
     data = data.replace(/\[[\$!][^\]]+\]/g, "");
     let index = 0;
