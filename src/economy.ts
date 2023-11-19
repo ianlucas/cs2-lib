@@ -278,8 +278,8 @@ export function CS_hasStatTrak(csItem: CS_Item): boolean {
     return CS_STATTRAKABLE_ITEMS.includes(csItem.type);
 }
 
-export function CS_validateStatTrak(stattrak: number, forItem: CS_Item): boolean {
-    if (!CS_hasStatTrak(forItem)) {
+export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolean {
+    if (forItem !== undefined && !CS_hasStatTrak(forItem)) {
         throw new Error("invalid stattrak");
     }
     if (stattrak < CS_MIN_STATTRAK || stattrak > CS_MAX_STATTRAK) {
