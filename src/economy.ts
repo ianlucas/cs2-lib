@@ -288,6 +288,8 @@ export function CS_validateStatTrak(stattrak: number, forItem: CS_Item): boolean
     return true;
 }
 
+export const CS_safeValidateStatTrak = safe(CS_validateStatTrak);
+
 export function CS_getWearLabel(wear: number): string {
     if (wear <= CS_MAX_FACTORY_NEW_WEAR) {
         return "FN";
