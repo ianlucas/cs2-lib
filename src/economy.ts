@@ -5,6 +5,7 @@
 
 import { CS_Team } from "./teams.js";
 import { compare, safe } from "./util.js";
+
 export interface CS_Item {
     altname?: string;
     base?: boolean;
