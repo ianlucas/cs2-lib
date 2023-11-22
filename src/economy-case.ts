@@ -57,7 +57,7 @@ export const CS_RARITY_COLOR_ORDER: Record<string, number | undefined> = {
 export const CS_RARITY_ORDER = ["common", "mythical", "legendary", "ancient", "special"];
 
 export function CS_randomFloat(min: number, max: number) {
-    return Math.random() * (max - min + 1) + min;
+    return Math.random() * (max - min) + min;
 }
 
 export function CS_randomInt(min: number, max: number) {
@@ -132,7 +132,11 @@ export function CS_roll(csCaseItem: CS_Item | number) {
     return {
         attributes: {
             seed: CS_hasSeed(csItem) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
-            wear: CS_hasWear(csItem) ? CS_randomFloat(CS_MIN_WEAR, CS_MAX_WEAR) : undefined,
+            wear: CS_hasWear(csItem)
+                ? Number(
+                      CS_randomFloat(CS_MIN_WEAR, CS_MAX_WEAR).toString().substring(0, CS_MAX_WEAR.toString().length)
+                  )
+                : undefined,
             stattrak: CS_hasStatTrak(csItem) ? (Math.random() <= 1 / 10 ? 0 : undefined) : undefined
         },
         csItem,
