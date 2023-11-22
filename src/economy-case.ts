@@ -25,6 +25,16 @@ export const CS_RARITY_COLORS: Record<string, string> = {
     "#e4ae39": "ancient" // immortal
 };
 
+export const CS_RARITY_FOR_SOUNDS: Record<string, string> = {
+    "#b0c3d9": "common",
+    "#5e98d9": "uncommon",
+    "#4b69ff": "rare",
+    "#8847ff": "mythical",
+    "#d32ce6": "legendary",
+    "#eb4b4b": "ancient",
+    "#e4ae39": "ancient" // immortal
+};
+
 export const CS_RARITY_ODDS: Record<string, number> = {
     common: 0.8,
     mythical: 0.16,
@@ -126,7 +136,7 @@ export function CS_roll(csCaseItem: CS_Item | number) {
             stattrak: CS_hasStatTrak(csItem) ? (Math.random() <= 1 / 10 ? 0 : undefined) : undefined
         },
         csItem,
-        rarity: rollRarity,
+        rarity: CS_RARITY_FOR_SOUNDS[csItem.rarity],
         special: rollRarity === "special"
     };
 }
