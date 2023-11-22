@@ -568,7 +568,8 @@ class GenerateScript {
                 !itemProps.image_inventory.includes("/status_icons/") ||
                 itemProps.tool?.use_string === "#ConsumeItem" ||
                 itemProps.attributes?.["set supply crate series"]?.attribute_class === "supply_crate_series" ||
-                itemProps.item_name.indexOf("#CSGO_TournamentPass") === 0
+                itemProps.item_name.indexOf("#CSGO_TournamentPass") === 0 ||
+                !itemProps.attributes?.["pedestal display model"]
             ) {
                 continue;
             }

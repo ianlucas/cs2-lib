@@ -36,6 +36,7 @@ export interface CS_ItemsGameTXT {
                         attribute_class?: string;
                         value?: string;
                     };
+                    ["pedestal display model"]?: string;
                 };
                 baseitem: string;
                 image_inventory: string;
@@ -53,7 +54,6 @@ export interface CS_ItemsGameTXT {
                     type?: string;
                     use_string?: string;
                 };
-
                 tags?: {
                     ItemSet?: {
                         tag_value?: string;
