@@ -50,7 +50,7 @@ export function CS_randomFloat(min: number, max: number) {
     return Math.random() * (max - min + 1) + min;
 }
 
-export function CS_randomInt(min: number, max: number): number {
+export function CS_randomInt(min: number, max: number) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -120,12 +120,13 @@ export function CS_roll(csCaseItem: CS_Item | number) {
     }
     const csItem = items[rollRarity][Math.floor(Math.random() * items[rollRarity].length)];
     return {
-        csItem,
         attributes: {
             seed: CS_hasSeed(csItem) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
             wear: CS_hasWear(csItem) ? CS_randomFloat(CS_MIN_WEAR, CS_MAX_WEAR) : undefined,
             stattrak: CS_hasStatTrak(csItem) ? (Math.random() <= 1 / 10 ? 0 : undefined) : undefined
         },
+        csItem,
+        rarity: rollRarity,
         special: rollRarity === "special"
     };
 }
