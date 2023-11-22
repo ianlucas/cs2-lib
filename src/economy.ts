@@ -16,6 +16,7 @@ export interface CS_Item {
     id: number;
     image: string;
     itemid?: number;
+    keys?: number[];
     localimage?: boolean;
     model?: string;
     name: string;
@@ -23,7 +24,7 @@ export interface CS_Item {
     rareimage?: number;
     rarity: string;
     teams?: CS_Team[];
-    type: "agent" | "case" | "glove" | "melee" | "musickit" | "patch" | "pin" | "sticker" | "weapon";
+    type: "agent" | "case" | "glove" | "key" | "melee" | "musickit" | "patch" | "pin" | "sticker" | "weapon";
 }
 
 export const CS_MIN_STATTRAK = 0;

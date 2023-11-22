@@ -31,6 +31,9 @@ export interface CS_ItemsGameTXT {
         };
         items: {
             [itemIndex: string]: {
+                associated_items?: {
+                    [itemIndex: string]: string;
+                };
                 attributes?: {
                     ["set supply crate series"]?: {
                         attribute_class?: string;
@@ -57,6 +60,9 @@ export interface CS_ItemsGameTXT {
                 tags?: {
                     ItemSet?: {
                         tag_value?: string;
+                    };
+                    StickerCapsule?: {
+                        [tagKey: string]: string;
                     };
                 };
             };

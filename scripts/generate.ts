@@ -598,6 +598,7 @@ class GenerateScript {
     parseCases() {
         console.warn("parsing cases...");
         this.caseRareItems.populate(this.baseItems, this.generatedItems);
+        const keyItems = new Map<string, number>();
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
                 itemProps.image_inventory === undefined ||
@@ -636,12 +637,55 @@ class GenerateScript {
                 const rarecontents = this.caseRareItems.get(name);
                 this.addTranslation(id, name, itemProps.item_name);
 
+                if (!itemProps.associated_items) {
+                    if (
+                        itemProps.prefab !== "sticker_capsule" &&
+                        itemProps.prefab !== "weapon_case_souvenirpkg" &&
+                        !itemProps.tags?.StickerCapsule &&
+                        !itemProps.name.includes("crate_signature") &&
+                        !itemProps.name.includes("crate_pins") &&
+                        !itemProps.name.includes("crate_musickit") &&
+                        !itemProps.name.includes("crate_patch") &&
+                        !itemProps.prefab.includes("selfopening")
+                    ) {
+                        throw new Error(`no key found for case ${itemProps.name}`);
+                    }
+                    itemProps.associated_items = {};
+                }
+
+                const keys = Object.keys(itemProps.associated_items).map((itemIndex) => {
+                    if (keyItems.has(itemIndex)) {
+                        return keyItems.get(itemIndex)!;
+                    }
+                    const itemProps = this.items[itemIndex];
+                    const id = this.ids.get(`key_${itemIndex}`);
+                    if (!itemProps.item_name) {
+                        console.log(`name not found for key of ${itemIndex}, fallback to #CSGO_base_crate_key.`);
+                        itemProps.item_name = "#CSGO_base_crate_key";
+                    }
+                    const name = this.requireTranslation(itemProps.item_name);
+                    this.addTranslation(id, name, itemProps.item_name);
+                    this.generatedItems.push({
+                        category: "key",
+                        def: Number(itemIndex),
+                        id,
+                        image: this.getCDNUrl(itemProps.image_inventory),
+                        name,
+                        rarity: this.raritiesColorHex.common,
+                        teams: undefined,
+                        type: "key"
+                    });
+                    keyItems.set(itemIndex, id);
+                    return id;
+                });
+
                 this.generatedItems.push({
                     category: "case",
                     contents,
                     def: Number(itemIndex),
                     id,
                     image: this.getCDNUrl(itemProps.image_inventory),
+                    keys: keys.length > 0 ? keys : undefined,
                     rarecontents,
                     rareimage:
                         itemProps.image_unusual_item !== undefined
