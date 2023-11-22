@@ -6,7 +6,7 @@
 import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
-import { CS_Item, CS_RARE_IMAGE_CUSTOM } from "../src/economy.js";
+import { CS_Item, CS_RARE_IMAGE_CUSTOM, CS_RARE_IMAGE_DEFAULT } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
 import { CS2_IMAGES_PATH, IMAGES_PATH, ITEMS_PATH, LANGUAGE_PATH } from "./env.js";
@@ -691,7 +691,7 @@ class GenerateScript {
                         itemProps.image_unusual_item !== undefined
                             ? this.getCaseRareImage(id, itemProps.image_unusual_item)
                             : rarecontents !== undefined && rarecontents?.length > 0
-                            ? 2
+                            ? CS_RARE_IMAGE_DEFAULT
                             : undefined,
                     name,
                     rarity: this.raritiesColorHex.common,

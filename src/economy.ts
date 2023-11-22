@@ -351,7 +351,7 @@ export function CS_resolveCaseRareImage(baseUrl: string, csItem: CS_Item | numbe
     if (rareimage === undefined) {
         throw new Error("case does not have rare items");
     }
-    if (rareimage === 1) {
+    if (rareimage === CS_RARE_IMAGE_CUSTOM) {
         return `${baseUrl}/${id}_rare.png`;
     }
     return `${baseUrl}/default_rare_item.png`;

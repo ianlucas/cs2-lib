@@ -94,13 +94,13 @@ export function CS_getCaseItems(csCaseItem: CS_Item | number) {
     return items;
 }
 
-export function CS_listCaseItems(csCaseItem: CS_Item | number) {
+export function CS_listCaseItems(csCaseItem: CS_Item | number, removeSpecialItems = false) {
     const { type, contents, rarecontents } =
         typeof csCaseItem === "number" ? CS_Economy.getById(csCaseItem) : csCaseItem;
     if (type !== "case") {
         throw new Error("item is not a case");
     }
-    const items = [...(contents || []), ...(rarecontents || [])];
+    const items = [...(contents || []), ...(rarecontents && !removeSpecialItems ? rarecontents : [])];
     return items
         .map((id) => CS_Economy.getById(id))
         .sort((a, b) => {
