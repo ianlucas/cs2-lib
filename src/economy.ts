@@ -135,6 +135,11 @@ export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
         label: "Case",
         category: "case",
         unique: true
+    },
+    {
+        label: "Key",
+        category: "key",
+        unique: true
     }
 ];
 
