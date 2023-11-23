@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { CS_roll } from "./economy-case.js";
 import {
     CS_Economy,
     CS_validateWear,
@@ -167,8 +168,47 @@ export class CS_Inventory {
         );
     }
 
+    unlockCase(caseIndex: number, keyIndex?: number) {
+        if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
+            throw new Error("invalid inventory item(s).");
+        }
+        const caseItem = CS_Economy.getById(this.items[caseIndex].id);
+        if (caseItem.type !== "case") {
+            throw new Error("item is not a case.");
+        }
+        const keyItem = keyIndex !== undefined ? CS_Economy.getById(this.items[keyIndex].id) : undefined;
+        if (keyItem !== undefined && keyItem.type !== "key") {
+            throw new Error("item is not a key.");
+        }
+        if (caseItem.keys !== undefined && (keyItem === undefined || !caseItem.keys.includes(keyItem.id))) {
+            throw new Error("case needs a valid key to be open.");
+        }
+        if (caseItem.keys === undefined && keyItem !== undefined) {
+            throw new Error("case does not need a key.");
+        }
+        const roll = CS_roll(caseItem);
+        return new CS_Inventory(
+            [
+                {
+                    id: roll.csItem.id,
+                    ...roll.attributes
+                },
+                ...this.items.filter((_, index) => index !== caseIndex && index !== keyIndex)
+            ],
+            this.limit
+        );
+    }
+
+    getItem(index: number): CS_InventoryItem | undefined {
+        return this.items[index];
+    }
+
     getItems(): CS_InventoryItem[] {
         return this.items;
+    }
+
+    size() {
+        return this.items.length;
     }
 }
 
@@ -286,7 +326,46 @@ export class CS_MutableInventory {
         return this;
     }
 
+    unlockCase(caseIndex: number, keyIndex?: number) {
+        if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
+            throw new Error("invalid inventory item(s).");
+        }
+        const caseItem = CS_Economy.getById(this.items[caseIndex].id);
+        if (caseItem.type !== "case") {
+            throw new Error("item is not a case.");
+        }
+        const keyItem = keyIndex !== undefined ? CS_Economy.getById(this.items[keyIndex].id) : undefined;
+        if (keyItem !== undefined && keyItem.type !== "key") {
+            throw new Error("item is not a key.");
+        }
+        if (caseItem.keys !== undefined && (keyItem === undefined || !caseItem.keys.includes(keyItem.id))) {
+            throw new Error("case needs a valid key to be open.");
+        }
+        if (caseItem.keys === undefined && keyItem !== undefined) {
+            throw new Error("case does not need a key.");
+        }
+        const roll = CS_roll(caseItem);
+        keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex : keyIndex - 1) : undefined;
+        this.items.splice(caseIndex, 1);
+        if (keyIndex !== undefined) {
+            this.items.splice(keyIndex, 1);
+        }
+        this.items.unshift({
+            id: roll.csItem.id,
+            ...roll.attributes
+        });
+        return this;
+    }
+
+    getItem(index: number): CS_InventoryItem | undefined {
+        return this.items[index];
+    }
+
     getItems(): CS_InventoryItem[] {
         return this.items;
+    }
+
+    size() {
+        return this.items.length;
     }
 }

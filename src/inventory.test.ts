@@ -12,13 +12,13 @@ CS_Economy.initialize(CS_ITEMS);
 
 function run(inventory: CS_Inventory | CS_MutableInventory) {
     test("initially is empty", () => {
-        expect(inventory.getItems().length).toBe(0);
+        expect(inventory.size()).toBe(0);
     });
     test("added one item", () => {
         inventory = inventory.add({
             id: 307
         });
-        expect(inventory.getItems().length).toBe(1);
+        expect(inventory.size()).toBe(1);
     });
     test("try to invalid item", () => {
         // this is a sticker item.
@@ -27,7 +27,7 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
             wear: 8,
             stattrak: 2
         });
-        expect(inventory.getItems().length).toBe(1);
+        expect(inventory.size()).toBe(1);
     });
     test("try to add more than limit", () => {
         for (let i = 0; i < 5; i++) {
@@ -36,28 +36,50 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
             });
         }
         expect(inventory.full()).toBeTruthy();
-        expect(inventory.getItems().length).toBe(5);
+        expect(inventory.size()).toBe(5);
     });
     test("equip item to T and CT", () => {
         inventory = inventory.equip(0, CS_TEAM_CT);
         inventory = inventory.equip(0, CS_TEAM_T);
-        const inventoryItem = inventory.getItems()[0];
+        const inventoryItem = inventory.getItem(0)!;
         expect(inventoryItem.equippedCT).toBeTruthy();
         expect(inventoryItem.equippedT).toBeTruthy();
     });
     test("remove item", () => {
         inventory = inventory.remove(1);
-        expect(inventory.getItems().length).toBe(4);
+        expect(inventory.size()).toBe(4);
     });
     test("unequip item", () => {
-        let inventoryItem = inventory.getItems()[0];
+        let inventoryItem = inventory.getItem(0)!;
         expect(inventoryItem.equippedCT).toBeTruthy();
         expect(inventoryItem.equippedT).toBeTruthy();
         inventory = inventory.unequip(0, CS_TEAM_CT);
         inventory = inventory.unequip(0, CS_TEAM_T);
-        inventoryItem = inventory.getItems()[0];
+        inventoryItem = inventory.getItem(0)!;
         expect(inventoryItem.equippedCT).toBeUndefined();
         expect(inventoryItem.equippedT).toBeUndefined();
+    });
+    test("unlock case", () => {
+        const size = inventory.size();
+        for (let i = 0; i < size; i++) {
+            inventory = inventory.remove(0);
+        }
+        inventory = inventory.add({ id: 9425 }); // case
+        inventory = inventory.add({ id: 9534 }); // key
+        inventory = inventory.unlockCase(1, 0);
+        expect(inventory.size()).toBe(1);
+        expect(inventory.getItem(0)!.id).not.toBe(9425);
+        expect(inventory.getItem(0)!.id).not.toBe(9534);
+        inventory = inventory.remove(0);
+        inventory = inventory.add({ id: 9425 }); // case
+        inventory = inventory.add({ id: 9534 }); // key
+        expect(() => inventory.unlockCase(0, 1)).toThrow();
+        inventory = inventory.remove(0);
+        inventory = inventory.remove(0);
+        inventory = inventory.add({ id: 9426 }); // capsule case
+        inventory = inventory.unlockCase(0);
+        expect(inventory.size()).toBe(1);
+        expect(CS_Economy.getById(inventory.getItem(0)!.id).type).toBe("sticker");
     });
 }
 

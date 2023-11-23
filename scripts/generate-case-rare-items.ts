@@ -64,7 +64,7 @@ export class CaseRareItems {
     get(caseKey: string) {
         const items = this.populated[caseKey];
         if (!items) {
-            console.log(`case ${caseKey} don't have rare items.`);
+            console.log(`case ${caseKey} does not have rare items.`);
             return undefined;
         }
         return items;
