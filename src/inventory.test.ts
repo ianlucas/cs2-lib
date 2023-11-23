@@ -66,7 +66,7 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
         }
         inventory = inventory.add({ id: 9425 }); // case
         inventory = inventory.add({ id: 9534 }); // key
-        inventory = inventory.unlockCase(1, 0);
+        inventory = inventory.unlockCase(1, 0).state;
         expect(inventory.size()).toBe(1);
         expect(inventory.getItem(0)!.id).not.toBe(9425);
         expect(inventory.getItem(0)!.id).not.toBe(9534);
@@ -77,7 +77,7 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
         inventory = inventory.remove(0);
         inventory = inventory.remove(0);
         inventory = inventory.add({ id: 9426 }); // capsule case
-        inventory = inventory.unlockCase(0);
+        inventory = inventory.unlockCase(0).state;
         expect(inventory.size()).toBe(1);
         expect(CS_Economy.getById(inventory.getItem(0)!.id).type).toBe("sticker");
     });
