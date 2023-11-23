@@ -362,7 +362,7 @@ export class CS_MutableInventory {
             throw new Error("case does not need a key.");
         }
         rolledItem = rolledItem !== undefined ? rolledItem : CS_roll(caseItem);
-        keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex : keyIndex - 1) : undefined;
+        keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex - 1 : keyIndex) : undefined;
         this.items.splice(caseIndex, 1);
         if (keyIndex !== undefined) {
             this.items.splice(keyIndex, 1);

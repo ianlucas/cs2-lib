@@ -80,6 +80,11 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
         inventory = inventory.unlockCase(0).state;
         expect(inventory.size()).toBe(1);
         expect(CS_Economy.getById(inventory.getItem(0)!.id).type).toBe("sticker");
+        inventory = inventory.remove(0);
+        inventory = inventory.add({ id: 9534 }); // key
+        inventory = inventory.add({ id: 9425 }); // case
+        inventory = inventory.unlockCase(0, 1).state;
+        expect(inventory.size()).toBe(1);
     });
 }
 
