@@ -1,3 +1,4 @@
 dist/images
 .env
 dist/generate-log.txt
+dist/sounds
