@@ -10,7 +10,9 @@ import {
     CS_validateNametag,
     CS_validateSeed,
     CS_validateStatTrak,
-    CS_validateStickers
+    CS_validateStickers,
+    CS_NAMETAG_TOOL_DEF,
+    CS_hasNametag
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 
@@ -218,6 +220,37 @@ export class CS_Inventory {
         };
     }
 
+    renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
+        nametag = nametag === "" ? undefined : nametag;
+        if (!this.items[toolIndex] || !this.items[targetIndex]) {
+            throw new Error("invalid inventory item(s).");
+        }
+        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
+            throw new Error("tool must be name tag.");
+        }
+        const targetItem = CS_Economy.getById(this.items[targetIndex].id);
+        if (!CS_hasNametag(targetItem)) {
+            throw new Error("item does not have nametag.");
+        }
+        if (nametag !== undefined) {
+            CS_validateNametag(nametag);
+        }
+        return new CS_Inventory(
+            this.items
+                .map((item, index) =>
+                    index === targetIndex
+                        ? {
+                              ...item,
+                              nametag
+                          }
+                        : item
+                )
+                .filter((_, index) => index !== toolIndex),
+            this.limit
+        );
+    }
+
     getItem(index: number): CS_InventoryItem | undefined {
         return this.items[index];
     }
@@ -384,6 +417,27 @@ export class CS_MutableInventory {
             state: this,
             rolledItem
         };
+    }
+
+    renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
+        nametag = nametag === "" ? undefined : nametag;
+        if (!this.items[toolIndex] || !this.items[targetIndex]) {
+            throw new Error("invalid inventory item(s).");
+        }
+        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
+            throw new Error("tool must be name tag.");
+        }
+        const targetItem = CS_Economy.getById(this.items[targetIndex].id);
+        if (!CS_hasNametag(targetItem)) {
+            throw new Error("item does not have nametag.");
+        }
+        if (nametag !== undefined) {
+            CS_validateNametag(nametag);
+        }
+        this.items[targetIndex].nametag = nametag;
+        this.items.splice(toolIndex, 1);
+        return this;
     }
 
     getItem(index: number): CS_InventoryItem | undefined {

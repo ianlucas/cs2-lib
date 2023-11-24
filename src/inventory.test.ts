@@ -11,6 +11,12 @@ import { CS_TEAM_CT, CS_TEAM_T } from "./teams";
 CS_Economy.initialize(CS_ITEMS);
 
 function run(inventory: CS_Inventory | CS_MutableInventory) {
+    function removeAllItems() {
+        const size = inventory.size();
+        for (let i = 0; i < size; i++) {
+            inventory = inventory.remove(0);
+        }
+    }
     test("initially is empty", () => {
         expect(inventory.size()).toBe(0);
     });
@@ -60,10 +66,7 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
         expect(inventoryItem.equippedT).toBeUndefined();
     });
     test("unlock case", () => {
-        const size = inventory.size();
-        for (let i = 0; i < size; i++) {
-            inventory = inventory.remove(0);
-        }
+        removeAllItems();
         inventory = inventory.add({ id: 9425 }); // case
         inventory = inventory.add({ id: 9534 }); // key
         inventory = inventory.unlockCase(1, 0).state;
@@ -85,6 +88,20 @@ function run(inventory: CS_Inventory | CS_MutableInventory) {
         inventory = inventory.add({ id: 9425 }); // case
         inventory = inventory.unlockCase(0, 1).state;
         expect(inventory.size()).toBe(1);
+    });
+    test("rename item", () => {
+        removeAllItems();
+        inventory = inventory.add({ id: 307, nametag: "initial nametag" }); // dragon lore
+        inventory = inventory.add({ id: 11261 }); // nametag
+        expect(inventory.size()).toBe(2);
+        expect(inventory.getItem(1)!.nametag).toBe("initial nametag");
+        inventory = inventory.renameItem(0, 1, "new nametag");
+        expect(inventory.size()).toBe(1);
+        expect(inventory.getItem(0)!.nametag).toBe("new nametag");
+        inventory = inventory.add({ id: 11261 }); // nametag
+        inventory = inventory.renameItem(0, 1);
+        expect(inventory.size()).toBe(1);
+        expect(inventory.getItem(0)!.nametag).toBe(undefined);
     });
 }
 
