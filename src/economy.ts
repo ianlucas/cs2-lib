@@ -36,6 +36,7 @@ export interface CS_Item {
         | "patch"
         | "pin"
         | "sticker"
+        | "tool"
         | "weapon";
 }
 
@@ -156,6 +157,11 @@ export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
     {
         label: "Key",
         category: "key",
+        unique: true
+    },
+    {
+        label: "Tool",
+        category: "tool",
         unique: true
     }
 ];

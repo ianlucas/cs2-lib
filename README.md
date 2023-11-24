@@ -14,7 +14,6 @@ CS_Economy.initialize(CS_ITEMS);
 
 ## Feature Overview
 
--   [ ] Economy Items - Tools
 -   [x] Economy Items - Agent Patches
 -   [x] Economy Items - Agents
 -   [x] Economy Items - Cases
@@ -23,6 +22,7 @@ CS_Economy.initialize(CS_ITEMS);
 -   [x] Economy Items - Knives
 -   [x] Economy Items - Music Kits
 -   [x] Economy Items - Pins
+-   [x] Economy Items - Tools
 -   [x] Economy Items - Weapon Skins
 -   [x] Economy Items - Weapon Stickers
 -   [x] Misc - Active Pool Maps

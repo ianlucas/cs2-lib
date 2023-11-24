@@ -81,6 +81,7 @@ export class GenerateScript {
         this.parseAgents();
         this.parsePatches();
         this.parsePins();
+        this.parseTools();
         this.parseCases();
 
         this.persist();
@@ -674,6 +675,38 @@ export class GenerateScript {
             this.addCaseItem(itemProps.name, id);
         }
         console.warn("parsed pins.");
+    }
+
+    parseTools() {
+        console.warn("parsing tools...");
+        for (const [itemIndex, itemProps] of Object.entries(this.items)) {
+            if (
+                itemProps.image_inventory === undefined ||
+                itemProps.item_name === undefined ||
+                !itemProps.image_inventory.includes("econ/tools/") ||
+                !itemProps.prefab.includes("csgo_tool")
+            ) {
+                continue;
+            }
+            const name = this.requireTranslation(itemProps.item_name);
+            const id = this.ids.get(`tool_${itemIndex}`);
+            this.addTranslation(id, name, itemProps.item_name);
+
+            this.generatedItems.push({
+                category: "tool",
+                def: Number(itemIndex),
+                id,
+                image: this.getCDNUrl(itemProps.image_inventory),
+                itemid: undefined,
+                name,
+                rarity: this.getRarityColorHex(["common"]),
+                teams: undefined,
+                type: "tool"
+            });
+
+            this.addCaseItem(itemProps.name, id);
+        }
+        console.warn("parsed tools.");
     }
 
     parseCases() {
