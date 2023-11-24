@@ -14,7 +14,7 @@ class DumpDefaultGraffiti {
         generate.readItemsGameTXT();
         const graffiti: string[] = [];
 
-        for (const [stickerIndex, stickerProps] of Object.entries(generate.stickerKits)) {
+        for (const stickerProps of Object.values(generate.stickerKits)) {
             if (
                 !stickerProps.sticker_material?.includes("default/") &&
                 !stickerProps.sticker_material?.includes("default2019/") &&
