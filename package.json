@@ -11,10 +11,12 @@
         "url": "https://github.com/ianlucas/cslib/issues"
     },
     "scripts": {
-        "test": "jest",
-        "generate": "ts-node --esm scripts/generate.ts > dist/generate-log.txt",
+        "build-docs": "typedoc src/index.ts",
         "build": "tsc",
-        "build-docs": "typedoc src/index.ts"
+        "dump-default-graffiti-cdn": "ts-node --esm scripts/dump-default-graffiti-cdn.ts",
+        "dump-default-graffiti": "ts-node --esm scripts/dump-default-graffiti.ts",
+        "generate": "ts-node --esm scripts/generate.ts > dist/generate-log.txt",
+        "test": "jest"
     },
     "author": "Ian Lucas",
     "license": "MIT",

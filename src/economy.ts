@@ -24,7 +24,19 @@ export interface CS_Item {
     rareimage?: number;
     rarity: string;
     teams?: CS_Team[];
-    type: "agent" | "case" | "glove" | "key" | "melee" | "musickit" | "patch" | "pin" | "sticker" | "weapon";
+    tint?: number;
+    type:
+        | "agent"
+        | "case"
+        | "glove"
+        | "graffiti"
+        | "key"
+        | "melee"
+        | "musickit"
+        | "patch"
+        | "pin"
+        | "sticker"
+        | "weapon";
 }
 
 export const CS_MIN_STATTRAK = 0;
@@ -124,6 +136,11 @@ export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
     {
         label: "Music Kit",
         category: "musickit",
+        unique: true
+    },
+    {
+        label: "Graffiti",
+        category: "graffiti",
         unique: true
     },
     {

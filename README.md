@@ -14,12 +14,12 @@ CS_Economy.initialize(CS_ITEMS);
 
 ## Feature Overview
 
--   [ ] Economy Items - Grafitti
 -   [ ] Economy Items - Tools
 -   [x] Economy Items - Agent Patches
 -   [x] Economy Items - Agents
 -   [x] Economy Items - Cases
 -   [x] Economy Items - Gloves
+-   [x] Economy Items - Graffiti
 -   [x] Economy Items - Knives
 -   [x] Economy Items - Music Kits
 -   [x] Economy Items - Pins

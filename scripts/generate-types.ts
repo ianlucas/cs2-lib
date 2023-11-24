@@ -29,6 +29,12 @@ export interface CS_ItemsGameTXT {
                 hex_color: string;
             };
         };
+        graffiti_tints: {
+            [graffitiTintKey: string]: {
+                id: string;
+                hex_color: string;
+            };
+        };
         items: {
             [itemIndex: string]: {
                 associated_items?: {
@@ -44,9 +50,11 @@ export interface CS_ItemsGameTXT {
                 baseitem: string;
                 image_inventory: string;
                 image_unusual_item?: string;
+                /** @TODO This property can be undefined. */
                 item_name: string;
                 item_rarity: string;
                 item_sub_position?: string;
+                loot_list_name?: string;
                 /**
                  * The classname of the item.
                  */
@@ -106,12 +114,13 @@ export interface CS_ItemsGameTXT {
         }[];
         sticker_kits: {
             [stickerIndex: string]: {
-                name: string;
+                description_string?: string;
                 item_name: string;
-                tournament_event_id: string;
-                sticker_material: string;
                 item_rarity: string;
+                name: string;
                 patch_material?: string;
+                sticker_material: string;
+                tournament_event_id: string;
             };
         }[];
     };

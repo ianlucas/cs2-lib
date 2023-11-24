@@ -5,7 +5,7 @@
 
 import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
-import { resolve } from "path";
+import { basename, resolve } from "path";
 import { CS_Item, CS_RARE_IMAGE_CUSTOM, CS_RARE_IMAGE_DEFAULT } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
@@ -24,7 +24,7 @@ import {
     UnsafeRaritiesRecord
 } from "./generate-types.js";
 import { CaseRareItems } from "./generate-case-rare-items.js";
-import { replaceInFile, writeJson } from "./util.js";
+import { readJson, readTxt, replaceInFile, writeJson } from "./util.js";
 
 const lootItemRE = /^\[([^\]]+)\](.*)$/;
 const econLocalImageSuffixes = ["heavy", "medium", "light"];
@@ -37,8 +37,9 @@ const uncategorizedStickers = [
     "danger_zone"
 ];
 
-class GenerateScript {
+export class GenerateScript {
     clientLootList: ClientLootListRecord = null!;
+    graffitiTints: { name: string; token: string; id: number }[] = null!;
     ids: ReturnType<InstanceType<typeof GenerateScript>["readIdsJSON"]> = null!;
     items: ItemsRecord = null!;
     itemsGameParsed: CS_ItemsGameTXT = null!;
@@ -61,9 +62,7 @@ class GenerateScript {
     caseItems = new Map<string, number>();
     caseRareItems = new CaseRareItems();
 
-    constructor() {
-        console.warn("generate script initialized.");
-    }
+    constructor() {}
 
     async run() {
         await this.caseRareItems.fetch();
@@ -78,6 +77,7 @@ class GenerateScript {
         this.parseSkins();
         this.parseMusicKits();
         this.parseStickers();
+        this.parseGraffiti();
         this.parseAgents();
         this.parsePatches();
         this.parsePins();
@@ -151,6 +151,7 @@ class GenerateScript {
         const parsed = CS_parseValveKeyValue<CS_ItemsGameTXT>(contents);
 
         this.clientLootList = {};
+        this.graffitiTints = [];
         this.items = {};
         this.itemsGameParsed = parsed;
         this.itemsRaritiesColorHex = {};
@@ -245,6 +246,14 @@ class GenerateScript {
             for (const [revolvingLootListKey, clientLootListKey] of Object.entries(kv)) {
                 this.revolvingLootList[revolvingLootListKey] = clientLootListKey;
             }
+        }
+        for (const graffitiTintProps of Object.values(parsed.items_game.graffiti_tints)) {
+            const tintToken = `#Attrib_SprayTintValue_${graffitiTintProps.id}`;
+            this.graffitiTints.push({
+                id: Number(graffitiTintProps.id),
+                name: this.requireTranslation(tintToken),
+                token: tintToken
+            });
         }
     }
 
@@ -386,7 +395,7 @@ class GenerateScript {
             const itemKey = `[${paintKit.className}]${parentItem.className}`;
             const name = `${parentItem.name} | ${paintKit.name}`;
             const id = this.ids.get(`paint_${parentItem.def}_${paintKit.itemid}`);
-            this.addTranslation(id, name, parentItem.nameToken, paintKit.nameToken);
+            this.addTranslation(id, name, parentItem.nameToken, " | ", paintKit.nameToken);
 
             this.generatedItems.push({
                 ...parentItem,
@@ -502,6 +511,78 @@ class GenerateScript {
         console.warn("parsed stickers.");
     }
 
+    parseGraffiti() {
+        console.warn("parse graffiti...");
+        const defaultGraffiti = readTxt("dist/dump-default-graffiti.txt").split("\n");
+        const defaultGraffitiCdn = readJson<Record<string, string>>("dist/dump-default-graffiti-cdn.json");
+        for (const [graffitiIndex, graffitiProps] of Object.entries(this.stickerKits)) {
+            if (
+                !graffitiProps.item_name?.includes("#SprayKit") &&
+                graffitiProps.item_name?.indexOf("spray_") !== 0 &&
+                !graffitiProps.description_string?.includes("#SprayKit")
+            ) {
+                continue;
+            }
+            const name = this.findTranslation(graffitiProps.item_name);
+            if (name === undefined) {
+                console.log(`unable to find translation for ${graffitiProps.item_name}.`);
+                continue;
+            }
+            if (defaultGraffiti.includes(name)) {
+                const graffitiName = this.findTranslation(graffitiProps.item_name);
+                let addedToCaseItem = false;
+                for (const { name: tintName, token: tintToken, id: tintId } of this.graffitiTints) {
+                    const name = `${graffitiName} (${tintName})`;
+                    const image = defaultGraffitiCdn[name];
+                    if (!image) {
+                        console.log(`unable to find image for ${name}.`);
+                        continue;
+                    }
+                    const id = this.ids.get(`spray_${graffitiIndex}_${tintId}`);
+                    const itemKey = `[${graffitiProps.name}]spray`;
+                    this.addTranslation(id, name, graffitiProps.item_name, " (", tintToken, ")");
+
+                    this.generatedItems.push({
+                        category: "graffiti",
+                        id,
+                        image,
+                        itemid: Number(graffitiIndex),
+                        name,
+                        rarity: this.getRarityColorHex([graffitiProps.item_rarity]),
+                        tint: tintId,
+                        type: "graffiti"
+                    });
+
+                    if (!addedToCaseItem) {
+                        this.addCaseItem(itemKey, id);
+                        addedToCaseItem = true;
+                    }
+                }
+            } else {
+                const id = this.ids.get(`spray_${graffitiIndex}`);
+                const itemKey = `[${graffitiProps.name}]spray`;
+                this.addTranslation(id, name, graffitiProps.item_name);
+
+                this.generatedItems.push({
+                    category: "graffiti",
+                    id,
+                    image: this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}_large`),
+                    itemid: Number(graffitiIndex),
+                    name,
+                    rarity: this.getRarityColorHex([
+                        itemKey,
+                        `[${graffitiProps.name}]spray`,
+                        graffitiProps.item_rarity
+                    ]),
+                    type: "graffiti"
+                });
+
+                this.addCaseItem(itemKey, id);
+            }
+        }
+        console.warn("parsed graffiti.");
+    }
+
     parsePatches() {
         console.warn("parse patches...");
         for (const [patchIndex, patchProps] of Object.entries(this.stickerKits)) {
@@ -603,7 +684,8 @@ class GenerateScript {
             if (
                 itemProps.image_inventory === undefined ||
                 (itemProps.prefab !== "weapon_case" &&
-                    itemProps.attributes?.["set supply crate series"]?.attribute_class !== "supply_crate_series") ||
+                    itemProps.attributes?.["set supply crate series"]?.attribute_class !== "supply_crate_series" &&
+                    itemProps.loot_list_name === undefined) ||
                 !itemProps.image_inventory.includes("econ/weapon_cases") ||
                 itemProps.tool?.type === "gift"
             ) {
@@ -611,18 +693,18 @@ class GenerateScript {
             }
             const contents = [] as number[];
             const revolvingLootListKey = itemProps.attributes?.["set supply crate series"]?.value;
-            if (!revolvingLootListKey) {
+            if (!revolvingLootListKey && !itemProps.loot_list_name) {
                 throw new Error(`revolving loot list key not found for ${itemProps.name}.`);
             }
-            const clientLootListKey = this.revolvingLootList[revolvingLootListKey];
+            const clientLootListKey =
+                revolvingLootListKey !== undefined
+                    ? this.revolvingLootList[revolvingLootListKey]
+                    : itemProps.loot_list_name;
             if (!clientLootListKey) {
-                throw new Error(`client loot list key not found for ${itemProps.name}`);
+                console.log(`client loot list key not found for ${itemProps.name}`);
+                continue;
             }
             for (const itemKey of this.getClientLootListItems(clientLootListKey)) {
-                if (itemKey.includes("]spray")) {
-                    // We're not parsing sprays yet.
-                    continue;
-                }
                 if (!this.caseItems.has(itemKey)) {
                     throw new Error(`item ${itemKey} not found.`);
                 }
@@ -646,6 +728,8 @@ class GenerateScript {
                         !itemProps.name.includes("crate_pins") &&
                         !itemProps.name.includes("crate_musickit") &&
                         !itemProps.name.includes("crate_patch") &&
+                        !itemProps.name.includes("crate_sprays") &&
+                        !itemProps.name.includes("selfopeningitem") &&
                         !itemProps.prefab.includes("selfopening")
                     ) {
                         throw new Error(`no key found for case ${itemProps.name}`);
@@ -760,14 +844,16 @@ class GenerateScript {
             }
             const translatedName = keys
                 .map((key) => {
-                    key = key.substring(1).toLowerCase();
-                    const translation = tokens[key];
+                    if (key.at(0) !== "#") {
+                        return key;
+                    }
+                    const translation = this.findTranslation(key, language);
                     if (!translation) {
                         console.log(`translation of ${key} not found for ${language}.`);
                     }
-                    return translation || this.languages.english[key];
+                    return translation || this.requireTranslation(key);
                 })
-                .join(" | ");
+                .join("");
 
             if (translatedName !== englishName) {
                 console.log(`skipped translation of ${keys} for ${language} (same as english).`);
@@ -945,4 +1031,6 @@ class GenerateScript {
     }
 }
 
-new GenerateScript().run();
+if (basename(process.argv[1]) === "generate.ts") {
+    new GenerateScript().run();
+}
