@@ -14,7 +14,16 @@ import {
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 
-export const CS_INVENTORY_EQUIPPABLE_ITEMS = ["weapon", "glove", "melee", "musickit", "agent", "patch", "pin", "spray"];
+export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
+    "agent",
+    "glove",
+    "graffiti",
+    "melee",
+    "musickit",
+    "patch",
+    "pin",
+    "weapon"
+];
 
 export interface CS_InventoryItem {
     equipped?: boolean;
