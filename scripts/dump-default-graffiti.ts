@@ -7,7 +7,6 @@ import { basename } from "path";
 import { GenerateScript } from "./generate.js";
 import { writeTxt } from "./util.js";
 
-//Attrib_SprayTintValue_19
 class DumpDefaultGraffiti {
     async run() {
         const generate = new GenerateScript();
