@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_roll } from "./economy-case.js";
+import { CS_unlockCase } from "./economy-case.js";
 import {
     CS_Economy,
     CS_validateWear,
@@ -182,10 +182,10 @@ export class CS_Inventory {
     unlockCase(
         caseIndex: number,
         keyIndex?: number,
-        rolledItem?: ReturnType<typeof CS_roll>
+        rolledItem?: ReturnType<typeof CS_unlockCase>
     ): {
         state: CS_Inventory;
-        rolledItem: ReturnType<typeof CS_roll>;
+        rolledItem: ReturnType<typeof CS_unlockCase>;
     } {
         if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
             throw new Error("invalid inventory item(s).");
@@ -204,7 +204,7 @@ export class CS_Inventory {
         if (caseItem.keys === undefined && keyItem !== undefined) {
             throw new Error("case does not need a key.");
         }
-        rolledItem = rolledItem !== undefined ? rolledItem : CS_roll(caseItem);
+        rolledItem = rolledItem !== undefined ? rolledItem : CS_unlockCase(caseItem);
         return {
             state: new CS_Inventory(
                 [
@@ -381,10 +381,10 @@ export class CS_MutableInventory {
     unlockCase(
         caseIndex: number,
         keyIndex?: number,
-        rolledItem?: ReturnType<typeof CS_roll>
+        rolledItem?: ReturnType<typeof CS_unlockCase>
     ): {
         state: CS_MutableInventory;
-        rolledItem: ReturnType<typeof CS_roll>;
+        rolledItem: ReturnType<typeof CS_unlockCase>;
     } {
         if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
             throw new Error("invalid inventory item(s).");
@@ -403,7 +403,7 @@ export class CS_MutableInventory {
         if (caseItem.keys === undefined && keyItem !== undefined) {
             throw new Error("case does not need a key.");
         }
-        rolledItem = rolledItem !== undefined ? rolledItem : CS_roll(caseItem);
+        rolledItem = rolledItem !== undefined ? rolledItem : CS_unlockCase(caseItem);
         keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex - 1 : keyIndex) : undefined;
         this.items.splice(caseIndex, 1);
         if (keyIndex !== undefined) {

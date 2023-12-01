@@ -17,12 +17,12 @@ import {
 
 export const CS_RARITY_COLORS: Record<string, string> = {
     "#b0c3d9": "common",
-    "#5e98d9": "common", // uncommon
-    "#4b69ff": "common", // rare
+    "#5e98d9": "uncommon",
+    "#4b69ff": "rare",
     "#8847ff": "mythical",
     "#d32ce6": "legendary",
     "#eb4b4b": "ancient",
-    "#e4ae39": "ancient" // immortal
+    "#e4ae39": "immortal"
 };
 
 export const CS_RARITY_FOR_SOUNDS: Record<string, string> = {
@@ -35,15 +35,8 @@ export const CS_RARITY_FOR_SOUNDS: Record<string, string> = {
     "#e4ae39": "ancient" // immortal
 };
 
-export const CS_RARITY_ODDS: Record<string, number> = {
-    common: 0.8,
-    mythical: 0.16,
-    legendary: 0.032,
-    ancient: 0.0064,
-    special: 0.0016
-};
-
 export const CS_RARITY_COLOR_DEFAULT = 0;
+
 export const CS_RARITY_COLOR_ORDER: Record<string, number | undefined> = {
     "#b0c3d9": 1,
     "#5e98d9": 2,
@@ -54,7 +47,18 @@ export const CS_RARITY_COLOR_ORDER: Record<string, number | undefined> = {
     "#e4ae39": 7
 };
 
-export const CS_RARITY_ORDER = ["common", "mythical", "legendary", "ancient", "special"];
+export const CS_RARITY_ORDER = [
+    "common",
+    "uncommon",
+    "rare",
+    "mythical",
+    "legendary",
+    "ancient",
+    "immortal",
+    "special"
+];
+
+export const CS_BASE_ODD = 0.8;
 
 export function CS_randomFloat(min: number, max: number) {
     return Math.random() * (max - min) + min;
@@ -111,13 +115,17 @@ export function CS_listCaseItems(csCaseItem: CS_Item | number, removeSpecialItem
         });
 }
 
-export function CS_roll(csCaseItem: CS_Item | number) {
+/**
+ * Improvements to the algorithm are welcome.
+ * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
+ */
+export function CS_unlockCase(csCaseItem: CS_Item | number) {
     const items = CS_getCaseItems(csCaseItem);
-    const presentRarities = Object.keys(items);
-    const total = presentRarities.reduce((acc, rarity) => acc + CS_RARITY_ODDS[rarity], 0);
-    const entries = CS_RARITY_ORDER.filter((rarity) => presentRarities.includes(rarity)).map(
-        (rarity) => [rarity, CS_RARITY_ODDS[rarity] / total] as const
-    );
+    const keys = Object.keys(items);
+    const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
+    const odds = rarities.map((_, index) => CS_BASE_ODD / Math.pow(5, index));
+    const total = odds.reduce((acc, cur) => acc + cur, 0);
+    const entries = rarities.map((rarity, index) => [rarity, odds[index] / total] as const);
     const roll = Math.random();
     let [rollRarity] = entries[0];
     let acc = 0;
