@@ -176,7 +176,7 @@ export class CS_Inventory {
             this.items.splice(keyIndex, 1);
         }
         this.items.unshift({
-            id: unlockedItem.item,
+            id: unlockedItem.id,
             ...unlockedItem.attributes
         });
         return unlockedItem;
