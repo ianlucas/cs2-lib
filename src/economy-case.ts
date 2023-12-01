@@ -148,7 +148,7 @@ export function CS_unlockCase(csCaseItem: CS_Item | number) {
                   )
                 : undefined
         },
-        item: item.id,
+        id: item.id,
         rarity: CS_RARITY_FOR_SOUNDS[item.rarity],
         special: rollRarity === "special"
     };
