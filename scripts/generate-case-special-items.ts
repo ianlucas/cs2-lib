@@ -21,7 +21,7 @@ interface SpacerulerwillCS2APIResponse {
     };
 }
 
-export class CaseRareItems {
+export class CaseSpecialItems {
     cases: Record<string, string[]> = {};
     populated: Record<string, number[]> = {};
 

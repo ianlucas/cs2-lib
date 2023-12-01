@@ -50,8 +50,7 @@ export interface CS_ItemsGameTXT {
                 baseitem: string;
                 image_inventory: string;
                 image_unusual_item?: string;
-                /** @TODO This property can be undefined. */
-                item_name: string;
+                item_name?: string;
                 item_rarity: string;
                 item_sub_position?: string;
                 loot_list_name?: string;

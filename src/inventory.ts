@@ -53,252 +53,28 @@ export class CS_Inventory {
         return this.items.length === this.limit;
     }
 
-    add(item: CS_InventoryItem): CS_Inventory {
+    add(inventoryItem: CS_InventoryItem) {
         if (this.full()) {
             return this;
         }
-        const csItem = CS_Economy.getById(item.id);
-        if (item.wear !== undefined) {
-            CS_validateWear(item.wear, csItem);
+        const item = CS_Economy.getById(inventoryItem.id);
+        if (inventoryItem.wear !== undefined) {
+            CS_validateWear(inventoryItem.wear, item);
         }
-        if (item.seed !== undefined) {
-            CS_validateSeed(item.seed, csItem);
+        if (inventoryItem.seed !== undefined) {
+            CS_validateSeed(inventoryItem.seed, item);
         }
-        if (item.stickers !== undefined) {
-            CS_validateStickers(csItem, item.stickers, item.stickerswear);
+        if (inventoryItem.stickers !== undefined) {
+            CS_validateStickers(item, inventoryItem.stickers, inventoryItem.stickerswear);
         }
-        if (item.nametag !== undefined) {
-            CS_validateNametag(item.nametag, csItem);
+        if (inventoryItem.nametag !== undefined) {
+            CS_validateNametag(inventoryItem.nametag, item);
         }
-        if (item.stattrak !== undefined) {
-            CS_validateStatTrak(item.stattrak, csItem);
-        }
-        return new CS_Inventory(
-            [
-                {
-                    ...item,
-                    equipped: undefined,
-                    equippedCT: undefined,
-                    equippedT: undefined
-                },
-                ...this.items
-            ],
-            this.limit
-        );
-    }
-
-    safeAdd(item: CS_InventoryItem): CS_Inventory {
-        try {
-            return this.add(item);
-        } catch {
-            return this;
-        }
-    }
-
-    remove(at: number): CS_Inventory {
-        if (!this.items[at]) {
-            return this;
-        }
-        return new CS_Inventory(
-            this.items.filter((_, index) => {
-                return at !== index;
-            }),
-            this.limit
-        );
-    }
-
-    equip(at: number, csTeam?: CS_Team): CS_Inventory {
-        const item = this.items[at];
-        if (!item) {
-            return this;
-        }
-        if (item.equipped) {
-            return this;
-        }
-        if (csTeam === CS_TEAM_CT && item.equippedCT) {
-            return this;
-        }
-        if (csTeam === CS_TEAM_T && item.equippedT) {
-            return this;
-        }
-        const csItem = CS_Economy.getById(item.id);
-        if (!CS_INVENTORY_EQUIPPABLE_ITEMS.includes(csItem.type)) {
-            return this;
-        }
-        if (csTeam === undefined && csItem.teams !== undefined) {
-            return this;
-        }
-        if (csTeam !== undefined && !csItem.teams?.includes(csTeam)) {
-            return this;
-        }
-        return new CS_Inventory(
-            this.items.map((current, index) => {
-                if (index === at) {
-                    return {
-                        ...current,
-                        equipped: csTeam === undefined ? true : undefined,
-                        equippedCT: csTeam === CS_TEAM_CT ? true : current.equippedCT,
-                        equippedT: csTeam === CS_TEAM_T ? true : current.equippedT
-                    };
-                }
-                const currentCsItem = CS_Economy.getById(current.id);
-                if (
-                    currentCsItem.type === csItem.type &&
-                    (csItem.type !== "weapon" || currentCsItem.model === csItem.model)
-                ) {
-                    return {
-                        ...current,
-                        equipped: csTeam === undefined ? undefined : current.equipped,
-                        equippedCT: csTeam === CS_TEAM_CT ? undefined : current.equippedCT,
-                        equippedT: csTeam === CS_TEAM_T ? undefined : current.equippedT
-                    };
-                }
-                return current;
-            }),
-            this.limit
-        );
-    }
-
-    unequip(at: number, csTeam?: CS_Team): CS_Inventory {
-        if (!this.items[at]) {
-            return this;
-        }
-        return new CS_Inventory(
-            this.items.map((item, index) => {
-                if (at === index) {
-                    return {
-                        ...item,
-                        equipped: csTeam === undefined ? undefined : item.equipped,
-                        equippedCT: csTeam === CS_TEAM_CT ? undefined : item.equippedCT,
-                        equippedT: csTeam === CS_TEAM_T ? undefined : item.equippedT
-                    };
-                }
-                return item;
-            }),
-            this.limit
-        );
-    }
-
-    unlockCase(
-        caseIndex: number,
-        keyIndex?: number,
-        rolledItem?: ReturnType<typeof CS_unlockCase>
-    ): {
-        state: CS_Inventory;
-        rolledItem: ReturnType<typeof CS_unlockCase>;
-    } {
-        if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
-            throw new Error("invalid inventory item(s).");
-        }
-        const caseItem = CS_Economy.getById(this.items[caseIndex].id);
-        if (caseItem.type !== "case") {
-            throw new Error("item is not a case.");
-        }
-        const keyItem = keyIndex !== undefined ? CS_Economy.getById(this.items[keyIndex].id) : undefined;
-        if (keyItem !== undefined && keyItem.type !== "key") {
-            throw new Error("item is not a key.");
-        }
-        if (caseItem.keys !== undefined && (keyItem === undefined || !caseItem.keys.includes(keyItem.id))) {
-            throw new Error("case needs a valid key to be open.");
-        }
-        if (caseItem.keys === undefined && keyItem !== undefined) {
-            throw new Error("case does not need a key.");
-        }
-        rolledItem = rolledItem !== undefined ? rolledItem : CS_unlockCase(caseItem);
-        return {
-            state: new CS_Inventory(
-                [
-                    {
-                        id: rolledItem.csItem.id,
-                        ...rolledItem.attributes
-                    },
-                    ...this.items.filter((_, index) => index !== caseIndex && index !== keyIndex)
-                ],
-                this.limit
-            ),
-            rolledItem
-        };
-    }
-
-    renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
-        nametag = nametag === "" ? undefined : nametag;
-        if (!this.items[toolIndex] || !this.items[targetIndex]) {
-            throw new Error("invalid inventory item(s).");
-        }
-        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
-        if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
-            throw new Error("tool must be name tag.");
-        }
-        const targetItem = CS_Economy.getById(this.items[targetIndex].id);
-        if (!CS_hasNametag(targetItem)) {
-            throw new Error("item does not have nametag.");
-        }
-        if (nametag !== undefined) {
-            CS_validateNametag(nametag);
-        }
-        return new CS_Inventory(
-            this.items
-                .map((item, index) =>
-                    index === targetIndex
-                        ? {
-                              ...item,
-                              nametag
-                          }
-                        : item
-                )
-                .filter((_, index) => index !== toolIndex),
-            this.limit
-        );
-    }
-
-    getItem(index: number): CS_InventoryItem | undefined {
-        return this.items[index];
-    }
-
-    getItems(): CS_InventoryItem[] {
-        return this.items;
-    }
-
-    size() {
-        return this.items.length;
-    }
-}
-
-export class CS_MutableInventory {
-    private items: CS_InventoryItem[];
-    private limit: number;
-
-    constructor(items: CS_InventoryItem[] = [], limit: number = 256) {
-        this.items = items;
-        this.limit = limit;
-    }
-
-    full(): boolean {
-        return this.items.length === this.limit;
-    }
-
-    add(item: CS_InventoryItem) {
-        if (this.full()) {
-            return this;
-        }
-        const csItem = CS_Economy.getById(item.id);
-        if (item.wear !== undefined) {
-            CS_validateWear(item.wear, csItem);
-        }
-        if (item.seed !== undefined) {
-            CS_validateSeed(item.seed, csItem);
-        }
-        if (item.stickers !== undefined) {
-            CS_validateStickers(csItem, item.stickers, item.stickerswear);
-        }
-        if (item.nametag !== undefined) {
-            CS_validateNametag(item.nametag, csItem);
-        }
-        if (item.stattrak !== undefined) {
-            CS_validateStatTrak(item.stattrak, csItem);
+        if (inventoryItem.stattrak !== undefined) {
+            CS_validateStatTrak(inventoryItem.stattrak, item);
         }
         this.items.unshift({
-            ...item,
+            ...inventoryItem,
             equipped: undefined,
             equippedCT: undefined,
             equippedT: undefined
@@ -306,86 +82,76 @@ export class CS_MutableInventory {
         return this;
     }
 
-    safeAdd(item: CS_InventoryItem) {
+    safeAdd(inventoryItem: CS_InventoryItem) {
         try {
-            return this.add(item);
+            return this.add(inventoryItem);
         } catch {
             return this;
         }
     }
 
-    remove(at: number) {
-        if (!this.items[at]) {
+    remove(index: number) {
+        if (!this.items[index]) {
             return this;
         }
-        this.items.splice(at, 1);
+        this.items.splice(index, 1);
         return this;
     }
 
-    equip(at: number, csTeam?: CS_Team) {
-        const item = this.items[at];
-        if (!item) {
+    equip(index: number, team?: CS_Team) {
+        const inventoryItem = this.items[index];
+        if (!inventoryItem) {
             return this;
         }
-        if (item.equipped) {
+        if (inventoryItem.equipped) {
             return this;
         }
-        if (csTeam === CS_TEAM_CT && item.equippedCT) {
+        if (team === CS_TEAM_CT && inventoryItem.equippedCT) {
             return this;
         }
-        if (csTeam === CS_TEAM_T && item.equippedT) {
+        if (team === CS_TEAM_T && inventoryItem.equippedT) {
             return this;
         }
-        const csItem = CS_Economy.getById(item.id);
-        if (!CS_INVENTORY_EQUIPPABLE_ITEMS.includes(csItem.type)) {
+        const item = CS_Economy.getById(inventoryItem.id);
+        if (!CS_INVENTORY_EQUIPPABLE_ITEMS.includes(item.type)) {
             return this;
         }
-        if (csTeam === undefined && csItem.teams !== undefined) {
+        if (team === undefined && item.teams !== undefined) {
             return this;
         }
-        if (csTeam !== undefined && !csItem.teams?.includes(csTeam)) {
+        if (team !== undefined && !item.teams?.includes(team)) {
             return this;
         }
         for (let index = 0; index < this.items.length; index++) {
             const current = this.items[index];
-            if (at === index) {
-                current.equipped = csTeam === undefined ? true : undefined;
-                current.equippedCT = csTeam === CS_TEAM_CT ? true : current.equippedCT;
-                current.equippedT = csTeam === CS_TEAM_T ? true : current.equippedT;
+            if (index === index) {
+                current.equipped = team === undefined ? true : undefined;
+                current.equippedCT = team === CS_TEAM_CT ? true : current.equippedCT;
+                current.equippedT = team === CS_TEAM_T ? true : current.equippedT;
             } else {
-                const currentCsItem = CS_Economy.getById(current.id);
-                if (
-                    currentCsItem.type === csItem.type &&
-                    (csItem.type !== "weapon" || currentCsItem.model === csItem.model)
-                ) {
-                    current.equipped = csTeam === undefined ? undefined : current.equipped;
-                    current.equippedCT = csTeam === CS_TEAM_CT ? undefined : current.equippedCT;
-                    current.equippedT = csTeam === CS_TEAM_T ? undefined : current.equippedT;
+                const currentitem = CS_Economy.getById(current.id);
+                if (currentitem.type === item.type && (item.type !== "weapon" || currentitem.model === item.model)) {
+                    current.equipped = team === undefined ? undefined : current.equipped;
+                    current.equippedCT = team === CS_TEAM_CT ? undefined : current.equippedCT;
+                    current.equippedT = team === CS_TEAM_T ? undefined : current.equippedT;
                 }
             }
         }
         return this;
     }
 
-    unequip(at: number, csTeam?: CS_Team) {
-        if (!this.items[at]) {
+    unequip(index: number, team?: CS_Team) {
+        if (!this.items[index]) {
             return this;
         }
-        const item = this.items[at];
-        item.equipped = csTeam === undefined ? undefined : item.equipped;
-        item.equippedCT = csTeam === CS_TEAM_CT ? undefined : item.equippedCT;
-        item.equippedT = csTeam === CS_TEAM_T ? undefined : item.equippedT;
+        const item = this.items[index];
+        item.equipped = team === undefined ? undefined : item.equipped;
+        item.equippedCT = team === CS_TEAM_CT ? undefined : item.equippedCT;
+        item.equippedT = team === CS_TEAM_T ? undefined : item.equippedT;
         return this;
     }
 
-    unlockCase(
-        caseIndex: number,
-        keyIndex?: number,
-        rolledItem?: ReturnType<typeof CS_unlockCase>
-    ): {
-        state: CS_MutableInventory;
-        rolledItem: ReturnType<typeof CS_unlockCase>;
-    } {
+    unlockCase(caseIndex: number, keyIndex?: number, unlockedItem?: ReturnType<typeof CS_unlockCase>) {
         if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
             throw new Error("invalid inventory item(s).");
         }
@@ -403,20 +169,17 @@ export class CS_MutableInventory {
         if (caseItem.keys === undefined && keyItem !== undefined) {
             throw new Error("case does not need a key.");
         }
-        rolledItem = rolledItem !== undefined ? rolledItem : CS_unlockCase(caseItem);
+        unlockedItem = unlockedItem !== undefined ? unlockedItem : CS_unlockCase(caseItem);
         keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex - 1 : keyIndex) : undefined;
         this.items.splice(caseIndex, 1);
         if (keyIndex !== undefined) {
             this.items.splice(keyIndex, 1);
         }
         this.items.unshift({
-            id: rolledItem.csItem.id,
-            ...rolledItem.attributes
+            id: unlockedItem.item.id,
+            ...unlockedItem.attributes
         });
-        return {
-            state: this,
-            rolledItem
-        };
+        return unlockedItem;
     }
 
     renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
@@ -440,11 +203,11 @@ export class CS_MutableInventory {
         return this;
     }
 
-    getItem(index: number): CS_InventoryItem | undefined {
+    get(index: number): CS_InventoryItem | undefined {
         return this.items[index];
     }
 
-    getItems(): CS_InventoryItem[] {
+    getAll(): CS_InventoryItem[] {
         return this.items;
     }
 

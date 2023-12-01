@@ -9,7 +9,7 @@ import { compare, safe } from "./util.js";
 export interface CS_Item {
     altname?: string;
     base?: boolean;
-    category: string;
+    category?: string;
     contents?: number[];
     def?: number;
     free?: boolean;
@@ -20,8 +20,8 @@ export interface CS_Item {
     localimage?: boolean;
     model?: string;
     name: string;
-    rarecontents?: number[];
-    rareimage?: number;
+    specialcontents?: number[];
+    specialimage?: number;
     rarity: string;
     teams?: CS_Team[];
     tint?: number;
@@ -64,8 +64,8 @@ export const CS_STICKERABLE_ITEMS = ["weapon"];
 export const CS_NAMETAG_RE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
 export const CS_MIN_STICKER_WEAR = 0;
 export const CS_MAX_STICKER_WEAR = 0.9;
-export const CS_RARE_IMAGE_DEFAULT = 1;
-export const CS_RARE_IMAGE_CUSTOM = 2;
+export const CS_SPECIAL_ITEM_IMAGE_DEFAULT = 1;
+export const CS_SPECIAL_ITEM_IMAGE_CUSTOM = 2;
 export const CS_NAMETAG_TOOL_DEF = 1200;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
@@ -83,90 +83,6 @@ function filterItems(predicate: CS_EconomyPredicate) {
     };
 }
 
-export interface CS_CategoryMenuItem {
-    category: string;
-    label: string;
-    unique: boolean;
-}
-
-export const CS_CATEGORY_MENU: CS_CategoryMenuItem[] = [
-    {
-        label: "Pistol",
-        category: "secondary",
-        unique: false
-    },
-    {
-        label: "SMG",
-        category: "smg",
-        unique: false
-    },
-    {
-        label: "Heavy",
-        category: "heavy",
-        unique: false
-    },
-    {
-        label: "Rifle",
-        category: "rifle",
-        unique: false
-    },
-    {
-        label: "Knife",
-        category: "melee",
-        unique: true
-    },
-    {
-        label: "Glove",
-        category: "glove",
-        unique: true
-    },
-    {
-        label: "Sticker",
-        category: "sticker",
-        unique: true
-    },
-    {
-        label: "Agent",
-        category: "agent",
-        unique: true
-    },
-    {
-        label: "Patch",
-        category: "patch",
-        unique: true
-    },
-    {
-        label: "Music Kit",
-        category: "musickit",
-        unique: true
-    },
-    {
-        label: "Graffiti",
-        category: "graffiti",
-        unique: true
-    },
-    {
-        label: "Pin",
-        category: "pin",
-        unique: true
-    },
-    {
-        label: "Case",
-        category: "case",
-        unique: true
-    },
-    {
-        label: "Key",
-        category: "key",
-        unique: true
-    },
-    {
-        label: "Tool",
-        category: "tool",
-        unique: true
-    }
-];
-
 export class CS_Economy {
     static items: CS_Item[] = [];
     static itemMap: Map<number, CS_Item> = new Map();
@@ -181,7 +97,7 @@ export class CS_Economy {
         CS_Economy.stickers = [];
         items.forEach((item) => {
             CS_Economy.itemMap.set(item.id, item);
-            if (item.type === "sticker") {
+            if (item.type === "sticker" && item.category !== undefined) {
                 CS_Economy.stickers.push(item);
                 CS_Economy.categories.add(item.category);
             }
@@ -213,8 +129,8 @@ export function CS_filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
     return items;
 }
 
-export function CS_hasWear(csItem: CS_Item): boolean {
-    return CS_WEARABLE_ITEMS.includes(csItem.type);
+export function CS_hasWear(item: CS_Item): boolean {
+    return CS_WEARABLE_ITEMS.includes(item.type);
 }
 
 export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
@@ -232,8 +148,8 @@ export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
 
 export const CS_safeValidateWear = safe(CS_validateWear);
 
-export function CS_hasSeed(csItem: CS_Item): boolean {
-    return CS_SEEDABLE_ITEMS.includes(csItem.type);
+export function CS_hasSeed(item: CS_Item): boolean {
+    return CS_SEEDABLE_ITEMS.includes(item.type);
 }
 
 export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
@@ -251,16 +167,16 @@ export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
 
 export const CS_safeValidateSeed = safe(CS_validateSeed);
 
-export function CS_hasStickers(csItem: CS_Item): boolean {
-    return CS_STICKERABLE_ITEMS.includes(csItem.type);
+export function CS_hasStickers(item: CS_Item): boolean {
+    return CS_STICKERABLE_ITEMS.includes(item.type);
 }
 
 export function CS_validateStickers(
-    csItem: CS_Item,
+    item: CS_Item,
     stickers: (number | null)[],
     stickerswear: (number | null)[] = []
 ): boolean {
-    if (!CS_hasStickers(csItem)) {
+    if (!CS_hasStickers(item)) {
         throw new Error("item does not have seed");
     }
     if (stickers.length > 4) {
@@ -289,8 +205,8 @@ export function CS_validateStickers(
     return true;
 }
 
-export function CS_hasNametag(csItem: CS_Item): boolean {
-    return CS_NAMETAGGABLE_ITEMS.includes(csItem.type);
+export function CS_hasNametag(item: CS_Item): boolean {
+    return CS_NAMETAGGABLE_ITEMS.includes(item.type);
 }
 
 export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean {
@@ -305,8 +221,8 @@ export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean 
 
 export const CS_safeValidateNametag = safe(CS_validateNametag);
 
-export function CS_hasStatTrak(csItem: CS_Item): boolean {
-    return CS_STATTRAKABLE_ITEMS.includes(csItem.type);
+export function CS_hasStatTrak(item: CS_Item): boolean {
+    return CS_STATTRAKABLE_ITEMS.includes(item.type);
 }
 
 export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolean {
@@ -345,42 +261,42 @@ export function CS_getStickers(): CS_Item[] {
     return CS_Economy.stickers;
 }
 
-export function CS_resolveItemImage(baseUrl: string, csItem: CS_Item | number, wear?: number): string {
-    const { base, id, image, localimage } = typeof csItem === "number" ? CS_Economy.getById(csItem) : csItem;
-    if (!localimage) {
-        if (image.charAt(0) === "/") {
-            return `${baseUrl}${image}`;
-        }
-        return image;
-    }
-    if (base) {
-        return `${baseUrl}/${id}.png`;
-    }
+export function CS_resolveItemImage(baseUrl: string, item: CS_Item | number, wear?: number): string {
+    const { base, id, image, localimage } = typeof item === "number" ? CS_Economy.getById(item) : item;
     const url = `${baseUrl}/${id}`;
-    if (wear === undefined) {
-        return `${url}_light.png`;
+    switch (true) {
+        case !localimage && image.charAt(0) === "/":
+            return `${baseUrl}${image}`;
+        case !localimage:
+            return image;
+        case base:
+            return `${baseUrl}/${id}.png`;
+        case wear === undefined:
+            return `${url}_light.png`;
+
+        // In the future we need to be more precise on this, I don't think it's
+        // correct. Please let me know if you know which wear each image
+        // matches.
+
+        case wear !== undefined && wear < 1 / 3:
+            return `${url}_light.png`;
+        case wear !== undefined && wear < 2 / 3:
+            return `${url}_medium.png`;
+        default:
+            return `${url}_heavy.png`;
     }
-    // In the future we need to be more precise on this, I don't think it's
-    // correct.  Please let me know if you know which wear each image matches.
-    if (wear < 1 / 3) {
-        return `${url}_light.png`;
-    }
-    if (wear < 2 / 3) {
-        return `${url}_medium.png`;
-    }
-    return `${url}_heavy.png`;
 }
 
-export function CS_resolveCaseRareImage(baseUrl: string, csItem: CS_Item | number): string {
-    csItem = typeof csItem === "number" ? CS_Economy.getById(csItem) : csItem;
-    const { id, type, rareimage } = csItem;
+export function CS_resolveCaseSpecialItemImage(baseUrl: string, item: CS_Item | number): string {
+    item = typeof item === "number" ? CS_Economy.getById(item) : item;
+    const { id, type, specialimage } = item;
     if (type !== "case") {
         throw new Error("item is not a case");
     }
-    if (rareimage === undefined) {
+    if (specialimage === undefined) {
         throw new Error("case does not have rare items");
     }
-    if (rareimage === CS_RARE_IMAGE_CUSTOM) {
+    if (specialimage === CS_SPECIAL_ITEM_IMAGE_CUSTOM) {
         return `${baseUrl}/${id}_rare.png`;
     }
     return `${baseUrl}/default_rare_item.png`;

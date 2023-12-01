@@ -70,41 +70,47 @@ export function CS_randomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function CS_getCaseItems(csCaseItem: CS_Item | number) {
-    const { type, contents, rarecontents } =
-        typeof csCaseItem === "number" ? CS_Economy.getById(csCaseItem) : csCaseItem;
-    if (type !== "case") {
+export function CS_getCaseContents(caseItem: CS_Item | number) {
+    const {
+        type,
+        contents,
+        specialcontents: rarecontents
+    } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+    if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
     const items: Record<string, CS_Item[]> = {};
-    for (const id of contents!) {
-        const csItem = CS_Economy.getById(id);
-        const rarity = CS_RARITY_COLORS[csItem.rarity];
+    for (const id of contents) {
+        const item = CS_Economy.getById(id);
+        const rarity = CS_RARITY_COLORS[item.rarity];
         if (!items[rarity]) {
             items[rarity] = [];
         }
-        items[rarity].push(csItem);
+        items[rarity].push(item);
     }
     if (rarecontents) {
         for (const id of rarecontents) {
-            const csItem = CS_Economy.getById(id);
+            const item = CS_Economy.getById(id);
             const rarity = "special";
             if (!items[rarity]) {
                 items[rarity] = [];
             }
-            items[rarity].push(csItem);
+            items[rarity].push(item);
         }
     }
     return items;
 }
 
-export function CS_listCaseItems(csCaseItem: CS_Item | number, removeSpecialItems = false) {
-    const { type, contents, rarecontents } =
-        typeof csCaseItem === "number" ? CS_Economy.getById(csCaseItem) : csCaseItem;
-    if (type !== "case") {
+export function CS_listCaseContents(caseItem: CS_Item | number, hideRareContents = false) {
+    const {
+        type,
+        contents,
+        specialcontents: rarecontents
+    } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+    if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
-    const items = [...(contents || []), ...(rarecontents && !removeSpecialItems ? rarecontents : [])];
+    const items = [...contents, ...(!hideRareContents && rarecontents !== undefined ? rarecontents : [])];
     return items
         .map((id) => CS_Economy.getById(id))
         .sort((a, b) => {
@@ -116,11 +122,10 @@ export function CS_listCaseItems(csCaseItem: CS_Item | number, removeSpecialItem
 }
 
 /**
- * Improvements to the algorithm are welcome.
  * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
  */
 export function CS_unlockCase(csCaseItem: CS_Item | number) {
-    const items = CS_getCaseItems(csCaseItem);
+    const items = CS_getCaseContents(csCaseItem);
     const keys = Object.keys(items);
     const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
     const odds = rarities.map((_, index) => CS_BASE_ODD / Math.pow(5, index));
@@ -136,19 +141,19 @@ export function CS_unlockCase(csCaseItem: CS_Item | number) {
             break;
         }
     }
-    const csItem = items[rollRarity][Math.floor(Math.random() * items[rollRarity].length)];
+    const item = items[rollRarity][Math.floor(Math.random() * items[rollRarity].length)];
     return {
         attributes: {
-            seed: CS_hasSeed(csItem) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
-            wear: CS_hasWear(csItem)
+            seed: CS_hasSeed(item) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
+            stattrak: CS_hasStatTrak(item) ? (Math.random() <= 1 / 10 ? 0 : undefined) : undefined,
+            wear: CS_hasWear(item)
                 ? Number(
                       CS_randomFloat(CS_MIN_WEAR, CS_MAX_WEAR).toString().substring(0, CS_MAX_WEAR.toString().length)
                   )
-                : undefined,
-            stattrak: CS_hasStatTrak(csItem) ? (Math.random() <= 1 / 10 ? 0 : undefined) : undefined
+                : undefined
         },
-        csItem,
-        rarity: CS_RARITY_FOR_SOUNDS[csItem.rarity],
+        item,
+        rarity: CS_RARITY_FOR_SOUNDS[item.rarity],
         special: rollRarity === "special"
     };
 }
