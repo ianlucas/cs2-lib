@@ -85,6 +85,8 @@ export interface CS_ItemsGameTXT {
             [paintKitKey: string]: {
                 description_tag?: string;
                 name: string;
+                wear_remap_max?: string;
+                wear_remap_min?: string;
             };
         }[];
         paint_kits_rarity: {
@@ -145,6 +147,8 @@ export type PaintKitsProps = {
     name: string;
     nameToken: string;
     rarityColorHex: string;
+    wearmax: number;
+    wearmin: number;
 };
 export type SafeRaritiesRecord = Record<string, string | undefined>;
 export type UnsafeRaritiesRecord = Record<string, string>;

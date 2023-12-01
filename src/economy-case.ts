@@ -59,6 +59,7 @@ export const CS_RARITY_ORDER = [
 ];
 
 export const CS_BASE_ODD = 0.8;
+export const CS_STATTRAK_ODD = 1 / 10;
 
 export function CS_randomFloat(min: number, max: number) {
     return Math.random() * (max - min) + min;
@@ -145,10 +146,12 @@ export function CS_unlockCase(csCaseItem: CS_Item | number) {
     return {
         attributes: {
             seed: CS_hasSeed(item) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
-            stattrak: CS_hasStatTrak(item) ? (Math.random() <= 1 / 10 ? 0 : undefined) : undefined,
+            stattrak: CS_hasStatTrak(item) ? (Math.random() <= CS_STATTRAK_ODD ? 0 : undefined) : undefined,
             wear: CS_hasWear(item)
                 ? Number(
-                      CS_randomFloat(CS_MIN_WEAR, CS_MAX_WEAR).toString().substring(0, CS_MAX_WEAR.toString().length)
+                      CS_randomFloat(item.wearmin ?? CS_MIN_WEAR, item.wearmax ?? CS_MAX_WEAR)
+                          .toString()
+                          .substring(0, CS_MAX_WEAR.toString().length)
                   )
                 : undefined
         },

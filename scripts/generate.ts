@@ -6,7 +6,13 @@
 import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
-import { CS_Item, CS_SPECIAL_ITEM_IMAGE_CUSTOM, CS_SPECIAL_ITEM_IMAGE_DEFAULT } from "../src/economy.js";
+import {
+    CS_DEFAULT_MAX_WEAR,
+    CS_DEFAULT_MIN_WEAR,
+    CS_Item,
+    CS_SPECIAL_ITEM_IMAGE_CUSTOM,
+    CS_SPECIAL_ITEM_IMAGE_DEFAULT
+} from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
 import { CS2_IMAGES_PATH, IMAGES_PATH, ITEMS_PATH, LANGUAGE_PATH } from "./env.js";
@@ -228,7 +234,15 @@ export class GenerateScript {
                     name: this.requireTranslation(paintKitProps.description_tag),
                     nameToken: paintKitProps.description_tag,
                     rarityColorHex: this.getRarityColorHex([paintKitProps.name]),
-                    itemid: Number(paintKitIndex)
+                    itemid: Number(paintKitIndex),
+                    wearmax:
+                        paintKitProps.wear_remap_max !== undefined
+                            ? Number(paintKitProps.wear_remap_max)
+                            : CS_DEFAULT_MAX_WEAR,
+                    wearmin:
+                        paintKitProps.wear_remap_min !== undefined
+                            ? Number(paintKitProps.wear_remap_min)
+                            : CS_DEFAULT_MIN_WEAR
                 });
             }
         }
@@ -411,7 +425,9 @@ export class GenerateScript {
                 name,
                 rarity: ["melee", "glove"].includes(parentItem.type)
                     ? this.getRarityColorHex([parentItem.rarity, paintKit.rarityColorHex])
-                    : this.getRarityColorHex([itemKey, paintKit.rarityColorHex])
+                    : this.getRarityColorHex([itemKey, paintKit.rarityColorHex]),
+                wearmax: paintKit.wearmax,
+                wearmin: paintKit.wearmin
             });
 
             this.addCaseItem(itemKey, id);

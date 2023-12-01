@@ -38,12 +38,17 @@ export interface CS_Item {
         | "sticker"
         | "tool"
         | "weapon";
+    wearmax?: number;
+    wearmin?: number;
 }
 
 export const CS_MIN_STATTRAK = 0;
 export const CS_MAX_STATTRAK = 999999;
-export const CS_MIN_WEAR = 0.000001;
-export const CS_MAX_WEAR = 0.999999;
+export const CS_WEAR_FACTOR = 0.000001;
+export const CS_MIN_WEAR = 0;
+export const CS_MAX_WEAR = 1;
+export const CS_DEFAULT_MIN_WEAR = 0.06;
+export const CS_DEFAULT_MAX_WEAR = 0.8;
 export const CS_MIN_FACTORY_NEW_WEAR = CS_MIN_WEAR;
 export const CS_MAX_FACTORY_NEW_WEAR = 0.07;
 export const CS_MIN_MINIMAL_WEAR_WEAR = 0.070001;
@@ -137,11 +142,19 @@ export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
     if (forItem !== undefined && !CS_hasWear(forItem)) {
         throw new Error("item does not have wear");
     }
-    if (String(wear).length > String(CS_MAX_WEAR).length) {
+    if (String(wear).length > String(CS_WEAR_FACTOR).length) {
         throw new Error("invalid wear length");
     }
     if (wear < CS_MIN_WEAR || wear > CS_MAX_WEAR) {
         throw new Error("invalid wear");
+    }
+    if (forItem !== undefined) {
+        if (forItem.wearmin !== undefined && wear < forItem.wearmin) {
+            throw new Error("invalid wear");
+        }
+        if (forItem.wearmax !== undefined && wear > forItem.wearmax) {
+            throw new Error("invalid wear");
+        }
     }
     return true;
 }
