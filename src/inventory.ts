@@ -122,15 +122,15 @@ export class CS_Inventory {
         if (team !== undefined && !item.teams?.includes(team)) {
             return this;
         }
-        for (let index = 0; index < this.items.length; index++) {
-            const current = this.items[index];
-            if (index === index) {
+        for (let other = 0; other < this.items.length; other++) {
+            const current = this.items[other];
+            if (index === other) {
                 current.equipped = team === undefined ? true : undefined;
                 current.equippedCT = team === CS_TEAM_CT ? true : current.equippedCT;
                 current.equippedT = team === CS_TEAM_T ? true : current.equippedT;
             } else {
-                const currentitem = CS_Economy.getById(current.id);
-                if (currentitem.type === item.type && (item.type !== "weapon" || currentitem.model === item.model)) {
+                const currentItem = CS_Economy.getById(current.id);
+                if (currentItem.type === item.type && (item.type !== "weapon" || currentItem.model === item.model)) {
                     current.equipped = team === undefined ? undefined : current.equipped;
                     current.equippedCT = team === CS_TEAM_CT ? undefined : current.equippedCT;
                     current.equippedT = team === CS_TEAM_T ? undefined : current.equippedT;
