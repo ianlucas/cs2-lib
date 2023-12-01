@@ -66,12 +66,12 @@ export class GenerateScript {
     generatedItems: CS_Item[] = [];
 
     caseItems = new Map<string, number>();
-    caseRareItems = new CaseSpecialItems();
+    caseSpecialItems = new CaseSpecialItems();
 
     constructor() {}
 
     async run() {
-        await this.caseRareItems.fetch();
+        await this.caseSpecialItems.fetch();
 
         this.ids = this.readIdsJSON();
         this.readCsgoLanguageTXT();
@@ -722,7 +722,7 @@ export class GenerateScript {
 
     parseCases() {
         console.warn("parsing cases...");
-        this.caseRareItems.populate(this.baseItems, this.generatedItems);
+        this.caseSpecialItems.populate(this.baseItems, this.generatedItems);
         const keyItems = new Map<string, number>();
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
@@ -761,7 +761,7 @@ export class GenerateScript {
             if (contents.length > 0) {
                 const name = this.requireTranslation(itemProps.item_name);
                 const id = this.ids.get(`case_${itemIndex}`);
-                const specialcontents = this.caseRareItems.get(name);
+                const specialcontents = this.caseSpecialItems.get(name);
                 this.addTranslation(id, name, itemProps.item_name);
 
                 if (!itemProps.associated_items) {
@@ -820,8 +820,8 @@ export class GenerateScript {
                         itemProps.image_unusual_item !== undefined
                             ? this.getCaseSpecialItemImage(id, itemProps.image_unusual_item)
                             : specialcontents !== undefined && specialcontents?.length > 0
-                              ? CS_SPECIAL_ITEM_IMAGE_DEFAULT
-                              : undefined,
+                            ? CS_SPECIAL_ITEM_IMAGE_DEFAULT
+                            : undefined,
                     teams: undefined,
                     type: "case"
                 });

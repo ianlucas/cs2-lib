@@ -307,7 +307,7 @@ export function CS_resolveCaseSpecialItemImage(baseUrl: string, item: CS_Item | 
         throw new Error("item is not a case");
     }
     if (specialimage === undefined) {
-        throw new Error("case does not have rare items");
+        throw new Error("case does not have special items");
     }
     if (specialimage === CS_SPECIAL_ITEM_IMAGE_CUSTOM) {
         return `${baseUrl}/${id}_rare.png`;

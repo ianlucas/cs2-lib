@@ -72,11 +72,7 @@ export function CS_randomInt(min: number, max: number) {
 }
 
 export function CS_getCaseContents(caseItem: CS_Item | number) {
-    const {
-        type,
-        contents,
-        specialcontents: rarecontents
-    } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+    const { type, contents, specialcontents } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
     if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
@@ -89,8 +85,8 @@ export function CS_getCaseContents(caseItem: CS_Item | number) {
         }
         items[rarity].push(item);
     }
-    if (rarecontents) {
-        for (const id of rarecontents) {
+    if (specialcontents) {
+        for (const id of specialcontents) {
             const item = CS_Economy.getById(id);
             const rarity = "special";
             if (!items[rarity]) {
@@ -102,16 +98,12 @@ export function CS_getCaseContents(caseItem: CS_Item | number) {
     return items;
 }
 
-export function CS_listCaseContents(caseItem: CS_Item | number, hideRareContents = false) {
-    const {
-        type,
-        contents,
-        specialcontents: rarecontents
-    } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+export function CS_listCaseContents(caseItem: CS_Item | number, hideSpecialContents = false) {
+    const { type, contents, specialcontents } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
     if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
-    const items = [...contents, ...(!hideRareContents && rarecontents !== undefined ? rarecontents : [])];
+    const items = [...contents, ...(!hideSpecialContents && specialcontents !== undefined ? specialcontents : [])];
     return items
         .map((id) => CS_Economy.getById(id))
         .sort((a, b) => {
