@@ -1,15 +1,26 @@
 # cslib
 
-This is a TypeScript library for Counter-Strike-related applications.
+> A TypeScript library for manipulating Counter-Strike-related data.
 
-## `CS_Economy` class
+## Install
 
-Before using `CS_Economy` class or related functions, you need to set the items:
+```sh
+npm install @ianlucas/cslib
+```
+
+## Usage
+
+For any module that deals with economy items, you need to setup the available items (`CS_ITEMS` contains all items from the game):
 
 ```typescript
 import { CS_Economy, CS_ITEMS } from "cslib";
 
 CS_Economy.initialize(CS_ITEMS);
+
+const item = CS_Economy.getById(307);
+
+item.name;
+//=> AWP | Dragon Lore
 ```
 
 ## Feature Overview
