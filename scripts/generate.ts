@@ -820,8 +820,8 @@ export class GenerateScript {
                         itemProps.image_unusual_item !== undefined
                             ? this.getCaseSpecialItemImage(id, itemProps.image_unusual_item)
                             : specialcontents !== undefined && specialcontents?.length > 0
-                            ? CS_SPECIAL_ITEM_IMAGE_DEFAULT
-                            : undefined,
+                              ? CS_SPECIAL_ITEM_IMAGE_DEFAULT
+                              : undefined,
                     teams: undefined,
                     type: "case"
                 });

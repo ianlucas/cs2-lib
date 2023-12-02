@@ -1,14 +1,11 @@
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
 export default {
     transform: {
-        '\\.[jt]sx?$': [
-            'ts-jest',
-            { useESM: true }
-        ]
+        "\\.[jt]sx?$": ["ts-jest", { useESM: true }]
     },
     moduleNameMapper: {
-        '(.+)\\.js': '$1'
+        "(.+)\\.js": "$1"
     },
-    extensionsToTreatAsEsm: ['.ts'],
+    extensionsToTreatAsEsm: [".ts"],
     testEnvironment: "node"
 };
