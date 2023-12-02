@@ -20,7 +20,7 @@ CS_Economy.initialize(CS_ITEMS);
 const item = CS_Economy.getById(307);
 
 item.name;
-//=> AWP | Dragon Lore
+//=> "AWP | Dragon Lore"
 ```
 
 ## Feature Overview
