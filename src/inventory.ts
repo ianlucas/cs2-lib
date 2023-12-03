@@ -42,7 +42,7 @@ export interface CS_InventoryItem {
 
 export class CS_Inventory {
     private items: CS_InventoryItem[];
-    private limit: number;
+    public limit: number;
 
     constructor(items: CS_InventoryItem[] = [], limit: number = 256) {
         this.items = items;
