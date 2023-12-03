@@ -13,7 +13,10 @@ import {
     CS_WEAR_FACTOR,
     CS_hasSeed,
     CS_hasStatTrak,
-    CS_hasWear
+    CS_hasWear,
+    CS_validateSeed,
+    CS_validateStatTrak,
+    CS_validateWear
 } from "./economy.js";
 
 export const CS_RARITY_COLORS: Record<string, string> = {
@@ -118,8 +121,8 @@ export function CS_listCaseContents(caseItem: CS_Item | number, hideSpecialConte
 /**
  * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
  */
-export function CS_unlockCase(csCaseItem: CS_Item | number) {
-    const items = CS_getCaseContents(csCaseItem);
+export function CS_unlockCase(caseItem: CS_Item | number) {
+    const items = CS_getCaseContents(caseItem);
     const keys = Object.keys(items);
     const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
     const odds = rarities.map((_, index) => CS_BASE_ODD / Math.pow(5, index));
@@ -152,4 +155,27 @@ export function CS_unlockCase(csCaseItem: CS_Item | number) {
         rarity: CS_RARITY_FOR_SOUNDS[item.rarity],
         special: rollRarity === "special"
     };
+}
+
+export function CS_validateUnlockedItem(
+    caseItem: number | CS_Item,
+    { id, attributes: { seed, stattrak, wear } }: ReturnType<typeof CS_unlockCase>
+) {
+    caseItem = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+    if (caseItem.type !== "case") {
+        throw new Error("item is not a case.");
+    }
+    if (!caseItem.contents?.includes(id) && !caseItem.specialcontents?.includes(id)) {
+        throw new Error("unlocked item is not from this case.");
+    }
+    const item = CS_Economy.getById(id);
+    if (seed !== undefined) {
+        CS_validateSeed(seed, item);
+    }
+    if (stattrak !== undefined) {
+        CS_validateStatTrak(stattrak, item);
+    }
+    if (wear !== undefined) {
+        CS_validateWear(wear, item);
+    }
 }

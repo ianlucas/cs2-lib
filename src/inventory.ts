@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_unlockCase } from "./economy-case.js";
+import { CS_unlockCase, CS_validateUnlockedItem } from "./economy-case.js";
 import {
     CS_Economy,
-    CS_validateWear,
+    CS_NAMETAG_TOOL_DEF,
+    CS_hasNametag,
     CS_validateNametag,
     CS_validateSeed,
     CS_validateStatTrak,
     CS_validateStickers,
-    CS_NAMETAG_TOOL_DEF,
-    CS_hasNametag
+    CS_validateWear
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 
@@ -82,19 +82,23 @@ export class CS_Inventory {
         return this;
     }
 
-    safeAdd(inventoryItem: CS_InventoryItem) {
-        try {
-            return this.add(inventoryItem);
-        } catch {
-            return this;
+    addWithNametag(toolIndex: number, itemId: number, nametag: string) {
+        if (nametag === "") {
+            throw new Error("invalid nametag.");
         }
-    }
-
-    remove(index: number) {
-        if (!this.items[index]) {
-            return this;
+        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
+            throw new Error("tool must be name tag.");
         }
-        this.items.splice(index, 1);
+        const targetItem = CS_Economy.getById(itemId);
+        if (!CS_hasNametag(targetItem)) {
+            throw new Error("item does not have nametag.");
+        }
+        this.items.splice(toolIndex, 1);
+        this.add({
+            id: itemId,
+            nametag
+        });
         return this;
     }
 
@@ -151,14 +155,12 @@ export class CS_Inventory {
         return this;
     }
 
-    unlockCase(caseIndex: number, keyIndex?: number, unlockedItem?: ReturnType<typeof CS_unlockCase>) {
+    unlockCase(unlockedItem: ReturnType<typeof CS_unlockCase>, caseIndex: number, keyIndex?: number) {
         if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
             throw new Error("invalid inventory item(s).");
         }
         const caseItem = CS_Economy.getById(this.items[caseIndex].id);
-        if (caseItem.type !== "case") {
-            throw new Error("item is not a case.");
-        }
+        CS_validateUnlockedItem(caseItem, unlockedItem);
         const keyItem = keyIndex !== undefined ? CS_Economy.getById(this.items[keyIndex].id) : undefined;
         if (keyItem !== undefined && keyItem.type !== "key") {
             throw new Error("item is not a key.");
@@ -169,7 +171,6 @@ export class CS_Inventory {
         if (caseItem.keys === undefined && keyItem !== undefined) {
             throw new Error("case does not need a key.");
         }
-        unlockedItem = unlockedItem !== undefined ? unlockedItem : CS_unlockCase(caseItem);
         keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex - 1 : keyIndex) : undefined;
         this.items.splice(caseIndex, 1);
         if (keyIndex !== undefined) {
@@ -179,7 +180,7 @@ export class CS_Inventory {
             id: unlockedItem.id,
             ...unlockedItem.attributes
         });
-        return unlockedItem;
+        return this;
     }
 
     renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
@@ -209,6 +210,20 @@ export class CS_Inventory {
 
     getAll(): CS_InventoryItem[] {
         return this.items;
+    }
+
+    remove(index: number) {
+        if (!this.items[index]) {
+            return this;
+        }
+        this.items.splice(index, 1);
+        return this;
+    }
+
+    removeAll() {
+        while (this.items[0]) {
+            this.items.splice(0, 1);
+        }
     }
 
     size() {

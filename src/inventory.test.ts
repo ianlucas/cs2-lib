@@ -4,40 +4,36 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS_Economy } from "./economy";
+import { CS_unlockCase } from "./economy-case";
 import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
 import { CS_TEAM_CT, CS_TEAM_T } from "./teams";
 
 CS_Economy.initialize(CS_ITEMS);
-let inventory = new CS_Inventory([], 5);
+const inventory = new CS_Inventory([], 5);
 
-function removeAllItems() {
-    const size = inventory.size();
-    for (let i = 0; i < size; i++) {
-        inventory = inventory.remove(0);
-    }
-}
 test("initially is empty", () => {
     expect(inventory.size()).toBe(0);
 });
 test("added one item", () => {
-    inventory = inventory.add({
+    inventory.add({
         id: 307
     });
     expect(inventory.size()).toBe(1);
 });
 test("try to invalid item", () => {
-    // this is a sticker item.
-    inventory = inventory.safeAdd({
-        id: 5683,
-        wear: 8,
-        stattrak: 2
-    });
+    expect(() =>
+        inventory.add({
+            id: 5683,
+            wear: 8,
+            stattrak: 2
+        })
+    ).toThrow();
     expect(inventory.size()).toBe(1);
 });
 test("try to add more than limit", () => {
     for (let i = 0; i < 5; i++) {
-        inventory = inventory.add({
+        inventory.add({
             id: 307
         });
     }
@@ -45,61 +41,61 @@ test("try to add more than limit", () => {
     expect(inventory.size()).toBe(5);
 });
 test("equip item to T and CT", () => {
-    inventory = inventory.equip(0, CS_TEAM_CT);
-    inventory = inventory.equip(0, CS_TEAM_T);
+    inventory.equip(0, CS_TEAM_CT);
+    inventory.equip(0, CS_TEAM_T);
     const inventoryItem = inventory.get(0)!;
     expect(inventoryItem.equippedCT).toBeTruthy();
     expect(inventoryItem.equippedT).toBeTruthy();
 });
 test("remove item", () => {
-    inventory = inventory.remove(1);
+    inventory.remove(1);
     expect(inventory.size()).toBe(4);
 });
 test("unequip item", () => {
     let inventoryItem = inventory.get(0)!;
     expect(inventoryItem.equippedCT).toBeTruthy();
     expect(inventoryItem.equippedT).toBeTruthy();
-    inventory = inventory.unequip(0, CS_TEAM_CT);
-    inventory = inventory.unequip(0, CS_TEAM_T);
+    inventory.unequip(0, CS_TEAM_CT);
+    inventory.unequip(0, CS_TEAM_T);
     inventoryItem = inventory.get(0)!;
     expect(inventoryItem.equippedCT).toBeUndefined();
     expect(inventoryItem.equippedT).toBeUndefined();
 });
 test("unlock case", () => {
-    removeAllItems();
-    inventory = inventory.add({ id: 9425 }); // case
-    inventory = inventory.add({ id: 9534 }); // key
-    inventory.unlockCase(1, 0);
+    inventory.removeAll();
+    inventory.add({ id: 9425 }); // case
+    inventory.add({ id: 9534 }); // key
+    inventory.unlockCase(CS_unlockCase(9425), 1, 0);
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0)!.id).not.toBe(9425);
     expect(inventory.get(0)!.id).not.toBe(9534);
-    inventory = inventory.remove(0);
-    inventory = inventory.add({ id: 9425 }); // case
-    inventory = inventory.add({ id: 9534 }); // key
-    expect(() => inventory.unlockCase(0, 1)).toThrow();
-    inventory = inventory.remove(0);
-    inventory = inventory.remove(0);
-    inventory = inventory.add({ id: 9426 }); // capsule case
-    inventory.unlockCase(0);
+    inventory.remove(0);
+    inventory.add({ id: 9425 }); // case
+    inventory.add({ id: 9534 }); // key
+    expect(() => inventory.unlockCase(CS_unlockCase(9425), 0, 1)).toThrow();
+    inventory.remove(0);
+    inventory.remove(0);
+    inventory.add({ id: 9426 }); // capsule case
+    inventory.unlockCase(CS_unlockCase(9426), 0);
     expect(inventory.size()).toBe(1);
     expect(CS_Economy.getById(inventory.get(0)!.id).type).toBe("sticker");
-    inventory = inventory.remove(0);
-    inventory = inventory.add({ id: 9534 }); // key
-    inventory = inventory.add({ id: 9425 }); // case
-    inventory.unlockCase(0, 1);
+    inventory.remove(0);
+    inventory.add({ id: 9534 }); // key
+    inventory.add({ id: 9425 }); // case
+    inventory.unlockCase(CS_unlockCase(9425), 0, 1);
     expect(inventory.size()).toBe(1);
 });
 test("rename item", () => {
-    removeAllItems();
-    inventory = inventory.add({ id: 307, nametag: "initial nametag" }); // dragon lore
-    inventory = inventory.add({ id: 11261 }); // nametag
+    inventory.removeAll();
+    inventory.add({ id: 307, nametag: "initial nametag" }); // dragon lore
+    inventory.add({ id: 11261 }); // nametag
     expect(inventory.size()).toBe(2);
     expect(inventory.get(1)!.nametag).toBe("initial nametag");
-    inventory = inventory.renameItem(0, 1, "new nametag");
+    inventory.renameItem(0, 1, "new nametag");
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0)!.nametag).toBe("new nametag");
-    inventory = inventory.add({ id: 11261 }); // nametag
-    inventory = inventory.renameItem(0, 1);
+    inventory.add({ id: 11261 }); // nametag
+    inventory.renameItem(0, 1);
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0)!.nametag).toBe(undefined);
 });
