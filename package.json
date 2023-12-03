@@ -16,6 +16,7 @@
         "dump-default-graffiti": "tsx scripts/dump-default-graffiti.ts",
         "format": "prettier . --write",
         "generate": "tsx scripts/generate.ts > dist/generate-log.txt",
+        "publish": "npm run build && npm publish",
         "test": "jest"
     },
     "author": "Ian Lucas",
