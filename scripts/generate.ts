@@ -280,10 +280,10 @@ export class GenerateScript {
         console.warn("parsing weapons...");
         const categoryRE = /(c4|[^\d]+)/;
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
-            if (itemProps.baseitem !== "1" || !itemProps.item_sub_position) {
+            if (itemProps.baseitem !== "1" || !itemProps.flexible_loadout_slot) {
                 continue;
             }
-            const matches = itemProps.item_sub_position.match(categoryRE);
+            const matches = itemProps.flexible_loadout_slot.match(categoryRE);
             if (!matches) {
                 continue;
             }

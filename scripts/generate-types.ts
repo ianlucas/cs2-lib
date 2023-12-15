@@ -48,11 +48,11 @@ export interface CS_ItemsGameTXT {
                     ["pedestal display model"]?: string;
                 };
                 baseitem: string;
+                flexible_loadout_slot?: string;
                 image_inventory: string;
                 image_unusual_item?: string;
                 item_name?: string;
                 item_rarity: string;
-                item_sub_position?: string;
                 loot_list_name?: string;
                 /**
                  * The classname of the item.
