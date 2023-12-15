@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createHash } from "crypto";
-import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
+import { copyFileSync, exists, existsSync, readFileSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
 import {
     CS_DEFAULT_MAX_WEAR,
@@ -229,9 +229,14 @@ export class GenerateScript {
                 if (!paintKitProps.description_tag || paintKitProps.name === "default") {
                     continue;
                 }
+                const name = this.findTranslation(paintKitProps.description_tag);
+                if (!name) {
+                    console.log(`unable to find translation for paint ${paintKitProps.description_tag}.`);
+                    continue;
+                }
                 this.paintKits.push({
                     className: paintKitProps.name,
-                    name: this.requireTranslation(paintKitProps.description_tag),
+                    name,
                     nameToken: paintKitProps.description_tag,
                     rarityColorHex: this.getRarityColorHex([paintKitProps.name]),
                     itemid: Number(paintKitIndex),
@@ -300,8 +305,8 @@ export class GenerateScript {
                 free: true,
                 id,
                 image: prefab.image_inventory
-                    ? this.getCDNUrl(prefab.image_inventory)
-                    : this.getCDNUrl(`econ/weapons/base_weapons/${itemProps.name}`),
+                    ? this.getCDNUrl(prefab.image_inventory, `${id}`)
+                    : this.getCDNUrl(`econ/weapons/base_weapons/${itemProps.name}`, `${id}`),
                 itemid: undefined,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
@@ -327,8 +332,12 @@ export class GenerateScript {
             ) {
                 continue;
             }
+            const name = this.findTranslation(itemProps.item_name);
+            if (!name) {
+                console.log(`unable to find translation for item ${itemProps.item_name}.`);
+                continue;
+            }
             const prefab = this.getPrefab(itemProps.prefab);
-            const name = this.requireTranslation(itemProps.item_name);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`melee_${teams.join("_")}_${itemIndex}`);
             this.addTranslation(id, name, itemProps.item_name);
@@ -339,7 +348,7 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory),
+                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 itemid: itemProps.baseitem === "1" ? undefined : 0,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
@@ -374,7 +383,9 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
-                image: itemProps.image_inventory ? this.getCDNUrl(itemProps.image_inventory) : `/${itemProps.name}.png`,
+                image: itemProps.image_inventory
+                    ? this.getCDNUrl(itemProps.image_inventory, `${id}`)
+                    : `/${itemProps.name}.png`,
                 itemid: itemProps.baseitem === "1" ? undefined : 0,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name,
@@ -420,7 +431,7 @@ export class GenerateScript {
                 free: undefined,
                 id,
                 itemid: paintKit.itemid,
-                image: this.getCDNUrl(`${iconPath}_large`),
+                image: this.getCDNUrl(`${iconPath}_large`, `${id}`),
                 localimage: this.getEconLocalImage(id, parentItem.className, paintKit.className),
                 name,
                 rarity: ["melee", "glove"].includes(parentItem.type)
@@ -450,9 +461,9 @@ export class GenerateScript {
 
                 this.generatedItems.push({
                     base: true,
-                    free: musicIndex === "1" ? true : undefined,
+                    free: ["1", "70"].includes(musicIndex) ? true : undefined,
                     id,
-                    image: this.getCDNUrl(musicProps.image_inventory),
+                    image: this.getCDNUrl(musicProps.image_inventory, `${id}`),
                     itemid: Number(musicIndex),
                     name,
                     rarity: this.raritiesColorHex.rare,
@@ -517,7 +528,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 category,
                 id,
-                image: this.getCDNUrl(`econ/stickers/${stickerProps.sticker_material}_large`),
+                image: this.getCDNUrl(`econ/stickers/${stickerProps.sticker_material}_large`, `${id}`),
                 itemid: Number(stickerIndex),
                 name,
                 rarity: this.getRarityColorHex([itemKey, `[${stickerProps.name}]sticker`, stickerProps.item_rarity]),
@@ -582,7 +593,7 @@ export class GenerateScript {
 
                 this.generatedItems.push({
                     id,
-                    image: this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}_large`),
+                    image: this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}_large`, `${id}`),
                     itemid: Number(graffitiIndex),
                     name,
                     rarity: this.getRarityColorHex([
@@ -616,7 +627,7 @@ export class GenerateScript {
 
             this.generatedItems.push({
                 id,
-                image: this.getCDNUrl(`econ/patches/${patchProps.patch_material}_large`),
+                image: this.getCDNUrl(`econ/patches/${patchProps.patch_material}_large`, `${id}`),
                 itemid: Number(patchIndex),
                 teams: [CS_TEAM_CT, CS_TEAM_T],
                 name,
@@ -643,7 +654,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory),
+                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 itemid: undefined,
                 name,
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
@@ -676,7 +687,7 @@ export class GenerateScript {
                 altname: itemProps.name,
                 def: Number(itemIndex),
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory),
+                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 itemid: undefined,
                 name,
                 rarity: this.getRarityColorHex([itemProps.item_rarity, "ancient"]),
@@ -707,7 +718,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory),
+                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 itemid: undefined,
                 name,
                 rarity: this.getRarityColorHex(["common"]),
@@ -797,7 +808,7 @@ export class GenerateScript {
                     this.generatedItems.push({
                         def: Number(itemIndex),
                         id,
-                        image: this.getCDNUrl(itemProps.image_inventory),
+                        image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                         name,
                         rarity: this.raritiesColorHex.common,
                         teams: undefined,
@@ -811,7 +822,7 @@ export class GenerateScript {
                     contents,
                     def: Number(itemIndex),
                     id,
-                    image: this.getCDNUrl(itemProps.image_inventory),
+                    image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                     keys: keys.length > 0 ? keys : undefined,
                     name,
                     rarity: this.raritiesColorHex.common,
@@ -929,13 +940,33 @@ export class GenerateScript {
         });
     }
 
-    // Looks like this doesn't work on CS2 files extracted by Source 2 Viewer.
-    // Need to check this on next case launch.
-    getCDNUrl(file: string) {
-        const buffer = readFileSync(resolve(IMAGES_PATH, file + ".png"));
+    getFileSha1(path: string) {
+        if (!existsSync(path)) {
+            return undefined;
+        }
+        const buffer = readFileSync(path);
         const hashSum = createHash("sha1");
         hashSum.update(buffer);
-        const sha1 = hashSum.digest("hex");
+        return hashSum.digest("hex");
+    }
+
+    getCDNUrl(file: string, fileid: string) {
+        const cs2ImagePath = resolve(CS2_IMAGES_PATH, file + "_png.png");
+        const csgoSha1 = this.getFileSha1(resolve(IMAGES_PATH, file + ".png"));
+        const cs2Sha1 = this.getFileSha1(cs2ImagePath);
+        if (csgoSha1 === undefined && cs2Sha1 === undefined) {
+            throw new Error(`unable to get cdn for file ${file}.`);
+        }
+        const sha1 = csgoSha1 !== undefined && csgoSha1 !== cs2Sha1 ? csgoSha1 : cs2Sha1;
+        if (!sha1) {
+            throw new Error(`unable to get sha1 for file ${file}.`);
+        }
+        // CS2's CDN is not working for some items, we're going to depend on Statically.
+        if (csgoSha1 === undefined) {
+            const destPath = resolve(process.cwd(), `dist/images/${fileid}.png`);
+            copyFileSync(cs2ImagePath, destPath);
+            return `https://cdn.statically.io/gh/ianlucas/cslib/main/dist/images/${fileid}.png`;
+        }
         return `https://steamcdn-a.akamaihd.net/apps/730/icons/${file.toLowerCase()}.${sha1}.png`;
     }
 
