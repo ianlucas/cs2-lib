@@ -66,7 +66,8 @@ export const CS_NAMETAGGABLE_ITEMS = ["melee", "weapon"];
 export const CS_SEEDABLE_ITEMS = ["weapon", "melee"];
 export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon", "musickit"];
 export const CS_STICKERABLE_ITEMS = ["weapon"];
-export const CS_NAMETAG_RE = /^[A-Za-z0-9|][A-Za-z0-9|\s]{0,19}$/;
+export const CS_NAMETAG_RE =
+    /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
 export const CS_MIN_STICKER_WEAR = 0;
 export const CS_MAX_STICKER_WEAR = 0.9;
 export const CS_SPECIAL_ITEM_IMAGE_DEFAULT = 1;
@@ -226,7 +227,7 @@ export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean 
     if (forItem !== undefined && !CS_hasNametag(forItem)) {
         throw new Error("invalid nametag");
     }
-    if (!CS_NAMETAG_RE.test(nametag)) {
+    if (nametag[0] === " " || !CS_NAMETAG_RE.test(nametag)) {
         throw new Error("invalid nametag");
     }
     return true;
