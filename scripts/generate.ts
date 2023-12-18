@@ -239,7 +239,7 @@ export class GenerateScript {
                     name,
                     nameToken: paintKitProps.description_tag,
                     rarityColorHex: this.getRarityColorHex([paintKitProps.name]),
-                    itemid: Number(paintKitIndex),
+                    index: Number(paintKitIndex),
                     wearmax:
                         paintKitProps.wear_remap_max !== undefined
                             ? Number(paintKitProps.wear_remap_max)
@@ -307,7 +307,7 @@ export class GenerateScript {
                 image: prefab.image_inventory
                     ? this.getCDNUrl(prefab.image_inventory, `${id}`)
                     : this.getCDNUrl(`econ/weapons/base_weapons/${itemProps.name}`, `${id}`),
-                itemid: undefined,
+                index: undefined,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
                 name,
@@ -349,7 +349,7 @@ export class GenerateScript {
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
-                itemid: itemProps.baseitem === "1" ? undefined : 0,
+                index: itemProps.baseitem === "1" ? undefined : 0,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
                 name,
@@ -386,7 +386,7 @@ export class GenerateScript {
                 image: itemProps.image_inventory
                     ? this.getCDNUrl(itemProps.image_inventory, `${id}`)
                     : `/${itemProps.name}.png`,
-                itemid: itemProps.baseitem === "1" ? undefined : 0,
+                index: itemProps.baseitem === "1" ? undefined : 0,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name,
                 name,
@@ -422,7 +422,7 @@ export class GenerateScript {
             }
             const itemKey = `[${paintKit.className}]${parentItem.className}`;
             const name = `${parentItem.name} | ${paintKit.name}`;
-            const id = this.ids.get(`paint_${parentItem.def}_${paintKit.itemid}`);
+            const id = this.ids.get(`paint_${parentItem.def}_${paintKit.index}`);
             this.addTranslation(id, name, parentItem.nameToken, " | ", paintKit.nameToken);
 
             this.generatedItems.push({
@@ -430,7 +430,7 @@ export class GenerateScript {
                 base: undefined,
                 free: undefined,
                 id,
-                itemid: paintKit.itemid,
+                index: paintKit.index,
                 image: this.getCDNUrl(`${iconPath}_large`, `${id}`),
                 localimage: this.getEconLocalImage(id, parentItem.className, paintKit.className),
                 name,
@@ -464,7 +464,7 @@ export class GenerateScript {
                     free: ["1", "70"].includes(musicIndex) ? true : undefined,
                     id,
                     image: this.getCDNUrl(musicProps.image_inventory, `${id}`),
-                    itemid: Number(musicIndex),
+                    index: Number(musicIndex),
                     name,
                     rarity: this.raritiesColorHex.rare,
                     type: "musickit"
@@ -529,7 +529,7 @@ export class GenerateScript {
                 category,
                 id,
                 image: this.getCDNUrl(`econ/stickers/${stickerProps.sticker_material}_large`, `${id}`),
-                itemid: Number(stickerIndex),
+                index: Number(stickerIndex),
                 name,
                 rarity: this.getRarityColorHex([itemKey, `[${stickerProps.name}]sticker`, stickerProps.item_rarity]),
                 type: "sticker"
@@ -574,7 +574,7 @@ export class GenerateScript {
                     this.generatedItems.push({
                         id,
                         image,
-                        itemid: Number(graffitiIndex),
+                        index: Number(graffitiIndex),
                         name,
                         rarity: this.getRarityColorHex([graffitiProps.item_rarity]),
                         tint: tintId,
@@ -594,7 +594,7 @@ export class GenerateScript {
                 this.generatedItems.push({
                     id,
                     image: this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}_large`, `${id}`),
-                    itemid: Number(graffitiIndex),
+                    index: Number(graffitiIndex),
                     name,
                     rarity: this.getRarityColorHex([
                         itemKey,
@@ -628,7 +628,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 id,
                 image: this.getCDNUrl(`econ/patches/${patchProps.patch_material}_large`, `${id}`),
-                itemid: Number(patchIndex),
+                index: Number(patchIndex),
                 teams: [CS_TEAM_CT, CS_TEAM_T],
                 name,
                 rarity: this.getRarityColorHex([itemKey, `[${patchProps.name}]patch`, patchProps.item_rarity]),
@@ -655,7 +655,7 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 id,
                 image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
-                itemid: undefined,
+                index: undefined,
                 name,
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
                 teams,
@@ -688,7 +688,7 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 id,
                 image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
-                itemid: undefined,
+                index: undefined,
                 name,
                 rarity: this.getRarityColorHex([itemProps.item_rarity, "ancient"]),
                 teams: undefined,
@@ -719,7 +719,7 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 id,
                 image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
-                itemid: undefined,
+                index: undefined,
                 name,
                 rarity: this.getRarityColorHex(["common"]),
                 teams: undefined,

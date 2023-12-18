@@ -15,7 +15,7 @@ export interface CS_Item {
     free?: boolean;
     id: number;
     image: string;
-    itemid?: number;
+    index?: number;
     keys?: number[];
     localimage?: boolean;
     model?: string;

@@ -143,7 +143,7 @@ export type ItemProps = CS_ItemsGameTXT["items_game"]["items"][number][string];
 export type ItemsRecord = Record<string, ItemProps>;
 export type PaintKitsProps = {
     className: string;
-    itemid: number;
+    index: number;
     name: string;
     nameToken: string;
     rarityColorHex: string;
