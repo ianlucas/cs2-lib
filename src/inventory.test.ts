@@ -34,7 +34,10 @@ test("try to invalid item", () => {
 test("try to add more than limit", () => {
     for (let i = 0; i < 5; i++) {
         inventory.add({
-            id: 307
+            id: 307,
+            wear: 0.02,
+            stattrak: 2,
+            seed: 10
         });
     }
     expect(inventory.full()).toBeTruthy();
