@@ -43,6 +43,8 @@ const uncategorizedStickers = [
     "danger_zone"
 ];
 
+const isHeavyWeapon = ["weapon_m249", "weapon_mag7", "weapon_negev", "weapon_nova", "weapon_sawedoff", "weapon_xm1014"];
+
 export class GenerateScript {
     clientLootList: ClientLootListRecord = null!;
     graffitiTints: { name: string; token: string; id: number }[] = null!;
@@ -299,7 +301,7 @@ export class GenerateScript {
 
             this.baseItems.push({
                 base: true,
-                category,
+                category: isHeavyWeapon.includes(itemProps.name) ? "heavy" : category,
                 className: itemProps.name,
                 def: Number(itemIndex),
                 free: true,
