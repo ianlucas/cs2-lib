@@ -6,8 +6,11 @@
 import { CS_unlockCase, CS_validateUnlockedItem } from "./economy-case.js";
 import {
     CS_Economy,
+    CS_MAX_WEAR,
     CS_NAMETAG_TOOL_DEF,
+    CS_STICKER_WEAR_FACTOR,
     CS_hasNametag,
+    CS_hasStickers,
     CS_validateNametag,
     CS_validateSeed,
     CS_validateStatTrak,
@@ -15,6 +18,7 @@ import {
     CS_validateWear
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
+import { float } from "./util.js";
 
 export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
     "agent",
@@ -84,15 +88,15 @@ export class CS_Inventory {
 
     addWithNametag(toolIndex: number, itemId: number, nametag: string) {
         if (nametag === "") {
-            throw new Error("invalid nametag.");
+            throw new Error("invalid nametag");
         }
         const toolItem = CS_Economy.getById(this.items[toolIndex].id);
         if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
-            throw new Error("tool must be name tag.");
+            throw new Error("tool must be name tag");
         }
         const targetItem = CS_Economy.getById(itemId);
         if (!CS_hasNametag(targetItem)) {
-            throw new Error("item does not have nametag.");
+            throw new Error("item does not have nametag");
         }
         this.items.splice(toolIndex, 1);
         this.add({
@@ -157,19 +161,19 @@ export class CS_Inventory {
 
     unlockCase(unlockedItem: ReturnType<typeof CS_unlockCase>, caseIndex: number, keyIndex?: number) {
         if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
-            throw new Error("invalid inventory item(s).");
+            throw new Error("invalid inventory item(s)");
         }
         const caseItem = CS_Economy.getById(this.items[caseIndex].id);
         CS_validateUnlockedItem(caseItem, unlockedItem);
         const keyItem = keyIndex !== undefined ? CS_Economy.getById(this.items[keyIndex].id) : undefined;
         if (keyItem !== undefined && keyItem.type !== "key") {
-            throw new Error("item is not a key.");
+            throw new Error("item is not a key");
         }
         if (caseItem.keys !== undefined && (keyItem === undefined || !caseItem.keys.includes(keyItem.id))) {
-            throw new Error("case needs a valid key to be open.");
+            throw new Error("case needs a valid key to be open");
         }
         if (caseItem.keys === undefined && keyItem !== undefined) {
-            throw new Error("case does not need a key.");
+            throw new Error("case does not need a key");
         }
         keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex - 1 : keyIndex) : undefined;
         this.items.splice(caseIndex, 1);
@@ -186,21 +190,70 @@ export class CS_Inventory {
     renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
         nametag = nametag === "" ? undefined : nametag;
         if (!this.items[toolIndex] || !this.items[targetIndex]) {
-            throw new Error("invalid inventory item(s).");
+            throw new Error("invalid inventory item(s)");
         }
         const toolItem = CS_Economy.getById(this.items[toolIndex].id);
         if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
-            throw new Error("tool must be name tag.");
+            throw new Error("tool must be name tag");
         }
         const targetItem = CS_Economy.getById(this.items[targetIndex].id);
         if (!CS_hasNametag(targetItem)) {
-            throw new Error("item does not have nametag.");
+            throw new Error("item does not have nametag");
         }
         if (nametag !== undefined) {
             CS_validateNametag(nametag);
         }
         this.items[targetIndex].nametag = nametag;
         this.items.splice(toolIndex, 1);
+        return this;
+    }
+
+    applyItemSticker(itemIndex: number, stickerItemIndex: number, stickerIndex: number) {
+        if (!this.items[itemIndex] || !this.items[stickerItemIndex]) {
+            throw new Error("invalid inventory item(s)");
+        }
+        const inventoryItem = this.items[itemIndex];
+        const item = CS_Economy.getById(inventoryItem.id);
+        if (!CS_hasStickers(item)) {
+            console.log(item);
+            throw new Error("item does not have stickers");
+        }
+        const sticker = CS_Economy.getById(this.items[stickerItemIndex].id);
+        if (sticker.type !== "sticker") {
+            throw new Error("not applying a sticker");
+        }
+        const stickers = inventoryItem.stickers ?? [null, null, null, null];
+        if (stickers[stickerIndex] !== null) {
+            throw new Error("cant apply existing sticker");
+        }
+        stickers[stickerIndex] = sticker.id;
+        inventoryItem.stickers = stickers;
+        this.items.splice(stickerItemIndex, 1);
+        return this;
+    }
+
+    scrapeItemSticker(itemIndex: number, stickerIndex: number) {
+        const inventoryItem = this.items[itemIndex];
+        if (!inventoryItem || !inventoryItem.stickers) {
+            throw new Error("invalid inventory item");
+        }
+        const { stickers } = inventoryItem;
+        if (typeof stickers[stickerIndex] !== "number") {
+            throw new Error("invalid sticker index");
+        }
+        const stickersWear = inventoryItem.stickerswear ?? [null, null, null, null];
+        const stickerWear = stickersWear[stickerIndex] || 0;
+        const nextWear = float(stickerWear + CS_STICKER_WEAR_FACTOR);
+        if (nextWear > CS_MAX_WEAR) {
+            stickers[stickerIndex] = null;
+            stickersWear[stickerIndex] = null;
+            inventoryItem.stickers = stickers.filter((id) => id !== null).length > 0 ? stickers : undefined;
+            inventoryItem.stickerswear =
+                stickersWear.filter((wear) => wear !== null).length > 0 ? stickersWear : undefined;
+            return this;
+        }
+        stickersWear[stickerIndex] = nextWear;
+        inventoryItem.stickerswear = stickersWear;
         return this;
     }
 

@@ -16,3 +16,7 @@ export function safe<T extends (...args: any[]) => any>(fn: T): (...args: Parame
         }
     };
 }
+
+export function float(literal: number, fractionDigits: number = 2) {
+    return parseFloat(literal.toFixed(fractionDigits));
+}

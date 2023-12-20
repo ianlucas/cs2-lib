@@ -70,7 +70,7 @@ export const CS_NAMETAG_RE =
     /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
 export const CS_STICKER_WEAR_FACTOR = 0.1;
 export const CS_MIN_STICKER_WEAR = 0;
-export const CS_MAX_STICKER_WEAR = 1;
+export const CS_MAX_STICKER_WEAR = 0.9;
 export const CS_SPECIAL_ITEM_IMAGE_DEFAULT = 1;
 export const CS_SPECIAL_ITEM_IMAGE_CUSTOM = 2;
 export const CS_NAMETAG_TOOL_DEF = 1200;
