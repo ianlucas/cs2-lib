@@ -25,17 +25,6 @@ item.name;
 
 ## Feature Overview
 
--   [x] Economy Items - Agent Patches
--   [x] Economy Items - Agents
--   [x] Economy Items - Cases
--   [x] Economy Items - Gloves
--   [x] Economy Items - Graffiti
--   [x] Economy Items - Knives
--   [x] Economy Items - Music Kits
--   [x] Economy Items - Pins
--   [x] Economy Items - Tools
--   [x] Economy Items - Weapon Skins
--   [x] Economy Items - Weapon Stickers
--   [x] Misc - Active Pool Maps
--   [x] Misc - Teams
--   [x] Misc - Veto
+-   **Economy items:** Weapon/Knife/Glove Skins, Weapon Stickers, Agents, Agent Patches, Graffiti, Pins, Music Kits, Cases, Case Keys, and Tools provided in `CS_ITEMS` and `dist/items.json`.
+-   **Economy:** Economy and Inventory classes.
+-   **Misc:** Active Pool Maps, Teams, and Veto utilities.
