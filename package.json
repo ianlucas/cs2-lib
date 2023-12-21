@@ -1,15 +1,12 @@
 {
     "name": "@ianlucas/cslib",
-    "private": false,
     "version": "7.3.0",
-    "description": "Counter-Strike.",
+    "description": "A TypeScript library for manipulating Counter-Strike-related data",
+    "license": "MIT",
+    "author": "Ian Lucas",
+    "repository": "ianlucas/cslib",
+    "type": "module",
     "main": "dist/index.js",
-    "repository": {
-        "url": "https://github.com/ianlucas/cslib"
-    },
-    "bugs": {
-        "url": "https://github.com/ianlucas/cslib/issues"
-    },
     "scripts": {
         "build": "tsc",
         "dump-default-graffiti-cdn": "tsx scripts/dump-default-graffiti-cdn.ts",
@@ -19,8 +16,6 @@
         "release": "npm run build && npm publish",
         "test": "jest"
     },
-    "author": "Ian Lucas",
-    "license": "MIT",
     "devDependencies": {
         "@types/jest": "^29.5.10",
         "@types/node": "^18.15.11",
@@ -32,6 +27,5 @@
         "ts-jest": "^29.1.1",
         "tsx": "^4.6.1",
         "typescript": "^5.3.2"
-    },
-    "type": "module"
+    }
 }
