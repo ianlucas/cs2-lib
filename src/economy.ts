@@ -189,7 +189,7 @@ export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
 export const CS_safeValidateSeed = safe(CS_validateSeed);
 
 export function CS_hasStickers(item: CS_Item): boolean {
-    return CS_STICKERABLE_ITEMS.includes(item.type);
+    return CS_STICKERABLE_ITEMS.includes(item.type) && item.category !== "c4";
 }
 
 export function CS_validateStickers(
