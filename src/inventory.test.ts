@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy } from "./economy";
+import { CS_Economy, CS_MAX_STATTRAK } from "./economy";
 import { CS_unlockCase } from "./economy-case";
 import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
@@ -170,4 +170,8 @@ test("increment stattrak", () => {
     expect(inventory.get(0)!.stattrak).toBe(0);
     inventory.incrementItemStatTrak(0);
     expect(inventory.get(0)!.stattrak).toBe(1);
+    inventory.add({ id: 307, stattrak: CS_MAX_STATTRAK - 1 });
+    inventory.incrementItemStatTrak(0);
+    inventory.incrementItemStatTrak(0);
+    expect(inventory.get(0)!.stattrak).toBe(CS_MAX_STATTRAK);
 });

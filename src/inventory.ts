@@ -6,6 +6,7 @@
 import { CS_unlockCase, CS_validateUnlockedItem } from "./economy-case.js";
 import {
     CS_Economy,
+    CS_MAX_STATTRAK,
     CS_MAX_WEAR,
     CS_NAMETAG_TOOL_DEF,
     CS_STICKER_WEAR_FACTOR,
@@ -262,7 +263,9 @@ export class CS_Inventory {
         if (!inventoryItem || inventoryItem.stattrak === undefined) {
             throw new Error("invalid inventory item");
         }
-        inventoryItem.stattrak++;
+        if (inventoryItem.stattrak < CS_MAX_STATTRAK) {
+            inventoryItem.stattrak++;
+        }
         return this;
     }
 
