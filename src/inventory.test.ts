@@ -175,3 +175,48 @@ test("increment stattrak", () => {
     inventory.incrementItemStatTrak(0);
     expect(inventory.get(0)!.stattrak).toBe(CS_MAX_STATTRAK);
 });
+
+test("swap items stattrak", () => {
+    inventory.removeAll();
+    inventory.add({ id: 307, stattrak: 0 });
+    inventory.add({ id: 307, stattrak: 2556 });
+    inventory.swapItemsStatTrak(0, 1);
+    expect(inventory.get(0)!.stattrak).toBe(0);
+    expect(inventory.get(1)!.stattrak).toBe(2556);
+    inventory.removeAll();
+    inventory.add({ id: 307, stattrak: 0 });
+    inventory.add({ id: 307, stattrak: 2556 });
+    inventory.swapItemsStatTrak(1, 0);
+    expect(inventory.get(0)!.stattrak).toBe(0);
+    expect(inventory.get(1)!.stattrak).toBe(2556);
+    inventory.removeAll();
+    inventory.add({ id: 307 });
+    inventory.add({ id: 307, stattrak: 2556 });
+    expect(() => inventory.swapItemsStatTrak(0, 1)).toThrow();
+    inventory.removeAll();
+    inventory.add({ id: 1501, stattrak: 10 }); // 9
+    inventory.add({ id: 1499, stattrak: 9 }); // 8
+    inventory.add({ id: 1334, stattrak: 8 }); // 7
+    inventory.add({ id: 1356, stattrak: 7 }); // 6
+    inventory.add({ id: 1139, stattrak: 1 }); // 5
+    inventory.add({ id: 1126, stattrak: 2 }); // 4
+    inventory.add({ id: 307, stattrak: 3 }); // 3
+    inventory.add({ id: 313, stattrak: 4 }); // 2
+    inventory.add({ id: 1841, stattrak: 5 }); // 1
+    inventory.add({ id: 1801, stattrak: 6 }); // 0
+
+    for (let i = 0; i < 10; i += 2) {
+        for (let j = 0; j < 10; j++) {
+            if (j === i || j === i + 1) continue;
+            expect(() => inventory.swapItemsStatTrak(i, j)).toThrow();
+        }
+    }
+
+    for (let i = 0; i < 10; i += 2) {
+        const from = inventory.get(i)!.stattrak;
+        const to = inventory.get(i + 1)!.stattrak;
+        inventory.swapItemsStatTrak(i, i + 1);
+        expect(inventory.get(i)!.stattrak).toBe(to);
+        expect(inventory.get(i + 1)!.stattrak).toBe(from);
+    }
+});

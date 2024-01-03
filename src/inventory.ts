@@ -269,6 +269,31 @@ export class CS_Inventory {
         return this;
     }
 
+    swapItemsStatTrak(fromIndex: number, toIndex: number) {
+        const fromInventoryItem = this.items[fromIndex];
+        const toInventoryItem = this.items[toIndex];
+        if (
+            !fromInventoryItem ||
+            !toInventoryItem ||
+            fromInventoryItem.stattrak === undefined ||
+            toInventoryItem.stattrak === undefined
+        ) {
+            throw new Error("invalid inventory items");
+        }
+        const fromItem = CS_Economy.getById(fromInventoryItem.id);
+        const toItem = CS_Economy.getById(toInventoryItem.id);
+        if (fromItem.type !== toItem.type) {
+            throw new Error("items must be of the same type");
+        }
+        if (fromItem.type !== "musickit" && fromItem.def !== toItem.def) {
+            throw new Error("items must be of the same type");
+        }
+        const fromStattrak = fromInventoryItem.stattrak;
+        fromInventoryItem.stattrak = toInventoryItem.stattrak;
+        toInventoryItem.stattrak = fromStattrak;
+        return this;
+    }
+
     get(index: number): CS_InventoryItem | undefined {
         return this.items[index];
     }
