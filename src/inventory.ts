@@ -257,6 +257,15 @@ export class CS_Inventory {
         return this;
     }
 
+    incrementItemStatTrak(itemIndex: number) {
+        const inventoryItem = this.items[itemIndex];
+        if (!inventoryItem || inventoryItem.stattrak === undefined) {
+            throw new Error("invalid inventory item");
+        }
+        inventoryItem.stattrak++;
+        return this;
+    }
+
     get(index: number): CS_InventoryItem | undefined {
         return this.items[index];
     }

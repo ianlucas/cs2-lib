@@ -160,3 +160,14 @@ test("scrape item sticker", () => {
     expect(inventory.get(0)!.stickers).toBe(undefined);
     expect(inventory.get(0)!.stickerswear).toBe(undefined);
 });
+
+test("increment stattrak", () => {
+    inventory.removeAll();
+    inventory.add({ id: 307 });
+    expect(inventory.get(0)!.stattrak).toBe(undefined);
+    expect(() => inventory.incrementItemStatTrak(0)).toThrow();
+    inventory.add({ id: 307, stattrak: 0 });
+    expect(inventory.get(0)!.stattrak).toBe(0);
+    inventory.incrementItemStatTrak(0);
+    expect(inventory.get(0)!.stattrak).toBe(1);
+});
