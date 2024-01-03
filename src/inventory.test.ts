@@ -221,6 +221,7 @@ test("swap items stattrak", () => {
     }
 
     expect(() => inventory.swapItemsStatTrak(2, 0, 1)).toThrow();
+    expect(() => inventory.swapItemsStatTrak(10, 0, 0)).toThrow();
 
     for (let i = 0; i < 10; i += 2) {
         const from = inventory.get(i)!.stattrak;

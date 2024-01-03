@@ -271,6 +271,9 @@ export class CS_Inventory {
     }
 
     swapItemsStatTrak(toolIndex: number, fromIndex: number, toIndex: number) {
+        if (fromIndex === toIndex) {
+            throw new Error("indexes must be different");
+        }
         const fromInventoryItem = this.items[fromIndex];
         const toInventoryItem = this.items[toIndex];
         if (
