@@ -10,6 +10,7 @@ import {
     CS_MAX_WEAR,
     CS_NAMETAG_TOOL_DEF,
     CS_STICKER_WEAR_FACTOR,
+    CS_SWAP_STATTRAK_TOOL_DEF,
     CS_hasNametag,
     CS_hasStickers,
     CS_validateNametag,
@@ -269,16 +270,21 @@ export class CS_Inventory {
         return this;
     }
 
-    swapItemsStatTrak(fromIndex: number, toIndex: number) {
+    swapItemsStatTrak(toolIndex: number, fromIndex: number, toIndex: number) {
         const fromInventoryItem = this.items[fromIndex];
         const toInventoryItem = this.items[toIndex];
         if (
+            !this.items[toolIndex] ||
             !fromInventoryItem ||
             !toInventoryItem ||
             fromInventoryItem.stattrak === undefined ||
             toInventoryItem.stattrak === undefined
         ) {
             throw new Error("invalid inventory items");
+        }
+        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        if (toolItem.def !== CS_SWAP_STATTRAK_TOOL_DEF) {
+            throw new Error("tool must be stattrak swap tool");
         }
         const fromItem = CS_Economy.getById(fromInventoryItem.id);
         const toItem = CS_Economy.getById(toInventoryItem.id);
@@ -291,6 +297,7 @@ export class CS_Inventory {
         const fromStattrak = fromInventoryItem.stattrak;
         fromInventoryItem.stattrak = toInventoryItem.stattrak;
         toInventoryItem.stattrak = fromStattrak;
+        this.items.splice(toolIndex, 1);
         return this;
     }
 

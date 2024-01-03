@@ -178,22 +178,28 @@ test("increment stattrak", () => {
 
 test("swap items stattrak", () => {
     inventory.removeAll();
+    inventory.add({ id: 11263 });
     inventory.add({ id: 307, stattrak: 0 });
     inventory.add({ id: 307, stattrak: 2556 });
-    inventory.swapItemsStatTrak(0, 1);
+    inventory.swapItemsStatTrak(2, 0, 1);
     expect(inventory.get(0)!.stattrak).toBe(0);
     expect(inventory.get(1)!.stattrak).toBe(2556);
     inventory.removeAll();
+    inventory.add({ id: 11263 });
     inventory.add({ id: 307, stattrak: 0 });
     inventory.add({ id: 307, stattrak: 2556 });
-    inventory.swapItemsStatTrak(1, 0);
+    inventory.swapItemsStatTrak(2, 1, 0);
     expect(inventory.get(0)!.stattrak).toBe(0);
     expect(inventory.get(1)!.stattrak).toBe(2556);
     inventory.removeAll();
+    inventory.add({ id: 11263 });
     inventory.add({ id: 307 });
     inventory.add({ id: 307, stattrak: 2556 });
-    expect(() => inventory.swapItemsStatTrak(0, 1)).toThrow();
+    expect(() => inventory.swapItemsStatTrak(2, 0, 1)).toThrow();
     inventory.removeAll();
+    for (let i = 0; i < 5; i++) {
+        inventory.add({ id: 11263 });
+    }
     inventory.add({ id: 1501, stattrak: 10 }); // 9
     inventory.add({ id: 1499, stattrak: 9 }); // 8
     inventory.add({ id: 1334, stattrak: 8 }); // 7
@@ -205,18 +211,24 @@ test("swap items stattrak", () => {
     inventory.add({ id: 1841, stattrak: 5 }); // 1
     inventory.add({ id: 1801, stattrak: 6 }); // 0
 
+    const initialSize = inventory.size();
+
     for (let i = 0; i < 10; i += 2) {
         for (let j = 0; j < 10; j++) {
             if (j === i || j === i + 1) continue;
-            expect(() => inventory.swapItemsStatTrak(i, j)).toThrow();
+            expect(() => inventory.swapItemsStatTrak(10, i, j)).toThrow();
         }
     }
+
+    expect(() => inventory.swapItemsStatTrak(2, 0, 1)).toThrow();
 
     for (let i = 0; i < 10; i += 2) {
         const from = inventory.get(i)!.stattrak;
         const to = inventory.get(i + 1)!.stattrak;
-        inventory.swapItemsStatTrak(i, i + 1);
+        inventory.swapItemsStatTrak(10, i, i + 1);
         expect(inventory.get(i)!.stattrak).toBe(to);
         expect(inventory.get(i + 1)!.stattrak).toBe(from);
     }
+
+    expect(inventory.size()).toBe(initialSize - 5);
 });
