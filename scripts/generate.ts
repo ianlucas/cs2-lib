@@ -886,24 +886,7 @@ export class GenerateScript {
         for (const [language, translations] of Object.entries(this.translations)) {
             writeJson(`dist/items-${language}.json`, translations);
             console.warn(`generated dist/items-${language}.json.`);
-            writeTxt(
-                `src/translations/${language}.ts`,
-                `${banner}\n\nexport const CS_${language}: Record<string, string> = ${JSON.stringify(translations)};`
-            );
-            console.warn(`updated src/translations/${language}.ts.`);
         }
-        const languages = Object.keys(this.translations);
-
-        writeTxt(
-            `src/translations/index.ts`,
-            `${banner}\n\n${languages
-                .map(
-                    (language) =>
-                        `import { CS_${language} as ${language} } from "./${language}.js";\nexport * from "./${language}.js";\n`
-                )
-                .join("")}\nexport const CS_ITEM_TRANSLATION = { ${languages.join(", ")} };`
-        );
-        console.warn("updated src/translations/index.ts.");
 
         replaceInFile("src/items.ts", /CS_Item\[\] = [^;]+;/, `CS_Item[] = ${JSON.stringify(items)};`);
         console.warn("updated src/items.ts.");
