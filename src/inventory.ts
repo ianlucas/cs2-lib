@@ -304,8 +304,21 @@ export class CS_Inventory {
         return this;
     }
 
-    get(index: number): CS_InventoryItem | undefined {
+    get(index: number) {
+        if (!this.items[index]) {
+            throw new Error("invalid inventory item");
+        }
         return this.items[index];
+    }
+
+    getItem(index: number) {
+        return CS_Economy.getById(this.get(index).id);
+    }
+
+    getExtended(index: number) {
+        const inventoryItem = this.get(index);
+        const item = CS_Economy.getById(inventoryItem.id);
+        return { ...inventoryItem, item };
     }
 
     getAll(): CS_InventoryItem[] {

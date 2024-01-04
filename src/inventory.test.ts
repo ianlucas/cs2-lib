@@ -51,7 +51,7 @@ test("try to add more than limit", () => {
 test("equip item to T and CT", () => {
     inventory.equip(0, CS_TEAM_CT);
     inventory.equip(0, CS_TEAM_T);
-    const inventoryItem = inventory.get(0)!;
+    const inventoryItem = inventory.get(0);
     expect(inventoryItem.equippedCT).toBeTruthy();
     expect(inventoryItem.equippedT).toBeTruthy();
 });
@@ -62,12 +62,12 @@ test("remove item", () => {
 });
 
 test("unequip item", () => {
-    let inventoryItem = inventory.get(0)!;
+    let inventoryItem = inventory.get(0);
     expect(inventoryItem.equippedCT).toBeTruthy();
     expect(inventoryItem.equippedT).toBeTruthy();
     inventory.unequip(0, CS_TEAM_CT);
     inventory.unequip(0, CS_TEAM_T);
-    inventoryItem = inventory.get(0)!;
+    inventoryItem = inventory.get(0);
     expect(inventoryItem.equippedCT).toBeUndefined();
     expect(inventoryItem.equippedT).toBeUndefined();
 });
@@ -78,8 +78,8 @@ test("unlock case", () => {
     inventory.add({ id: 9534 }); // key
     inventory.unlockCase(CS_unlockCase(9425), 1, 0);
     expect(inventory.size()).toBe(1);
-    expect(inventory.get(0)!.id).not.toBe(9425);
-    expect(inventory.get(0)!.id).not.toBe(9534);
+    expect(inventory.get(0).id).not.toBe(9425);
+    expect(inventory.get(0).id).not.toBe(9534);
     inventory.remove(0);
     inventory.add({ id: 9425 }); // case
     inventory.add({ id: 9534 }); // key
@@ -89,7 +89,7 @@ test("unlock case", () => {
     inventory.add({ id: 9426 }); // capsule case
     inventory.unlockCase(CS_unlockCase(9426), 0);
     expect(inventory.size()).toBe(1);
-    expect(CS_Economy.getById(inventory.get(0)!.id).type).toBe("sticker");
+    expect(CS_Economy.getById(inventory.get(0).id).type).toBe("sticker");
     inventory.remove(0);
     inventory.add({ id: 9534 }); // key
     inventory.add({ id: 9425 }); // case
@@ -102,14 +102,14 @@ test("rename item", () => {
     inventory.add({ id: 307, nametag: "initial nametag" }); // dragon lore
     inventory.add({ id: 11261 }); // nametag
     expect(inventory.size()).toBe(2);
-    expect(inventory.get(1)!.nametag).toBe("initial nametag");
+    expect(inventory.get(1).nametag).toBe("initial nametag");
     inventory.renameItem(0, 1, "new nametag");
     expect(inventory.size()).toBe(1);
-    expect(inventory.get(0)!.nametag).toBe("new nametag");
+    expect(inventory.get(0).nametag).toBe("new nametag");
     inventory.add({ id: 11261 }); // nametag
     inventory.renameItem(0, 1);
     expect(inventory.size()).toBe(1);
-    expect(inventory.get(0)!.nametag).toBe(undefined);
+    expect(inventory.get(0).nametag).toBe(undefined);
 });
 
 test("apply item sticker", () => {
@@ -121,15 +121,15 @@ test("apply item sticker", () => {
     inventory.add({ id: 6001 });
     inventory.add({ id: 307 });
     inventory.add({ id: 307 });
-    expect(inventory.get(0)!.stickers).toBe(undefined);
+    expect(inventory.get(0).stickers).toBe(undefined);
     expect(() => inventory.applyItemSticker(0, 1, 0)).toThrow();
     for (let stickerIndex = 0; stickerIndex < 4; stickerIndex++) {
-        const expectedId = inventory.get(2)!.id;
+        const expectedId = inventory.get(2).id;
         inventory.applyItemSticker(0, 2, stickerIndex);
         expect(() => inventory.applyItemSticker(0, 2, stickerIndex)).toThrow();
         expect(inventory.size()).toBe(6 - (stickerIndex + 1));
-        expect(inventory.get(0)!.stickers).not.toBe(undefined);
-        expect(inventory.get(0)!.stickers![stickerIndex]).toBe(expectedId);
+        expect(inventory.get(0).stickers).not.toBe(undefined);
+        expect(inventory.get(0).stickers![stickerIndex]).toBe(expectedId);
     }
     expect(() => inventory.applyItemSticker(0, 1, 5)).toThrow();
     expect(() => inventory.applyItemSticker(0, 1, -1)).toThrow();
@@ -143,37 +143,37 @@ test("scrape item sticker", () => {
     expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
     expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
     inventory.scrapeItemSticker(0, 0);
-    expect(inventory.get(0)!.stickerswear).not.toBe(undefined);
-    expect(inventory.get(0)!.stickerswear![0]).toBe(0.1);
+    expect(inventory.get(0).stickerswear).not.toBe(undefined);
+    expect(inventory.get(0).stickerswear![0]).toBe(0.1);
     for (let scrape = 1; scrape < 10; scrape++) {
         inventory.scrapeItemSticker(0, 0);
-        expect(inventory.get(0)!.stickerswear![0]).toBe(float(0.1 + 0.1 * scrape));
+        expect(inventory.get(0).stickerswear![0]).toBe(float(0.1 + 0.1 * scrape));
     }
     inventory.scrapeItemSticker(0, 0);
-    expect(inventory.get(0)!.stickers![0]).toBe(null);
-    expect(inventory.get(0)!.stickerswear).toBe(undefined);
+    expect(inventory.get(0).stickers![0]).toBe(null);
+    expect(inventory.get(0).stickerswear).toBe(undefined);
     for (let scrape = 0; scrape < 10; scrape++) {
         inventory.scrapeItemSticker(0, 1);
-        expect(inventory.get(0)!.stickerswear![1]).toBe(float(0.1 + 0.1 * scrape));
+        expect(inventory.get(0).stickerswear![1]).toBe(float(0.1 + 0.1 * scrape));
     }
     inventory.scrapeItemSticker(0, 1);
-    expect(inventory.get(0)!.stickers).toBe(undefined);
-    expect(inventory.get(0)!.stickerswear).toBe(undefined);
+    expect(inventory.get(0).stickers).toBe(undefined);
+    expect(inventory.get(0).stickerswear).toBe(undefined);
 });
 
 test("increment stattrak", () => {
     inventory.removeAll();
     inventory.add({ id: 307 });
-    expect(inventory.get(0)!.stattrak).toBe(undefined);
+    expect(inventory.get(0).stattrak).toBe(undefined);
     expect(() => inventory.incrementItemStatTrak(0)).toThrow();
     inventory.add({ id: 307, stattrak: 0 });
-    expect(inventory.get(0)!.stattrak).toBe(0);
+    expect(inventory.get(0).stattrak).toBe(0);
     inventory.incrementItemStatTrak(0);
-    expect(inventory.get(0)!.stattrak).toBe(1);
+    expect(inventory.get(0).stattrak).toBe(1);
     inventory.add({ id: 307, stattrak: CS_MAX_STATTRAK - 1 });
     inventory.incrementItemStatTrak(0);
     inventory.incrementItemStatTrak(0);
-    expect(inventory.get(0)!.stattrak).toBe(CS_MAX_STATTRAK);
+    expect(inventory.get(0).stattrak).toBe(CS_MAX_STATTRAK);
 });
 
 test("swap items stattrak", () => {
@@ -182,15 +182,15 @@ test("swap items stattrak", () => {
     inventory.add({ id: 307, stattrak: 0 });
     inventory.add({ id: 307, stattrak: 2556 });
     inventory.swapItemsStatTrak(2, 0, 1);
-    expect(inventory.get(0)!.stattrak).toBe(0);
-    expect(inventory.get(1)!.stattrak).toBe(2556);
+    expect(inventory.get(0).stattrak).toBe(0);
+    expect(inventory.get(1).stattrak).toBe(2556);
     inventory.removeAll();
     inventory.add({ id: 11263 });
     inventory.add({ id: 307, stattrak: 0 });
     inventory.add({ id: 307, stattrak: 2556 });
     inventory.swapItemsStatTrak(2, 1, 0);
-    expect(inventory.get(0)!.stattrak).toBe(0);
-    expect(inventory.get(1)!.stattrak).toBe(2556);
+    expect(inventory.get(0).stattrak).toBe(0);
+    expect(inventory.get(1).stattrak).toBe(2556);
     inventory.removeAll();
     inventory.add({ id: 11263 });
     inventory.add({ id: 307 });
@@ -224,11 +224,11 @@ test("swap items stattrak", () => {
     expect(() => inventory.swapItemsStatTrak(10, 0, 0)).toThrow();
 
     for (let i = 0; i < 10; i += 2) {
-        const from = inventory.get(i)!.stattrak;
-        const to = inventory.get(i + 1)!.stattrak;
+        const from = inventory.get(i).stattrak;
+        const to = inventory.get(i + 1).stattrak;
         inventory.swapItemsStatTrak(10, i, i + 1);
-        expect(inventory.get(i)!.stattrak).toBe(to);
-        expect(inventory.get(i + 1)!.stattrak).toBe(from);
+        expect(inventory.get(i).stattrak).toBe(to);
+        expect(inventory.get(i + 1).stattrak).toBe(from);
     }
 
     expect(inventory.size()).toBe(initialSize - 5);
