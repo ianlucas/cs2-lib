@@ -38,7 +38,7 @@ test("has every types and categories", () => {
 
 test("compare repository items with current items", async () => {
     const repositoryItems = (await (
-        await fetch("https://raw.githubusercontent.com/ianlucas/cslib/main/dist/items.json")
+        await fetch("https://raw.githubusercontent.com/ianlucas/cslib/main/assets/data/items.json")
     ).json()) as CS_Item[];
 
     for (const repItem of repositoryItems) {
