@@ -884,8 +884,8 @@ export class GenerateScript {
         console.warn("generated assets/data/ids.json.");
 
         for (const [language, translations] of Object.entries(this.translations)) {
-            writeJson(`assets/data/items-${language}.json`, translations);
-            console.warn(`generated assets/data/items-${language}.json.`);
+            writeJson(`assets/translations/items-${language}.json`, translations);
+            console.warn(`generated assets/translations/items-${language}.json.`);
         }
 
         replaceInFile("src/items.ts", /CS_Item\[\] = [^;]+;/, `CS_Item[] = ${JSON.stringify(items)};`);
