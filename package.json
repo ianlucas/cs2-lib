@@ -10,6 +10,7 @@
     "scripts": {
         "dump-default-graffiti-cdn": "tsx scripts/dump-default-graffiti-cdn.ts",
         "dump-default-graffiti": "tsx scripts/dump-default-graffiti.ts",
+        "dump-new-model-skins": "tsx scripts/dump-new-model-skins.ts",
         "format": "prettier . --write",
         "generate": "tsx scripts/generate.ts > generate-log.txt",
         "prepack": "([ -d dist ] && rm -rf dist); tsc",

@@ -404,6 +404,7 @@ export class GenerateScript {
 
     parseSkins() {
         console.warn("parse skins...");
+        const newModelSkins = readJson<Record<string, string[] | undefined>>("assets/data/dump-new-model-skins.json");
         for (const { icon_path: iconPath } of Object.values(
             this.itemsGameParsed.items_game.alternate_icons2.weapon_icons
         )) {
@@ -434,6 +435,10 @@ export class GenerateScript {
                 id,
                 index: paintKit.index,
                 image: this.getCDNUrl(`${iconPath}_large`, `${id}`),
+                // This logic needs to be updated when we have new skins for CS2.
+                legacy:
+                    (parentItem.type === "weapon" && !newModelSkins[parentItem.name]?.includes(paintKit.name)) ||
+                    undefined,
                 localimage: this.getEconLocalImage(id, parentItem.className, paintKit.className),
                 name,
                 rarity: ["melee", "glove"].includes(parentItem.type)

@@ -17,6 +17,7 @@ export interface CS_Item {
     image: string;
     index?: number;
     keys?: number[];
+    legacy?: boolean;
     localimage?: boolean;
     model?: string;
     name: string;
