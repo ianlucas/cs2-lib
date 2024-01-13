@@ -12,7 +12,7 @@
         "dump-default-graffiti-cdn": "tsx scripts/dump-default-graffiti-cdn.ts",
         "dump-default-graffiti": "tsx scripts/dump-default-graffiti.ts",
         "format": "prettier . --write",
-        "generate": "tsx scripts/generate.ts > dist/generate-log.txt",
+        "generate": "tsx scripts/generate.ts > generate-log.txt",
         "release": "npm run build && npm publish",
         "test": "jest"
     },
