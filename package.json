@@ -1,6 +1,6 @@
 {
     "name": "@ianlucas/cslib",
-    "version": "7.7.0",
+    "version": "8.0.0",
     "description": "A TypeScript library for manipulating Counter-Strike-related data",
     "license": "MIT",
     "author": "Ian Lucas",
@@ -8,12 +8,11 @@
     "type": "module",
     "main": "dist/index.js",
     "scripts": {
-        "build": "tsc",
         "dump-default-graffiti-cdn": "tsx scripts/dump-default-graffiti-cdn.ts",
         "dump-default-graffiti": "tsx scripts/dump-default-graffiti.ts",
         "format": "prettier . --write",
         "generate": "tsx scripts/generate.ts > generate-log.txt",
-        "release": "npm run build && npm publish",
+        "prepack": "([ -d dist ] && rm -rf dist); tsc",
         "test": "jest"
     },
     "devDependencies": {
