@@ -25,6 +25,6 @@ item.name;
 
 ## Feature Overview
 
--   **Economy items:** Weapon/Knife/Glove Skins, Weapon Stickers, Agents, Agent Patches, Graffiti, Pins, Music Kits, Cases, Case Keys, and Tools provided in `CS_ITEMS` and `dist/items.json`.
+-   **Economy items:** Weapon/Knife/Glove Skins, Weapon Stickers, Agents, Agent Patches, Graffiti, Pins, Music Kits, Cases, Case Keys, and Tools provided in `CS_ITEMS` and `assets/data/items.json`.
 -   **Economy:** Economy and Inventory classes.
 -   **Misc:** Active Pool Maps, Teams, and Veto utilities.

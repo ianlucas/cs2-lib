@@ -11,7 +11,7 @@ class DumpDefaultGraffitiCdn {
     async run() {
         const min = 1;
         const max = 5;
-        const graffiti = readTxt("dist/dump-default-graffiti.txt").split("\n");
+        const graffiti = readTxt("assets/data/dump-default-graffiti.txt").split("\n");
         const anchorRE = /<a href="https:\/\/csgostash.com\/graffiti\/(\d+)\/([^"]+)">([^<]+)<\/a>/g;
         const imageRE = /src="([^"]+)" alt="([^"]+)"/g;
         const urls: string[] = [];
@@ -39,7 +39,7 @@ class DumpDefaultGraffitiCdn {
         }
 
         console.log(`dumped ${Object.keys(cdn).length} items.`);
-        writeJson("dist/dump-default-graffiti-cdn.json", cdn);
+        writeJson("assets/data/dump-default-graffiti-cdn.json", cdn);
     }
 }
 

@@ -25,7 +25,7 @@ class DumpDefaultGraffiti {
             graffiti.push(generate.requireTranslation(stickerProps.item_name));
         }
 
-        writeTxt("dist/dump-default-graffiti.txt", graffiti.join("\n"));
+        writeTxt("assets/data/dump-default-graffiti.txt", graffiti.join("\n"));
     }
 }
 

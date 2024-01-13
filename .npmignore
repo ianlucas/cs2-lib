@@ -1,4 +1,12 @@
 .env
-dist/generate-log.txt
-dist/images
-dist/sounds
+.env.example
+.git
+.gitignore
+.prettierignore
+.prettierrc
+assets
+jest.config.js
+README.md
+scripts
+src
+tsconfig.json

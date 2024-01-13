@@ -96,7 +96,7 @@ export class GenerateScript {
     }
 
     readIdsJSON() {
-        const path = resolve(process.cwd(), "dist/ids.json");
+        const path = resolve(process.cwd(), "assets/data/ids.json");
         const ids = (existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : []) as string[];
         const uniqueIds = [] as string[];
         return {
@@ -544,8 +544,8 @@ export class GenerateScript {
 
     parseGraffiti() {
         console.warn("parse graffiti...");
-        const defaultGraffiti = readTxt("dist/dump-default-graffiti.txt").split("\n");
-        const defaultGraffitiCdn = readJson<Record<string, string>>("dist/dump-default-graffiti-cdn.json");
+        const defaultGraffiti = readTxt("assets/data/dump-default-graffiti.txt").split("\n");
+        const defaultGraffitiCdn = readJson<Record<string, string>>("assets/data/dump-default-graffiti-cdn.json");
         for (const [graffitiIndex, graffitiProps] of Object.entries(this.stickerKits)) {
             if (
                 !graffitiProps.item_name?.includes("#SprayKit") &&
@@ -876,16 +876,16 @@ export class GenerateScript {
                 nameToken: undefined
             }));
 
-        writeJson("dist/parsed-items-game.json", this.itemsGameParsed);
-        console.warn("generated dist/parsed-items-game.json.");
-        writeJson("dist/items.json", items);
-        console.warn("generated dist/items.json.");
-        writeJson("dist/ids.json", this.ids.getAll());
-        console.warn("generated dist/ids.json.");
+        writeJson("assets/data/parsed-items-game.json", this.itemsGameParsed);
+        console.warn("generated assets/data/parsed-items-game.json.");
+        writeJson("assets/data/items.json", items);
+        console.warn("generated assets/data/items.json.");
+        writeJson("assets/data/ids.json", this.ids.getAll());
+        console.warn("generated assets/data/ids.json.");
 
         for (const [language, translations] of Object.entries(this.translations)) {
-            writeJson(`dist/items-${language}.json`, translations);
-            console.warn(`generated dist/items-${language}.json.`);
+            writeJson(`assets/data/items-${language}.json`, translations);
+            console.warn(`generated assets/data/items-${language}.json.`);
         }
 
         replaceInFile("src/items.ts", /CS_Item\[\] = [^;]+;/, `CS_Item[] = ${JSON.stringify(items)};`);
@@ -965,16 +965,16 @@ export class GenerateScript {
         }
         // CS2's CDN is not working for some items, we're going to depend on Statically.
         if (csgoSha1 === undefined) {
-            const destPath = resolve(process.cwd(), `dist/images/${fileid}.png`);
+            const destPath = resolve(process.cwd(), `assets/images/${fileid}.png`);
             copyFileSync(cs2ImagePath, destPath);
-            return `https://cdn.statically.io/gh/ianlucas/cslib/main/dist/images/${fileid}.png`;
+            return `https://cdn.statically.io/gh/ianlucas/cslib/main/assets/images/${fileid}.png`;
         }
         return `https://steamcdn-a.akamaihd.net/apps/730/icons/${file.toLowerCase()}.${sha1}.png`;
     }
 
     getBaseLocalImage(id: number, className: string) {
         const imagePath = resolve(CS2_IMAGES_PATH, `econ/weapons/base_weapons/${className}_png.png`);
-        const destPath = resolve(process.cwd(), `dist/images/${id}.png`);
+        const destPath = resolve(process.cwd(), `assets/images/${id}.png`);
         if (existsSync(destPath)) {
             return true;
         }
@@ -996,7 +996,7 @@ export class GenerateScript {
                         CS2_IMAGES_PATH,
                         `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`
                     );
-                    const dest = resolve(process.cwd(), `dist/images/${id}_${suffix}.png`);
+                    const dest = resolve(process.cwd(), `assets/images/${id}_${suffix}.png`);
                     if (existsSync(src)) {
                         copyFileSync(src, dest);
                         return true;
@@ -1008,10 +1008,10 @@ export class GenerateScript {
                     // let's keep it here.
                     if (found.length < econLocalImageSuffixes.length && index === found.length - 1) {
                         console.log(`missing local image for id ${id}.`);
-                        const src = resolve(process.cwd(), `dist/images/${id}_${suffix}.png`);
+                        const src = resolve(process.cwd(), `assets/images/${id}_${suffix}.png`);
                         for (const otherSuffix of econLocalImageSuffixes) {
                             if (!found.includes(otherSuffix)) {
-                                const dest = resolve(process.cwd(), `dist/images/${id}_${otherSuffix}.png`);
+                                const dest = resolve(process.cwd(), `assets/images/${id}_${otherSuffix}.png`);
                                 if (existsSync(src)) {
                                     copyFileSync(src, dest);
                                     console.log(`had to copy ${suffix} to ${otherSuffix} for id ${id}.`);
@@ -1098,7 +1098,7 @@ export class GenerateScript {
 
     getCaseSpecialItemImage(id: number, path: string) {
         const src = resolve(CS2_IMAGES_PATH, `${path}_png.png`);
-        const dest = resolve(process.cwd(), `dist/images/${id}_rare.png`);
+        const dest = resolve(process.cwd(), `assets/images/${id}_rare.png`);
         if (existsSync(src)) {
             copyFileSync(src, dest);
             return CS_SPECIAL_ITEM_IMAGE_CUSTOM;
