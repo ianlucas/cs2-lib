@@ -4,7 +4,9 @@
 .gitignore
 .prettierignore
 .prettierrc
-assets
+assets/data
+assets/images
+assets/sounds
 jest.config.js
 README.md
 scripts
