@@ -54,6 +54,7 @@ export interface CS_ItemsGameTXT {
                 item_name?: string;
                 item_rarity: string;
                 loot_list_name?: string;
+                model_player?: string;
                 /**
                  * The classname of the item.
                  */

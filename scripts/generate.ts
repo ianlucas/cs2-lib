@@ -663,6 +663,7 @@ export class GenerateScript {
                 id,
                 image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 index: undefined,
+                model: itemProps.model_player?.replace("characters/models/", "").replace(".vmdl", ""),
                 name,
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
                 teams,

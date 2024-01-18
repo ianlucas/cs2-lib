@@ -50,6 +50,9 @@ test("compare repository items with current items", async () => {
         if (item.type === "weapon") {
             expect(item.category).toBe(repItem.category);
         }
+        if (item.type === "agent") {
+            expect(item.model).not.toBeUndefined();
+        }
         expect(item.def).toBe(repItem.def);
         expect(item.index).toBe(repItem.index);
     }
