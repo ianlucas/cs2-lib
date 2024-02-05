@@ -35,6 +35,12 @@ export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
     "weapon"
 ];
 
+export const CS_INVENTORY_TIMESTAMP = 1707176260747;
+
+function timestamp() {
+    return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
+}
+
 export interface CS_InventoryItem {
     equipped?: boolean;
     equippedCT?: boolean;
@@ -45,6 +51,7 @@ export interface CS_InventoryItem {
     stattrak?: number;
     stickers?: number[];
     stickerswear?: number[];
+    updatedat?: number;
     wear?: number;
 }
 
@@ -91,7 +98,8 @@ export class CS_Inventory {
             ...inventoryItem,
             equipped: undefined,
             equippedCT: undefined,
-            equippedT: undefined
+            equippedT: undefined,
+            updatedat: timestamp()
         });
         return this;
     }
@@ -192,7 +200,8 @@ export class CS_Inventory {
         }
         this.items.unshift({
             id: unlockedItem.id,
-            ...unlockedItem.attributes
+            ...unlockedItem.attributes,
+            updatedat: timestamp()
         });
         return this;
     }
@@ -214,6 +223,7 @@ export class CS_Inventory {
             CS_validateNametag(nametag);
         }
         this.items[targetIndex].nametag = nametag;
+        this.items[targetIndex].updatedat = timestamp();
         this.items.splice(toolIndex, 1);
         return this;
     }
@@ -237,6 +247,7 @@ export class CS_Inventory {
         }
         stickers[stickerIndex] = sticker.id;
         inventoryItem.stickers = stickers;
+        inventoryItem.updatedat = timestamp();
         this.items.splice(stickerItemIndex, 1);
         return this;
     }
@@ -268,6 +279,7 @@ export class CS_Inventory {
         }
         stickersWear[stickerIndex] = nextWear;
         inventoryItem.stickerswear = stickersWear;
+        inventoryItem.updatedat = timestamp();
         return this;
     }
 
@@ -278,6 +290,7 @@ export class CS_Inventory {
         }
         if (inventoryItem.stattrak < CS_MAX_STATTRAK) {
             inventoryItem.stattrak++;
+            inventoryItem.updatedat = timestamp();
         }
         return this;
     }
@@ -311,7 +324,9 @@ export class CS_Inventory {
         }
         const fromStattrak = fromInventoryItem.stattrak;
         fromInventoryItem.stattrak = toInventoryItem.stattrak;
+        fromInventoryItem.updatedat = timestamp();
         toInventoryItem.stattrak = fromStattrak;
+        toInventoryItem.updatedat = timestamp();
         this.items.splice(toolIndex, 1);
         return this;
     }
