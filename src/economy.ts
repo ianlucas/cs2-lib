@@ -76,6 +76,8 @@ export const CS_SPECIAL_ITEM_IMAGE_DEFAULT = 1;
 export const CS_SPECIAL_ITEM_IMAGE_CUSTOM = 2;
 export const CS_NAMETAG_TOOL_DEF = 1200;
 export const CS_SWAP_STATTRAK_TOOL_DEF = 1324;
+export const CS_NO_STICKER = 0;
+export const CS_NO_STICKER_WEAR = 0;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 
@@ -194,20 +196,19 @@ export function CS_hasStickers(item: CS_Item): boolean {
     return CS_STICKERABLE_ITEMS.includes(item.type) && item.category !== "c4";
 }
 
-export function CS_validateStickers(
-    item: CS_Item,
-    stickers: (number | null)[],
-    stickerswear: (number | null)[] = []
-): boolean {
+export function CS_validateStickers(item: CS_Item, stickers: number[], stickerswear?: number[]): boolean {
     if (!CS_hasStickers(item)) {
         throw new Error("item does not have seed");
     }
-    if (stickers.length > 4) {
+    if (stickers.length !== 4) {
         throw new Error("invalid stickers");
     }
+    if (stickerswear !== undefined && stickerswear.length !== 4) {
+        throw new Error("invalid stickers wear");
+    }
     for (const [index, sticker] of stickers.entries()) {
-        if (sticker === null) {
-            if (stickerswear[index] !== undefined) {
+        if (sticker === CS_NO_STICKER) {
+            if (stickerswear !== undefined && stickerswear[index] !== CS_NO_STICKER_WEAR) {
                 throw new Error("invalid wear");
             }
             continue;
@@ -217,6 +218,9 @@ export function CS_validateStickers(
         }
         if (CS_Economy.getById(sticker).type !== "sticker") {
             throw new Error("invalid sticker");
+        }
+        if (stickerswear === undefined) {
+            continue;
         }
         const wear = stickerswear[index];
         if (typeof wear === "number") {

@@ -9,6 +9,8 @@ import {
     CS_MAX_STATTRAK,
     CS_MAX_WEAR,
     CS_NAMETAG_TOOL_DEF,
+    CS_NO_STICKER,
+    CS_NO_STICKER_WEAR,
     CS_STICKER_WEAR_FACTOR,
     CS_SWAP_STATTRAK_TOOL_DEF,
     CS_hasNametag,
@@ -41,8 +43,8 @@ export interface CS_InventoryItem {
     nametag?: string;
     seed?: number;
     stattrak?: number;
-    stickers?: (number | null)[];
-    stickerswear?: (number | null)[];
+    stickers?: number[];
+    stickerswear?: number[];
     wear?: number;
 }
 
@@ -217,15 +219,14 @@ export class CS_Inventory {
         const inventoryItem = this.items[itemIndex];
         const item = CS_Economy.getById(inventoryItem.id);
         if (!CS_hasStickers(item)) {
-            console.log(item);
             throw new Error("item does not have stickers");
         }
         const sticker = CS_Economy.getById(this.items[stickerItemIndex].id);
         if (sticker.type !== "sticker") {
             throw new Error("not applying a sticker");
         }
-        const stickers = inventoryItem.stickers ?? [null, null, null, null];
-        if (stickers[stickerIndex] !== null) {
+        const stickers = inventoryItem.stickers ?? [CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER];
+        if (stickers[stickerIndex] !== CS_NO_STICKER) {
             throw new Error("cant apply existing sticker");
         }
         stickers[stickerIndex] = sticker.id;
@@ -243,15 +244,20 @@ export class CS_Inventory {
         if (typeof stickers[stickerIndex] !== "number") {
             throw new Error("invalid sticker index");
         }
-        const stickersWear = inventoryItem.stickerswear ?? [null, null, null, null];
-        const stickerWear = stickersWear[stickerIndex] || 0;
+        const stickersWear = inventoryItem.stickerswear ?? [
+            CS_NO_STICKER_WEAR,
+            CS_NO_STICKER_WEAR,
+            CS_NO_STICKER_WEAR,
+            CS_NO_STICKER_WEAR
+        ];
+        const stickerWear = stickersWear[stickerIndex] || CS_NO_STICKER_WEAR;
         const nextWear = float(stickerWear + CS_STICKER_WEAR_FACTOR);
         if (nextWear > CS_MAX_WEAR) {
-            stickers[stickerIndex] = null;
-            stickersWear[stickerIndex] = null;
-            inventoryItem.stickers = stickers.filter((id) => id !== null).length > 0 ? stickers : undefined;
+            stickers[stickerIndex] = CS_NO_STICKER;
+            stickersWear[stickerIndex] = CS_NO_STICKER_WEAR;
+            inventoryItem.stickers = stickers.filter((id) => id !== CS_NO_STICKER).length > 0 ? stickers : undefined;
             inventoryItem.stickerswear =
-                stickersWear.filter((wear) => wear !== null).length > 0 ? stickersWear : undefined;
+                stickersWear.filter((wear) => wear !== CS_NO_STICKER_WEAR).length > 0 ? stickersWear : undefined;
             return this;
         }
         stickersWear[stickerIndex] = nextWear;

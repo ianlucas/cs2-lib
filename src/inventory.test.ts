@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy, CS_MAX_STATTRAK } from "./economy";
+import { CS_Economy, CS_MAX_STATTRAK, CS_NO_STICKER } from "./economy";
 import { CS_unlockCase } from "./economy-case";
 import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
@@ -139,7 +139,7 @@ test("apply item sticker", () => {
 
 test("scrape item sticker", () => {
     inventory.removeAll();
-    inventory.add({ id: 307, stickers: [7306, 7306, null, null] });
+    inventory.add({ id: 307, stickers: [7306, 7306, CS_NO_STICKER, CS_NO_STICKER] });
     expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
     expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
     inventory.scrapeItemSticker(0, 0);
@@ -150,7 +150,7 @@ test("scrape item sticker", () => {
         expect(inventory.get(0).stickerswear![0]).toBe(float(0.1 + 0.1 * scrape));
     }
     inventory.scrapeItemSticker(0, 0);
-    expect(inventory.get(0).stickers![0]).toBe(null);
+    expect(inventory.get(0).stickers![0]).toBe(CS_NO_STICKER);
     expect(inventory.get(0).stickerswear).toBe(undefined);
     for (let scrape = 0; scrape < 10; scrape++) {
         inventory.scrapeItemSticker(0, 1);
