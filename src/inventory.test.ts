@@ -11,7 +11,7 @@ import { CS_TEAM_CT, CS_TEAM_T } from "./teams";
 import { float } from "./util";
 
 CS_Economy.initialize(CS_ITEMS);
-const inventory = new CS_Inventory([], 5);
+let inventory = new CS_Inventory({ limit: 5 });
 
 test("initially is empty", () => {
     expect(inventory.size()).toBe(0);
@@ -113,8 +113,7 @@ test("rename item", () => {
 });
 
 test("apply item sticker", () => {
-    inventory.removeAll();
-    inventory.limit = 16;
+    inventory = new CS_Inventory({ limit: 16 });
     inventory.add({ id: 7305 });
     inventory.add({ id: 7307 });
     inventory.add({ id: 7308 });

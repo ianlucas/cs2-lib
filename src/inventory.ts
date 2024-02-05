@@ -48,13 +48,19 @@ export interface CS_InventoryItem {
     wear?: number;
 }
 
+export interface CS_InventoryOptions {
+    items?: CS_InventoryItem[];
+    limit?: number;
+    storageUnitLimit?: number;
+}
+
 export class CS_Inventory {
     private items: CS_InventoryItem[];
-    public limit: number;
+    private limit: number;
 
-    constructor(items: CS_InventoryItem[] = [], limit: number = 256) {
-        this.items = items;
-        this.limit = limit;
+    constructor({ items, limit }: CS_InventoryOptions) {
+        this.items = items ?? [];
+        this.limit = limit ?? 256;
     }
 
     full(): boolean {
@@ -347,5 +353,12 @@ export class CS_Inventory {
 
     size() {
         return this.items.length;
+    }
+
+    copy() {
+        return new CS_Inventory({
+            items: this.items,
+            limit: this.limit
+        });
     }
 }
