@@ -76,6 +76,7 @@ export const CS_SPECIAL_ITEM_IMAGE_DEFAULT = 1;
 export const CS_SPECIAL_ITEM_IMAGE_CUSTOM = 2;
 export const CS_NAMETAG_TOOL_DEF = 1200;
 export const CS_SWAP_STATTRAK_TOOL_DEF = 1324;
+export const CS_STORAGE_UNIT_TOOL_DEF = 1201;
 export const CS_NO_STICKER = 0;
 export const CS_NO_STICKER_WEAR = 0;
 
