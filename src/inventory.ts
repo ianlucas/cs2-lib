@@ -41,6 +41,33 @@ function timestamp() {
     return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
 }
 
+export function CS_validateInventoryItem({
+    id,
+    nametag,
+    seed,
+    stattrak,
+    stickers,
+    stickerswear,
+    wear
+}: CS_InventoryItem) {
+    const item = CS_Economy.getById(id);
+    if (wear !== undefined) {
+        CS_validateWear(wear, item);
+    }
+    if (seed !== undefined) {
+        CS_validateSeed(seed, item);
+    }
+    if (stickers !== undefined) {
+        CS_validateStickers(item, stickers, stickerswear);
+    }
+    if (nametag !== undefined) {
+        CS_validateNametag(nametag, item);
+    }
+    if (stattrak !== undefined) {
+        CS_validateStatTrak(stattrak, item);
+    }
+}
+
 export interface CS_InventoryItem {
     equipped?: boolean;
     equippedCT?: boolean;
@@ -78,22 +105,7 @@ export class CS_Inventory {
         if (this.full()) {
             return this;
         }
-        const item = CS_Economy.getById(inventoryItem.id);
-        if (inventoryItem.wear !== undefined) {
-            CS_validateWear(inventoryItem.wear, item);
-        }
-        if (inventoryItem.seed !== undefined) {
-            CS_validateSeed(inventoryItem.seed, item);
-        }
-        if (inventoryItem.stickers !== undefined) {
-            CS_validateStickers(item, inventoryItem.stickers, inventoryItem.stickerswear);
-        }
-        if (inventoryItem.nametag !== undefined) {
-            CS_validateNametag(inventoryItem.nametag, item);
-        }
-        if (inventoryItem.stattrak !== undefined) {
-            CS_validateStatTrak(inventoryItem.stattrak, item);
-        }
+        CS_validateInventoryItem(inventoryItem);
         this.items.unshift({
             ...inventoryItem,
             equipped: undefined,
@@ -121,6 +133,25 @@ export class CS_Inventory {
             id: itemId,
             nametag
         });
+        return this;
+    }
+
+    edit(index: number, changes: Partial<CS_InventoryItem>) {
+        if (!this.items[index]) {
+            throw new Error("invalid inventory item");
+        }
+        if (changes.id !== undefined && this.items[index].id !== changes.id) {
+            throw new Error("item id cannot be modified");
+        }
+        const inventoryItem = {
+            ...this.items[index],
+            ...changes
+        };
+        CS_validateInventoryItem(inventoryItem);
+        this.items[index] = {
+            ...inventoryItem,
+            updatedat: timestamp()
+        };
         return this;
     }
 

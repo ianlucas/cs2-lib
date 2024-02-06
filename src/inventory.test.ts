@@ -48,6 +48,14 @@ test("try to add more than limit", () => {
     expect(inventory.size()).toBe(5);
 });
 
+test("edit item", () => {
+    inventory.edit(2, { wear: 0.5, stattrak: 0 });
+    const inventoryItem = inventory.get(2);
+    expect(inventoryItem.wear).toBe(0.5);
+    expect(inventoryItem.stattrak).toBe(0);
+    expect(() => inventory.edit(2, { id: 200 })).toThrow();
+});
+
 test("equip item to T and CT", () => {
     inventory.equip(0, CS_TEAM_CT);
     inventory.equip(0, CS_TEAM_T);
