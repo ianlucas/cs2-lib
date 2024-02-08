@@ -15,7 +15,8 @@ import {
 } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
-import { CS2_IMAGES_PATH, IMAGES_PATH, ITEMS_PATH, LANGUAGE_PATH } from "./env.js";
+import { CS2_CSGO_PATH } from "./env.js";
+import { CaseSpecialItems } from "./generate-case-special-items.js";
 import {
     CS_CsgoLanguageTXT,
     CS_ItemsGameTXT,
@@ -29,8 +30,7 @@ import {
     StickerKitsRecord,
     UnsafeRaritiesRecord
 } from "./generate-types.js";
-import { CaseSpecialItems } from "./generate-case-special-items.js";
-import { banner, readJson, readTxt, replaceInFile, writeJson, writeTxt } from "./util.js";
+import { readJson, readTxt, replaceInFile, writeJson } from "./util.js";
 
 const lootItemRE = /^\[([^\]]+)\](.*)$/;
 const econLocalImageSuffixes = ["heavy", "medium", "light"];
@@ -44,6 +44,10 @@ const uncategorizedStickers = [
 ];
 
 const isHeavyWeapon = ["weapon_m249", "weapon_mag7", "weapon_negev", "weapon_nova", "weapon_sawedoff", "weapon_xm1014"];
+const isSecondaryWeapon = ["weapon_taser"];
+const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
+const CS2_ITEMS_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
+const CS2_IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
 
 export class GenerateScript {
     clientLootList: ClientLootListRecord = null!;
@@ -66,6 +70,7 @@ export class GenerateScript {
         nameToken: string;
     })[] = [];
     generatedItems: CS_Item[] = [];
+    previousItems: Map<number, CS_Item> = null!;
 
     caseItems = new Map<string, number>();
     caseSpecialItems = new CaseSpecialItems();
@@ -76,6 +81,7 @@ export class GenerateScript {
         await this.caseSpecialItems.fetch();
 
         this.ids = this.readIdsJSON();
+        this.previousItems = this.readItemsJSON();
         this.readCsgoLanguageTXT();
         this.readItemsGameTXT();
 
@@ -93,6 +99,12 @@ export class GenerateScript {
         this.parseCases();
 
         this.persist();
+    }
+
+    readItemsJSON() {
+        const path = resolve(process.cwd(), "assets/data/items.json");
+        const items = (existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : []) as CS_Item[];
+        return new Map(items.map((item) => [item.id, item]));
     }
 
     readIdsJSON() {
@@ -122,7 +134,7 @@ export class GenerateScript {
     readCsgoLanguageTXT() {
         const languages = {} as LanguagesRecord;
         const translations = {} as LanguagesRecord;
-        const files = readdirSync(LANGUAGE_PATH);
+        const files = readdirSync(CS2_RESOURCE_PATH);
         const fileRE = /csgo_([^\._]+)\.txt$/;
         for (const file of files) {
             const matches = file.match(fileRE);
@@ -130,7 +142,7 @@ export class GenerateScript {
                 continue;
             }
             const [, language] = matches;
-            const contents = readFileSync(resolve(LANGUAGE_PATH, file), "utf-8");
+            const contents = readFileSync(resolve(CS2_RESOURCE_PATH, file), "utf-8");
             languages[language] = {};
             translations[language] = {};
             const kv = languages[language];
@@ -156,7 +168,7 @@ export class GenerateScript {
     }
 
     readItemsGameTXT() {
-        const contents = readFileSync(ITEMS_PATH, "utf-8");
+        const contents = readFileSync(CS2_ITEMS_PATH, "utf-8");
         const parsed = CS_parseValveKeyValue<CS_ItemsGameTXT>(contents);
 
         this.clientLootList = {};
@@ -290,7 +302,7 @@ export class GenerateScript {
                 continue;
             }
             const [, category] = matches;
-            if (category === "equipment") {
+            if (category === "equipment" && !isSecondaryWeapon.includes(itemProps.name)) {
                 continue;
             }
             const prefab = this.getPrefab(itemProps.prefab);
@@ -301,14 +313,23 @@ export class GenerateScript {
 
             this.baseItems.push({
                 base: true,
-                category: isHeavyWeapon.includes(itemProps.name) ? "heavy" : category,
+                /**
+                 * @TODO Move this to a better place.
+                 */
+                category: isHeavyWeapon.includes(itemProps.name)
+                    ? "heavy"
+                    : isSecondaryWeapon.includes(itemProps.name)
+                      ? "secondary"
+                      : category,
                 className: itemProps.name,
                 def: Number(itemIndex),
                 free: true,
                 id,
-                image: prefab.image_inventory
-                    ? this.getCDNUrl(prefab.image_inventory, `${id}`)
-                    : this.getCDNUrl(`econ/weapons/base_weapons/${itemProps.name}`, `${id}`),
+                image:
+                    this.previousItems.get(id)?.image ??
+                    (prefab.image_inventory
+                        ? this.getCDNUrl(prefab.image_inventory, `${id}`)
+                        : this.getCDNUrl(`econ/weapons/base_weapons/${itemProps.name}`, `${id}`)),
                 index: undefined,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
@@ -350,7 +371,7 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 index: itemProps.baseitem === "1" ? undefined : 0,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
@@ -385,9 +406,11 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
-                image: itemProps.image_inventory
-                    ? this.getCDNUrl(itemProps.image_inventory, `${id}`)
-                    : `/${itemProps.name}.png`,
+                image:
+                    this.previousItems.get(id)?.image ??
+                    (itemProps.image_inventory
+                        ? this.getCDNUrl(itemProps.image_inventory, `${id}`)
+                        : `/${itemProps.name}.png`),
                 index: itemProps.baseitem === "1" ? undefined : 0,
                 localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name,
@@ -404,7 +427,6 @@ export class GenerateScript {
 
     parseSkins() {
         console.warn("parse skins...");
-        const newModelSkins = readJson<Record<string, string[] | undefined>>("assets/data/dump-new-model-skins.json");
         for (const { icon_path: iconPath } of Object.values(
             this.itemsGameParsed.items_game.alternate_icons2.weapon_icons
         )) {
@@ -434,11 +456,8 @@ export class GenerateScript {
                 free: undefined,
                 id,
                 index: paintKit.index,
-                image: this.getCDNUrl(`${iconPath}_large`, `${id}`),
-                // This logic needs to be updated when we have new skins for CS2.
-                legacy:
-                    (parentItem.type === "weapon" && !newModelSkins[parentItem.name]?.includes(paintKit.name)) ||
-                    undefined,
+                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(`${iconPath}`, `${id}`),
+                legacy: this.previousItems.get(id)?.legacy,
                 localimage: this.getEconLocalImage(id, parentItem.className, paintKit.className),
                 name,
                 rarity: ["melee", "glove"].includes(parentItem.type)
@@ -470,7 +489,7 @@ export class GenerateScript {
                     base: true,
                     free: ["1", "70"].includes(musicIndex) ? true : undefined,
                     id,
-                    image: this.getCDNUrl(musicProps.image_inventory, `${id}`),
+                    image: this.previousItems.get(id)?.image ?? this.getCDNUrl(musicProps.image_inventory, `${id}`),
                     index: Number(musicIndex),
                     name,
                     rarity: this.raritiesColorHex.rare,
@@ -496,7 +515,7 @@ export class GenerateScript {
                 continue;
             }
             let category = "";
-            const [folder] = stickerProps.sticker_material.split("/");
+            const [folder, subfolder] = stickerProps.sticker_material.split("/");
             if (folder === "alyx") {
                 category = this.findTranslation("#CSGO_crate_sticker_pack_hlalyx_capsule");
             }
@@ -521,6 +540,9 @@ export class GenerateScript {
                 }
             }
             if (!category) {
+                category = this.findTranslation(`#CSGO_crate_sticker_pack_${subfolder}_capsule`);
+            }
+            if (!category) {
                 throw new Error(`unable to define a category for ${stickerProps.item_name}.`);
             }
             const name = this.findTranslation(stickerProps.item_name);
@@ -535,7 +557,9 @@ export class GenerateScript {
             this.generatedItems.push({
                 category,
                 id,
-                image: this.getCDNUrl(`econ/stickers/${stickerProps.sticker_material}_large`, `${id}`),
+                image:
+                    this.previousItems.get(id)?.image ??
+                    this.getCDNUrl(`econ/stickers/${stickerProps.sticker_material}`, `${id}`),
                 index: Number(stickerIndex),
                 name,
                 rarity: this.getRarityColorHex([itemKey, `[${stickerProps.name}]sticker`, stickerProps.item_rarity]),
@@ -568,13 +592,13 @@ export class GenerateScript {
                 const graffitiName = this.findTranslation(graffitiProps.item_name);
                 let addedToCaseItem = false;
                 for (const { name: tintName, token: tintToken, id: tintId } of this.graffitiTints) {
+                    const id = this.ids.get(`spray_${graffitiIndex}_${tintId}`);
                     const name = `${graffitiName} (${tintName})`;
-                    const image = defaultGraffitiCdn[name];
+                    const image = this.previousItems.get(id)?.image ?? defaultGraffitiCdn[name];
                     if (!image) {
                         console.log(`unable to find image for ${name}.`);
                         continue;
                     }
-                    const id = this.ids.get(`spray_${graffitiIndex}_${tintId}`);
                     const itemKey = `[${graffitiProps.name}]spray`;
                     this.addTranslation(id, name, graffitiProps.item_name, " (", tintToken, ")");
 
@@ -600,7 +624,9 @@ export class GenerateScript {
 
                 this.generatedItems.push({
                     id,
-                    image: this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}_large`, `${id}`),
+                    image:
+                        this.previousItems.get(id)?.image ??
+                        this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}`, `${id}`),
                     index: Number(graffitiIndex),
                     name,
                     rarity: this.getRarityColorHex([
@@ -634,7 +660,9 @@ export class GenerateScript {
 
             this.generatedItems.push({
                 id,
-                image: this.getCDNUrl(`econ/patches/${patchProps.patch_material}_large`, `${id}`),
+                image:
+                    this.previousItems.get(id)?.image ??
+                    this.getCDNUrl(`econ/patches/${patchProps.patch_material}`, `${id}`),
                 index: Number(patchIndex),
                 teams: [CS_TEAM_CT, CS_TEAM_T],
                 name,
@@ -661,7 +689,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 index: undefined,
                 model: itemProps.model_player?.replace("characters/models/", "").replace(".vmdl", ""),
                 name,
@@ -695,7 +723,7 @@ export class GenerateScript {
                 altname: itemProps.name,
                 def: Number(itemIndex),
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 index: undefined,
                 name,
                 rarity: this.getRarityColorHex([itemProps.item_rarity, "ancient"]),
@@ -726,7 +754,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
-                image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
                 index: undefined,
                 name,
                 rarity: this.getRarityColorHex(["common"]),
@@ -816,7 +844,7 @@ export class GenerateScript {
                     this.generatedItems.push({
                         def: Number(itemIndex),
                         id,
-                        image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                        image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
                         name,
                         rarity: this.raritiesColorHex.common,
                         teams: undefined,
@@ -830,7 +858,7 @@ export class GenerateScript {
                     contents,
                     def: Number(itemIndex),
                     id,
-                    image: this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                    image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
                     keys: keys.length > 0 ? keys : undefined,
                     name,
                     rarity: this.raritiesColorHex.common,
@@ -958,24 +986,15 @@ export class GenerateScript {
         return hashSum.digest("hex");
     }
 
+    // Currently we don't know how to get the CDN urls from the files
+    // themselves, previoulsy we could get the SHA1 hash of a file and then use
+    // it to resolve a CDN url, but this method no longer works. For now on we
+    // are going to depend on Statically.
     getCDNUrl(file: string, fileid: string) {
         const cs2ImagePath = resolve(CS2_IMAGES_PATH, file + "_png.png");
-        const csgoSha1 = this.getFileSha1(resolve(IMAGES_PATH, file + ".png"));
-        const cs2Sha1 = this.getFileSha1(cs2ImagePath);
-        if (csgoSha1 === undefined && cs2Sha1 === undefined) {
-            throw new Error(`unable to get cdn for file ${file}.`);
-        }
-        const sha1 = csgoSha1 !== undefined && csgoSha1 !== cs2Sha1 ? csgoSha1 : cs2Sha1;
-        if (!sha1) {
-            throw new Error(`unable to get sha1 for file ${file}.`);
-        }
-        // CS2's CDN is not working for some items, we're going to depend on Statically.
-        if (csgoSha1 === undefined) {
-            const destPath = resolve(process.cwd(), `assets/images/${fileid}.png`);
-            copyFileSync(cs2ImagePath, destPath);
-            return `https://cdn.statically.io/gh/ianlucas/cslib/main/assets/images/${fileid}.png`;
-        }
-        return `https://steamcdn-a.akamaihd.net/apps/730/icons/${file.toLowerCase()}.${sha1}.png`;
+        const destPath = resolve(process.cwd(), `assets/images/${fileid}.png`);
+        copyFileSync(cs2ImagePath, destPath);
+        return `https://cdn.statically.io/gh/ianlucas/cslib/main/assets/images/${fileid}.png`;
     }
 
     getBaseLocalImage(id: number, className: string) {
@@ -996,37 +1015,18 @@ export class GenerateScript {
             return undefined;
         }
         return (
-            econLocalImageSuffixes
-                .filter((suffix) => {
-                    const src = resolve(
-                        CS2_IMAGES_PATH,
-                        `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`
-                    );
-                    const dest = resolve(process.cwd(), `assets/images/${id}_${suffix}.png`);
-                    if (existsSync(src)) {
-                        copyFileSync(src, dest);
-                        return true;
-                    }
-                    return false;
-                })
-                .map((suffix, index, found) => {
-                    // I'm confident this logic will never be executed, but
-                    // let's keep it here.
-                    if (found.length < econLocalImageSuffixes.length && index === found.length - 1) {
-                        console.log(`missing local image for id ${id}.`);
-                        const src = resolve(process.cwd(), `assets/images/${id}_${suffix}.png`);
-                        for (const otherSuffix of econLocalImageSuffixes) {
-                            if (!found.includes(otherSuffix)) {
-                                const dest = resolve(process.cwd(), `assets/images/${id}_${otherSuffix}.png`);
-                                if (existsSync(src)) {
-                                    copyFileSync(src, dest);
-                                    console.log(`had to copy ${suffix} to ${otherSuffix} for id ${id}.`);
-                                }
-                            }
-                        }
-                    }
-                    return suffix;
-                }).length > 0 || undefined
+            econLocalImageSuffixes.filter((suffix) => {
+                const src = resolve(
+                    CS2_IMAGES_PATH,
+                    `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`
+                );
+                const dest = resolve(process.cwd(), `assets/images/${id}_${suffix}.png`);
+                if (existsSync(src)) {
+                    copyFileSync(src, dest);
+                    return true;
+                }
+                return false;
+            }).length > 0 || undefined
         );
     }
 
