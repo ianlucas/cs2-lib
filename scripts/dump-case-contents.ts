@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as cheerio from "cheerio";
 import { basename } from "path";
 import { sleep, writeJson } from "./util.js";
@@ -14,7 +19,7 @@ class DumpCaseContents {
                 continue;
             }
             console.log(`scraping ${caseUrl}...`);
-            const contents = await (await fetch(caseUrl)).text();
+            const contents = await (await fetch(this.formatUrl(caseUrl))).text();
             const specialContentsUrl = this.getSpecialContentsUrl(caseUrl, contents);
             const $ = cheerio.load(contents);
             const caseName = $("h1").text().trim();
@@ -22,7 +27,7 @@ class DumpCaseContents {
 
             if (specialContentsUrl) {
                 console.log(`scraping ${specialContentsUrl}...`);
-                const contents = await (await fetch(specialContentsUrl)).text();
+                const contents = await (await fetch(this.formatUrl(specialContentsUrl))).text();
                 const $ = cheerio.load(contents);
                 caseSpecialContents[caseName] = this.getItemNames($);
                 await sleep(1000);
@@ -31,6 +36,10 @@ class DumpCaseContents {
 
         console.log(`dumped ${Object.keys(caseSpecialContents).length} items.`);
         writeJson("assets/data/dump-case-special-contents.json", caseSpecialContents);
+    }
+
+    formatUrl(url: string) {
+        return url.replace("&amp;", "&");
     }
 
     getSpecialContentsUrl(caseUrl: string, contents: string) {

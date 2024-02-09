@@ -16,7 +16,7 @@ import {
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
 import { CS2_CSGO_PATH } from "./env.js";
-import { CaseSpecialItems } from "./generate-case-special-items.js";
+import { CaseSpecialContents } from "./case-special-contents.js";
 import {
     CS_CsgoLanguageTXT,
     CS_ItemsGameTXT,
@@ -73,12 +73,12 @@ export class GenerateScript {
     previousItems: Map<number, CS_Item> = null!;
 
     caseItems = new Map<string, number>();
-    caseSpecialItems = new CaseSpecialItems();
+    caseSpecialItems = new CaseSpecialContents();
 
     constructor() {}
 
     async run() {
-        await this.caseSpecialItems.fetch();
+        this.caseSpecialItems.load();
 
         this.ids = this.readIdsJSON();
         this.previousItems = this.readItemsJSON();
@@ -862,7 +862,7 @@ export class GenerateScript {
                     keys: keys.length > 0 ? keys : undefined,
                     name,
                     rarity: this.raritiesColorHex.common,
-                    specialcontents,
+                    specialcontents: this.previousItems.get(id)?.specialcontents ?? specialcontents,
                     specialimage:
                         itemProps.image_unusual_item !== undefined
                             ? this.getCaseSpecialItemImage(id, itemProps.image_unusual_item)
