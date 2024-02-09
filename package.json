@@ -8,6 +8,7 @@
     "type": "module",
     "main": "dist/index.js",
     "scripts": {
+        "dump-case-contents": "tsx scripts/dump-case-contents.ts",
         "dump-default-graffiti-cdn": "tsx scripts/dump-default-graffiti-cdn.ts",
         "dump-default-graffiti": "tsx scripts/dump-default-graffiti.ts",
         "dump-new-model-skins": "tsx scripts/dump-new-model-skins.ts",
@@ -20,6 +21,7 @@
         "@types/jest": "^29.5.10",
         "@types/node": "^18.15.11",
         "@types/node-fetch": "^2.6.9",
+        "cheerio": "^1.0.0-rc.12",
         "dotenv": "^16.3.1",
         "jest": "^29.7.0",
         "node-fetch": "^2.7.0",
