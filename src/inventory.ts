@@ -263,47 +263,55 @@ export class CS_Inventory {
         return this;
     }
 
-    renameStorageUnit(itemIndex: number, nametag: string) {
+    renameStorageUnit(index: number, nametag: string) {
         if (nametag.trim() === "") {
             throw new Error("invalid nametag");
         }
-        if (!this.items[itemIndex]) {
+        if (!this.items[index]) {
             throw new Error("invalid inventory item");
         }
-        const item = CS_Economy.getById(this.items[itemIndex].id);
+        const item = CS_Economy.getById(this.items[index].id);
         if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
             throw new Error("item is not a storage unit");
         }
         CS_validateNametag(nametag);
-        this.items[itemIndex].nametag = nametag;
-        this.items[itemIndex].updatedat = timestamp();
+        this.items[index].nametag = nametag;
+        this.items[index].updatedat = timestamp();
         return this;
     }
 
-    isStorageUnitFull(storageIndex: number) {
-        return this.items[storageIndex]?.storage?.length === this.storageUnitLimit;
+    isStorageUnitFull(index: number) {
+        return this.items[index]?.storage?.length === this.storageUnitLimit;
     }
 
-    hasStorageUnitItems(storageIndex: number) {
-        return (this.items[storageIndex]?.storage?.length ?? 0) > 0;
+    hasItemsInStorageUnit(index: number) {
+        return (this.items[index]?.storage?.length ?? 0) > 0;
     }
 
-    canDepositStorageUnit(storageIndex: number) {
-        return this.items[storageIndex]?.nametag !== undefined;
+    canDepositToStorageUnit(index: number) {
+        return this.items[index]?.nametag !== undefined && !this.isStorageUnitFull(index);
     }
 
-    depositStorageUnit(storageIndex: number, itemIndexes: number[]) {
-        if (!this.items[storageIndex]) {
+    getStorageUnitItems(index: number) {
+        return this.items[index]?.storage ?? [];
+    }
+
+    depositToStorageUnit(index: number, indexes: number[]) {
+        if (!this.items[index]) {
             throw new Error("invalid inventory item");
         }
-        const storageItem = CS_Economy.getById(this.items[storageIndex].id);
-        if (storageItem.def !== CS_STORAGE_UNIT_TOOL_DEF) {
+        const inventoryItem = this.items[index];
+        const item = CS_Economy.getById(inventoryItem.id);
+        if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
             throw new Error("item is not a storage unit");
         }
-        if (this.isStorageUnitFull(storageIndex)) {
-            throw new Error("storage unit is full");
+        if (indexes.length === 0) {
+            throw new Error("no items to deposit");
         }
-        for (const index of itemIndexes) {
+        if (!this.canDepositToStorageUnit(index)) {
+            throw new Error("cannot deposit to storage unit");
+        }
+        for (const index of indexes) {
             if (!this.items[index]) {
                 throw new Error("invalid inventory item");
             }
@@ -312,38 +320,42 @@ export class CS_Inventory {
                 throw new Error("cannot deposit storage unit");
             }
         }
-        this.items[storageIndex].storage = (this.items[storageIndex].storage ?? []).concat(
-            itemIndexes.map((index) => {
+        this.items[index].storage = (inventoryItem.storage ?? []).concat(
+            indexes.map((index) => {
                 return this.items[index];
             })
         );
-        this.items = this.items.filter((_, index) => !itemIndexes.includes(index));
+        this.items[index].updatedat = timestamp();
+        this.items = this.items.filter((_, index) => !indexes.includes(index));
         return this;
     }
 
-    retrieveStorageUnit(storageIndex: number, itemIndexes: number[]) {
-        if (!this.items[storageIndex]) {
+    retrieveFromStorageUnit(index: number, indexes: number[]) {
+        if (!this.items[index]) {
             throw new Error("invalid inventory item");
         }
-        const storageItem = CS_Economy.getById(this.items[storageIndex].id);
-        if (storageItem.def !== CS_STORAGE_UNIT_TOOL_DEF) {
+        const inventoryItem = this.items[index];
+        const item = CS_Economy.getById(inventoryItem.id);
+
+        if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
             throw new Error("item is not a storage unit");
         }
-        if (!this.hasStorageUnitItems(storageIndex)) {
+        const stored = inventoryItem.storage;
+        if (!stored || indexes.length === 0) {
+            throw new Error("no items to retrieve");
+        }
+        if (!this.hasItemsInStorageUnit(index)) {
             throw new Error("storage unit is empty");
         }
-        for (const index of itemIndexes) {
-            if (!this.items[storageIndex]?.storage?.[index]) {
+        for (const index of indexes) {
+            if (!stored[index]) {
                 throw new Error("invalid storage unit item");
             }
+            stored[index].updatedat = timestamp();
         }
-        this.items = this.items.concat(
-            itemIndexes.map((index) => {
-                return this.items[storageIndex].storage![index];
-            })
-        );
-        const storage = this.items[storageIndex].storage!.filter((_, index) => !itemIndexes.includes(index));
-        this.items[storageIndex].storage = storage.length > 0 ? storage : undefined;
+        this.items = [...indexes.map((index) => stored[index]), ...this.items];
+        const storage = stored.filter((_, index) => !indexes.includes(index));
+        this.items[index].storage = storage.length > 0 ? storage : undefined;
         return this;
     }
 

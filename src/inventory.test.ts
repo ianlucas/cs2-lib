@@ -240,3 +240,37 @@ test("swap items stattrak", () => {
 
     expect(inventory.size()).toBe(initialSize - 5);
 });
+
+test("storage unit", () => {
+    inventory = new CS_Inventory({ limit: 32, storageUnitLimit: 2 });
+    inventory.add({ id: 307, stattrak: 3 }); // 5
+    inventory.add({ id: 313, stattrak: 4 }); // 4
+    inventory.add({ id: 1841, stattrak: 5 }); // 3
+    inventory.add({ id: 1801, stattrak: 6 }); // 2
+    inventory.add({ id: 11262 }); // 1
+    inventory.add({ id: 11262 }); // 0
+
+    expect(inventory.size()).toBe(6);
+    expect(inventory.isStorageUnitFull(0)).toBe(false);
+    expect(inventory.hasItemsInStorageUnit(0)).toBe(false);
+    expect(inventory.canDepositToStorageUnit(0)).toBe(false);
+    expect(() => inventory.depositToStorageUnit(0, [2, 3])).toThrow();
+    inventory.renameStorageUnit(0, "storage unit");
+    expect(inventory.get(0).nametag).toBe("storage unit");
+    expect(() => inventory.depositToStorageUnit(0, [1])).toThrow();
+    expect(() => inventory.retrieveFromStorageUnit(0, [0, 1])).toThrow();
+    expect(() => inventory.depositToStorageUnit(0, [10])).toThrow();
+    expect(() => inventory.depositToStorageUnit(0, [])).toThrow();
+    inventory.depositToStorageUnit(0, [2, 3]);
+    expect(inventory.size()).toBe(4);
+    expect(inventory.getStorageUnitItems(0).length).toBe(2);
+    expect(inventory.getStorageUnitItems(0)[0].id).toBe(1801);
+    expect(inventory.getStorageUnitItems(0)[1].id).toBe(1841);
+    expect(() => inventory.depositToStorageUnit(0, [2])).toThrow();
+    expect(() => inventory.retrieveFromStorageUnit(0, [])).toThrow();
+    inventory.retrieveFromStorageUnit(0, [0]);
+    expect(inventory.size()).toBe(5);
+    expect(inventory.getStorageUnitItems(0).length).toBe(1);
+    expect(inventory.getStorageUnitItems(0)[0].id).toBe(1841);
+    expect(inventory.get(0).id).toBe(1801);
+});
