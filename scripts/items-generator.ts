@@ -492,24 +492,31 @@ export class ItemsGenerator {
                 continue;
             }
             let category = "";
+            let categoryToken = "";
             const [folder, subfolder] = stickerProps.sticker_material.split("/");
             if (folder === "alyx") {
-                category = this.findTranslation("#CSGO_crate_sticker_pack_hlalyx_capsule");
+                categoryToken = "#CSGO_crate_sticker_pack_hlalyx_capsule";
+                category = this.findTranslation(categoryToken);
             }
             if (UNCATEGORIZED_STICKERS.indexOf(folder) > -1) {
+                categoryToken = "";
                 category = "Valve";
             }
             if (!category) {
-                category = this.findTranslation(`#CSGO_sticker_crate_key_${folder}`);
+                categoryToken = `#CSGO_sticker_crate_key_${folder}`;
+                category = this.findTranslation(categoryToken);
             }
             if (!category) {
-                category = this.findTranslation(`#CSGO_crate_sticker_pack_${folder}`);
+                categoryToken = `#CSGO_crate_sticker_pack_${folder}`;
+                category = this.findTranslation(categoryToken);
             }
             if (!category) {
-                category = this.findTranslation(`#CSGO_crate_sticker_pack_${folder}_capsule`);
+                categoryToken = `#CSGO_crate_sticker_pack_${folder}_capsule`;
+                category = this.findTranslation(categoryToken);
             }
             if (stickerProps.tournament_event_id) {
-                category = this.findTranslation(`#CSGO_Tournament_Event_NameShort_${stickerProps.tournament_event_id}`);
+                categoryToken = `#CSGO_Tournament_Event_NameShort_${stickerProps.tournament_event_id}`;
+                category = this.findTranslation(categoryToken);
                 if (!category) {
                     throw new Error(
                         `unable to find the short name for tournament ${stickerProps.tournament_event_id}.`
@@ -517,7 +524,8 @@ export class ItemsGenerator {
                 }
             }
             if (!category) {
-                category = this.findTranslation(`#CSGO_crate_sticker_pack_${subfolder}_capsule`);
+                categoryToken = `#CSGO_crate_sticker_pack_${subfolder}_capsule`;
+                category = this.findTranslation(categoryToken);
             }
             if (!category) {
                 throw new Error(`unable to define a category for ${stickerProps.item_name}.`);
@@ -531,6 +539,9 @@ export class ItemsGenerator {
             const itemKey = `[${stickerProps.name}]sticker`;
 
             this.addTranslation(id, name, stickerProps.item_name);
+            if (categoryToken !== "") {
+                this.addTranslation(category, category, categoryToken);
+            }
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.push({
@@ -881,7 +892,7 @@ export class ItemsGenerator {
         console.warn("script completed.");
     }
 
-    addTranslation(id: number, englishName: string, ...keys: string[]) {
+    addTranslation(id: number | string, englishName: string, ...keys: string[]) {
         for (const language of Object.keys(this.languages)) {
             if (language === "english") {
                 continue;
