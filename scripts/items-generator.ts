@@ -428,7 +428,9 @@ export class ItemsGenerator {
             const itemKey = `[${paintKit.className}]${parentItem.className}`;
             const name = `${parentItem.name} | ${paintKit.name}`;
             const id = this.ids.get(`paint_${parentItem.def}_${paintKit.index}`);
+
             this.addTranslation(id, name, parentItem.nameToken, " | ", paintKit.nameToken);
+            this.addCaseContent(itemKey, id);
 
             this.generatedItems.push({
                 ...parentItem,
@@ -445,8 +447,6 @@ export class ItemsGenerator {
                 wearmax: paintKit.wearmax,
                 wearmin: paintKit.wearmin
             });
-
-            this.addCaseItem(itemKey, id);
         }
     }
 
@@ -461,7 +461,9 @@ export class ItemsGenerator {
                 const itemKey = `[${musicProps.name}]musickit`;
                 const name = this.requireTranslation(musicProps.loc_name);
                 const id = this.ids.get(`musickit_${musicIndex}`);
+
                 this.addTranslation(id, name, musicProps.loc_name);
+                this.addCaseContent(itemKey, id);
 
                 this.generatedItems.push({
                     base: true,
@@ -473,8 +475,6 @@ export class ItemsGenerator {
                     rarity: this.raritiesColorHex.rare,
                     type: "musickit"
                 });
-
-                this.addCaseItem(itemKey, id);
             }
         }
     }
@@ -529,7 +529,9 @@ export class ItemsGenerator {
             }
             const id = this.ids.get(`sticker_${stickerIndex}`);
             const itemKey = `[${stickerProps.name}]sticker`;
+
             this.addTranslation(id, name, stickerProps.item_name);
+            this.addCaseContent(itemKey, id);
 
             this.generatedItems.push({
                 category,
@@ -542,8 +544,6 @@ export class ItemsGenerator {
                 rarity: this.getRarityColorHex([itemKey, `[${stickerProps.name}]sticker`, stickerProps.item_rarity]),
                 type: "sticker"
             });
-
-            this.addCaseItem(itemKey, id);
         }
     }
 
@@ -589,14 +589,18 @@ export class ItemsGenerator {
                     });
 
                     if (!addedToCaseItem) {
-                        this.addCaseItem(itemKey, id);
+                        // @TODO Update `economy-case` to make sure we are
+                        // giving random colors for tinted graffiti.
+                        this.addCaseContent(itemKey, id);
                         addedToCaseItem = true;
                     }
                 }
             } else {
                 const id = this.ids.get(`spray_${graffitiIndex}`);
                 const itemKey = `[${graffitiProps.name}]spray`;
+
                 this.addTranslation(id, name, graffitiProps.item_name);
+                this.addCaseContent(itemKey, id);
 
                 this.generatedItems.push({
                     id,
@@ -612,8 +616,6 @@ export class ItemsGenerator {
                     ]),
                     type: "graffiti"
                 });
-
-                this.addCaseItem(itemKey, id);
             }
         }
     }
@@ -631,7 +633,9 @@ export class ItemsGenerator {
             }
             const id = this.ids.get(`patch_${patchIndex}`);
             const itemKey = `[${patchProps.name}]patch`;
+
             this.addTranslation(id, name, patchProps.item_name);
+            this.addCaseContent(itemKey, id);
 
             this.generatedItems.push({
                 id,
@@ -643,8 +647,6 @@ export class ItemsGenerator {
                 rarity: this.getRarityColorHex([itemKey, `[${patchProps.name}]patch`, patchProps.item_rarity]),
                 type: "patch"
             });
-
-            this.addCaseItem(itemKey, id);
         }
     }
 
@@ -694,7 +696,9 @@ export class ItemsGenerator {
             }
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.ids.get(`pin_${itemIndex}`);
+
             this.addTranslation(id, name, itemProps.item_name);
+            this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.push({
                 altname: itemProps.name,
@@ -707,8 +711,6 @@ export class ItemsGenerator {
                 teams: undefined,
                 type: "pin"
             });
-
-            this.addCaseItem(itemProps.name, id);
         }
     }
 
@@ -725,7 +727,9 @@ export class ItemsGenerator {
             }
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.ids.get(`tool_${itemIndex}`);
+
             this.addTranslation(id, name, itemProps.item_name);
+            this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.push({
                 def: Number(itemIndex),
@@ -737,8 +741,6 @@ export class ItemsGenerator {
                 teams: undefined,
                 type: "tool"
             });
-
-            this.addCaseItem(itemProps.name, id);
         }
     }
 
@@ -1021,7 +1023,7 @@ export class ItemsGenerator {
         return colorHex;
     }
 
-    addCaseItem(itemKey: string, id: number) {
+    addCaseContent(itemKey: string, id: number) {
         if (this.caseContents.has(itemKey)) {
             throw new Error(`duplicate found for ${itemKey}.`);
         }

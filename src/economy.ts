@@ -296,7 +296,7 @@ export function CS_getStickers(): CS_Item[] {
 }
 
 export function CS_resolveItemImage(baseUrl: string, item: CS_Item | number, wear?: number): string {
-    const { base, id, image } = typeof item === "number" ? CS_Economy.getById(item) : item;
+    const { id, image } = typeof item === "number" ? CS_Economy.getById(item) : item;
 
     if (wear !== undefined) {
         switch (true) {

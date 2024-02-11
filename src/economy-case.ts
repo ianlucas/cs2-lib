@@ -19,36 +19,44 @@ import {
     CS_validateWear
 } from "./economy.js";
 
+export const CS_RARITY_COMMON_COLOR = "#b0c3d9";
+export const CS_RARITY_UNCOMMON_COLOR = "#5e98d9";
+export const CS_RARITY_RARE_COLOR = "#4b69ff";
+export const CS_RARITY_MYTHICAL_COLOR = "#8847ff";
+export const CS_RARITY_LEGENDARY_COLOR = "#d32ce6";
+export const CS_RARITY_ANCIENT_COLOR = "#eb4b4b";
+export const CS_RARITY_IMMORTAL_COLOR = "#e4ae39";
+
 export const CS_RARITY_COLORS: Record<string, string> = {
-    "#b0c3d9": "common",
-    "#5e98d9": "uncommon",
-    "#4b69ff": "rare",
-    "#8847ff": "mythical",
-    "#d32ce6": "legendary",
-    "#eb4b4b": "ancient",
-    "#e4ae39": "immortal"
+    [CS_RARITY_COMMON_COLOR]: "common",
+    [CS_RARITY_UNCOMMON_COLOR]: "uncommon",
+    [CS_RARITY_RARE_COLOR]: "rare",
+    [CS_RARITY_MYTHICAL_COLOR]: "mythical",
+    [CS_RARITY_LEGENDARY_COLOR]: "legendary",
+    [CS_RARITY_ANCIENT_COLOR]: "ancient",
+    [CS_RARITY_IMMORTAL_COLOR]: "immortal"
 };
 
 export const CS_RARITY_FOR_SOUNDS: Record<string, string> = {
-    "#b0c3d9": "common",
-    "#5e98d9": "uncommon",
-    "#4b69ff": "rare",
-    "#8847ff": "mythical",
-    "#d32ce6": "legendary",
-    "#eb4b4b": "ancient",
-    "#e4ae39": "ancient" // immortal
+    [CS_RARITY_COMMON_COLOR]: "common",
+    [CS_RARITY_UNCOMMON_COLOR]: "uncommon",
+    [CS_RARITY_RARE_COLOR]: "rare",
+    [CS_RARITY_MYTHICAL_COLOR]: "mythical",
+    [CS_RARITY_LEGENDARY_COLOR]: "legendary",
+    [CS_RARITY_ANCIENT_COLOR]: "ancient",
+    [CS_RARITY_IMMORTAL_COLOR]: "ancient" // immortal
 };
 
 export const CS_RARITY_COLOR_DEFAULT = 0;
 
 export const CS_RARITY_COLOR_ORDER: Record<string, number | undefined> = {
-    "#b0c3d9": 1,
-    "#5e98d9": 2,
-    "#4b69ff": 3,
-    "#8847ff": 4,
-    "#d32ce6": 5,
-    "#eb4b4b": 6,
-    "#e4ae39": 7
+    [CS_RARITY_COMMON_COLOR]: 1,
+    [CS_RARITY_UNCOMMON_COLOR]: 2,
+    [CS_RARITY_RARE_COLOR]: 3,
+    [CS_RARITY_MYTHICAL_COLOR]: 4,
+    [CS_RARITY_LEGENDARY_COLOR]: 5,
+    [CS_RARITY_ANCIENT_COLOR]: 6,
+    [CS_RARITY_IMMORTAL_COLOR]: 7
 };
 
 export const CS_RARITY_ORDER = [
@@ -102,12 +110,12 @@ export function CS_getCaseContents(caseItem: CS_Item | number) {
     return items;
 }
 
-export function CS_listCaseContents(caseItem: CS_Item | number, hideSpecialContents = false) {
+export function CS_listCaseContents(caseItem: CS_Item | number, hideSpecials = false) {
     const { type, contents, specials } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
     if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
-    const items = [...contents, ...(!hideSpecialContents && specials !== undefined ? specials : [])];
+    const items = [...contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
     return items
         .map((id) => CS_Economy.getById(id))
         .sort((a, b) => {
