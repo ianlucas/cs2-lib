@@ -76,7 +76,7 @@ export function CS_randomInt(min: number, max: number) {
 }
 
 export function CS_getCaseContents(caseItem: CS_Item | number) {
-    const { type, contents, specialcontents } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+    const { type, contents, specials } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
     if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
@@ -89,8 +89,8 @@ export function CS_getCaseContents(caseItem: CS_Item | number) {
         }
         items[rarity].push(item);
     }
-    if (specialcontents) {
-        for (const id of specialcontents) {
+    if (specials) {
+        for (const id of specials) {
             const item = CS_Economy.getById(id);
             const rarity = "special";
             if (!items[rarity]) {
@@ -103,11 +103,11 @@ export function CS_getCaseContents(caseItem: CS_Item | number) {
 }
 
 export function CS_listCaseContents(caseItem: CS_Item | number, hideSpecialContents = false) {
-    const { type, contents, specialcontents } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
+    const { type, contents, specials } = typeof caseItem === "number" ? CS_Economy.getById(caseItem) : caseItem;
     if (type !== "case" || contents === undefined) {
         throw new Error("item is not a case");
     }
-    const items = [...contents, ...(!hideSpecialContents && specialcontents !== undefined ? specialcontents : [])];
+    const items = [...contents, ...(!hideSpecialContents && specials !== undefined ? specials : [])];
     return items
         .map((id) => CS_Economy.getById(id))
         .sort((a, b) => {
@@ -165,7 +165,7 @@ export function CS_validateUnlockedItem(
     if (caseItem.type !== "case") {
         throw new Error("item is not a case.");
     }
-    if (!caseItem.contents?.includes(id) && !caseItem.specialcontents?.includes(id)) {
+    if (!caseItem.contents?.includes(id) && !caseItem.specials?.includes(id)) {
         throw new Error("unlocked item is not from this case.");
     }
     const item = CS_Economy.getById(id);

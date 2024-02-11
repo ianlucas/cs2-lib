@@ -19,21 +19,23 @@ test("has every types and categories", () => {
         itemTypes.add(item.type);
     }
 
-    expect(Array.from(weaponCategories)).toMatchObject(["rifle", "c4", "secondary", "heavy", "smg"]);
-    expect(Array.from(itemTypes)).toMatchObject([
-        "weapon",
-        "glove",
-        "melee",
-        "musickit",
-        "agent",
-        "sticker",
-        "pin",
-        "case",
-        "graffiti",
-        "patch",
-        "key",
-        "tool"
-    ]);
+    expect(Array.from(weaponCategories).sort()).toMatchObject(["c4", "heavy", "rifle", "secondary", "smg"].sort());
+    expect(Array.from(itemTypes).sort()).toMatchObject(
+        [
+            "agent",
+            "case",
+            "glove",
+            "graffiti",
+            "key",
+            "melee",
+            "musickit",
+            "patch",
+            "pin",
+            "sticker",
+            "tool",
+            "weapon"
+        ].sort()
+    );
 });
 
 test("compare repository items with current items", async () => {

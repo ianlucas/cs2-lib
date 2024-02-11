@@ -3,23 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fetch from "node-fetch";
 import { basename } from "path";
-import { readTxt, sleep, writeJson } from "./util.js";
+import { fetchText, readJson, sleep, writeJson } from "./util.js";
 
-class DumpDefaultGraffitiCdn {
+export class TintGraffitiImagesScraper {
     async run() {
         const min = 1;
         const max = 5;
-        const graffiti = readTxt("assets/data/dump-default-graffiti.txt").split("\n");
+        const graffiti = readJson<string[]>("assets/data/tint-graffiti-names.json");
         const anchorRE = /<a href="https:\/\/csgostash.com\/graffiti\/(\d+)\/([^"]+)">([^<]+)<\/a>/g;
         const imageRE = /src="([^"]+)" alt="([^"]+)"/g;
         const urls: string[] = [];
-        const cdn: Record<string, string> = {};
+        const images: Record<string, string> = {};
+
         for (let page = min; page <= max; page++) {
             const url = `https://csgostash.com/graffiti?page=${page}`;
-            console.log(`scraping ${url}...`);
-            const contents = await (await fetch(url)).text();
+            const contents = await fetchText(url);
             await sleep(1000);
             for (const [, id, slug, name] of contents.matchAll(anchorRE)) {
                 if (graffiti.includes(name)) {
@@ -27,22 +26,21 @@ class DumpDefaultGraffitiCdn {
                 }
             }
             for (const url of urls) {
-                console.log(`scraping ${url}...`);
-                const contents = await (await fetch(url)).text();
+                const contents = await fetchText(url);
                 for (const [, url, alt] of contents.matchAll(imageRE)) {
                     if (url.includes("https://steamcommunity-a.akamaihd.net")) {
-                        cdn[alt.replace("Sealed Graffiti | ", "")] = url.replace("256fx256f", "256fx192f");
+                        images[alt.replace("Sealed Graffiti | ", "")] = url.replace("256fx256f", "256fx192f");
                     }
                 }
                 await sleep(1000);
             }
         }
 
-        console.log(`dumped ${Object.keys(cdn).length} items.`);
-        writeJson("assets/data/dump-default-graffiti-cdn.json", cdn);
+        console.log(`scraped ${Object.keys(images).length} items.`);
+        writeJson("assets/data/tint-graffiti-images.json", images);
     }
 }
 
-if (basename(process.argv[1]) === "dump-default-graffiti-cdn.ts") {
-    new DumpDefaultGraffitiCdn().run();
+if (basename(process.argv[1]) === "tint-graffiti-images-scraper.ts") {
+    new TintGraffitiImagesScraper().run();
 }

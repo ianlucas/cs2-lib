@@ -6,17 +6,12 @@
 import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
-import {
-    CS_DEFAULT_MAX_WEAR,
-    CS_DEFAULT_MIN_WEAR,
-    CS_Item,
-    CS_SPECIAL_ITEM_IMAGE_CUSTOM,
-    CS_SPECIAL_ITEM_IMAGE_DEFAULT
-} from "../src/economy.js";
+import { format } from "util";
+import { CS_DEFAULT_MAX_WEAR, CS_DEFAULT_MIN_WEAR, CS_Item } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
+import { CasesScraper } from "./cases-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
-import { CaseSpecialContents } from "./case-special-contents.js";
 import {
     CS_CsgoLanguageTXT,
     CS_ItemsGameTXT,
@@ -29,12 +24,23 @@ import {
     SafeRaritiesRecord,
     StickerKitsRecord,
     UnsafeRaritiesRecord
-} from "./generate-types.js";
-import { readJson, readTxt, replaceInFile, writeJson } from "./util.js";
+} from "./items-generator-types.js";
+import { readJson, replaceInFile, writeJson } from "./util.js";
 
-const lootItemRE = /^\[([^\]]+)\](.*)$/;
-const econLocalImageSuffixes = ["heavy", "medium", "light"];
-const uncategorizedStickers = [
+const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
+const CS2_ITEMS_TXT_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
+const CS2_IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
+const ITEM_IDS_JSON_PATH = "assets/data/items-ids.json";
+const ITEMS_JSON_PATH = "assets/data/items.json";
+const PARSED_ITEMS_GAME_JSON_PATH = "assets/data/parsed-items-game.json";
+const ITEMS_TS_PATH = "src/items.ts";
+const LANGUAGE_JSON_PATH = "assets/translations/items-%s.json";
+
+const LOOT_ITEM_RE = /^\[([^\]]+)\](.*)$/;
+const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
+const WEAPON_CATEGORY_RE = /(c4|[^\d]+)/;
+const PAINT_IMAGE_SUFFIXES = ["light", "medium", "heavy"] as const;
+const UNCATEGORIZED_STICKERS = [
     "standard",
     "stickers2",
     "community02",
@@ -42,17 +48,41 @@ const uncategorizedStickers = [
     "community_mix01",
     "danger_zone"
 ];
+const HEAVY_WEAPONS = ["weapon_m249", "weapon_mag7", "weapon_negev", "weapon_nova", "weapon_sawedoff", "weapon_xm1014"];
+const SECONDARY_WEAPONS = ["weapon_taser"];
+const FREE_MUSIC_KITS = ["1", "70"];
 
-const isHeavyWeapon = ["weapon_m249", "weapon_mag7", "weapon_negev", "weapon_nova", "weapon_sawedoff", "weapon_xm1014"];
-const isSecondaryWeapon = ["weapon_taser"];
-const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
-const CS2_ITEMS_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
-const CS2_IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
+export class Items extends Map<number, CS_Item> {
+    constructor() {
+        super(readJson<CS_Item[]>(ITEMS_JSON_PATH, []).map((item) => [item.id, item]));
+    }
+}
 
-export class GenerateScript {
+export class ItemsIds {
+    identifiers: string[];
+    uniqueIds: string[] = [];
+
+    constructor() {
+        this.identifiers = readJson<string[]>(ITEM_IDS_JSON_PATH, []);
+    }
+
+    get(identifier: string) {
+        if (this.uniqueIds.indexOf(identifier) > -1) {
+            throw new Error(`${identifier} is not unique.`);
+        }
+        this.uniqueIds.push(identifier);
+        const index = this.identifiers.indexOf(identifier);
+        if (index === -1) {
+            this.identifiers.push(identifier);
+            return this.identifiers.length - 1;
+        }
+        return index;
+    }
+}
+
+export class ItemsGenerator {
     clientLootList: ClientLootListRecord = null!;
     graffitiTints: { name: string; token: string; id: number }[] = null!;
-    ids: ReturnType<InstanceType<typeof GenerateScript>["readIdsJSON"]> = null!;
     items: ItemsRecord = null!;
     itemsGameParsed: CS_ItemsGameTXT = null!;
     itemsRaritiesColorHex: SafeRaritiesRecord = null!;
@@ -70,18 +100,13 @@ export class GenerateScript {
         nameToken: string;
     })[] = [];
     generatedItems: CS_Item[] = [];
-    previousItems: Map<number, CS_Item> = null!;
 
-    caseItems = new Map<string, number>();
-    caseSpecialItems = new CaseSpecialContents();
-
-    constructor() {}
+    caseContents = new Map<string, number>();
+    casesScraper = new CasesScraper();
+    ids = new ItemsIds();
+    previousItems = new Items();
 
     async run() {
-        this.caseSpecialItems.load();
-
-        this.ids = this.readIdsJSON();
-        this.previousItems = this.readItemsJSON();
         this.readCsgoLanguageTXT();
         this.readItemsGameTXT();
 
@@ -101,47 +126,20 @@ export class GenerateScript {
         this.persist();
     }
 
-    readItemsJSON() {
-        const path = resolve(process.cwd(), "assets/data/items.json");
-        const items = (existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : []) as CS_Item[];
-        return new Map(items.map((item) => [item.id, item]));
-    }
-
-    readIdsJSON() {
-        const path = resolve(process.cwd(), "assets/data/ids.json");
-        const ids = (existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : []) as string[];
-        const uniqueIds = [] as string[];
-        return {
-            get(identifier: string) {
-                if (uniqueIds.indexOf(identifier) > -1) {
-                    throw new Error(`${identifier} is not unique.`);
-                }
-                uniqueIds.push(identifier);
-                const index = ids.indexOf(identifier);
-                if (index === -1) {
-                    ids.push(identifier);
-                    return ids.length - 1;
-                }
-                return index;
-            },
-
-            getAll() {
-                return ids;
-            }
-        };
-    }
-
-    readCsgoLanguageTXT() {
+    readCsgoLanguageTXT(include?: string[]) {
         const languages = {} as LanguagesRecord;
         const translations = {} as LanguagesRecord;
         const files = readdirSync(CS2_RESOURCE_PATH);
-        const fileRE = /csgo_([^\._]+)\.txt$/;
+
         for (const file of files) {
-            const matches = file.match(fileRE);
+            const matches = file.match(LANGUAGE_FILE_RE);
             if (!matches) {
                 continue;
             }
             const [, language] = matches;
+            if (include !== undefined && !include.includes(language)) {
+                continue;
+            }
             const contents = readFileSync(resolve(CS2_RESOURCE_PATH, file), "utf-8");
             languages[language] = {};
             translations[language] = {};
@@ -164,11 +162,10 @@ export class GenerateScript {
         }
         this.languages = languages;
         this.translations = translations;
-        console.warn(`loaded the following languages: ${Object.keys(languages)}.`);
     }
 
     readItemsGameTXT() {
-        const contents = readFileSync(CS2_ITEMS_PATH, "utf-8");
+        const contents = readFileSync(CS2_ITEMS_TXT_PATH, "utf-8");
         const parsed = CS_parseValveKeyValue<CS_ItemsGameTXT>(contents);
 
         this.clientLootList = {};
@@ -230,7 +227,7 @@ export class GenerateScript {
                     for (const itemOrClientLootListKey of Object.keys(clientLootList)) {
                         if (
                             itemOrClientLootListKey.includes("customplayer_") ||
-                            itemOrClientLootListKey.match(lootItemRE)
+                            itemOrClientLootListKey.match(LOOT_ITEM_RE)
                         ) {
                             this.itemsRaritiesColorHex[itemOrClientLootListKey] = this.raritiesColorHex[rarityKey];
                         }
@@ -243,11 +240,7 @@ export class GenerateScript {
                 if (!paintKitProps.description_tag || paintKitProps.name === "default") {
                     continue;
                 }
-                const name = this.findTranslation(paintKitProps.description_tag);
-                if (!name) {
-                    console.log(`unable to find translation for paint ${paintKitProps.description_tag}.`);
-                    continue;
-                }
+                const name = this.requireTranslation(paintKitProps.description_tag);
                 this.paintKits.push({
                     className: paintKitProps.name,
                     name,
@@ -292,17 +285,17 @@ export class GenerateScript {
 
     parseWeapons() {
         console.warn("parsing weapons...");
-        const categoryRE = /(c4|[^\d]+)/;
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (itemProps.baseitem !== "1" || !itemProps.flexible_loadout_slot) {
                 continue;
             }
-            const matches = itemProps.flexible_loadout_slot.match(categoryRE);
+            const matches = itemProps.flexible_loadout_slot.match(WEAPON_CATEGORY_RE);
             if (!matches) {
                 continue;
             }
             const [, category] = matches;
-            if (category === "equipment" && !isSecondaryWeapon.includes(itemProps.name)) {
+            const isTaser = itemProps.name === "weapon_taser";
+            if (category === "equipment" && !isTaser) {
                 continue;
             }
             const prefab = this.getPrefab(itemProps.prefab);
@@ -313,25 +306,16 @@ export class GenerateScript {
 
             this.baseItems.push({
                 base: true,
-                /**
-                 * @TODO Move this to a better place.
-                 */
-                category: isHeavyWeapon.includes(itemProps.name)
-                    ? "heavy"
-                    : isSecondaryWeapon.includes(itemProps.name)
-                      ? "secondary"
-                      : category,
+                category: this.getWeaponCategory(itemProps.name, category),
                 className: itemProps.name,
                 def: Number(itemIndex),
                 free: true,
                 id,
                 image:
-                    this.previousItems.get(id)?.image ??
-                    (prefab.image_inventory
-                        ? this.getCDNUrl(prefab.image_inventory, `${id}`)
-                        : this.getCDNUrl(`econ/weapons/base_weapons/${itemProps.name}`, `${id}`)),
+                    prefab.image_inventory !== undefined
+                        ? this.getImage(id, prefab.image_inventory)
+                        : this.getBaseImage(id, itemProps.name),
                 index: undefined,
-                localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
                 name,
                 nameToken: prefab.item_name,
@@ -340,7 +324,6 @@ export class GenerateScript {
                 type: "weapon"
             });
         }
-        console.warn("parsed weapons.");
     }
 
     parseMelees() {
@@ -348,10 +331,11 @@ export class GenerateScript {
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
                 itemProps.item_name === undefined ||
+                itemProps.image_inventory === undefined ||
+                itemProps.used_by_classes === undefined ||
                 (itemProps.prefab === "melee" && itemProps.baseitem !== "1") ||
                 itemProps.prefab?.indexOf("melee") === -1 ||
-                itemProps.prefab?.indexOf("noncustomizable") > -1 ||
-                !itemProps.used_by_classes
+                itemProps.prefab?.indexOf("noncustomizable") > -1
             ) {
                 continue;
             }
@@ -371,9 +355,8 @@ export class GenerateScript {
                 def: Number(itemIndex),
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
-                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.getImage(id, itemProps.image_inventory),
                 index: itemProps.baseitem === "1" ? undefined : 0,
-                localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name.replace("weapon_", ""),
                 name,
                 nameToken: itemProps.item_name,
@@ -382,7 +365,6 @@ export class GenerateScript {
                 type: "melee"
             });
         }
-        console.warn("parsed melees.");
     }
 
     parseGloves() {
@@ -408,11 +390,10 @@ export class GenerateScript {
                 id,
                 image:
                     this.previousItems.get(id)?.image ??
-                    (itemProps.image_inventory
-                        ? this.getCDNUrl(itemProps.image_inventory, `${id}`)
+                    (itemProps.image_inventory !== undefined
+                        ? this.getImage(id, itemProps.image_inventory)
                         : `/${itemProps.name}.png`),
                 index: itemProps.baseitem === "1" ? undefined : 0,
-                localimage: this.getBaseLocalImage(id, itemProps.name),
                 model: itemProps.name,
                 name,
                 nameToken: itemProps.item_name,
@@ -422,7 +403,6 @@ export class GenerateScript {
                 type: "glove"
             });
         }
-        console.warn("parsed gloves.");
     }
 
     parseSkins() {
@@ -456,9 +436,8 @@ export class GenerateScript {
                 free: undefined,
                 id,
                 index: paintKit.index,
-                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(`${iconPath}`, `${id}`),
+                image: this.getSkinImage(id, parentItem.className, paintKit.className),
                 legacy: this.previousItems.get(id)?.legacy,
-                localimage: this.getEconLocalImage(id, parentItem.className, paintKit.className),
                 name,
                 rarity: ["melee", "glove"].includes(parentItem.type)
                     ? this.getRarityColorHex([parentItem.rarity, paintKit.rarityColorHex])
@@ -469,7 +448,6 @@ export class GenerateScript {
 
             this.addCaseItem(itemKey, id);
         }
-        console.warn("parsed skins.");
     }
 
     parseMusicKits() {
@@ -487,9 +465,9 @@ export class GenerateScript {
 
                 this.generatedItems.push({
                     base: true,
-                    free: ["1", "70"].includes(musicIndex) ? true : undefined,
+                    free: FREE_MUSIC_KITS.includes(musicIndex) ? true : undefined,
                     id,
-                    image: this.previousItems.get(id)?.image ?? this.getCDNUrl(musicProps.image_inventory, `${id}`),
+                    image: this.previousItems.get(id)?.image ?? this.getImage(id, musicProps.image_inventory),
                     index: Number(musicIndex),
                     name,
                     rarity: this.raritiesColorHex.rare,
@@ -499,7 +477,6 @@ export class GenerateScript {
                 this.addCaseItem(itemKey, id);
             }
         }
-        console.warn("parsed music kits.");
     }
 
     parseStickers() {
@@ -519,7 +496,7 @@ export class GenerateScript {
             if (folder === "alyx") {
                 category = this.findTranslation("#CSGO_crate_sticker_pack_hlalyx_capsule");
             }
-            if (uncategorizedStickers.indexOf(folder) > -1) {
+            if (UNCATEGORIZED_STICKERS.indexOf(folder) > -1) {
                 category = "Valve";
             }
             if (!category) {
@@ -559,7 +536,7 @@ export class GenerateScript {
                 id,
                 image:
                     this.previousItems.get(id)?.image ??
-                    this.getCDNUrl(`econ/stickers/${stickerProps.sticker_material}`, `${id}`),
+                    this.getImage(id, `econ/stickers/${stickerProps.sticker_material}`),
                 index: Number(stickerIndex),
                 name,
                 rarity: this.getRarityColorHex([itemKey, `[${stickerProps.name}]sticker`, stickerProps.item_rarity]),
@@ -568,13 +545,12 @@ export class GenerateScript {
 
             this.addCaseItem(itemKey, id);
         }
-        console.warn("parsed stickers.");
     }
 
     parseGraffiti() {
         console.warn("parse graffiti...");
-        const defaultGraffiti = readTxt("assets/data/dump-default-graffiti.txt").split("\n");
-        const defaultGraffitiCdn = readJson<Record<string, string>>("assets/data/dump-default-graffiti-cdn.json");
+        const tintGraffitiNames = readJson<string[]>("assets/data/tint-graffiti-names.json");
+        const tintGraffitiImages = readJson<Record<string, string>>("assets/data/tint-graffiti-images.json");
         for (const [graffitiIndex, graffitiProps] of Object.entries(this.stickerKits)) {
             if (
                 !graffitiProps.item_name?.includes("#SprayKit") &&
@@ -588,13 +564,13 @@ export class GenerateScript {
                 console.log(`unable to find translation for ${graffitiProps.item_name}.`);
                 continue;
             }
-            if (defaultGraffiti.includes(name)) {
+            if (tintGraffitiNames.includes(name)) {
                 const graffitiName = this.findTranslation(graffitiProps.item_name);
                 let addedToCaseItem = false;
                 for (const { name: tintName, token: tintToken, id: tintId } of this.graffitiTints) {
                     const id = this.ids.get(`spray_${graffitiIndex}_${tintId}`);
                     const name = `${graffitiName} (${tintName})`;
-                    const image = this.previousItems.get(id)?.image ?? defaultGraffitiCdn[name];
+                    const image = this.previousItems.get(id)?.image ?? tintGraffitiImages[name];
                     if (!image) {
                         console.log(`unable to find image for ${name}.`);
                         continue;
@@ -626,7 +602,7 @@ export class GenerateScript {
                     id,
                     image:
                         this.previousItems.get(id)?.image ??
-                        this.getCDNUrl(`econ/stickers/${graffitiProps.sticker_material}`, `${id}`),
+                        this.getImage(id, `econ/stickers/${graffitiProps.sticker_material}`),
                     index: Number(graffitiIndex),
                     name,
                     rarity: this.getRarityColorHex([
@@ -640,7 +616,6 @@ export class GenerateScript {
                 this.addCaseItem(itemKey, id);
             }
         }
-        console.warn("parsed graffiti.");
     }
 
     parsePatches() {
@@ -661,8 +636,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 id,
                 image:
-                    this.previousItems.get(id)?.image ??
-                    this.getCDNUrl(`econ/patches/${patchProps.patch_material}`, `${id}`),
+                    this.previousItems.get(id)?.image ?? this.getImage(id, `econ/patches/${patchProps.patch_material}`),
                 index: Number(patchIndex),
                 teams: [CS_TEAM_CT, CS_TEAM_T],
                 name,
@@ -672,13 +646,17 @@ export class GenerateScript {
 
             this.addCaseItem(itemKey, id);
         }
-        console.warn("parsed patches.");
     }
 
     parseAgents() {
         console.warn("parsing agents...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
-            if (itemProps.item_name === undefined || itemProps.prefab !== "customplayertradable") {
+            if (
+                itemProps.item_name === undefined ||
+                itemProps.used_by_classes === undefined ||
+                itemProps.image_inventory === undefined ||
+                itemProps.prefab !== "customplayertradable"
+            ) {
                 continue;
             }
             const name = this.requireTranslation(itemProps.item_name);
@@ -689,7 +667,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
-                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                 index: undefined,
                 model: itemProps.model_player?.replace("characters/models/", "").replace(".vmdl", ""),
                 name,
@@ -698,7 +676,6 @@ export class GenerateScript {
                 type: "agent"
             });
         }
-        console.warn("parsed agents.");
     }
 
     parsePins() {
@@ -723,7 +700,7 @@ export class GenerateScript {
                 altname: itemProps.name,
                 def: Number(itemIndex),
                 id,
-                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                 index: undefined,
                 name,
                 rarity: this.getRarityColorHex([itemProps.item_rarity, "ancient"]),
@@ -733,7 +710,6 @@ export class GenerateScript {
 
             this.addCaseItem(itemProps.name, id);
         }
-        console.warn("parsed pins.");
     }
 
     parseTools() {
@@ -754,7 +730,7 @@ export class GenerateScript {
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
-                image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                image: this.previousItems.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                 index: undefined,
                 name,
                 rarity: this.getRarityColorHex(["common"]),
@@ -764,12 +740,11 @@ export class GenerateScript {
 
             this.addCaseItem(itemProps.name, id);
         }
-        console.warn("parsed tools.");
     }
 
     parseCases() {
         console.warn("parsing cases...");
-        this.caseSpecialItems.populate(this.baseItems, this.generatedItems);
+        this.casesScraper.populate(this.baseItems, this.generatedItems);
         const keyItems = new Map<string, number>();
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
@@ -797,10 +772,10 @@ export class GenerateScript {
                 continue;
             }
             for (const itemKey of this.getClientLootListItems(clientLootListKey)) {
-                if (!this.caseItems.has(itemKey)) {
+                if (!this.caseContents.has(itemKey)) {
                     throw new Error(`item ${itemKey} not found.`);
                 }
-                contents.push(this.caseItems.get(itemKey)!);
+                contents.push(this.caseContents.get(itemKey)!);
             }
             if (contents.length === 0) {
                 console.log(`no items found for ${itemProps.name}.`);
@@ -808,7 +783,7 @@ export class GenerateScript {
             if (contents.length > 0) {
                 const name = this.requireTranslation(itemProps.item_name);
                 const id = this.ids.get(`case_${itemIndex}`);
-                const specialcontents = this.caseSpecialItems.get(name);
+                const specials = this.casesScraper.getSpecials(name);
                 this.addTranslation(id, name, itemProps.item_name);
 
                 if (!itemProps.associated_items) {
@@ -839,12 +814,15 @@ export class GenerateScript {
                         console.log(`name not found for key of ${itemIndex}, fallback to #CSGO_base_crate_key.`);
                         itemProps.item_name = "#CSGO_base_crate_key";
                     }
+                    if (itemProps.image_inventory === undefined) {
+                        throw new Error(`image_inventory not found for key of ${itemIndex}.`);
+                    }
                     const name = this.requireTranslation(itemProps.item_name);
                     this.addTranslation(id, name, itemProps.item_name);
                     this.generatedItems.push({
                         def: Number(itemIndex),
                         id,
-                        image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                        image: this.previousItems.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                         name,
                         rarity: this.raritiesColorHex.common,
                         teams: undefined,
@@ -858,77 +836,51 @@ export class GenerateScript {
                     contents,
                     def: Number(itemIndex),
                     id,
-                    image: this.previousItems.get(id)?.image ?? this.getCDNUrl(itemProps.image_inventory, `${id}`),
+                    image: this.previousItems.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
                     name,
                     rarity: this.raritiesColorHex.common,
-                    specialcontents: this.previousItems.get(id)?.specialcontents ?? specialcontents,
-                    specialimage:
+                    specials: this.previousItems.get(id)?.specials ?? specials,
+                    specialsimage:
                         itemProps.image_unusual_item !== undefined
-                            ? this.getCaseSpecialItemImage(id, itemProps.image_unusual_item)
-                            : specialcontents !== undefined && specialcontents?.length > 0
-                              ? CS_SPECIAL_ITEM_IMAGE_DEFAULT
-                              : undefined,
+                            ? this.getSpecialsImage(id, itemProps.image_unusual_item)
+                            : undefined,
                     teams: undefined,
                     type: "case"
                 });
             }
         }
-        console.warn("parsed cases.");
     }
 
     persist() {
-        const items = [...this.baseItems, ...this.generatedItems]
-            .sort((a, b) => {
-                const aTop = a.base || a.free;
-                const bTop = b.base || b.free;
-                if (aTop && !bTop) {
-                    return -1;
-                }
-                if (!aTop && bTop) {
-                    return 1;
-                }
-                if (aTop && bTop) {
-                    if (a.free && !b.free) {
-                        return -1;
-                    }
-                    if (!a.free && b.free) {
-                        return 1;
-                    }
-                }
-                if (a.name < b.name) {
-                    return -1;
-                }
-                if (a.name > b.name) {
-                    return 1;
-                }
-                return 0;
-            })
-            .map((item) => ({
-                ...item,
-                className: undefined,
-                nameToken: undefined
-            }));
+        const items = [...this.baseItems, ...this.generatedItems].map((item) => ({
+            ...item,
+            className: undefined,
+            nameToken: undefined
+        }));
 
-        writeJson("assets/data/parsed-items-game.json", this.itemsGameParsed);
-        console.warn("generated assets/data/parsed-items-game.json.");
-        writeJson("assets/data/items.json", items);
-        console.warn("generated assets/data/items.json.");
-        writeJson("assets/data/ids.json", this.ids.getAll());
-        console.warn("generated assets/data/ids.json.");
+        writeJson(PARSED_ITEMS_GAME_JSON_PATH, this.itemsGameParsed);
+        console.warn(`generated ${PARSED_ITEMS_GAME_JSON_PATH}.`);
+
+        writeJson(ITEMS_JSON_PATH, items);
+        console.warn(`generated ${ITEMS_JSON_PATH}.`);
+
+        writeJson(ITEM_IDS_JSON_PATH, this.ids.identifiers);
+        console.warn(`generated ${ITEM_IDS_JSON_PATH}.`);
 
         for (const [language, translations] of Object.entries(this.translations)) {
-            writeJson(`assets/translations/items-${language}.json`, translations);
-            console.warn(`generated assets/translations/items-${language}.json.`);
+            const path = format(LANGUAGE_JSON_PATH, language);
+            writeJson(path, translations);
+            console.warn(`generated ${path}.`);
         }
 
-        replaceInFile("src/items.ts", /CS_Item\[\] = [^;]+;/, `CS_Item[] = ${JSON.stringify(items)};`);
-        console.warn("updated src/items.ts.");
+        replaceInFile(ITEMS_TS_PATH, /CS_Item\[\] = [^;]+;/, `CS_Item[] = ${JSON.stringify(items)};`);
+        console.warn(`updated ${ITEMS_TS_PATH}.`);
         console.warn("script completed.");
     }
 
     addTranslation(id: number, englishName: string, ...keys: string[]) {
-        for (const [language, tokens] of Object.entries(this.languages)) {
+        for (const language of Object.keys(this.languages)) {
             if (language === "english") {
                 continue;
             }
@@ -988,46 +940,40 @@ export class GenerateScript {
 
     // Currently we don't know how to get the CDN urls from the files
     // themselves, previoulsy we could get the SHA1 hash of a file and then use
-    // it to resolve a CDN url, but this method no longer works. For now on we
-    // are going to depend on Statically.
-    getCDNUrl(file: string, fileid: string) {
-        const cs2ImagePath = resolve(CS2_IMAGES_PATH, file + "_png.png");
-        const destPath = resolve(process.cwd(), `assets/images/${fileid}.png`);
-        copyFileSync(cs2ImagePath, destPath);
-        return `https://cdn.statically.io/gh/ianlucas/cslib/main/assets/images/${fileid}.png`;
-    }
+    // it to resolve a CDN url, but this method no longer works. For new items
+    // this is going to return undefined and is meant to be self-hosted
 
-    getBaseLocalImage(id: number, className: string) {
-        const imagePath = resolve(CS2_IMAGES_PATH, `econ/weapons/base_weapons/${className}_png.png`);
+    getImage(id: number, path: string) {
+        const cs2ImagePath = resolve(CS2_IMAGES_PATH, path + "_png.png");
         const destPath = resolve(process.cwd(), `assets/images/${id}.png`);
-        if (existsSync(destPath)) {
-            return true;
-        }
-        if (existsSync(imagePath)) {
-            copyFileSync(imagePath, destPath);
-            return true;
-        }
+        copyFileSync(cs2ImagePath, destPath);
         return undefined;
     }
 
-    getEconLocalImage(id: number, className: string | undefined, paintClassName: string | undefined) {
-        if (!className || !paintClassName) {
-            return undefined;
+    getBaseImage(id: number, className: string) {
+        return this.getImage(id, `econ/weapons/base_weapons/${className}`);
+    }
+
+    getSkinImage(id: number, className: string | undefined, paintClassName: string | undefined) {
+        const paths = PAINT_IMAGE_SUFFIXES.map((suffix) => [
+            resolve(CS2_IMAGES_PATH, `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`),
+            resolve(process.cwd(), `assets/images/${id}_${suffix}.png`)
+        ]);
+        for (const [src, dest] of paths) {
+            copyFileSync(src, dest);
         }
-        return (
-            econLocalImageSuffixes.filter((suffix) => {
-                const src = resolve(
-                    CS2_IMAGES_PATH,
-                    `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`
-                );
-                const dest = resolve(process.cwd(), `assets/images/${id}_${suffix}.png`);
-                if (existsSync(src)) {
-                    copyFileSync(src, dest);
-                    return true;
-                }
-                return false;
-            }).length > 0 || undefined
-        );
+        // returns the image with light suffix.
+        return this.getImage(id, paths[0][0].replace("_png.png", ""));
+    }
+
+    getWeaponCategory(name: string, category: string) {
+        if (SECONDARY_WEAPONS.includes(name)) {
+            return "secondary";
+        }
+        if (HEAVY_WEAPONS.includes(name)) {
+            return "heavy";
+        }
+        return category;
     }
 
     getPrefab(prefabKey: string) {
@@ -1076,10 +1022,10 @@ export class GenerateScript {
     }
 
     addCaseItem(itemKey: string, id: number) {
-        if (this.caseItems.has(itemKey)) {
+        if (this.caseContents.has(itemKey)) {
             throw new Error(`duplicate found for ${itemKey}.`);
         }
-        this.caseItems.set(itemKey, id);
+        this.caseContents.set(itemKey, id);
     }
 
     getClientLootListItems(clientLootListKey: string, items: string[] = []) {
@@ -1091,7 +1037,7 @@ export class GenerateScript {
         for (const itemOrClientLootListKey of itemOrClientLootListKeys) {
             // At this point, `caseItemMap` should be populated with all economy
             // items that can be retrieved from cases.
-            if (!this.caseItems.has(itemOrClientLootListKey)) {
+            if (!this.caseContents.has(itemOrClientLootListKey)) {
                 // If we did not find, that means that it's probably a reference
                 // to another loot list...
                 this.getClientLootListItems(itemOrClientLootListKey, items);
@@ -1102,17 +1048,17 @@ export class GenerateScript {
         return items;
     }
 
-    getCaseSpecialItemImage(id: number, path: string) {
+    getSpecialsImage(id: number, path: string) {
         const src = resolve(CS2_IMAGES_PATH, `${path}_png.png`);
         const dest = resolve(process.cwd(), `assets/images/${id}_rare.png`);
         if (existsSync(src)) {
             copyFileSync(src, dest);
-            return CS_SPECIAL_ITEM_IMAGE_CUSTOM;
+            return true;
         }
         return undefined;
     }
 }
 
-if (basename(process.argv[1]) === "generate.ts") {
-    new GenerateScript().run();
+if (basename(process.argv[1]) === "items-generator.ts") {
+    new ItemsGenerator().run();
 }

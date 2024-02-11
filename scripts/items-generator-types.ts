@@ -49,22 +49,14 @@ export interface CS_ItemsGameTXT {
                 };
                 baseitem: string;
                 flexible_loadout_slot?: string;
-                image_inventory: string;
+                image_inventory?: string;
                 image_unusual_item?: string;
                 item_name?: string;
                 item_rarity: string;
                 loot_list_name?: string;
                 model_player?: string;
-                /**
-                 * The classname of the item.
-                 */
                 name: string;
                 prefab: string;
-                used_by_classes: Record<string, string>;
-                tool?: {
-                    type?: string;
-                    use_string?: string;
-                };
                 tags?: {
                     ItemSet?: {
                         tag_value?: string;
@@ -73,6 +65,11 @@ export interface CS_ItemsGameTXT {
                         [tagKey: string]: string;
                     };
                 };
+                tool?: {
+                    type?: string;
+                    use_string?: string;
+                };
+                used_by_classes?: Record<string, string>;
             };
         }[];
         music_definitions: {
@@ -99,7 +96,7 @@ export interface CS_ItemsGameTXT {
                 item_class: string;
                 item_name: string;
                 item_rarity: string;
-                image_inventory: string;
+                image_inventory?: string;
                 used_by_classes: Record<string, string>;
                 visuals: {
                     weapon_type: string;

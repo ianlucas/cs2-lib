@@ -14,15 +14,14 @@ export interface CS_Item {
     def?: number;
     free?: boolean;
     id: number;
-    image: string;
+    image?: string;
     index?: number;
     keys?: number[];
     legacy?: boolean;
-    localimage?: boolean;
     model?: string;
     name: string;
-    specialcontents?: number[];
-    specialimage?: number;
+    specials?: number[];
+    specialsimage?: boolean;
     rarity: string;
     teams?: CS_Team[];
     tint?: number;
@@ -72,8 +71,6 @@ export const CS_NAMETAG_RE =
 export const CS_STICKER_WEAR_FACTOR = 0.1;
 export const CS_MIN_STICKER_WEAR = 0;
 export const CS_MAX_STICKER_WEAR = 0.9;
-export const CS_SPECIAL_ITEM_IMAGE_DEFAULT = 1;
-export const CS_SPECIAL_ITEM_IMAGE_CUSTOM = 2;
 export const CS_NAMETAG_TOOL_DEF = 1200;
 export const CS_SWAP_STATTRAK_TOOL_DEF = 1324;
 export const CS_STORAGE_UNIT_TOOL_DEF = 1201;
@@ -299,41 +296,40 @@ export function CS_getStickers(): CS_Item[] {
 }
 
 export function CS_resolveItemImage(baseUrl: string, item: CS_Item | number, wear?: number): string {
-    const { base, id, image, localimage } = typeof item === "number" ? CS_Economy.getById(item) : item;
-    const url = `${baseUrl}/${id}`;
-    switch (true) {
-        case !localimage && image.charAt(0) === "/":
-            return `${baseUrl}${image}`;
-        case !localimage:
-            return image;
-        case base:
-            return `${baseUrl}/${id}.png`;
-        case wear === undefined:
-            return `${url}_light.png`;
+    const { base, id, image } = typeof item === "number" ? CS_Economy.getById(item) : item;
 
-        // In the future we need to be more precise on this, I don't think it's
-        // correct. Please let me know if you know which wear each image
-        // matches.
-
-        case wear !== undefined && wear < 1 / 3:
-            return `${url}_light.png`;
-        case wear !== undefined && wear < 2 / 3:
-            return `${url}_medium.png`;
-        default:
-            return `${url}_heavy.png`;
+    if (wear !== undefined) {
+        switch (true) {
+            case wear < 1 / 3:
+                return `${baseUrl}/${id}_light.png`;
+            case wear < 2 / 3:
+                return `${baseUrl}/${id}_medium.png`;
+            default:
+                return `${baseUrl}/${id}_heavy.png`;
+        }
     }
+
+    if (image === undefined) {
+        return `${baseUrl}/${id}.png`;
+    }
+
+    if (image.charAt(0) === "/") {
+        return `${baseUrl}${image}`;
+    }
+
+    return image;
 }
 
-export function CS_resolveCaseSpecialItemImage(baseUrl: string, item: CS_Item | number): string {
+export function CS_resolveCaseSpecialsImage(baseUrl: string, item: CS_Item | number): string {
     item = typeof item === "number" ? CS_Economy.getById(item) : item;
-    const { id, type, specialimage } = item;
+    const { id, type, specialsimage, specials } = item;
     if (type !== "case") {
         throw new Error("item is not a case");
     }
-    if (specialimage === undefined) {
+    if (specials === undefined) {
         throw new Error("case does not have special items");
     }
-    if (specialimage === CS_SPECIAL_ITEM_IMAGE_CUSTOM) {
+    if (specialsimage) {
         return `${baseUrl}/${id}_rare.png`;
     }
     return `${baseUrl}/default_rare_item.png`;

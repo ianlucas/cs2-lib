@@ -4,17 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { basename } from "path";
-import { GenerateScript } from "./generate.js";
-import { writeTxt } from "./util.js";
+import { ItemsGenerator } from "./items-generator.js";
+import { writeJson } from "./util.js";
 
-class DumpDefaultGraffiti {
+export class TintGraffitiNamesGenerator {
     async run() {
-        const generate = new GenerateScript();
-        generate.readCsgoLanguageTXT();
-        generate.readItemsGameTXT();
+        const generator = new ItemsGenerator();
+        generator.readCsgoLanguageTXT(["english"]);
+        generator.readItemsGameTXT();
         const graffiti: string[] = [];
 
-        for (const stickerProps of Object.values(generate.stickerKits)) {
+        for (const stickerProps of Object.values(generator.stickerKits)) {
             if (
                 !stickerProps.sticker_material?.includes("default/") &&
                 !stickerProps.sticker_material?.includes("default2019/") &&
@@ -22,13 +22,13 @@ class DumpDefaultGraffiti {
             ) {
                 continue;
             }
-            graffiti.push(generate.requireTranslation(stickerProps.item_name));
+            graffiti.push(generator.requireTranslation(stickerProps.item_name));
         }
 
-        writeTxt("assets/data/dump-default-graffiti.txt", graffiti.join("\n"));
+        writeJson("assets/data/tint-graffiti-names.json", graffiti);
     }
 }
 
-if (basename(process.argv[1]) === "dump-default-graffiti.ts") {
-    new DumpDefaultGraffiti().run();
+if (basename(process.argv[1]) === "tint-graffiti-names-generator.ts") {
+    new TintGraffitiNamesGenerator().run();
 }
