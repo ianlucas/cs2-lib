@@ -346,7 +346,7 @@ export class CS_Inventory {
             throw new Error("item is not a storage unit");
         }
         const stored = inventoryItem.storage;
-        if (!stored || indexes.length === 0) {
+        if (stored === undefined || indexes.length === 0) {
             throw new Error("no items to retrieve");
         }
         if (!this.hasItemsInStorageUnit(index)) {
@@ -358,9 +358,9 @@ export class CS_Inventory {
             }
             stored[index].updatedat = timestamp();
         }
-        this.items = [...indexes.map((index) => stored[index]), ...this.items];
         const storage = stored.filter((_, index) => !indexes.includes(index));
         this.items[index].storage = storage.length > 0 ? storage : undefined;
+        this.items = [...indexes.map((index) => stored[index]), ...this.items];
         return this;
     }
 

@@ -270,7 +270,7 @@ test("storage unit", () => {
     expect(() => inventory.retrieveFromStorageUnit(0, [])).toThrow();
     inventory.retrieveFromStorageUnit(0, [0]);
     expect(inventory.size()).toBe(5);
-    expect(inventory.getStorageUnitItems(0).length).toBe(1);
-    expect(inventory.getStorageUnitItems(0)[0].id).toBe(1841);
+    expect(inventory.getStorageUnitItems(1).length).toBe(1);
+    expect(inventory.getStorageUnitItems(1)[0].id).toBe(1841);
     expect(inventory.get(0).id).toBe(1801);
 });
