@@ -322,7 +322,12 @@ export class CS_Inventory {
         }
         this.items[index].storage = (inventoryItem.storage ?? []).concat(
             indexes.map((index) => {
-                return this.items[index];
+                return {
+                    ...this.items[index],
+                    equipped: undefined,
+                    equippedCT: undefined,
+                    equippedT: undefined
+                };
             })
         );
         this.items[index].updatedat = timestamp();
