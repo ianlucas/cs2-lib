@@ -38,8 +38,28 @@ export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
 
 export const CS_INVENTORY_TIMESTAMP = 1707696138408;
 
-function timestamp() {
+export function CS_getTimestamp() {
     return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
+}
+
+export class CS_InventoryUids {
+    private items: Map<number, CS_InventoryItem>;
+
+    constructor(items: Map<number, CS_InventoryItem> | CS_InventoryItem[]) {
+        this.items = items instanceof Map ? items : new Map(items.map((item) => [item.uid, item]));
+    }
+
+    add(item: Omit<CS_InventoryItem, "uid">) {
+        let uid = 0;
+        while (true) {
+            if (!this.items.has(uid)) {
+                const newItem = { ...item, uid };
+                this.items.set(uid, newItem);
+                return newItem;
+            }
+            uid++;
+        }
+    }
 }
 
 export function CS_validateInventoryItem({
@@ -50,7 +70,7 @@ export function CS_validateInventoryItem({
     stickers,
     stickerswear,
     wear
-}: CS_InventoryItem) {
+}: Omit<CS_InventoryItem, "uid">) {
     const item = CS_Economy.getById(id);
     if (wear !== undefined) {
         CS_validateWear(wear, item);
@@ -80,6 +100,7 @@ export interface CS_InventoryItem {
     stickers?: number[];
     stickerswear?: number[];
     storage?: CS_InventoryItem[];
+    uid: number;
     updatedat?: number;
     wear?: number;
 }
@@ -91,40 +112,46 @@ export interface CS_InventoryOptions {
 }
 
 export class CS_Inventory {
-    private items: CS_InventoryItem[];
+    private items = new Map<number, CS_InventoryItem>();
     private limit: number;
     private storageUnitLimit: number;
+    private uids: CS_InventoryUids;
 
     constructor({ items, limit, storageUnitLimit }: CS_InventoryOptions) {
-        this.items = items ?? [];
+        this.items = new Map((items ?? []).map((item) => [item.uid, item]));
         this.limit = limit ?? 256;
         this.storageUnitLimit = storageUnitLimit ?? 32;
+        this.uids = new CS_InventoryUids(this.items);
     }
 
     full(): boolean {
-        return this.items.length === this.limit;
+        return this.items.size === this.limit;
     }
 
-    add(inventoryItem: CS_InventoryItem) {
+    add(
+        inventoryItem: Omit<CS_InventoryItem, "uid"> & {
+            uid?: number;
+        }
+    ) {
         if (this.full()) {
             return this;
         }
         CS_validateInventoryItem(inventoryItem);
-        this.items.unshift({
+        this.uids.add({
             ...inventoryItem,
             equipped: undefined,
             equippedCT: undefined,
             equippedT: undefined,
-            updatedat: timestamp()
+            updatedat: CS_getTimestamp()
         });
         return this;
     }
 
-    addWithNametag(toolIndex: number, itemId: number, nametag: string) {
+    addWithNametag(toolUid: number, itemId: number, nametag: string) {
         if (nametag === "") {
             throw new Error("invalid nametag");
         }
-        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        const toolItem = CS_Economy.getById(this.get(toolUid).id);
         if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
             throw new Error("tool must be name tag");
         }
@@ -132,7 +159,7 @@ export class CS_Inventory {
         if (!CS_hasNametag(targetItem)) {
             throw new Error("item does not have nametag");
         }
-        this.items.splice(toolIndex, 1);
+        this.items.delete(toolUid);
         this.add({
             id: itemId,
             nametag
@@ -140,30 +167,25 @@ export class CS_Inventory {
         return this;
     }
 
-    edit(index: number, changes: Partial<CS_InventoryItem>) {
-        if (!this.items[index]) {
-            throw new Error("invalid inventory item");
-        }
-        if (changes.id !== undefined && this.items[index].id !== changes.id) {
+    edit(itemUid: number, attributes: Partial<CS_InventoryItem>) {
+        const inventoryItem = this.get(itemUid);
+        if (attributes.id !== undefined && inventoryItem.id !== attributes.id) {
             throw new Error("item id cannot be modified");
         }
-        const inventoryItem = {
-            ...this.items[index],
-            ...changes
-        };
-        CS_validateInventoryItem(inventoryItem);
-        this.items[index] = {
+        const changes = {
             ...inventoryItem,
-            updatedat: timestamp()
+            ...attributes
         };
+        CS_validateInventoryItem(changes);
+        this.items.set(itemUid, {
+            ...changes,
+            updatedat: CS_getTimestamp()
+        });
         return this;
     }
 
-    equip(index: number, team?: CS_Team) {
-        const inventoryItem = this.items[index];
-        if (!inventoryItem) {
-            return this;
-        }
+    equip(itemUid: number, team?: CS_Team) {
+        const inventoryItem = this.get(itemUid);
         if (inventoryItem.equipped) {
             return this;
         }
@@ -183,42 +205,35 @@ export class CS_Inventory {
         if (team !== undefined && !item.teams?.includes(team)) {
             return this;
         }
-        for (let other = 0; other < this.items.length; other++) {
-            const current = this.items[other];
-            if (index === other) {
-                current.equipped = team === undefined ? true : undefined;
-                current.equippedCT = team === CS_TEAM_CT ? true : current.equippedCT;
-                current.equippedT = team === CS_TEAM_T ? true : current.equippedT;
+        for (const [otherUid, otherInventoryItem] of this.items) {
+            if (itemUid === otherUid) {
+                otherInventoryItem.equipped = team === undefined ? true : undefined;
+                otherInventoryItem.equippedCT = team === CS_TEAM_CT ? true : otherInventoryItem.equippedCT;
+                otherInventoryItem.equippedT = team === CS_TEAM_T ? true : otherInventoryItem.equippedT;
             } else {
-                const currentItem = CS_Economy.getById(current.id);
+                const currentItem = CS_Economy.getById(otherInventoryItem.id);
                 if (currentItem.type === item.type && (item.type !== "weapon" || currentItem.model === item.model)) {
-                    current.equipped = team === undefined ? undefined : current.equipped;
-                    current.equippedCT = team === CS_TEAM_CT ? undefined : current.equippedCT;
-                    current.equippedT = team === CS_TEAM_T ? undefined : current.equippedT;
+                    otherInventoryItem.equipped = team === undefined ? undefined : otherInventoryItem.equipped;
+                    otherInventoryItem.equippedCT = team === CS_TEAM_CT ? undefined : otherInventoryItem.equippedCT;
+                    otherInventoryItem.equippedT = team === CS_TEAM_T ? undefined : otherInventoryItem.equippedT;
                 }
             }
         }
         return this;
     }
 
-    unequip(index: number, team?: CS_Team) {
-        if (!this.items[index]) {
-            return this;
-        }
-        const item = this.items[index];
-        item.equipped = team === undefined ? undefined : item.equipped;
-        item.equippedCT = team === CS_TEAM_CT ? undefined : item.equippedCT;
-        item.equippedT = team === CS_TEAM_T ? undefined : item.equippedT;
+    unequip(uid: number, team?: CS_Team) {
+        const inventoryItem = this.get(uid);
+        inventoryItem.equipped = team === undefined ? undefined : inventoryItem.equipped;
+        inventoryItem.equippedCT = team === CS_TEAM_CT ? undefined : inventoryItem.equippedCT;
+        inventoryItem.equippedT = team === CS_TEAM_T ? undefined : inventoryItem.equippedT;
         return this;
     }
 
-    unlockCase(unlockedItem: ReturnType<typeof CS_unlockCase>, caseIndex: number, keyIndex?: number) {
-        if (!this.items[caseIndex] || (keyIndex !== undefined && !this.items[keyIndex])) {
-            throw new Error("invalid inventory item(s)");
-        }
-        const caseItem = CS_Economy.getById(this.items[caseIndex].id);
+    unlockCase(unlockedItem: ReturnType<typeof CS_unlockCase>, caseUid: number, keyUid?: number) {
+        const caseItem = CS_Economy.getById(this.get(caseUid).id);
         CS_validateUnlockedItem(caseItem, unlockedItem);
-        const keyItem = keyIndex !== undefined ? CS_Economy.getById(this.items[keyIndex].id) : undefined;
+        const keyItem = keyUid !== undefined ? CS_Economy.getById(this.get(keyUid).id) : undefined;
         if (keyItem !== undefined && keyItem.type !== "key") {
             throw new Error("item is not a key");
         }
@@ -228,168 +243,154 @@ export class CS_Inventory {
         if (caseItem.keys === undefined && keyItem !== undefined) {
             throw new Error("case does not need a key");
         }
-        keyIndex = keyIndex !== undefined ? (keyIndex > caseIndex ? keyIndex - 1 : keyIndex) : undefined;
-        this.items.splice(caseIndex, 1);
-        if (keyIndex !== undefined) {
-            this.items.splice(keyIndex, 1);
+        this.items.delete(caseUid);
+        if (keyUid !== undefined) {
+            this.items.delete(keyUid);
         }
-        this.items.unshift({
+        this.add({
             id: unlockedItem.id,
             ...unlockedItem.attributes,
-            updatedat: timestamp()
+            updatedat: CS_getTimestamp()
         });
         return this;
     }
 
-    renameItem(toolIndex: number, targetIndex: number, nametag?: string) {
+    renameItem(toolUid: number, targetUid: number, nametag?: string) {
         nametag = nametag === "" ? undefined : nametag;
-        if (!this.items[toolIndex] || !this.items[targetIndex]) {
-            throw new Error("invalid inventory item(s)");
-        }
-        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        const toolItem = CS_Economy.getById(this.get(toolUid).id);
         if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
             throw new Error("tool must be name tag");
         }
-        const targetItem = CS_Economy.getById(this.items[targetIndex].id);
+        const targetInventoryItem = this.get(targetUid);
+        const targetItem = CS_Economy.getById(targetInventoryItem.id);
         if (!CS_hasNametag(targetItem)) {
             throw new Error("item does not have nametag");
         }
         if (nametag !== undefined) {
             CS_validateNametag(nametag);
         }
-        this.items[targetIndex].nametag = nametag;
-        this.items[targetIndex].updatedat = timestamp();
-        this.items.splice(toolIndex, 1);
+        targetInventoryItem.nametag = nametag;
+        targetInventoryItem.updatedat = CS_getTimestamp();
+        this.items.delete(toolUid);
         return this;
     }
 
-    renameStorageUnit(index: number, nametag: string) {
+    renameStorageUnit(storageUid: number, nametag: string) {
         if (nametag.trim() === "") {
             throw new Error("invalid nametag");
         }
-        if (!this.items[index]) {
-            throw new Error("invalid inventory item");
-        }
-        const item = CS_Economy.getById(this.items[index].id);
-        if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
+        const storageInventoryItem = this.get(storageUid);
+        const storageItem = CS_Economy.getById(storageInventoryItem.id);
+        if (storageItem.def !== CS_STORAGE_UNIT_TOOL_DEF) {
             throw new Error("item is not a storage unit");
         }
         CS_validateNametag(nametag);
-        this.items[index].nametag = nametag;
-        this.items[index].updatedat = timestamp();
+        storageInventoryItem.nametag = nametag;
+        storageInventoryItem.updatedat = CS_getTimestamp();
         return this;
     }
 
-    isStorageUnitFull(index: number) {
-        return this.items[index]?.storage?.length === this.storageUnitLimit;
+    isStorageUnitFull(storageUid: number) {
+        return this.get(storageUid).storage?.length === this.storageUnitLimit;
     }
 
-    hasItemsInStorageUnit(index: number) {
-        return (this.items[index]?.storage?.length ?? 0) > 0;
+    hasItemsInStorageUnit(storageUid: number) {
+        return (this.get(storageUid).storage?.length ?? 0) > 0;
     }
 
-    canDepositToStorageUnit(index: number) {
-        return this.items[index]?.nametag !== undefined && !this.isStorageUnitFull(index);
+    canDepositToStorageUnit(storageUid: number) {
+        return this.get(storageUid).nametag !== undefined && !this.isStorageUnitFull(storageUid);
     }
 
-    getStorageUnitItems(index: number) {
-        return this.items[index]?.storage ?? [];
+    getStorageUnitItems(storageUid: number) {
+        return this.get(storageUid).storage ?? [];
     }
 
-    depositToStorageUnit(index: number, indexes: number[]) {
-        if (!this.items[index]) {
-            throw new Error("invalid inventory item");
-        }
-        const inventoryItem = this.items[index];
-        const item = CS_Economy.getById(inventoryItem.id);
+    depositToStorageUnit(storageUid: number, depositUids: number[]) {
+        const storageInventoryItem = this.get(storageUid);
+        const item = CS_Economy.getById(storageInventoryItem.id);
         if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
             throw new Error("item is not a storage unit");
         }
-        if (indexes.length === 0) {
+        if (depositUids.length === 0) {
             throw new Error("no items to deposit");
         }
-        if (!this.canDepositToStorageUnit(index)) {
+        if (!this.canDepositToStorageUnit(storageUid)) {
             throw new Error("cannot deposit to storage unit");
         }
-        for (const index of indexes) {
-            if (!this.items[index]) {
-                throw new Error("invalid inventory item");
-            }
-            const item = CS_Economy.getById(this.items[index].id);
+        for (const uid of depositUids) {
+            const item = CS_Economy.getById(this.get(uid).id);
             if (item.def === CS_STORAGE_UNIT_TOOL_DEF) {
                 throw new Error("cannot deposit storage unit");
             }
         }
-        this.items[index].storage = (inventoryItem.storage ?? []).concat(
-            indexes.map((index) => {
-                return {
-                    ...this.items[index],
+        const storage = storageInventoryItem.storage ?? [];
+        const uids = new CS_InventoryUids(storage);
+        storageInventoryItem.storage = storage.concat(
+            depositUids.map((index) => {
+                return uids.add({
+                    ...this.get(index),
                     equipped: undefined,
                     equippedCT: undefined,
                     equippedT: undefined
-                };
+                });
             })
         );
-        this.items[index].updatedat = timestamp();
-        this.items = this.items.filter((_, index) => !indexes.includes(index));
+        storageInventoryItem.updatedat = CS_getTimestamp();
+        for (const uid of depositUids) {
+            this.items.delete(uid);
+        }
         return this;
     }
 
-    retrieveFromStorageUnit(index: number, indexes: number[]) {
-        if (!this.items[index]) {
-            throw new Error("invalid inventory item");
-        }
-        const inventoryItem = this.items[index];
-        const item = CS_Economy.getById(inventoryItem.id);
+    retrieveFromStorageUnit(storageUid: number, retrieveUids: number[]) {
+        const storageInventoryItem = this.get(storageUid);
+        const storageItem = CS_Economy.getById(storageInventoryItem.id);
 
-        if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
+        if (storageItem.def !== CS_STORAGE_UNIT_TOOL_DEF) {
             throw new Error("item is not a storage unit");
         }
-        const stored = inventoryItem.storage;
-        if (stored === undefined || indexes.length === 0) {
+        const stored = storageInventoryItem.storage;
+        if (stored === undefined || retrieveUids.length === 0) {
             throw new Error("no items to retrieve");
         }
-        if (!this.hasItemsInStorageUnit(index)) {
+        if (!this.hasItemsInStorageUnit(storageUid)) {
             throw new Error("storage unit is empty");
         }
-        for (const index of indexes) {
-            if (!stored[index]) {
-                throw new Error("invalid storage unit item");
+        for (const inventoryItem of stored) {
+            if (retrieveUids.includes(inventoryItem.uid)) {
+                inventoryItem.updatedat = CS_getTimestamp();
+                this.add(inventoryItem);
             }
-            stored[index].updatedat = timestamp();
         }
-        const storage = stored.filter((_, index) => !indexes.includes(index));
-        this.items[index].storage = storage.length > 0 ? storage : undefined;
-        this.items = [...indexes.map((index) => stored[index]), ...this.items];
+        const storage = stored.filter(({ uid }) => !retrieveUids.includes(uid));
+        storageInventoryItem.storage = storage.length > 0 ? storage : undefined;
         return this;
     }
 
-    applyItemSticker(itemIndex: number, stickerItemIndex: number, stickerIndex: number) {
-        if (!this.items[itemIndex] || !this.items[stickerItemIndex]) {
-            throw new Error("invalid inventory item(s)");
-        }
-        const inventoryItem = this.items[itemIndex];
-        const item = CS_Economy.getById(inventoryItem.id);
+    applyItemSticker(targetUid: number, stickerUid: number, stickerIndex: number) {
+        const targetInventoryItem = this.get(targetUid);
+        const item = CS_Economy.getById(targetInventoryItem.id);
         if (!CS_hasStickers(item)) {
             throw new Error("item does not have stickers");
         }
-        const sticker = CS_Economy.getById(this.items[stickerItemIndex].id);
+        const sticker = CS_Economy.getById(this.get(stickerUid).id);
         if (sticker.type !== "sticker") {
             throw new Error("not applying a sticker");
         }
-        const stickers = inventoryItem.stickers ?? [CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER];
+        const stickers = targetInventoryItem.stickers ?? [CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER];
         if (stickers[stickerIndex] !== CS_NO_STICKER) {
             throw new Error("cant apply existing sticker");
         }
         stickers[stickerIndex] = sticker.id;
-        inventoryItem.stickers = stickers;
-        inventoryItem.updatedat = timestamp();
-        this.items.splice(stickerItemIndex, 1);
+        targetInventoryItem.stickers = stickers;
+        targetInventoryItem.updatedat = CS_getTimestamp();
+        this.items.delete(stickerUid);
         return this;
     }
 
-    scrapeItemSticker(itemIndex: number, stickerIndex: number) {
-        const inventoryItem = this.items[itemIndex];
+    scrapeItemSticker(targetUid: number, stickerIndex: number) {
+        const inventoryItem = this.get(targetUid);
         if (!inventoryItem || !inventoryItem.stickers) {
             throw new Error("invalid inventory item");
         }
@@ -415,38 +416,32 @@ export class CS_Inventory {
         }
         stickersWear[stickerIndex] = nextWear;
         inventoryItem.stickerswear = stickersWear;
-        inventoryItem.updatedat = timestamp();
+        inventoryItem.updatedat = CS_getTimestamp();
         return this;
     }
 
-    incrementItemStatTrak(itemIndex: number) {
-        const inventoryItem = this.items[itemIndex];
+    incrementItemStatTrak(targetUid: number) {
+        const inventoryItem = this.get(targetUid);
         if (!inventoryItem || inventoryItem.stattrak === undefined) {
             throw new Error("invalid inventory item");
         }
         if (inventoryItem.stattrak < CS_MAX_STATTRAK) {
             inventoryItem.stattrak++;
-            inventoryItem.updatedat = timestamp();
+            inventoryItem.updatedat = CS_getTimestamp();
         }
         return this;
     }
 
-    swapItemsStatTrak(toolIndex: number, fromIndex: number, toIndex: number) {
-        if (fromIndex === toIndex) {
-            throw new Error("indexes must be different");
+    swapItemsStatTrak(toolUid: number, fromUid: number, toUid: number) {
+        if (fromUid === toUid) {
+            throw new Error("uids must be different");
         }
-        const fromInventoryItem = this.items[fromIndex];
-        const toInventoryItem = this.items[toIndex];
-        if (
-            !this.items[toolIndex] ||
-            !fromInventoryItem ||
-            !toInventoryItem ||
-            fromInventoryItem.stattrak === undefined ||
-            toInventoryItem.stattrak === undefined
-        ) {
+        const fromInventoryItem = this.get(fromUid);
+        const toInventoryItem = this.get(toUid);
+        if (fromInventoryItem.stattrak === undefined || toInventoryItem.stattrak === undefined) {
             throw new Error("invalid inventory items");
         }
-        const toolItem = CS_Economy.getById(this.items[toolIndex].id);
+        const toolItem = CS_Economy.getById(this.get(toolUid).id);
         if (toolItem.def !== CS_SWAP_STATTRAK_TOOL_DEF) {
             throw new Error("tool must be stattrak swap tool");
         }
@@ -460,18 +455,19 @@ export class CS_Inventory {
         }
         const fromStattrak = fromInventoryItem.stattrak;
         fromInventoryItem.stattrak = toInventoryItem.stattrak;
-        fromInventoryItem.updatedat = timestamp();
+        fromInventoryItem.updatedat = CS_getTimestamp();
         toInventoryItem.stattrak = fromStattrak;
-        toInventoryItem.updatedat = timestamp();
-        this.items.splice(toolIndex, 1);
+        toInventoryItem.updatedat = CS_getTimestamp();
+        this.items.delete(toolUid);
         return this;
     }
 
-    get(index: number) {
-        if (!this.items[index]) {
+    get(uid: number) {
+        const inventoryItem = this.items.get(uid);
+        if (inventoryItem === undefined) {
             throw new Error("invalid inventory item");
         }
-        return this.items[index];
+        return inventoryItem;
     }
 
     getItem(index: number) {
@@ -485,30 +481,25 @@ export class CS_Inventory {
     }
 
     getAll(): CS_InventoryItem[] {
-        return this.items;
+        return Array.from(this.items.values());
     }
 
-    remove(index: number) {
-        if (!this.items[index]) {
-            return this;
-        }
-        this.items.splice(index, 1);
+    remove(uid: number) {
+        this.items.delete(uid);
         return this;
     }
 
     removeAll() {
-        while (this.items[0]) {
-            this.items.splice(0, 1);
-        }
+        this.items.clear();
     }
 
     size() {
-        return this.items.length;
+        return this.items.size;
     }
 
     copy() {
         return new CS_Inventory({
-            items: this.items,
+            items: this.getAll(),
             limit: this.limit
         });
     }

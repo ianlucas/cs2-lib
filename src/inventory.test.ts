@@ -82,40 +82,39 @@ test("unequip item", () => {
 
 test("unlock case", () => {
     inventory.removeAll();
-    inventory.add({ id: 9425 }); // case
-    inventory.add({ id: 9534 }); // key
-    inventory.unlockCase(CS_unlockCase(9425), 1, 0);
+    inventory.add({ id: 9425 }); // case -> 0
+    inventory.add({ id: 9534 }); // key -> 1
+    inventory.unlockCase(CS_unlockCase(9425), 0, 1);
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0).id).not.toBe(9425);
     expect(inventory.get(0).id).not.toBe(9534);
-    inventory.remove(0);
-    inventory.add({ id: 9425 }); // case
-    inventory.add({ id: 9534 }); // key
-    expect(() => inventory.unlockCase(CS_unlockCase(9425), 0, 1)).toThrow();
-    inventory.remove(0);
-    inventory.remove(0);
+    inventory.removeAll();
+    inventory.add({ id: 9425 }); // case -> 0
+    inventory.add({ id: 9534 }); // key -> 1
+    expect(() => inventory.unlockCase(CS_unlockCase(9425), 1, 0)).toThrow();
+    inventory.removeAll();
     inventory.add({ id: 9426 }); // capsule case
     inventory.unlockCase(CS_unlockCase(9426), 0);
     expect(inventory.size()).toBe(1);
     expect(CS_Economy.getById(inventory.get(0).id).type).toBe("sticker");
-    inventory.remove(0);
-    inventory.add({ id: 9534 }); // key
-    inventory.add({ id: 9425 }); // case
-    inventory.unlockCase(CS_unlockCase(9425), 0, 1);
+    inventory.removeAll();
+    inventory.add({ id: 9534 }); // key -> 0
+    inventory.add({ id: 9425 }); // case -> 1
+    inventory.unlockCase(CS_unlockCase(9425), 1, 0);
     expect(inventory.size()).toBe(1);
 });
 
 test("rename item", () => {
     inventory.removeAll();
-    inventory.add({ id: 307, nametag: "initial nametag" }); // dragon lore
-    inventory.add({ id: 11261 }); // nametag
+    inventory.add({ id: 307, nametag: "initial nametag" }); // dragon lore -> 0
+    inventory.add({ id: 11261 }); // nametag -> 1
     expect(inventory.size()).toBe(2);
-    expect(inventory.get(1).nametag).toBe("initial nametag");
-    inventory.renameItem(0, 1, "new nametag");
+    expect(inventory.get(0).nametag).toBe("initial nametag");
+    inventory.renameItem(1, 0, "new nametag");
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0).nametag).toBe("new nametag");
     inventory.add({ id: 11261 }); // nametag
-    inventory.renameItem(0, 1);
+    inventory.renameItem(1, 0);
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0).nametag).toBe(undefined);
 });
@@ -126,22 +125,23 @@ test("apply item sticker", () => {
     inventory.add({ id: 7307 });
     inventory.add({ id: 7308 });
     inventory.add({ id: 6001 });
-    inventory.add({ id: 307 });
-    inventory.add({ id: 307 });
+    inventory.add({ id: 307 }); // 4
+    inventory.add({ id: 307 }); // 5
     expect(inventory.get(0).stickers).toBe(undefined);
     expect(() => inventory.applyItemSticker(0, 1, 0)).toThrow();
     for (let stickerIndex = 0; stickerIndex < 4; stickerIndex++) {
-        const expectedId = inventory.get(2).id;
-        inventory.applyItemSticker(0, 2, stickerIndex);
-        expect(() => inventory.applyItemSticker(0, 2, stickerIndex)).toThrow();
+        const expectedId = inventory.get(stickerIndex).id;
+        inventory.applyItemSticker(4, stickerIndex, stickerIndex);
+        expect(() => inventory.applyItemSticker(4, 2, stickerIndex)).toThrow();
         expect(inventory.size()).toBe(6 - (stickerIndex + 1));
-        expect(inventory.get(0).stickers).not.toBe(undefined);
-        expect(inventory.get(0).stickers![stickerIndex]).toBe(expectedId);
+        expect(inventory.get(4).stickers).not.toBe(undefined);
+        expect(inventory.get(4).stickers![stickerIndex]).toBe(expectedId);
     }
-    expect(() => inventory.applyItemSticker(0, 1, 5)).toThrow();
-    expect(() => inventory.applyItemSticker(0, 1, -1)).toThrow();
-    expect(() => inventory.applyItemSticker(0, 1, NaN)).toThrow();
-    expect(inventory.size()).toBe(2);
+    inventory.add({ id: 6001 });
+    expect(() => inventory.applyItemSticker(4, 2, 5)).toThrow();
+    expect(() => inventory.applyItemSticker(4, 2, -1)).toThrow();
+    expect(() => inventory.applyItemSticker(4, 2, NaN)).toThrow();
+    expect(inventory.size()).toBe(3);
 });
 
 test("scrape item sticker", () => {
@@ -174,68 +174,70 @@ test("increment stattrak", () => {
     expect(inventory.get(0).stattrak).toBe(undefined);
     expect(() => inventory.incrementItemStatTrak(0)).toThrow();
     inventory.add({ id: 307, stattrak: 0 });
-    expect(inventory.get(0).stattrak).toBe(0);
-    inventory.incrementItemStatTrak(0);
-    expect(inventory.get(0).stattrak).toBe(1);
+    expect(inventory.get(1).stattrak).toBe(0);
+    inventory.incrementItemStatTrak(1);
+    expect(inventory.get(1).stattrak).toBe(1);
     inventory.add({ id: 307, stattrak: CS_MAX_STATTRAK - 1 });
-    inventory.incrementItemStatTrak(0);
-    inventory.incrementItemStatTrak(0);
-    expect(inventory.get(0).stattrak).toBe(CS_MAX_STATTRAK);
+    inventory.incrementItemStatTrak(2);
+    inventory.incrementItemStatTrak(2);
+    expect(inventory.get(2).stattrak).toBe(CS_MAX_STATTRAK);
 });
 
 test("swap items stattrak", () => {
     inventory.removeAll();
-    inventory.add({ id: 11263 });
-    inventory.add({ id: 307, stattrak: 0 });
-    inventory.add({ id: 307, stattrak: 2556 });
-    inventory.swapItemsStatTrak(2, 0, 1);
-    expect(inventory.get(0).stattrak).toBe(0);
+    inventory.add({ id: 11263 }); //0
+    inventory.add({ id: 307, stattrak: 0 }); //1
+    inventory.add({ id: 307, stattrak: 2556 }); //2
+    inventory.swapItemsStatTrak(0, 1, 2);
+    expect(inventory.get(2).stattrak).toBe(0);
     expect(inventory.get(1).stattrak).toBe(2556);
     inventory.removeAll();
-    inventory.add({ id: 11263 });
-    inventory.add({ id: 307, stattrak: 0 });
-    inventory.add({ id: 307, stattrak: 2556 });
-    inventory.swapItemsStatTrak(2, 1, 0);
-    expect(inventory.get(0).stattrak).toBe(0);
+    inventory.add({ id: 11263 }); //0
+    inventory.add({ id: 307, stattrak: 0 }); //1
+    inventory.add({ id: 307, stattrak: 2556 }); //2
+    inventory.swapItemsStatTrak(0, 2, 1);
+    expect(inventory.get(2).stattrak).toBe(0);
     expect(inventory.get(1).stattrak).toBe(2556);
     inventory.removeAll();
-    inventory.add({ id: 11263 });
-    inventory.add({ id: 307 });
-    inventory.add({ id: 307, stattrak: 2556 });
-    expect(() => inventory.swapItemsStatTrak(2, 0, 1)).toThrow();
+    inventory.add({ id: 11263 }); //0
+    inventory.add({ id: 307 }); //1
+    inventory.add({ id: 307, stattrak: 2556 }); //2
+    expect(() => inventory.swapItemsStatTrak(0, 1, 2)).toThrow();
     inventory.removeAll();
     for (let i = 0; i < 5; i++) {
-        inventory.add({ id: 11263 });
+        inventory.add({ id: 11263 }); //0-4
     }
-    inventory.add({ id: 1501, stattrak: 10 }); // 9
-    inventory.add({ id: 1499, stattrak: 9 }); // 8
+    inventory.add({ id: 1501, stattrak: 10 }); // 5
+    inventory.add({ id: 1499, stattrak: 9 }); // 6
     inventory.add({ id: 1334, stattrak: 8 }); // 7
-    inventory.add({ id: 1356, stattrak: 7 }); // 6
-    inventory.add({ id: 1139, stattrak: 1 }); // 5
-    inventory.add({ id: 1126, stattrak: 2 }); // 4
-    inventory.add({ id: 307, stattrak: 3 }); // 3
-    inventory.add({ id: 313, stattrak: 4 }); // 2
-    inventory.add({ id: 1841, stattrak: 5 }); // 1
-    inventory.add({ id: 1801, stattrak: 6 }); // 0
+    inventory.add({ id: 1356, stattrak: 7 }); // 8
+    inventory.add({ id: 1139, stattrak: 1 }); // 9
+    inventory.add({ id: 1126, stattrak: 2 }); // 10
+    inventory.add({ id: 307, stattrak: 3 }); // 11
+    inventory.add({ id: 313, stattrak: 4 }); // 12
+    inventory.add({ id: 1841, stattrak: 5 }); // 13
+    inventory.add({ id: 1801, stattrak: 6 }); // 14
 
     const initialSize = inventory.size();
 
-    for (let i = 0; i < 10; i += 2) {
-        for (let j = 0; j < 10; j++) {
+    for (let i = 5; i < 15; i += 2) {
+        for (let j = 5; j < 15; j++) {
             if (j === i || j === i + 1) continue;
-            expect(() => inventory.swapItemsStatTrak(10, i, j)).toThrow();
+            expect(() => inventory.swapItemsStatTrak(0, i, j)).toThrow();
         }
     }
 
-    expect(() => inventory.swapItemsStatTrak(2, 0, 1)).toThrow();
-    expect(() => inventory.swapItemsStatTrak(10, 0, 0)).toThrow();
+    expect(() => inventory.swapItemsStatTrak(14, 13, 12)).toThrow();
+    expect(() => inventory.swapItemsStatTrak(0, 14, 14)).toThrow();
 
-    for (let i = 0; i < 10; i += 2) {
+    let t = 0;
+    for (let i = 5; i < 15; i += 2) {
         const from = inventory.get(i).stattrak;
         const to = inventory.get(i + 1).stattrak;
-        inventory.swapItemsStatTrak(10, i, i + 1);
+        inventory.swapItemsStatTrak((i - 5) / 2, i, i + 1);
         expect(inventory.get(i).stattrak).toBe(to);
         expect(inventory.get(i + 1).stattrak).toBe(from);
+        t++;
     }
 
     expect(inventory.size()).toBe(initialSize - 5);
@@ -243,34 +245,35 @@ test("swap items stattrak", () => {
 
 test("storage unit", () => {
     inventory = new CS_Inventory({ limit: 32, storageUnitLimit: 2 });
-    inventory.add({ id: 307, stattrak: 3 }); // 5
-    inventory.add({ id: 313, stattrak: 4 }); // 4
-    inventory.add({ id: 1841, stattrak: 5 }); // 3
-    inventory.add({ id: 1801, stattrak: 6 }); // 2
-    inventory.add({ id: 11262 }); // 1
-    inventory.add({ id: 11262 }); // 0
+    inventory.add({ id: 307, stattrak: 3 }); // 0
+    inventory.add({ id: 313, stattrak: 4 }); // 1
+    inventory.add({ id: 1841, stattrak: 5 }); // 2
+    inventory.add({ id: 1801, stattrak: 6 }); // 3
+    inventory.add({ id: 11262 }); // 4
+    inventory.add({ id: 11262 }); // 5
 
     expect(inventory.size()).toBe(6);
-    expect(inventory.isStorageUnitFull(0)).toBe(false);
-    expect(inventory.hasItemsInStorageUnit(0)).toBe(false);
-    expect(inventory.canDepositToStorageUnit(0)).toBe(false);
-    expect(() => inventory.depositToStorageUnit(0, [2, 3])).toThrow();
-    inventory.renameStorageUnit(0, "storage unit");
-    expect(inventory.get(0).nametag).toBe("storage unit");
-    expect(() => inventory.depositToStorageUnit(0, [1])).toThrow();
-    expect(() => inventory.retrieveFromStorageUnit(0, [0, 1])).toThrow();
-    expect(() => inventory.depositToStorageUnit(0, [10])).toThrow();
-    expect(() => inventory.depositToStorageUnit(0, [])).toThrow();
-    inventory.depositToStorageUnit(0, [2, 3]);
+    expect(inventory.isStorageUnitFull(4)).toBe(false);
+    expect(inventory.hasItemsInStorageUnit(4)).toBe(false);
+    expect(inventory.canDepositToStorageUnit(4)).toBe(false);
+    expect(() => inventory.depositToStorageUnit(4, [0, 1])).toThrow();
+    inventory.renameStorageUnit(4, "storage unit");
+    expect(inventory.get(4).nametag).toBe("storage unit");
+    expect(() => inventory.depositToStorageUnit(4, [5])).toThrow();
+    expect(() => inventory.retrieveFromStorageUnit(4, [0, 1])).toThrow();
+    expect(() => inventory.depositToStorageUnit(4, [10])).toThrow();
+    expect(() => inventory.depositToStorageUnit(4, [])).toThrow();
+    inventory.depositToStorageUnit(4, [0, 1]);
     expect(inventory.size()).toBe(4);
-    expect(inventory.getStorageUnitItems(0).length).toBe(2);
-    expect(inventory.getStorageUnitItems(0)[0].id).toBe(1801);
-    expect(inventory.getStorageUnitItems(0)[1].id).toBe(1841);
-    expect(() => inventory.depositToStorageUnit(0, [2])).toThrow();
-    expect(() => inventory.retrieveFromStorageUnit(0, [])).toThrow();
-    inventory.retrieveFromStorageUnit(0, [0]);
+    expect(inventory.getStorageUnitItems(4).length).toBe(2);
+    expect(inventory.getStorageUnitItems(4)[0].id).toBe(307);
+    expect(inventory.getStorageUnitItems(4)[1].id).toBe(313);
+    expect(() => inventory.depositToStorageUnit(4, [2])).toThrow();
+    expect(() => inventory.retrieveFromStorageUnit(4, [])).toThrow();
+    inventory.retrieveFromStorageUnit(4, [0]);
     expect(inventory.size()).toBe(5);
-    expect(inventory.getStorageUnitItems(1).length).toBe(1);
-    expect(inventory.getStorageUnitItems(1)[0].id).toBe(1841);
-    expect(inventory.get(0).id).toBe(1801);
+    expect(inventory.getStorageUnitItems(4).length).toBe(1);
+    expect(inventory.getStorageUnitItems(4)[0].id).toBe(313);
+    expect(inventory.getStorageUnitItems(4)[0].uid).toBe(1);
+    expect(inventory.get(0).id).toBe(307);
 });
