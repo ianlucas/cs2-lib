@@ -470,12 +470,12 @@ export class CS_Inventory {
         return inventoryItem;
     }
 
-    getItem(index: number) {
-        return CS_Economy.getById(this.get(index).id);
+    getItem(uid: number) {
+        return CS_Economy.getById(this.get(uid).id);
     }
 
-    getExtended(index: number) {
-        const inventoryItem = this.get(index);
+    getExtended(uid: number) {
+        const inventoryItem = this.get(uid);
         const item = CS_Economy.getById(inventoryItem.id);
         return { ...inventoryItem, item };
     }
