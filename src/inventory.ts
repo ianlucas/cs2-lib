@@ -36,7 +36,7 @@ export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
     "weapon"
 ];
 
-export const CS_INVENTORY_TIMESTAMP = 1707176260747;
+export const CS_INVENTORY_TIMESTAMP = 1707696138408;
 
 function timestamp() {
     return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
