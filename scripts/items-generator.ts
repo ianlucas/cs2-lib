@@ -25,11 +25,14 @@ import {
     StickerKitsRecord,
     UnsafeRaritiesRecord
 } from "./items-generator-types.js";
-import { readJson, replaceInFile, writeJson } from "./util.js";
+import { push, readJson, replaceInFile, writeJson } from "./util.js";
 
 const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
 const CS2_ITEMS_TXT_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
 const CS2_IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
+const LOOKUP_AGENT_MODEL_JSON_PATH = "assets/data/lookup-agent-model.json";
+const LOOKUP_WEAPON_MODEL_JSON_PATH = "assets/data/lookup-weapon-model.json";
+const LOOKUP_WEAPON_LEGACY_JSON_PATH = "assets/data/lookup-weapon-legacy.json";
 const ITEM_IDS_JSON_PATH = "assets/data/items-ids.json";
 const ITEMS_JSON_PATH = "assets/data/items.json";
 const PARSED_ITEMS_GAME_JSON_PATH = "assets/data/parsed-items-game.json";
@@ -94,6 +97,10 @@ export class ItemsGenerator {
     revolvingLootList: RevolvingLootListRecord = null!;
     stickerKits: StickerKitsRecord = null!;
     translations: LanguagesRecord = null!;
+
+    lookupAgentModel: Record<string, string> = {};
+    lookupWeaponModel: Record<string, string> = {};
+    lookupWeaponLegacy: Record<string, number[]> = {};
 
     baseItems: (CS_Item & {
         className?: string;
@@ -302,7 +309,9 @@ export class ItemsGenerator {
             const name = this.requireTranslation(prefab.item_name);
             const teams = this.getTeams(prefab.used_by_classes);
             const id = this.ids.get(`weapon_${teams.join("_")}_${itemIndex}`);
+
             this.addTranslation(id, name, prefab.item_name);
+            this.lookupWeaponModel[itemIndex] = itemProps.name;
 
             this.baseItems.push({
                 base: true,
@@ -347,7 +356,9 @@ export class ItemsGenerator {
             const prefab = this.getPrefab(itemProps.prefab);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`melee_${teams.join("_")}_${itemIndex}`);
+
             this.addTranslation(id, name, itemProps.item_name);
+            this.lookupWeaponModel[itemIndex] = itemProps.name;
 
             this.baseItems.push({
                 base: true,
@@ -428,9 +439,14 @@ export class ItemsGenerator {
             const itemKey = `[${paintKit.className}]${parentItem.className}`;
             const name = `${parentItem.name} | ${paintKit.name}`;
             const id = this.ids.get(`paint_${parentItem.def}_${paintKit.index}`);
+            const legacy = this.previousItems.get(id)?.legacy;
 
             this.addTranslation(id, name, parentItem.nameToken, " | ", paintKit.nameToken);
             this.addCaseContent(itemKey, id);
+
+            if (legacy) {
+                push(this.lookupWeaponLegacy, parentItem.def!, paintKit.index);
+            }
 
             this.generatedItems.push({
                 ...parentItem,
@@ -439,7 +455,7 @@ export class ItemsGenerator {
                 id,
                 index: paintKit.index,
                 image: this.getSkinImage(id, parentItem.className, paintKit.className),
-                legacy: this.previousItems.get(id)?.legacy,
+                legacy,
                 name,
                 rarity: ["melee", "glove"].includes(parentItem.type)
                     ? this.getRarityColorHex([parentItem.rarity, paintKit.rarityColorHex])
@@ -668,6 +684,7 @@ export class ItemsGenerator {
                 itemProps.item_name === undefined ||
                 itemProps.used_by_classes === undefined ||
                 itemProps.image_inventory === undefined ||
+                itemProps.model_player === undefined ||
                 itemProps.prefab !== "customplayertradable"
             ) {
                 continue;
@@ -675,14 +692,17 @@ export class ItemsGenerator {
             const name = this.requireTranslation(itemProps.item_name);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`agent_${teams.join("_")}_${itemIndex}`);
+            const model = itemProps.model_player.replace("characters/models/", "").replace(".vmdl", "");
+
             this.addTranslation(id, name, itemProps.item_name);
+            this.lookupAgentModel[itemIndex] = model;
 
             this.generatedItems.push({
                 def: Number(itemIndex),
                 id,
                 image: this.previousItems.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                 index: undefined,
-                model: itemProps.model_player?.replace("characters/models/", "").replace(".vmdl", ""),
+                model,
                 name,
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
                 teams,
@@ -871,6 +891,15 @@ export class ItemsGenerator {
             className: undefined,
             nameToken: undefined
         }));
+
+        writeJson(LOOKUP_AGENT_MODEL_JSON_PATH, this.lookupAgentModel);
+        console.warn(`generated ${LOOKUP_AGENT_MODEL_JSON_PATH}.`);
+
+        writeJson(LOOKUP_WEAPON_MODEL_JSON_PATH, this.lookupWeaponModel);
+        console.warn(`generated ${LOOKUP_WEAPON_MODEL_JSON_PATH}.`);
+
+        writeJson(LOOKUP_WEAPON_LEGACY_JSON_PATH, this.lookupWeaponLegacy);
+        console.warn(`generated ${LOOKUP_WEAPON_LEGACY_JSON_PATH}.`);
 
         writeJson(PARSED_ITEMS_GAME_JSON_PATH, this.itemsGameParsed);
         console.warn(`generated ${PARSED_ITEMS_GAME_JSON_PATH}.`);

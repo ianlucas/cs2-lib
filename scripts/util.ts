@@ -49,3 +49,13 @@ export async function fetchText(url: string) {
 export function dedupe<T>(array: T[]) {
     return [...new Set(array)];
 }
+
+export function push<T, U extends Record<string | number, U[]>>(obj: T, key: string | number, value: any) {
+    if (!obj[key]) {
+        obj[key] = [];
+    }
+    if (obj[key].includes(value)) {
+        return;
+    }
+    obj[key].push(value);
+}
