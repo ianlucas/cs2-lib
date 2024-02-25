@@ -12,7 +12,6 @@ import {
     CS_NO_STICKER,
     CS_NO_STICKER_WEAR,
     CS_STICKER_WEAR_FACTOR,
-    CS_STORAGE_UNIT_TOOL_DEF,
     CS_SWAP_STATTRAK_TOOL_DEF,
     CS_hasNametag,
     CS_hasStickers,
@@ -319,9 +318,7 @@ export class CS_Inventory {
         }
         const storageInventoryItem = this.get(storageUid);
         const storageItem = CS_Economy.getById(storageInventoryItem.id);
-        if (storageItem.def !== CS_STORAGE_UNIT_TOOL_DEF) {
-            throw new Error("item is not a storage unit");
-        }
+        CS_validateStorageUnit(storageItem);
         CS_validateNametag(nametag);
         storageInventoryItem.nametag = nametag;
         storageInventoryItem.updatedat = CS_getTimestamp();
@@ -347,9 +344,7 @@ export class CS_Inventory {
     depositToStorageUnit(storageUid: number, depositUids: number[]) {
         const storageInventoryItem = this.get(storageUid);
         const item = CS_Economy.getById(storageInventoryItem.id);
-        if (item.def !== CS_STORAGE_UNIT_TOOL_DEF) {
-            throw new Error("item is not a storage unit");
-        }
+        CS_validateStorageUnit(item);
         if (depositUids.length === 0) {
             throw new Error("no items to deposit");
         }
@@ -358,7 +353,7 @@ export class CS_Inventory {
         }
         for (const uid of depositUids) {
             const item = CS_Economy.getById(this.get(uid).id);
-            if (item.def === CS_STORAGE_UNIT_TOOL_DEF) {
+            if (CS_isStorageUnit(item)) {
                 throw new Error("cannot deposit storage unit");
             }
         }
@@ -385,9 +380,7 @@ export class CS_Inventory {
         const storageInventoryItem = this.get(storageUid);
         const storageItem = CS_Economy.getById(storageInventoryItem.id);
 
-        if (storageItem.def !== CS_STORAGE_UNIT_TOOL_DEF) {
-            throw new Error("item is not a storage unit");
-        }
+        CS_validateStorageUnit(storageItem);
         const stored = storageInventoryItem.storage;
         if (stored === undefined || retrieveUids.length === 0) {
             throw new Error("no items to retrieve");

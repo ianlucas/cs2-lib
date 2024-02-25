@@ -138,8 +138,13 @@ export function CS_filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
     return items;
 }
 
+export function CS_isC4(item: CS_Item | number): boolean {
+    item = typeof item === "number" ? CS_Economy.getById(item) : item;
+    return item.category === "c4";
+}
+
 export function CS_hasWear(item: CS_Item): boolean {
-    return CS_WEARABLE_ITEMS.includes(item.type);
+    return CS_WEARABLE_ITEMS.includes(item.type) && !CS_isC4(item);
 }
 
 export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
@@ -169,7 +174,7 @@ export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
 export const CS_safeValidateWear = safe(CS_validateWear);
 
 export function CS_hasSeed(item: CS_Item): boolean {
-    return CS_SEEDABLE_ITEMS.includes(item.type);
+    return CS_SEEDABLE_ITEMS.includes(item.type) && !CS_isC4(item);
 }
 
 export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
@@ -191,7 +196,7 @@ export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
 export const CS_safeValidateSeed = safe(CS_validateSeed);
 
 export function CS_hasStickers(item: CS_Item): boolean {
-    return CS_STICKERABLE_ITEMS.includes(item.type) && item.category !== "c4";
+    return CS_STICKERABLE_ITEMS.includes(item.type) && !CS_isC4(item);
 }
 
 export function CS_validateStickers(item: CS_Item, stickers: number[], stickerswear?: number[]): boolean {
@@ -237,7 +242,7 @@ export function CS_validateStickers(item: CS_Item, stickers: number[], stickersw
 }
 
 export function CS_hasNametag(item: CS_Item): boolean {
-    return CS_NAMETAGGABLE_ITEMS.includes(item.type) || item.def === CS_STORAGE_UNIT_TOOL_DEF;
+    return CS_NAMETAGGABLE_ITEMS.includes(item.type) || CS_isStorageUnit(item);
 }
 
 export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean {
@@ -253,7 +258,7 @@ export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean 
 export const CS_safeValidateNametag = safe(CS_validateNametag);
 
 export function CS_hasStatTrak(item: CS_Item): boolean {
-    return CS_STATTRAKABLE_ITEMS.includes(item.type);
+    return CS_STATTRAKABLE_ITEMS.includes(item.type) && !CS_isC4(item);
 }
 
 export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolean {
