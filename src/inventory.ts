@@ -16,10 +16,12 @@ import {
     CS_SWAP_STATTRAK_TOOL_DEF,
     CS_hasNametag,
     CS_hasStickers,
+    CS_isStorageUnit,
     CS_validateNametag,
     CS_validateSeed,
     CS_validateStatTrak,
     CS_validateStickers,
+    CS_validateStorageUnit,
     CS_validateWear
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
@@ -42,22 +44,33 @@ export function CS_getTimestamp() {
     return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
 }
 
-export class CS_InventoryUids {
-    private items: Map<number, CS_InventoryItem>;
+export class CS_InventoryItems {
+    map: Map<number, CS_InventoryItem>;
 
     constructor(items: Map<number, CS_InventoryItem> | CS_InventoryItem[]) {
-        this.items = items instanceof Map ? items : new Map(items.map((item) => [item.uid, item]));
+        this.map = items instanceof Map ? items : new Map(items.map((item) => [item.uid, item]));
     }
 
     add(item: Omit<CS_InventoryItem, "uid">) {
         let uid = 0;
         while (true) {
-            if (!this.items.has(uid)) {
+            if (!this.map.has(uid)) {
                 const newItem = { ...item, uid };
-                this.items.set(uid, newItem);
+                this.map.set(uid, newItem);
                 return newItem;
             }
             uid++;
+        }
+    }
+}
+
+export function CS_validateStorage(storage?: CS_InventoryItem[]) {
+    if (storage !== undefined) {
+        for (const item of storage) {
+            if (CS_isStorageUnit(item.id)) {
+                throw new Error("storage unit cannot be stored in storage unit");
+            }
+            CS_validateInventoryItem(item);
         }
     }
 }
@@ -69,6 +82,7 @@ export function CS_validateInventoryItem({
     stattrak,
     stickers,
     stickerswear,
+    storage,
     wear
 }: Omit<CS_InventoryItem, "uid">) {
     const item = CS_Economy.getById(id);
@@ -86,6 +100,10 @@ export function CS_validateInventoryItem({
     }
     if (stattrak !== undefined) {
         CS_validateStatTrak(stattrak, item);
+    }
+    if (storage !== undefined) {
+        CS_validateStorageUnit(item);
+        CS_validateStorage(storage);
     }
 }
 
@@ -111,21 +129,41 @@ export interface CS_InventoryOptions {
     storageUnitLimit?: number;
 }
 
+/**
+ * Use this when you don't trust the items being passed to the inventory. It
+ * will take care of validating the items. If the items are invalid, it will
+ * return an empty inventory.
+ */
+export function CS_createInventory({ items, ...options }: CS_InventoryOptions) {
+    try {
+        const inventory = new CS_Inventory(options);
+        for (const item of items ?? []) {
+            if (item.storage !== undefined) {
+                for (const [index, stored] of item.storage.entries()) {
+                    stored.uid = index;
+                }
+            }
+            inventory.add(item);
+        }
+        return inventory;
+    } catch {
+        return new CS_Inventory(options);
+    }
+}
+
 export class CS_Inventory {
-    private items = new Map<number, CS_InventoryItem>();
     private limit: number;
     private storageUnitLimit: number;
-    private uids: CS_InventoryUids;
+    private items: CS_InventoryItems;
 
     constructor({ items, limit, storageUnitLimit }: CS_InventoryOptions) {
-        this.items = new Map((items ?? []).map((item) => [item.uid, item]));
         this.limit = limit ?? 256;
         this.storageUnitLimit = storageUnitLimit ?? 32;
-        this.uids = new CS_InventoryUids(this.items);
+        this.items = new CS_InventoryItems(new Map((items ?? []).map((item) => [item.uid, item])));
     }
 
     full(): boolean {
-        return this.items.size === this.limit;
+        return this.items.map.size === this.limit;
     }
 
     add(
@@ -137,7 +175,7 @@ export class CS_Inventory {
             return this;
         }
         CS_validateInventoryItem(inventoryItem);
-        this.uids.add({
+        this.items.add({
             ...inventoryItem,
             equipped: undefined,
             equippedCT: undefined,
@@ -159,7 +197,7 @@ export class CS_Inventory {
         if (!CS_hasNametag(targetItem)) {
             throw new Error("item does not have nametag");
         }
-        this.items.delete(toolUid);
+        this.items.map.delete(toolUid);
         this.add({
             id: itemId,
             nametag
@@ -177,7 +215,7 @@ export class CS_Inventory {
             ...attributes
         };
         CS_validateInventoryItem(changes);
-        this.items.set(itemUid, {
+        this.items.map.set(itemUid, {
             ...changes,
             updatedat: CS_getTimestamp()
         });
@@ -205,7 +243,7 @@ export class CS_Inventory {
         if (team !== undefined && !item.teams?.includes(team)) {
             return this;
         }
-        for (const [otherUid, otherInventoryItem] of this.items) {
+        for (const [otherUid, otherInventoryItem] of this.items.map) {
             if (itemUid === otherUid) {
                 otherInventoryItem.equipped = team === undefined ? true : undefined;
                 otherInventoryItem.equippedCT = team === CS_TEAM_CT ? true : otherInventoryItem.equippedCT;
@@ -243,9 +281,9 @@ export class CS_Inventory {
         if (caseItem.keys === undefined && keyItem !== undefined) {
             throw new Error("case does not need a key");
         }
-        this.items.delete(caseUid);
+        this.items.map.delete(caseUid);
         if (keyUid !== undefined) {
-            this.items.delete(keyUid);
+            this.items.map.delete(keyUid);
         }
         this.add({
             id: unlockedItem.id,
@@ -271,7 +309,7 @@ export class CS_Inventory {
         }
         targetInventoryItem.nametag = nametag;
         targetInventoryItem.updatedat = CS_getTimestamp();
-        this.items.delete(toolUid);
+        this.items.map.delete(toolUid);
         return this;
     }
 
@@ -325,10 +363,10 @@ export class CS_Inventory {
             }
         }
         const storage = storageInventoryItem.storage ?? [];
-        const uids = new CS_InventoryUids(storage);
+        const items = new CS_InventoryItems(storage);
         storageInventoryItem.storage = storage.concat(
             depositUids.map((index) => {
-                return uids.add({
+                return items.add({
                     ...this.get(index),
                     equipped: undefined,
                     equippedCT: undefined,
@@ -338,7 +376,7 @@ export class CS_Inventory {
         );
         storageInventoryItem.updatedat = CS_getTimestamp();
         for (const uid of depositUids) {
-            this.items.delete(uid);
+            this.items.map.delete(uid);
         }
         return this;
     }
@@ -385,7 +423,7 @@ export class CS_Inventory {
         stickers[stickerIndex] = sticker.id;
         targetInventoryItem.stickers = stickers;
         targetInventoryItem.updatedat = CS_getTimestamp();
-        this.items.delete(stickerUid);
+        this.items.map.delete(stickerUid);
         return this;
     }
 
@@ -458,12 +496,12 @@ export class CS_Inventory {
         fromInventoryItem.updatedat = CS_getTimestamp();
         toInventoryItem.stattrak = fromStattrak;
         toInventoryItem.updatedat = CS_getTimestamp();
-        this.items.delete(toolUid);
+        this.items.map.delete(toolUid);
         return this;
     }
 
     get(uid: number) {
-        const inventoryItem = this.items.get(uid);
+        const inventoryItem = this.items.map.get(uid);
         if (inventoryItem === undefined) {
             throw new Error("invalid inventory item");
         }
@@ -481,20 +519,20 @@ export class CS_Inventory {
     }
 
     getAll(): CS_InventoryItem[] {
-        return Array.from(this.items.values());
+        return Array.from(this.items.map.values());
     }
 
     remove(uid: number) {
-        this.items.delete(uid);
+        this.items.map.delete(uid);
         return this;
     }
 
     removeAll() {
-        this.items.clear();
+        this.items.map.clear();
     }
 
     size() {
-        return this.items.size;
+        return this.items.map.size;
     }
 
     copy() {

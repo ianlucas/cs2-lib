@@ -237,7 +237,7 @@ export function CS_validateStickers(item: CS_Item, stickers: number[], stickersw
 }
 
 export function CS_hasNametag(item: CS_Item): boolean {
-    return CS_NAMETAGGABLE_ITEMS.includes(item.type);
+    return CS_NAMETAGGABLE_ITEMS.includes(item.type) || item.def === CS_STORAGE_UNIT_TOOL_DEF;
 }
 
 export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean {
@@ -270,6 +270,19 @@ export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolea
 }
 
 export const CS_safeValidateStatTrak = safe(CS_validateStatTrak);
+
+export function CS_isStorageUnit(item: CS_Item | number): boolean {
+    item = typeof item === "number" ? CS_Economy.getById(item) : item;
+    return item.def === CS_STORAGE_UNIT_TOOL_DEF;
+}
+
+export function CS_validateStorageUnit(item: CS_Item) {
+    if (!CS_isStorageUnit(item)) {
+        throw new Error("item is not a storage unit");
+    }
+}
+
+export const CS_safeValidateStorageUnit = safe(CS_validateStorageUnit);
 
 export function CS_getWearLabel(wear: number): string {
     if (wear <= CS_MAX_FACTORY_NEW_WEAR) {
