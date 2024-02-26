@@ -39,6 +39,14 @@ export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
 
 export const CS_INVENTORY_TIMESTAMP = 1707696138408;
 
+export const CS_INVENTORY_NO_STICKERS = [CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER] as const;
+export const CS_INVENTORY_NO_STICKERS_WEAR = [
+    CS_NO_STICKER_WEAR,
+    CS_NO_STICKER_WEAR,
+    CS_NO_STICKER_WEAR,
+    CS_NO_STICKER_WEAR
+] as const;
+
 export function CS_getTimestamp() {
     return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
 }
@@ -192,14 +200,25 @@ export class CS_Inventory {
         if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
             throw new Error("tool must be name tag");
         }
-        const targetItem = CS_Economy.getById(itemId);
-        if (!CS_hasNametag(targetItem)) {
-            throw new Error("item does not have nametag");
-        }
         this.items.map.delete(toolUid);
         this.add({
             id: itemId,
             nametag
+        });
+        return this;
+    }
+
+    addWithSticker(stickerUid: number, itemId: number, stickerIndex: number) {
+        const stickerItem = this.getItem(stickerUid);
+        if (stickerItem.type !== "sticker") {
+            throw new Error("not adding a sticker");
+        }
+        this.items.map.delete(stickerUid);
+        this.add({
+            id: itemId,
+            stickers: CS_INVENTORY_NO_STICKERS.map((noSticker, index) =>
+                index === stickerIndex ? stickerItem.id : noSticker
+            )
         });
         return this;
     }
@@ -409,7 +428,7 @@ export class CS_Inventory {
         if (sticker.type !== "sticker") {
             throw new Error("not applying a sticker");
         }
-        const stickers = targetInventoryItem.stickers ?? [CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER, CS_NO_STICKER];
+        const stickers = targetInventoryItem.stickers ?? CS_INVENTORY_NO_STICKERS.slice();
         if (stickers[stickerIndex] !== CS_NO_STICKER) {
             throw new Error("cant apply existing sticker");
         }
@@ -429,12 +448,7 @@ export class CS_Inventory {
         if (typeof stickers[stickerIndex] !== "number") {
             throw new Error("invalid sticker index");
         }
-        const stickersWear = inventoryItem.stickerswear ?? [
-            CS_NO_STICKER_WEAR,
-            CS_NO_STICKER_WEAR,
-            CS_NO_STICKER_WEAR,
-            CS_NO_STICKER_WEAR
-        ];
+        const stickersWear = inventoryItem.stickerswear ?? CS_INVENTORY_NO_STICKERS_WEAR.slice();
         const stickerWear = stickersWear[stickerIndex] || CS_NO_STICKER_WEAR;
         const nextWear = float(stickerWear + CS_STICKER_WEAR_FACTOR);
         if (nextWear > CS_MAX_WEAR) {
