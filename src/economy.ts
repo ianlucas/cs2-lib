@@ -72,7 +72,7 @@ export const CS_STICKER_WEAR_FACTOR = 0.1;
 export const CS_MIN_STICKER_WEAR = 0;
 export const CS_MAX_STICKER_WEAR = 0.9;
 export const CS_NAMETAG_TOOL_DEF = 1200;
-export const CS_SWAP_STATTRAK_TOOL_DEF = 1324;
+export const CS_STATTRAK_SWAP_TOOL_DEF = 1324;
 export const CS_STORAGE_UNIT_TOOL_DEF = 1201;
 export const CS_NO_STICKER = 0;
 export const CS_NO_STICKER_WEAR = 0;
@@ -113,12 +113,16 @@ export class CS_Economy {
         });
     }
 
-    static getById(id: number): CS_Item {
+    static getById(id: number) {
         const item = CS_Economy.itemMap.get(id);
         if (item === undefined) {
             throw new Error("item not found");
         }
         return item;
+    }
+
+    static get(idOrItem: number | CS_Item) {
+        return typeof idOrItem === "number" ? CS_Economy.getById(idOrItem) : idOrItem;
     }
 }
 
@@ -138,9 +142,18 @@ export function CS_filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
     return items;
 }
 
-export function CS_isC4(item: CS_Item | number): boolean {
-    item = typeof item === "number" ? CS_Economy.getById(item) : item;
-    return item.category === "c4";
+export function CS_isC4(item: number | CS_Item): boolean {
+    return CS_Economy.get(item).category === "c4";
+}
+
+export function CS_isSticker(item: number | CS_Item): boolean {
+    return CS_Economy.get(item).type === "sticker";
+}
+
+export function CS_expectSticker(item: number | CS_Item) {
+    if (!CS_isSticker(item)) {
+        throw new Error("item is not a sticker");
+    }
 }
 
 export function CS_hasWear(item: CS_Item): boolean {
@@ -242,20 +255,34 @@ export function CS_validateStickers(item: CS_Item, stickers: number[], stickersw
 }
 
 export function CS_hasNametag(item: CS_Item): boolean {
-    return CS_NAMETAGGABLE_ITEMS.includes(item.type) || CS_isStorageUnit(item);
+    return CS_NAMETAGGABLE_ITEMS.includes(item.type) || CS_isStorageUnitTool(item);
 }
 
-export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean {
+export function CS_trimNametag(nametag?: string) {
+    const trimmed = nametag?.trim();
+    return trimmed === "" ? undefined : trimmed;
+}
+
+export function CS_validateNametag(nametag?: string, forItem?: CS_Item): boolean {
     if (forItem !== undefined && !CS_hasNametag(forItem)) {
         throw new Error("invalid nametag");
     }
-    if (nametag[0] === " " || !CS_NAMETAG_RE.test(nametag)) {
+    if (nametag !== undefined && (nametag[0] === " " || !CS_NAMETAG_RE.test(nametag))) {
         throw new Error("invalid nametag");
     }
     return true;
 }
 
 export const CS_safeValidateNametag = safe(CS_validateNametag);
+
+export function CS_requireNametag(nametag?: string, forItem?: CS_Item): boolean {
+    if (nametag === undefined || nametag.trim().length === 0) {
+        throw new Error("item requires a nametag");
+    }
+    return CS_validateNametag(nametag, forItem);
+}
+
+export const CS_safeRequireNametag = safe(CS_requireNametag);
 
 export function CS_hasStatTrak(item: CS_Item): boolean {
     return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
@@ -276,18 +303,43 @@ export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolea
 
 export const CS_safeValidateStatTrak = safe(CS_validateStatTrak);
 
-export function CS_isStorageUnit(item: CS_Item | number): boolean {
-    item = typeof item === "number" ? CS_Economy.getById(item) : item;
-    return item.def === CS_STORAGE_UNIT_TOOL_DEF;
+export function CS_isStorageUnitTool(item: number | CS_Item): boolean {
+    const { def, type } = CS_Economy.get(item);
+    return type === "tool" && def === CS_STORAGE_UNIT_TOOL_DEF;
 }
 
-export function CS_validateStorageUnit(item: CS_Item) {
-    if (!CS_isStorageUnit(item)) {
+export function CS_expectStorageUnitTool(item: CS_Item) {
+    if (!CS_isStorageUnitTool(item)) {
         throw new Error("item is not a storage unit");
     }
+    return true;
 }
 
-export const CS_safeValidateStorageUnit = safe(CS_validateStorageUnit);
+export const CS_safeValidateStorageToolUnit = safe(CS_expectStorageUnitTool);
+
+export function CS_isNametagTool(toolItem: number | CS_Item): boolean {
+    const { def, type } = CS_Economy.get(toolItem);
+    return type === "tool" && def === CS_NAMETAG_TOOL_DEF;
+}
+
+export function CS_expectNametagTool(item: CS_Item) {
+    if (!CS_isNametagTool(item)) {
+        throw new Error("item is not a nametag tool");
+    }
+    return true;
+}
+
+export function isStatTrakSwapTool(item: number | CS_Item): boolean {
+    const { def, type } = CS_Economy.get(item);
+    return type === "tool" && def === CS_STATTRAK_SWAP_TOOL_DEF;
+}
+
+export function expectStatTrakSwapTool(item: CS_Item) {
+    if (!isStatTrakSwapTool(item)) {
+        throw new Error("item is not a stattrak swap tool");
+    }
+    return true;
+}
 
 export function CS_getWearLabel(wear: number): string {
     if (wear <= CS_MAX_FACTORY_NEW_WEAR) {
@@ -313,8 +365,8 @@ export function CS_getStickers(): CS_Item[] {
     return CS_Economy.stickers;
 }
 
-export function CS_resolveItemImage(baseUrl: string, item: CS_Item | number, wear?: number): string {
-    const { id, image } = typeof item === "number" ? CS_Economy.getById(item) : item;
+export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
+    const { id, image } = CS_Economy.get(item);
 
     if (wear !== undefined) {
         switch (true) {
@@ -338,9 +390,8 @@ export function CS_resolveItemImage(baseUrl: string, item: CS_Item | number, wea
     return image;
 }
 
-export function CS_resolveCaseSpecialsImage(baseUrl: string, item: CS_Item | number): string {
-    item = typeof item === "number" ? CS_Economy.getById(item) : item;
-    const { id, type, specialsimage, specials } = item;
+export function CS_resolveCaseSpecialsImage(baseUrl: string, item: number | CS_Item): string {
+    const { id, type, specialsimage, specials } = CS_Economy.get(item);
     if (type !== "case") {
         throw new Error("item is not a case");
     }

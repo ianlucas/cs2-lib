@@ -3,25 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_unlockCase, CS_validateUnlockedItem } from "./economy-case.js";
+import { CS_unlockCase, CS_validateCaseKey, CS_validateUnlockedItem } from "./economy-case.js";
 import {
     CS_Economy,
     CS_MAX_STATTRAK,
     CS_MAX_WEAR,
-    CS_NAMETAG_TOOL_DEF,
     CS_NO_STICKER,
     CS_NO_STICKER_WEAR,
     CS_STICKER_WEAR_FACTOR,
-    CS_SWAP_STATTRAK_TOOL_DEF,
-    CS_hasNametag,
+    CS_expectNametagTool,
+    CS_expectSticker,
+    CS_expectStorageUnitTool,
     CS_hasStickers,
-    CS_isStorageUnit,
+    CS_isStorageUnitTool,
+    CS_requireNametag,
+    CS_trimNametag,
     CS_validateNametag,
     CS_validateSeed,
     CS_validateStatTrak,
     CS_validateStickers,
-    CS_validateStorageUnit,
-    CS_validateWear
+    CS_validateWear,
+    expectStatTrakSwapTool
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 import { float } from "./util.js";
@@ -74,7 +76,7 @@ export class CS_InventoryItems {
 export function CS_validateStorage(storage?: CS_InventoryItem[]) {
     if (storage !== undefined) {
         for (const item of storage) {
-            if (CS_isStorageUnit(item.id)) {
+            if (CS_isStorageUnitTool(item.id)) {
                 throw new Error("storage unit cannot be stored in storage unit");
             }
             CS_validateInventoryItem(item);
@@ -109,7 +111,7 @@ export function CS_validateInventoryItem({
         CS_validateStatTrak(stattrak, item);
     }
     if (storage !== undefined) {
-        CS_validateStorageUnit(item);
+        CS_expectStorageUnitTool(item);
         CS_validateStorage(storage);
     }
 }
@@ -193,13 +195,9 @@ export class CS_Inventory {
     }
 
     addWithNametag(toolUid: number, itemId: number, nametag: string) {
-        if (nametag === "") {
-            throw new Error("invalid nametag");
-        }
-        const toolItem = CS_Economy.getById(this.get(toolUid).id);
-        if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
-            throw new Error("tool must be name tag");
-        }
+        const toolItem = this.getItem(toolUid);
+        CS_expectNametagTool(toolItem);
+        CS_requireNametag(nametag);
         this.items.map.delete(toolUid);
         this.add({
             id: itemId,
@@ -210,9 +208,7 @@ export class CS_Inventory {
 
     addWithSticker(stickerUid: number, itemId: number, stickerIndex: number) {
         const stickerItem = this.getItem(stickerUid);
-        if (stickerItem.type !== "sticker") {
-            throw new Error("not adding a sticker");
-        }
+        CS_expectSticker(stickerItem);
         this.items.map.delete(stickerUid);
         this.add({
             id: itemId,
@@ -287,18 +283,10 @@ export class CS_Inventory {
     }
 
     unlockCase(unlockedItem: ReturnType<typeof CS_unlockCase>, caseUid: number, keyUid?: number) {
-        const caseItem = CS_Economy.getById(this.get(caseUid).id);
+        const caseItem = this.getItem(caseUid);
         CS_validateUnlockedItem(caseItem, unlockedItem);
-        const keyItem = keyUid !== undefined ? CS_Economy.getById(this.get(keyUid).id) : undefined;
-        if (keyItem !== undefined && keyItem.type !== "key") {
-            throw new Error("item is not a key");
-        }
-        if (caseItem.keys !== undefined && (keyItem === undefined || !caseItem.keys.includes(keyItem.id))) {
-            throw new Error("case needs a valid key to be open");
-        }
-        if (caseItem.keys === undefined && keyItem !== undefined) {
-            throw new Error("case does not need a key");
-        }
+        const keyItem = keyUid !== undefined ? this.getItem(keyUid) : undefined;
+        CS_validateCaseKey(caseItem, keyItem);
         this.items.map.delete(caseUid);
         if (keyUid !== undefined) {
             this.items.map.delete(keyUid);
@@ -312,19 +300,12 @@ export class CS_Inventory {
     }
 
     renameItem(toolUid: number, targetUid: number, nametag?: string) {
-        nametag = nametag === "" ? undefined : nametag;
-        const toolItem = CS_Economy.getById(this.get(toolUid).id);
-        if (toolItem.type !== "tool" || toolItem.def !== CS_NAMETAG_TOOL_DEF) {
-            throw new Error("tool must be name tag");
-        }
+        nametag = CS_trimNametag(nametag);
+        const toolItem = this.getItem(toolUid);
+        CS_expectNametagTool(toolItem);
         const targetInventoryItem = this.get(targetUid);
         const targetItem = CS_Economy.getById(targetInventoryItem.id);
-        if (!CS_hasNametag(targetItem)) {
-            throw new Error("item does not have nametag");
-        }
-        if (nametag !== undefined) {
-            CS_validateNametag(nametag);
-        }
+        CS_validateNametag(nametag, targetItem);
         targetInventoryItem.nametag = nametag;
         targetInventoryItem.updatedat = CS_getTimestamp();
         this.items.map.delete(toolUid);
@@ -332,14 +313,12 @@ export class CS_Inventory {
     }
 
     renameStorageUnit(storageUid: number, nametag: string) {
-        if (nametag.trim() === "") {
-            throw new Error("invalid nametag");
-        }
+        const trimmed = CS_trimNametag(nametag);
         const storageInventoryItem = this.get(storageUid);
         const storageItem = CS_Economy.getById(storageInventoryItem.id);
-        CS_validateStorageUnit(storageItem);
-        CS_validateNametag(nametag);
-        storageInventoryItem.nametag = nametag;
+        CS_expectStorageUnitTool(storageItem);
+        CS_requireNametag(trimmed);
+        storageInventoryItem.nametag = trimmed;
         storageInventoryItem.updatedat = CS_getTimestamp();
         return this;
     }
@@ -363,7 +342,8 @@ export class CS_Inventory {
     depositToStorageUnit(storageUid: number, depositUids: number[]) {
         const storageInventoryItem = this.get(storageUid);
         const item = CS_Economy.getById(storageInventoryItem.id);
-        CS_validateStorageUnit(item);
+
+        CS_expectStorageUnitTool(item);
         if (depositUids.length === 0) {
             throw new Error("no items to deposit");
         }
@@ -372,7 +352,7 @@ export class CS_Inventory {
         }
         for (const uid of depositUids) {
             const item = CS_Economy.getById(this.get(uid).id);
-            if (CS_isStorageUnit(item)) {
+            if (CS_isStorageUnitTool(item)) {
                 throw new Error("cannot deposit storage unit");
             }
         }
@@ -399,7 +379,7 @@ export class CS_Inventory {
         const storageInventoryItem = this.get(storageUid);
         const storageItem = CS_Economy.getById(storageInventoryItem.id);
 
-        CS_validateStorageUnit(storageItem);
+        CS_expectStorageUnitTool(storageItem);
         const stored = storageInventoryItem.storage;
         if (stored === undefined || retrieveUids.length === 0) {
             throw new Error("no items to retrieve");
@@ -424,10 +404,8 @@ export class CS_Inventory {
         if (!CS_hasStickers(item)) {
             throw new Error("item does not have stickers");
         }
-        const sticker = CS_Economy.getById(this.get(stickerUid).id);
-        if (sticker.type !== "sticker") {
-            throw new Error("not applying a sticker");
-        }
+        const sticker = this.getItem(stickerUid);
+        CS_expectSticker(sticker);
         const stickers = targetInventoryItem.stickers ?? CS_INVENTORY_NO_STICKERS.slice();
         if (stickers[stickerIndex] !== CS_NO_STICKER) {
             throw new Error("cant apply existing sticker");
@@ -441,7 +419,7 @@ export class CS_Inventory {
 
     scrapeItemSticker(targetUid: number, stickerIndex: number) {
         const inventoryItem = this.get(targetUid);
-        if (!inventoryItem || !inventoryItem.stickers) {
+        if (inventoryItem.stickers === undefined) {
             throw new Error("invalid inventory item");
         }
         const { stickers } = inventoryItem;
@@ -467,7 +445,7 @@ export class CS_Inventory {
 
     incrementItemStatTrak(targetUid: number) {
         const inventoryItem = this.get(targetUid);
-        if (!inventoryItem || inventoryItem.stattrak === undefined) {
+        if (inventoryItem.stattrak === undefined) {
             throw new Error("invalid inventory item");
         }
         if (inventoryItem.stattrak < CS_MAX_STATTRAK) {
@@ -481,14 +459,12 @@ export class CS_Inventory {
         if (fromUid === toUid) {
             throw new Error("uids must be different");
         }
+        const toolItem = this.getItem(toolUid);
+        expectStatTrakSwapTool(toolItem);
         const fromInventoryItem = this.get(fromUid);
         const toInventoryItem = this.get(toUid);
         if (fromInventoryItem.stattrak === undefined || toInventoryItem.stattrak === undefined) {
             throw new Error("invalid inventory items");
-        }
-        const toolItem = CS_Economy.getById(this.get(toolUid).id);
-        if (toolItem.def !== CS_SWAP_STATTRAK_TOOL_DEF) {
-            throw new Error("tool must be stattrak swap tool");
         }
         const fromItem = CS_Economy.getById(fromInventoryItem.id);
         const toItem = CS_Economy.getById(toInventoryItem.id);
@@ -519,7 +495,7 @@ export class CS_Inventory {
         return CS_Economy.getById(this.get(uid).id);
     }
 
-    getExtended(uid: number) {
+    getSnapshot(uid: number) {
         const inventoryItem = this.get(uid);
         const item = CS_Economy.getById(inventoryItem.id);
         return { ...inventoryItem, item };
