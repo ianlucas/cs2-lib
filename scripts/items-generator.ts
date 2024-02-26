@@ -400,10 +400,9 @@ export class ItemsGenerator {
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image:
-                    this.previousItems.get(id)?.image ??
-                    (itemProps.image_inventory !== undefined
+                    itemProps.image_inventory !== undefined
                         ? this.getImage(id, itemProps.image_inventory)
-                        : `/${itemProps.name}.png`),
+                        : `/${itemProps.name}.png`,
                 index: itemProps.baseitem === "1" ? undefined : 0,
                 model: itemProps.name,
                 name,
