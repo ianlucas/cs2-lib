@@ -276,10 +276,13 @@ export function CS_trimNametag(nametag?: string) {
 }
 
 export function CS_validateNametag(nametag?: string, forItem?: CS_Item): boolean {
+    if (nametag === undefined) {
+        return true;
+    }
     if (forItem !== undefined && !CS_hasNametag(forItem)) {
         throw new Error("invalid nametag");
     }
-    if (nametag !== undefined && (nametag[0] === " " || !CS_NAMETAG_RE.test(nametag))) {
+    if (nametag[0] === " " || !CS_NAMETAG_RE.test(nametag)) {
         throw new Error("invalid nametag");
     }
     return true;
