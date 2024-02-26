@@ -13,10 +13,7 @@ import {
     CS_WEAR_FACTOR,
     CS_hasSeed,
     CS_hasStatTrak,
-    CS_hasWear,
-    CS_validateSeed,
-    CS_validateStatTrak,
-    CS_validateWear
+    CS_hasWear
 } from "./economy.js";
 import { safe } from "./util.js";
 

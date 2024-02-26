@@ -95,21 +95,11 @@ export function CS_validateInventoryItem({
     wear
 }: Omit<CS_InventoryItem, "uid">) {
     const item = CS_Economy.getById(id);
-    if (wear !== undefined) {
-        CS_validateWear(wear, item);
-    }
-    if (seed !== undefined) {
-        CS_validateSeed(seed, item);
-    }
-    if (stickers !== undefined) {
-        CS_validateStickers(item, stickers, stickerswear);
-    }
-    if (nametag !== undefined) {
-        CS_validateNametag(nametag, item);
-    }
-    if (stattrak !== undefined) {
-        CS_validateStatTrak(stattrak, item);
-    }
+    CS_validateWear(wear, item);
+    CS_validateSeed(seed, item);
+    CS_validateStickers(item, stickers, stickerswear);
+    CS_validateNametag(nametag, item);
+    CS_validateStatTrak(stattrak, item);
     if (storage !== undefined) {
         CS_expectStorageUnitTool(item);
         CS_validateStorage(storage);

@@ -160,7 +160,10 @@ export function CS_hasWear(item: CS_Item): boolean {
     return CS_WEARABLE_ITEMS.includes(item.type) && !item.free;
 }
 
-export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
+export function CS_validateWear(wear?: number, forItem?: CS_Item): boolean {
+    if (wear === undefined) {
+        return true;
+    }
     if (Number.isNaN(wear)) {
         throw new Error("invalid wear.");
     }
@@ -190,7 +193,10 @@ export function CS_hasSeed(item: CS_Item): boolean {
     return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free;
 }
 
-export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
+export function CS_validateSeed(seed?: number, forItem?: CS_Item): boolean {
+    if (seed === undefined) {
+        return true;
+    }
     if (Number.isNaN(seed)) {
         throw new Error("invalid seed.");
     }
@@ -212,7 +218,13 @@ export function CS_hasStickers(item: CS_Item): boolean {
     return CS_STICKERABLE_ITEMS.includes(item.type) && !CS_isC4(item);
 }
 
-export function CS_validateStickers(item: CS_Item, stickers: number[], stickerswear?: number[]): boolean {
+export function CS_validateStickers(item: CS_Item, stickers?: number[], stickerswear?: number[]): boolean {
+    if (stickers === undefined) {
+        if (stickerswear !== undefined) {
+            throw new Error("invalid stickers");
+        }
+        return true;
+    }
     if (!CS_hasStickers(item)) {
         throw new Error("item does not have seed");
     }
@@ -288,7 +300,10 @@ export function CS_hasStatTrak(item: CS_Item): boolean {
     return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
 }
 
-export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolean {
+export function CS_validateStatTrak(stattrak?: number, forItem?: CS_Item): boolean {
+    if (stattrak === undefined) {
+        return true;
+    }
     if (Number.isNaN(stattrak)) {
         throw new Error("invalid stattrak");
     }
