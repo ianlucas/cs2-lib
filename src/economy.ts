@@ -144,7 +144,7 @@ export function CS_isC4(item: CS_Item | number): boolean {
 }
 
 export function CS_hasWear(item: CS_Item): boolean {
-    return CS_WEARABLE_ITEMS.includes(item.type) && !CS_isC4(item);
+    return CS_WEARABLE_ITEMS.includes(item.type) && !item.free;
 }
 
 export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
@@ -174,7 +174,7 @@ export function CS_validateWear(wear: number, forItem?: CS_Item): boolean {
 export const CS_safeValidateWear = safe(CS_validateWear);
 
 export function CS_hasSeed(item: CS_Item): boolean {
-    return CS_SEEDABLE_ITEMS.includes(item.type) && !CS_isC4(item);
+    return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free;
 }
 
 export function CS_validateSeed(seed: number, forItem?: CS_Item): boolean {
@@ -258,7 +258,7 @@ export function CS_validateNametag(nametag: string, forItem?: CS_Item): boolean 
 export const CS_safeValidateNametag = safe(CS_validateNametag);
 
 export function CS_hasStatTrak(item: CS_Item): boolean {
-    return CS_STATTRAKABLE_ITEMS.includes(item.type) && !CS_isC4(item);
+    return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
 }
 
 export function CS_validateStatTrak(stattrak: number, forItem?: CS_Item): boolean {
