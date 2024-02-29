@@ -396,7 +396,7 @@ export class CS_Inventory {
         }
         const sticker = this.getItem(stickerUid);
         CS_expectSticker(sticker);
-        const stickers = targetInventoryItem.stickers ?? CS_INVENTORY_NO_STICKERS.slice();
+        const stickers = targetInventoryItem.stickers ?? [...CS_INVENTORY_NO_STICKERS];
         if (stickers[stickerIndex] !== CS_NO_STICKER) {
             throw new Error("cant apply existing sticker");
         }
@@ -416,7 +416,7 @@ export class CS_Inventory {
         if (typeof stickers[stickerIndex] !== "number") {
             throw new Error("invalid sticker index");
         }
-        const stickersWear = inventoryItem.stickerswear ?? CS_INVENTORY_NO_STICKERS_WEAR.slice();
+        const stickersWear = inventoryItem.stickerswear ?? [...CS_INVENTORY_NO_STICKERS_WEAR];
         const stickerWear = stickersWear[stickerIndex] || CS_NO_STICKER_WEAR;
         const nextWear = float(stickerWear + CS_STICKER_WEAR_FACTOR);
         if (nextWear > CS_MAX_WEAR) {
