@@ -219,8 +219,7 @@ export class CS_Inventory {
             ...attributes
         };
         CS_validateInventoryItem(changes);
-        this.items.map.set(itemUid, {
-            ...changes,
+        Object.assign(inventoryItem, changes, {
             updatedat: CS_getTimestamp()
         });
         return this;
