@@ -192,10 +192,18 @@ export function CS_unlockCase(caseItem: number | CS_Item) {
         }
     }
     const item = items[rollRarity][Math.floor(Math.random() * items[rollRarity].length)];
+    const hasStatTrak = item.category !== "StatTrakless";
+    const alwaysStatTrak = item.category === "StatTrak-only";
     return {
         attributes: {
             seed: CS_hasSeed(item) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
-            stattrak: CS_hasStatTrak(item) ? (Math.random() <= CS_STATTRAK_ODD ? 0 : undefined) : undefined,
+            stattrak: hasStatTrak
+                ? CS_hasStatTrak(item)
+                    ? alwaysStatTrak || Math.random() <= CS_STATTRAK_ODD
+                        ? 0
+                        : undefined
+                    : undefined
+                : undefined,
             wear: CS_hasWear(item)
                 ? Number(
                       CS_randomFloat(item.wearmin ?? CS_MIN_WEAR, item.wearmax ?? CS_MAX_WEAR)
