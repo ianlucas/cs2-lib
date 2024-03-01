@@ -865,6 +865,11 @@ export class ItemsGenerator {
                 });
 
                 this.generatedItems.push({
+                    category: name.includes("Music Kit")
+                        ? name.includes("StatTrak")
+                            ? "StatTrak-only"
+                            : "StatTrakless"
+                        : undefined,
                     contents,
                     def: Number(itemIndex),
                     id,
