@@ -384,9 +384,10 @@ export function CS_getStickers(): CS_Item[] {
 }
 
 export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
-    const { id, image } = CS_Economy.get(item);
+    item = CS_Economy.get(item);
+    const { id, image } = item;
 
-    if (wear !== undefined) {
+    if (CS_hasWear(item) && wear !== undefined) {
         switch (true) {
             case wear < 1 / 3:
                 return `${baseUrl}/${id}_light.png`;
