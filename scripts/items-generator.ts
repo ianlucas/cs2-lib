@@ -7,7 +7,7 @@ import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
 import { format } from "util";
-import { CS_DEFAULT_MAX_WEAR, CS_DEFAULT_MIN_WEAR, CS_Item } from "../src/economy.js";
+import { CS_DEFAULT_MAX_WEAR, CS_DEFAULT_MIN_WEAR, CS_Item, CS_ItemTranslations } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
 import { CasesScraper } from "./cases-scraper.js";
@@ -96,7 +96,7 @@ export class ItemsGenerator {
     raritiesColorHex: UnsafeRaritiesRecord = null!;
     revolvingLootList: RevolvingLootListRecord = null!;
     stickerKits: StickerKitsRecord = null!;
-    translations: LanguagesRecord = null!;
+    translations: CS_ItemTranslations = null!;
 
     lookupAgentModel: Record<string, string> = {};
     lookupWeaponModel: Record<string, string> = {};
@@ -135,7 +135,7 @@ export class ItemsGenerator {
 
     readCsgoLanguageTXT(include?: string[]) {
         const languages = {} as LanguagesRecord;
-        const translations = {} as LanguagesRecord;
+        const translations = {} as CS_ItemTranslations;
         const files = readdirSync(CS2_RESOURCE_PATH);
 
         for (const file of files) {
@@ -310,7 +310,7 @@ export class ItemsGenerator {
             const teams = this.getTeams(prefab.used_by_classes);
             const id = this.ids.get(`weapon_${teams.join("_")}_${itemIndex}`);
 
-            this.addTranslation(id, name, prefab.item_name);
+            this.addTranslation(id, "name", name, prefab.item_name);
             this.lookupWeaponModel[itemIndex] = itemProps.name;
 
             this.baseItems.push({
@@ -357,7 +357,7 @@ export class ItemsGenerator {
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`melee_${teams.join("_")}_${itemIndex}`);
 
-            this.addTranslation(id, name, itemProps.item_name);
+            this.addTranslation(id, "name", name, itemProps.item_name);
             this.lookupWeaponModel[itemIndex] = itemProps.name;
 
             this.baseItems.push({
@@ -391,7 +391,7 @@ export class ItemsGenerator {
             const name = this.requireTranslation(itemProps.item_name);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.ids.get(`glove_${teams.join("_")}_${itemIndex}`);
-            this.addTranslation(id, name, itemProps.item_name);
+            this.addTranslation(id, "name", name, itemProps.item_name);
 
             this.baseItems.push({
                 base: true,
@@ -440,7 +440,7 @@ export class ItemsGenerator {
             const id = this.ids.get(`paint_${parentItem.def}_${paintKit.index}`);
             const legacy = this.previousItems.get(id)?.legacy;
 
-            this.addTranslation(id, name, parentItem.nameToken, " | ", paintKit.nameToken);
+            this.addTranslation(id, "name", name, parentItem.nameToken, " | ", paintKit.nameToken);
             this.addCaseContent(itemKey, id);
 
             if (legacy) {
@@ -477,7 +477,7 @@ export class ItemsGenerator {
                 const name = this.requireTranslation(musicProps.loc_name);
                 const id = this.ids.get(`musickit_${musicIndex}`);
 
-                this.addTranslation(id, name, musicProps.loc_name);
+                this.addTranslation(id, "name", name, musicProps.loc_name);
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.push({
@@ -553,9 +553,9 @@ export class ItemsGenerator {
             const id = this.ids.get(`sticker_${stickerIndex}`);
             const itemKey = `[${stickerProps.name}]sticker`;
 
-            this.addTranslation(id, name, stickerProps.item_name);
+            this.addTranslation(id, "name", name, stickerProps.item_name);
             if (categoryToken !== "") {
-                this.addTranslation(category, category, categoryToken);
+                this.addTranslation(id, "category", category, categoryToken);
             }
             this.addCaseContent(itemKey, id);
 
@@ -602,7 +602,7 @@ export class ItemsGenerator {
                         continue;
                     }
                     const itemKey = `[${graffitiProps.name}]spray`;
-                    this.addTranslation(id, name, graffitiProps.item_name, " (", tintToken, ")");
+                    this.addTranslation(id, "name", name, graffitiProps.item_name, " (", tintToken, ")");
 
                     this.generatedItems.push({
                         id,
@@ -625,7 +625,7 @@ export class ItemsGenerator {
                 const id = this.ids.get(`spray_${graffitiIndex}`);
                 const itemKey = `[${graffitiProps.name}]spray`;
 
-                this.addTranslation(id, name, graffitiProps.item_name);
+                this.addTranslation(id, "name", name, graffitiProps.item_name);
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.push({
@@ -660,7 +660,7 @@ export class ItemsGenerator {
             const id = this.ids.get(`patch_${patchIndex}`);
             const itemKey = `[${patchProps.name}]patch`;
 
-            this.addTranslation(id, name, patchProps.item_name);
+            this.addTranslation(id, "name", name, patchProps.item_name);
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.push({
@@ -693,7 +693,7 @@ export class ItemsGenerator {
             const id = this.ids.get(`agent_${teams.join("_")}_${itemIndex}`);
             const model = itemProps.model_player.replace("characters/models/", "").replace(".vmdl", "");
 
-            this.addTranslation(id, name, itemProps.item_name);
+            this.addTranslation(id, "name", name, itemProps.item_name);
             this.lookupAgentModel[itemIndex] = model;
 
             this.generatedItems.push({
@@ -727,7 +727,7 @@ export class ItemsGenerator {
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.ids.get(`pin_${itemIndex}`);
 
-            this.addTranslation(id, name, itemProps.item_name);
+            this.addTranslation(id, "name", name, itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.push({
@@ -758,7 +758,7 @@ export class ItemsGenerator {
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.ids.get(`tool_${itemIndex}`);
 
-            this.addTranslation(id, name, itemProps.item_name);
+            this.addTranslation(id, "name", name, itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.push({
@@ -816,7 +816,7 @@ export class ItemsGenerator {
                 const name = this.requireTranslation(itemProps.item_name);
                 const id = this.ids.get(`case_${itemIndex}`);
                 const specials = this.casesScraper.getSpecials(name);
-                this.addTranslation(id, name, itemProps.item_name);
+                this.addTranslation(id, "name", name, itemProps.item_name);
 
                 if (!itemProps.associated_items) {
                     if (
@@ -850,7 +850,7 @@ export class ItemsGenerator {
                         throw new Error(`image_inventory not found for key of ${itemIndex}.`);
                     }
                     const name = this.requireTranslation(itemProps.item_name);
-                    this.addTranslation(id, name, itemProps.item_name);
+                    this.addTranslation(id, "name", name, itemProps.item_name);
                     this.generatedItems.push({
                         def: Number(itemIndex),
                         id,
@@ -925,7 +925,7 @@ export class ItemsGenerator {
         console.warn("script completed.");
     }
 
-    addTranslation(id: number | string, englishName: string, ...keys: string[]) {
+    addTranslation(id: number, field: string, englishName: string, ...keys: string[]) {
         for (const language of Object.keys(this.languages)) {
             if (language === "english") {
                 continue;
@@ -945,7 +945,10 @@ export class ItemsGenerator {
 
             if (translatedName !== englishName) {
                 console.log(`skipped translation of ${keys} for ${language} (same as english).`);
-                this.translations[language][id] = translatedName;
+                if (this.translations[language][id] === undefined) {
+                    this.translations[language][id] = {};
+                }
+                this.translations[language][id][field] = translatedName;
             }
         }
     }

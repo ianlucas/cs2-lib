@@ -42,6 +42,8 @@ export interface CS_Item {
     wearmin?: number;
 }
 
+export type CS_ItemTranslations = Record<string, Record<number, Record<string, string>>>;
+
 export const CS_MIN_STATTRAK = 0;
 export const CS_MAX_STATTRAK = 999999;
 export const CS_WEAR_FACTOR = 0.000001;
@@ -101,13 +103,15 @@ export class CS_Economy {
 
     static initialize(items: CS_Item[]) {
         CS_Economy.categories.clear();
-        CS_Economy.items = items;
+        CS_Economy.items = [];
         CS_Economy.itemMap.clear();
         CS_Economy.stickers = [];
         items.forEach((item) => {
-            CS_Economy.itemMap.set(item.id, item);
+            const copy = { ...item };
+            CS_Economy.items.push(copy);
+            CS_Economy.itemMap.set(item.id, copy);
             if (item.type === "sticker" && item.category !== undefined) {
-                CS_Economy.stickers.push(item);
+                CS_Economy.stickers.push(copy);
                 CS_Economy.categories.add(item.category);
             }
         });
@@ -123,6 +127,20 @@ export class CS_Economy {
 
     static get(idOrItem: number | CS_Item) {
         return typeof idOrItem === "number" ? CS_Economy.getById(idOrItem) : idOrItem;
+    }
+
+    static applyTranslation(translation: CS_ItemTranslations[number]) {
+        CS_Economy.categories.clear();
+        for (const [id, fields] of Object.entries(translation)) {
+            const item = CS_Economy.itemMap.get(Number(id));
+            if (item === undefined) {
+                continue;
+            }
+            Object.assign(item, fields);
+            if (fields.category !== undefined && item.type === "sticker") {
+                CS_Economy.categories.add(fields.category);
+            }
+        }
     }
 }
 
