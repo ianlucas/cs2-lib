@@ -52,7 +52,7 @@ const UNCATEGORIZED_STICKERS = [
     "danger_zone"
 ];
 const HEAVY_WEAPONS = ["weapon_m249", "weapon_mag7", "weapon_negev", "weapon_nova", "weapon_sawedoff", "weapon_xm1014"];
-const SECONDARY_WEAPONS = ["weapon_taser"];
+const PARSE_WEAPON_ALLOW = ["weapon_taser"];
 const FREE_MUSIC_KITS = ["1", "70"];
 
 export class Items extends Map<number, CS_Item> {
@@ -301,8 +301,7 @@ export class ItemsGenerator {
                 continue;
             }
             const [, category] = matches;
-            const isTaser = itemProps.name === "weapon_taser";
-            if (category === "equipment" && !isTaser) {
+            if (category === "equipment" && !PARSE_WEAPON_ALLOW.includes(itemProps.name)) {
                 continue;
             }
             const prefab = this.getPrefab(itemProps.prefab);
@@ -1016,9 +1015,6 @@ export class ItemsGenerator {
     }
 
     getWeaponCategory(name: string, category: string) {
-        if (SECONDARY_WEAPONS.includes(name)) {
-            return "secondary";
-        }
         if (HEAVY_WEAPONS.includes(name)) {
             return "heavy";
         }
