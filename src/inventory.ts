@@ -510,7 +510,8 @@ export class CS_Inventory {
     copy() {
         return new CS_Inventory({
             items: this.getAll(),
-            limit: this.limit
+            limit: this.limit,
+            storageUnitLimit: this.storageUnitLimit
         });
     }
 }
