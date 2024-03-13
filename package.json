@@ -1,6 +1,6 @@
 {
     "name": "@ianlucas/cslib",
-    "version": "11.3.0",
+    "version": "11.3.1",
     "description": "A TypeScript library for manipulating Counter-Strike-related data",
     "license": "MIT",
     "author": "Ian Lucas",
