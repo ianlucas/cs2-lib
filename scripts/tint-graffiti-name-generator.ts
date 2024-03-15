@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { basename } from "path";
-import { ItemsGenerator } from "./items-generator.js";
+import { ItemGenerator } from "./item-generator.js";
 import { writeJson } from "./util.js";
 
-export class TintGraffitiNamesGenerator {
+export class TintGraffitiNameGenerator {
     async run() {
-        const generator = new ItemsGenerator();
-        generator.readCsgoLanguageTXT(["english"]);
-        generator.readItemsGameTXT();
+        const generator = new ItemGenerator();
+        generator.readCsgoLanguage(["english"]);
+        generator.readItemsGame();
         const graffiti: string[] = [];
 
         for (const stickerProps of Object.values(generator.stickerKits)) {
@@ -29,6 +29,6 @@ export class TintGraffitiNamesGenerator {
     }
 }
 
-if (basename(process.argv[1]) === "tint-graffiti-names-generator.ts") {
-    new TintGraffitiNamesGenerator().run();
+if (basename(process.argv[1]) === "tint-graffiti-name-generator.ts") {
+    new TintGraffitiNameGenerator().run();
 }

@@ -6,7 +6,7 @@
 import { basename } from "path";
 import { fetchText, readJson, sleep, writeJson } from "./util.js";
 
-export class TintGraffitiImagesScraper {
+export class TintGraffitiImageScraper {
     async run() {
         const min = 1;
         const max = 5;
@@ -36,11 +36,11 @@ export class TintGraffitiImagesScraper {
             }
         }
 
-        console.log(`scraped ${Object.keys(images).length} items.`);
+        console.log(`Scraped ${Object.keys(images).length} items.`);
         writeJson("assets/data/tint-graffiti-images.json", images);
     }
 }
 
-if (basename(process.argv[1]) === "tint-graffiti-images-scraper.ts") {
-    new TintGraffitiImagesScraper().run();
+if (basename(process.argv[1]) === "tint-graffiti-image-scraper.ts") {
+    new TintGraffitiImageScraper().run();
 }
