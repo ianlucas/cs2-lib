@@ -15,7 +15,7 @@ import {
     CS_hasStatTrak,
     CS_hasWear
 } from "./economy.js";
-import { safe } from "./util.js";
+import { assert, safe } from "./util.js";
 
 export const CS_RARITY_COMMON_COLOR = "#b0c3d9";
 export const CS_RARITY_UNCOMMON_COLOR = "#5e98d9";
@@ -57,19 +57,12 @@ export const CS_RARITY_COLOR_ORDER: Record<string, number | undefined> = {
     [CS_RARITY_IMMORTAL_COLOR]: 7
 };
 
-export const CS_RARITY_ORDER = [
-    "common",
-    "uncommon",
-    "rare",
-    "mythical",
-    "legendary",
-    "ancient",
-    "immortal",
-    "special"
-];
+export const CS_RARITIES = ["common", "uncommon", "rare", "mythical", "legendary", "ancient", "immortal"] as const;
+
+export const CS_RARITY_ORDER = [...CS_RARITIES, "special"] as const;
 
 export const CS_BASE_ODD = 0.8;
-export const CS_STATTRAK_ODD = 1 / 10;
+export const CS_STATTRAK_ODD = 0.1;
 
 export function CS_randomFloat(min: number, max: number) {
     return Math.random() * (max - min) + min;
@@ -90,52 +83,40 @@ export function CS_isKey(item: number | CS_Item) {
 }
 
 export function CS_expectCase(item: number | CS_Item) {
-    if (!CS_isCase(item)) {
-        throw new Error("item is not a case.");
-    }
+    assert(CS_isCase(item), "Item is not a case.");
     return true;
 }
 
 export function CS_expectKey(item: number | CS_Item) {
-    if (!CS_isKey(item)) {
-        throw new Error("item is not a key.");
-    }
+    assert(CS_isKey(item), `Item is not a key.`);
     return true;
 }
 
 export function CS_validateCaseKey(caseItem: number | CS_Item, keyItem?: number | CS_Item) {
     caseItem = CS_Economy.get(caseItem);
-    keyItem = keyItem !== undefined ? CS_Economy.get(keyItem) : undefined;
     CS_expectCase(caseItem);
+    keyItem = keyItem !== undefined ? CS_Economy.get(keyItem) : undefined;
     if (keyItem !== undefined) {
-        if (caseItem.keys === undefined) {
-            throw new Error("case does not need a key");
-        }
-        CS_expectKey(keyItem);
-        if (!caseItem.keys.includes(keyItem.id)) {
-            throw new Error("case needs a valid key to be open");
-        }
+        assert(CS_expectKey(keyItem), "Invalid key item.");
+        assert(caseItem.keys !== undefined, "Case does not require a key.");
+        assert(caseItem.keys.includes(keyItem.id), "Invalid key for this case.");
     } else {
-        if (caseItem.keys !== undefined) {
-            throw new Error("case needs a key");
-        }
+        assert(caseItem.keys === undefined, "Case requires a key.");
     }
 }
 
 export const CS_safeValidateCaseKey = safe(CS_validateCaseKey);
 
-export function CS_getCaseContents(caseItem: number | CS_Item) {
-    caseItem = CS_Economy.get(caseItem);
-    CS_expectCase(caseItem);
-    const { contents, specials } = caseItem;
-    if (contents === undefined) {
-        throw new Error("case has no contents.");
-    }
+export function CS_getCaseContents(item: number | CS_Item) {
+    item = CS_Economy.get(item);
+    CS_expectCase(item);
+    const { contents, specials } = item;
+    assert(contents, `Case has no contents.`);
     return { contents, specials };
 }
 
-export function CS_groupCaseContents(caseItem: number | CS_Item) {
-    const { contents, specials } = CS_getCaseContents(caseItem);
+export function CS_groupCaseContents(item: number | CS_Item) {
+    const { contents, specials } = CS_getCaseContents(item);
     const items: Record<string, CS_Item[]> = {};
     for (const id of contents) {
         const item = CS_Economy.getById(id);
@@ -158,8 +139,8 @@ export function CS_groupCaseContents(caseItem: number | CS_Item) {
     return items;
 }
 
-export function CS_listCaseContents(caseItem: number | CS_Item, hideSpecials = false) {
-    const { contents, specials } = CS_getCaseContents(caseItem);
+export function CS_listCaseContents(item: number | CS_Item, hideSpecials = false) {
+    const { contents, specials } = CS_getCaseContents(item);
     const items = [...contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
     return items
         .map((id) => CS_Economy.getById(id))
@@ -174,9 +155,9 @@ export function CS_listCaseContents(caseItem: number | CS_Item, hideSpecials = f
 /**
  * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
  */
-export function CS_unlockCase(caseItem: number | CS_Item) {
-    const items = CS_groupCaseContents(caseItem);
-    const keys = Object.keys(items);
+export function CS_unlockCase(item: number | CS_Item) {
+    const contents = CS_groupCaseContents(item);
+    const keys = Object.keys(contents);
     const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
     const odds = rarities.map((_, index) => CS_BASE_ODD / Math.pow(5, index));
     const total = odds.reduce((acc, cur) => acc + cur, 0);
@@ -191,39 +172,47 @@ export function CS_unlockCase(caseItem: number | CS_Item) {
             break;
         }
     }
-    const item = items[rollRarity][Math.floor(Math.random() * items[rollRarity].length)];
-    const hasStatTrak = item.category !== "StatTrakless";
-    const alwaysStatTrak = item.category === "StatTrak-only";
+    const unlocked = contents[rollRarity][Math.floor(Math.random() * contents[rollRarity].length)];
+    const hasStatTrak = unlocked.category !== "StatTrakless";
+    const alwaysStatTrak = unlocked.category === "StatTrak-only";
     return {
         attributes: {
-            seed: CS_hasSeed(item) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
+            seed: CS_hasSeed(unlocked) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
             stattrak: hasStatTrak
-                ? CS_hasStatTrak(item)
+                ? CS_hasStatTrak(unlocked)
                     ? alwaysStatTrak || Math.random() <= CS_STATTRAK_ODD
                         ? 0
                         : undefined
                     : undefined
                 : undefined,
-            wear: CS_hasWear(item)
+            wear: CS_hasWear(unlocked)
                 ? Number(
-                      CS_randomFloat(item.wearmin ?? CS_MIN_WEAR, item.wearmax ?? CS_MAX_WEAR)
+                      CS_randomFloat(unlocked.wearmin ?? CS_MIN_WEAR, unlocked.wearmax ?? CS_MAX_WEAR)
                           .toString()
                           .substring(0, CS_WEAR_FACTOR.toString().length)
                   )
                 : undefined
         },
-        id: item.id,
-        rarity: CS_RARITY_FOR_SOUNDS[item.rarity],
+        id: unlocked.id,
+        rarity: CS_RARITY_FOR_SOUNDS[unlocked.rarity],
         special: rollRarity === "special"
     };
 }
 
-export function CS_validateUnlockedItem(caseItem: number | CS_Item, { id }: ReturnType<typeof CS_unlockCase>) {
-    caseItem = CS_Economy.get(caseItem);
-    if (caseItem.type !== "case") {
-        throw new Error("item is not a case.");
+export function CS_validateUnlockedItem(item: number | CS_Item, { id }: ReturnType<typeof CS_unlockCase>) {
+    item = CS_Economy.get(item);
+    CS_expectCase(item);
+    const { contents, specials } = item;
+    assert(contents?.includes(id) || specials?.includes(id), `Unlocked item is not from this case.`);
+}
+
+export function CS_resolveCaseSpecialsImage(baseUrl: string, item: number | CS_Item): string {
+    item = CS_Economy.get(item);
+    CS_expectCase(item);
+    const { id, specialsimage, specials } = item;
+    assert(specials === undefined, "Case does not have special items.");
+    if (specialsimage) {
+        return `${baseUrl}/${id}_rare.png`;
     }
-    if (!caseItem.contents?.includes(id) && !caseItem.specials?.includes(id)) {
-        throw new Error("unlocked item is not from this case.");
-    }
+    return `${baseUrl}/default_rare_item.png`;
 }
