@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS_Team } from "./teams.js";
-import { compare, safe } from "./util.js";
+import { assert, compare, safe } from "./util.js";
 
 export interface CS_Item {
     altname?: string;
@@ -95,33 +95,31 @@ function filterItems(predicate: CS_EconomyPredicate) {
 }
 
 export class CS_Economy {
-    static items: CS_Item[] = [];
-    static itemMap: Map<number, CS_Item> = new Map();
+    static categories = new Set<string>();
+    static items = new Map<number, CS_Item>();
+    static itemsAsArray: CS_Item[] = [];
+    static stickers = new Set<CS_Item>();
 
-    static categories: Set<string> = new Set();
-    static stickers: CS_Item[] = [];
-
-    static initialize(items: CS_Item[]) {
+    static use(items: CS_Item[]) {
         CS_Economy.categories.clear();
-        CS_Economy.items = [];
-        CS_Economy.itemMap.clear();
-        CS_Economy.stickers = [];
-        items.forEach((item) => {
-            const copy = { ...item };
-            CS_Economy.items.push(copy);
-            CS_Economy.itemMap.set(item.id, copy);
-            if (item.type === "sticker" && item.category !== undefined) {
-                CS_Economy.stickers.push(copy);
+        CS_Economy.items.clear();
+        CS_Economy.itemsAsArray = [];
+        CS_Economy.stickers.clear();
+        for (const item of items) {
+            const clone = { ...item };
+            CS_Economy.itemsAsArray.push(clone);
+            CS_Economy.items.set(item.id, clone);
+            if (CS_isSticker(item)) {
+                assert(item.category, `Sticker item '${item.id}' does not have a category.`);
+                CS_Economy.stickers.add(clone);
                 CS_Economy.categories.add(item.category);
             }
-        });
+        }
     }
 
     static getById(id: number) {
-        const item = CS_Economy.itemMap.get(id);
-        if (item === undefined) {
-            throw new Error("item not found");
-        }
+        const item = CS_Economy.items.get(id);
+        assert(item, `The given id '${id}' was not present in CS_Economy.items.`);
         return item;
     }
 
@@ -132,7 +130,7 @@ export class CS_Economy {
     static applyTranslation(translation: CS_ItemTranslations[number]) {
         CS_Economy.categories.clear();
         for (const [id, fields] of Object.entries(translation)) {
-            const item = CS_Economy.itemMap.get(Number(id));
+            const item = CS_Economy.items.get(Number(id));
             if (item === undefined) {
                 continue;
             }
@@ -145,18 +143,14 @@ export class CS_Economy {
 }
 
 export function CS_findItem(predicate: CS_EconomyPredicate): CS_Item {
-    const item = CS_Economy.items.find(filterItems(predicate));
-    if (item === undefined) {
-        throw new Error("item not found");
-    }
+    const item = CS_Economy.itemsAsArray.find(filterItems(predicate));
+    assert(item, "No items found.");
     return item;
 }
 
 export function CS_filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
-    const items = CS_Economy.items.filter(filterItems(predicate));
-    if (items.length === 0) {
-        throw new Error("items not found");
-    }
+    const items = CS_Economy.itemsAsArray.filter(filterItems(predicate));
+    assert(items.length > 0, "No items found.");
     return items;
 }
 
@@ -169,38 +163,25 @@ export function CS_isSticker(item: number | CS_Item): boolean {
 }
 
 export function CS_expectSticker(item: number | CS_Item) {
-    if (!CS_isSticker(item)) {
-        throw new Error("item is not a sticker");
-    }
+    assert(CS_isSticker(item), `Item is not a sticker.`);
+    return true;
 }
 
 export function CS_hasWear(item: CS_Item): boolean {
     return CS_WEARABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
 }
 
-export function CS_validateWear(wear?: number, forItem?: CS_Item): boolean {
+export function CS_validateWear(wear?: number, item?: CS_Item): boolean {
     if (wear === undefined) {
         return true;
     }
-    if (Number.isNaN(wear)) {
-        throw new Error("invalid wear.");
-    }
-    if (forItem !== undefined && !CS_hasWear(forItem)) {
-        throw new Error("item does not have wear");
-    }
-    if (String(wear).length > String(CS_WEAR_FACTOR).length) {
-        throw new Error("invalid wear length");
-    }
-    if (wear < CS_MIN_WEAR || wear > CS_MAX_WEAR) {
-        throw new Error("invalid wear");
-    }
-    if (forItem !== undefined) {
-        if (forItem.wearmin !== undefined && wear < forItem.wearmin) {
-            throw new Error("invalid wear");
-        }
-        if (forItem.wearmax !== undefined && wear > forItem.wearmax) {
-            throw new Error("invalid wear");
-        }
+    assert(!Number.isNaN(wear), "Wear must be a number.");
+    assert(String(wear).length <= String(CS_WEAR_FACTOR).length, "Wear value is too long.");
+    assert(wear >= CS_MIN_WEAR && wear <= CS_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
+    if (item !== undefined) {
+        assert(CS_hasWear(item), "Item does not have wear.");
+        assert(item.wearmin === undefined || wear >= item.wearmin, "Wear value is below the minimum allowed.");
+        assert(item.wearmax === undefined || wear <= item.wearmax, "Wear value is above the maximum allowed.");
     }
     return true;
 }
@@ -211,22 +192,14 @@ export function CS_hasSeed(item: CS_Item): boolean {
     return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
 }
 
-export function CS_validateSeed(seed?: number, forItem?: CS_Item): boolean {
+export function CS_validateSeed(seed?: number, item?: CS_Item): boolean {
     if (seed === undefined) {
         return true;
     }
-    if (Number.isNaN(seed)) {
-        throw new Error("invalid seed.");
-    }
-    if (forItem !== undefined && !CS_hasSeed(forItem)) {
-        throw new Error("item does not have seed");
-    }
-    if (String(seed).includes(".")) {
-        throw new Error("seed is an integer");
-    }
-    if (seed < CS_MIN_SEED || seed > CS_MAX_SEED) {
-        throw new Error("invalid seed");
-    }
+    assert(!Number.isNaN(seed), "Seed must be a valid number.");
+    assert(item === undefined || CS_hasSeed(item), "Item does not have a seed.");
+    assert(Number.isInteger(seed), "Seed must be an integer.");
+    assert(seed >= CS_MIN_SEED && seed <= CS_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
     return true;
 }
 
@@ -236,49 +209,28 @@ export function CS_hasStickers(item: CS_Item): boolean {
     return CS_STICKERABLE_ITEMS.includes(item.type) && !CS_isC4(item);
 }
 
-export function CS_validateStickers(item: CS_Item, stickers?: number[], stickerswear?: number[]): boolean {
+export function CS_validateStickers(stickers?: number[], wears?: number[], item?: CS_Item): boolean {
     if (stickers === undefined) {
-        if (stickerswear !== undefined) {
-            throw new Error("invalid stickers");
-        }
+        assert(wears === undefined, "Stickers array is undefined.");
         return true;
     }
-    if (!CS_hasStickers(item)) {
-        throw new Error("item does not have seed");
-    }
-    if (stickers.length !== 4) {
-        throw new Error("invalid stickers");
-    }
-    if (stickerswear !== undefined && stickerswear.length !== 4) {
-        throw new Error("invalid stickers wear");
-    }
-    for (const [index, sticker] of stickers.entries()) {
-        if (sticker === CS_NO_STICKER) {
-            if (stickerswear !== undefined && stickerswear[index] !== CS_NO_STICKER_WEAR) {
-                throw new Error("invalid wear");
-            }
+    assert(stickers.length === 4, "Stickers array must contain exactly 4 elements.");
+    assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
+    assert(item === undefined || CS_hasStickers(item), "The provided item does not have stickers.");
+    for (const [index, stickerId] of stickers.entries()) {
+        if (stickerId === CS_NO_STICKER) {
+            assert(wears === undefined || wears[index] === CS_NO_STICKER_WEAR, "Sticker wear value is invalid.");
             continue;
         }
-        if (Number.isNaN(sticker)) {
-            throw new Error("invalid sticker");
-        }
-        if (CS_Economy.getById(sticker).type !== "sticker") {
-            throw new Error("invalid sticker");
-        }
-        if (stickerswear === undefined) {
-            continue;
-        }
-        const wear = stickerswear[index];
-        if (typeof wear === "number") {
-            if (Number.isNaN(wear)) {
-                throw new Error("invalid sticker wear");
-            }
-            if (String(wear).length > String(CS_STICKER_WEAR_FACTOR).length) {
-                throw new Error("invalid sticker wear length");
-            }
-            if (wear < CS_MIN_STICKER_WEAR && wear > CS_MAX_STICKER_WEAR) {
-                throw new Error("invalid sticker wear wear");
-            }
+        assert(CS_isSticker(stickerId), "The provided ID does not correspond to a sticker.");
+        if (wears !== undefined) {
+            const wear = wears[index];
+            assert(!Number.isNaN(wear), "Sticker wear value must be a valid number.");
+            assert(String(wear).length <= String(CS_STICKER_WEAR_FACTOR).length, "Sticker wear value is too long.");
+            assert(
+                wear >= CS_MIN_STICKER_WEAR && wear <= CS_MAX_STICKER_WEAR,
+                "Sticker wear value must be between CS_MIN_STICKER_WEAR and CS_MAX_STICKER_WEAR."
+            );
         }
     }
     return true;
@@ -293,26 +245,19 @@ export function CS_trimNametag(nametag?: string) {
     return trimmed === "" ? undefined : trimmed;
 }
 
-export function CS_validateNametag(nametag?: string, forItem?: CS_Item): boolean {
-    if (nametag === undefined) {
-        return true;
-    }
-    if (forItem !== undefined && !CS_hasNametag(forItem)) {
-        throw new Error("invalid nametag");
-    }
-    if (nametag[0] === " " || !CS_NAMETAG_RE.test(nametag)) {
-        throw new Error("invalid nametag");
+export function CS_validateNametag(nametag?: string, item?: CS_Item): boolean {
+    if (nametag !== undefined) {
+        assert(item === undefined || CS_hasNametag(item), "The provided item does not have a nametag.");
+        assert(nametag[0] !== " " && CS_NAMETAG_RE.test(nametag), "Invalid nametag format.");
     }
     return true;
 }
 
 export const CS_safeValidateNametag = safe(CS_validateNametag);
 
-export function CS_requireNametag(nametag?: string, forItem?: CS_Item): boolean {
-    if (nametag === undefined || nametag.trim().length === 0) {
-        throw new Error("item requires a nametag");
-    }
-    return CS_validateNametag(nametag, forItem);
+export function CS_requireNametag(nametag?: string, item?: CS_Item): boolean {
+    assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
+    return CS_validateNametag(nametag, item);
 }
 
 export const CS_safeRequireNametag = safe(CS_requireNametag);
@@ -321,18 +266,14 @@ export function CS_hasStatTrak(item: CS_Item): boolean {
     return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
 }
 
-export function CS_validateStatTrak(stattrak?: number, forItem?: CS_Item): boolean {
-    if (stattrak === undefined) {
-        return true;
-    }
-    if (Number.isNaN(stattrak)) {
-        throw new Error("invalid stattrak");
-    }
-    if (forItem !== undefined && !CS_hasStatTrak(forItem)) {
-        throw new Error("invalid stattrak");
-    }
-    if (stattrak < CS_MIN_STATTRAK || stattrak > CS_MAX_STATTRAK) {
-        throw new Error("invalid stattrak");
+export function CS_validateStatTrak(stattrak?: number, item?: CS_Item): boolean {
+    assert(item === undefined || CS_hasStatTrak(item), "The provided item does not support stattrak.");
+    if (stattrak !== undefined) {
+        assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
+        assert(
+            stattrak >= CS_MIN_STATTRAK && stattrak <= CS_MAX_STATTRAK,
+            "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
+        );
     }
     return true;
 }
@@ -345,13 +286,9 @@ export function CS_isStorageUnitTool(item: number | CS_Item): boolean {
 }
 
 export function CS_expectStorageUnitTool(item: CS_Item) {
-    if (!CS_isStorageUnitTool(item)) {
-        throw new Error("item is not a storage unit");
-    }
+    assert(CS_isStorageUnitTool(item), "Item is not a storage unit.");
     return true;
 }
-
-export const CS_safeValidateStorageToolUnit = safe(CS_expectStorageUnitTool);
 
 export function CS_isNametagTool(toolItem: number | CS_Item): boolean {
     const { def, type } = CS_Economy.get(toolItem);
@@ -359,38 +296,33 @@ export function CS_isNametagTool(toolItem: number | CS_Item): boolean {
 }
 
 export function CS_expectNametagTool(item: CS_Item) {
-    if (!CS_isNametagTool(item)) {
-        throw new Error("item is not a nametag tool");
-    }
+    assert(CS_isNametagTool(item), "Item is not a nametag tool");
     return true;
 }
 
-export function isStatTrakSwapTool(item: number | CS_Item): boolean {
+export function CS_isStatTrakSwapTool(item: number | CS_Item): boolean {
     const { def, type } = CS_Economy.get(item);
     return type === "tool" && def === CS_STATTRAK_SWAP_TOOL_DEF;
 }
 
 export function expectStatTrakSwapTool(item: CS_Item) {
-    if (!isStatTrakSwapTool(item)) {
-        throw new Error("item is not a stattrak swap tool");
-    }
+    assert(CS_isStatTrakSwapTool(item), "Item is not a stattrak swap tool.");
     return true;
 }
 
 export function CS_getWearLabel(wear: number): string {
-    if (wear <= CS_MAX_FACTORY_NEW_WEAR) {
-        return "FN";
+    switch (true) {
+        case wear <= CS_MAX_FACTORY_NEW_WEAR:
+            return "FN";
+        case wear <= CS_MAX_MINIMAL_WEAR_WEAR:
+            return "MW";
+        case wear <= CS_MAX_FIELD_TESTED_WEAR:
+            return "FT";
+        case wear <= CS_MAX_WELL_WORN_WEAR:
+            return "WW";
+        default:
+            return "BS";
     }
-    if (wear <= CS_MAX_MINIMAL_WEAR_WEAR) {
-        return "MW";
-    }
-    if (wear <= CS_MAX_FIELD_TESTED_WEAR) {
-        return "FT";
-    }
-    if (wear <= CS_MAX_WELL_WORN_WEAR) {
-        return "WW";
-    }
-    return "BS";
 }
 
 export function CS_getStickerCategories(): string[] {
@@ -398,7 +330,7 @@ export function CS_getStickerCategories(): string[] {
 }
 
 export function CS_getStickers(): CS_Item[] {
-    return CS_Economy.stickers;
+    return Array.from(CS_Economy.stickers);
 }
 
 export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
@@ -425,18 +357,4 @@ export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wea
     }
 
     return image;
-}
-
-export function CS_resolveCaseSpecialsImage(baseUrl: string, item: number | CS_Item): string {
-    const { id, type, specialsimage, specials } = CS_Economy.get(item);
-    if (type !== "case") {
-        throw new Error("item is not a case");
-    }
-    if (specials === undefined) {
-        throw new Error("case does not have special items");
-    }
-    if (specialsimage) {
-        return `${baseUrl}/${id}_rare.png`;
-    }
-    return `${baseUrl}/default_rare_item.png`;
 }
