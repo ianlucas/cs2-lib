@@ -6,9 +6,9 @@
 import * as cheerio from "cheerio";
 import { basename } from "path";
 import { CS_Item } from "../src/economy.js";
-import { dedupe, fetchText, readJson, sleep, writeJson } from "./util.js";
+import { dedupe, fetchText, log, readJson, sleep, writeJson } from "./util.js";
 
-export class CasesScraper {
+export class CaseScraper {
     specialsData = readJson<Record<string, string[]>>("assets/data/case-specials.json", {});
     specials: Record<string, number[]> = {};
 
@@ -37,9 +37,9 @@ export class CasesScraper {
             }
         }
 
-        console.log(`scraped ${Object.keys(caseContents).length} cases with contents.`);
+        console.log(`Scraped ${Object.keys(caseContents).length} cases with contents.`);
         writeJson("assets/data/case-contents.json", caseContents);
-        console.log(`scraped ${Object.keys(caseSpecials).length} cases with specials.`);
+        console.log(`Scraped ${Object.keys(caseSpecials).length} cases with specials.`);
         writeJson("assets/data/case-specials.json", caseSpecials);
     }
 
@@ -77,7 +77,7 @@ export class CasesScraper {
             this.specials[caseName] = specials.map((name) => {
                 const id = lookup[name];
                 if (!id) {
-                    throw new Error(`item ${name} not found.`);
+                    throw new Error(`Item '${name}' not found.`);
                 }
                 return id;
             });
@@ -87,7 +87,7 @@ export class CasesScraper {
     getSpecials(caseName: string) {
         const items = this.specials[caseName];
         if (!items) {
-            console.log(`case ${caseName} does not have special items.`);
+            log(`Case '${caseName}' does not have special items.`);
             return undefined;
         }
         return items;
@@ -95,5 +95,5 @@ export class CasesScraper {
 }
 
 if (basename(process.argv[1]) === "case-scraper.ts") {
-    new CasesScraper().run();
+    new CaseScraper().run();
 }

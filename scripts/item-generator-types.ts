@@ -136,7 +136,7 @@ export type LanguagesRecord = Record<string, Record<string, string>> & {
 };
 
 export type PrefabProps = CS_ItemsGameTXT["items_game"]["prefabs"][number][string];
-export type PrefabsRecord = Record<string, PrefabProps>;
+export type PrefabsRecord = Record<string, PrefabProps | undefined>;
 export type ItemProps = CS_ItemsGameTXT["items_game"]["items"][number][string];
 export type ItemsRecord = Record<string, ItemProps>;
 export type PaintKitsProps = {

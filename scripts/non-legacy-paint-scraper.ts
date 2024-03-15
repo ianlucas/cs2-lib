@@ -6,7 +6,7 @@
 import { basename } from "path";
 import { fetchText, writeJson } from "./util.js";
 
-export class NonLegacyPaintsScraper {
+export class NonLegacyPaintScraper {
     async run() {
         const url = "https://bitskins.com/blog/what-cs2-weapon-skins-have-new-models";
         const contents = await fetchText(url);
@@ -27,11 +27,11 @@ export class NonLegacyPaintsScraper {
             }
         }
 
-        console.log(`scraped ${Object.keys(nonLegacyPaints).length} weapons, ${count} skins.`);
+        console.log(`Scraped ${Object.keys(nonLegacyPaints).length} weapons, ${count} skins.`);
         writeJson("assets/data/non-legacy-paints.json", nonLegacyPaints);
     }
 }
 
-if (basename(process.argv[1]) === "non-legacy-paints-scraper.ts") {
-    new NonLegacyPaintsScraper().run();
+if (basename(process.argv[1]) === "non-legacy-paint-scraper.ts") {
+    new NonLegacyPaintScraper().run();
 }
