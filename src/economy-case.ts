@@ -97,8 +97,8 @@ export function CS_validateCaseKey(caseItem: number | CS_Item, keyItem?: number 
     CS_expectCase(caseItem);
     keyItem = keyItem !== undefined ? CS_Economy.get(keyItem) : undefined;
     if (keyItem !== undefined) {
-        assert(CS_expectKey(keyItem), "Invalid key item.");
         assert(caseItem.keys !== undefined, "Case does not require a key.");
+        assert(CS_expectKey(keyItem), "Invalid key item.");
         assert(caseItem.keys.includes(keyItem.id), "Invalid key for this case.");
     } else {
         assert(caseItem.keys === undefined, "Case requires a key.");
