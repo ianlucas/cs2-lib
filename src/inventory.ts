@@ -158,17 +158,22 @@ export function CS_asBaseInventoryItem(item: CS_InventoryItem) {
     return CS_asPartialBaseInventoryItem(item) as CS_BaseInventoryItem;
 }
 
+export function CS_asInventoryItemMap(items: CS_BaseInventoryItem[]) {
+    const map = new Map<number, CS_InventoryItem>();
+    for (const item of items) {
+        assert(!map.has(item.uid), "Duplicate inventory item uid.");
+        map.set(item.uid, CS_asInventoryItem(item));
+    }
+    return map;
+}
+
 export class CS_Inventory {
     private items: Map<number, CS_InventoryItem>;
     private options: CS_InventoryOptions;
 
     constructor({ items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec>) {
         this.items =
-            items !== undefined
-                ? items instanceof Map
-                    ? items
-                    : new Map(items.map((item) => [item.uid, CS_asInventoryItem(item)]))
-                : new Map();
+            items !== undefined ? (items instanceof Map ? items : new Map(CS_asInventoryItemMap(items))) : new Map();
         this.options = {
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
