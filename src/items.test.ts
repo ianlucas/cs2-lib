@@ -19,7 +19,9 @@ test("has every types and categories", () => {
         itemTypes.add(item.type);
     }
 
-    expect(Array.from(weaponCategories).sort()).toMatchObject(["c4", "heavy", "rifle", "secondary", "smg"].sort());
+    expect(Array.from(weaponCategories).sort()).toMatchObject(
+        ["c4", "equipment", "heavy", "rifle", "secondary", "smg"].sort()
+    );
     expect(Array.from(itemTypes).sort()).toMatchObject(
         [
             "agent",
