@@ -169,7 +169,7 @@ export function CS_asInventoryItemMap(items: CS_BaseInventoryItem[]) {
 
 export class CS_Inventory {
     private items: Map<number, CS_InventoryItem>;
-    private options: CS_InventoryOptions;
+    readonly options: Readonly<CS_InventoryOptions>;
 
     constructor({ items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec>) {
         this.items =
@@ -334,11 +334,18 @@ export class CS_Inventory {
     }
 
     isStorageUnitFilled(storageUid: number) {
-        return this.get(storageUid).storage?.size ?? 0 > 0;
+        return this.getStorageUnitSize(storageUid) > 0;
     }
 
-    canDepositToStorageUnit(storageUid: number) {
-        return this.get(storageUid).nametag !== undefined && !this.isStorageUnitFull(storageUid);
+    canDepositToStorageUnit(storageUid: number, size = 1) {
+        return (
+            this.get(storageUid).nametag !== undefined &&
+            this.getStorageUnitSize(storageUid) + size <= this.options.storageUnitMaxItems
+        );
+    }
+
+    getStorageUnitSize(storageUid: number) {
+        return this.get(storageUid).storage?.size ?? 0;
     }
 
     getStorageUnitItems(storageUid: number) {
@@ -349,9 +356,9 @@ export class CS_Inventory {
         const item = this.get(storageUid);
         CS_expectStorageUnitTool(item.data);
         assert(depositUids.length > 0, "No items to deposit.");
-        assert(this.canDepositToStorageUnit(storageUid), "Cannot deposit to storage unit.");
-        for (const uid of depositUids) {
-            const item = CS_Economy.getById(this.get(uid).id);
+        assert(this.canDepositToStorageUnit(storageUid, depositUids.length), "Cannot deposit to storage unit.");
+        for (const sourceUid of depositUids) {
+            const item = CS_Economy.getById(this.get(sourceUid).id);
             assert(!CS_isStorageUnitTool(item), "Cannot deposit storage unit.");
         }
         const storage = item.storage ?? new Map<number, CS_InventoryItem>();
@@ -381,8 +388,10 @@ export class CS_Inventory {
         assert(retrieveUids.length > 0, "No items to retrieve.");
         assert(this.isStorageUnitFilled(storageUid), "Storage unit is empty.");
         for (const uid of retrieveUids) {
-            const item = storage.get(uid);
-            assert(item, "Item not found.");
+            assert(storage.has(uid), "Item not found.");
+        }
+        for (const uid of retrieveUids) {
+            const item = storage.get(uid)!;
             this.addInventoryItem(item);
             storage.delete(uid);
         }
