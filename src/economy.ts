@@ -336,7 +336,6 @@ export function CS_getStickers(): CS_Item[] {
 export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
     item = CS_Economy.get(item);
     const { id, image } = item;
-
     if (CS_hasWear(item) && wear !== undefined) {
         switch (true) {
             case wear < 1 / 3:
@@ -347,14 +346,11 @@ export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wea
                 return `${baseUrl}/${id}_heavy.png`;
         }
     }
-
     if (image === undefined) {
         return `${baseUrl}/${id}.png`;
     }
-
     if (image.charAt(0) === "/") {
         return `${baseUrl}${image}`;
     }
-
     return image;
 }
