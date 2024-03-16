@@ -76,8 +76,7 @@ export const CS_MAX_STICKER_WEAR = 0.9;
 export const CS_NAMETAG_TOOL_DEF = 1200;
 export const CS_STATTRAK_SWAP_TOOL_DEF = 1324;
 export const CS_STORAGE_UNIT_TOOL_DEF = 1201;
-export const CS_NO_STICKER = 0;
-export const CS_NO_STICKER_WEAR = 0;
+export const CS_NONE = 0;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 
@@ -218,8 +217,8 @@ export function CS_validateStickers(stickers?: number[], wears?: number[], item?
     assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
     assert(item === undefined || CS_hasStickers(item), "The provided item does not have stickers.");
     for (const [index, stickerId] of stickers.entries()) {
-        if (stickerId === CS_NO_STICKER) {
-            assert(wears === undefined || wears[index] === CS_NO_STICKER_WEAR, "Sticker wear value is invalid.");
+        if (stickerId === CS_NONE) {
+            assert(wears === undefined || wears[index] === CS_NONE, "Sticker wear value is invalid.");
             continue;
         }
         assert(CS_isSticker(stickerId), "The provided ID does not correspond to a sticker.");
@@ -267,14 +266,15 @@ export function CS_hasStatTrak(item: CS_Item): boolean {
 }
 
 export function CS_validateStatTrak(stattrak?: number, item?: CS_Item): boolean {
-    assert(item === undefined || CS_hasStatTrak(item), "The provided item does not support stattrak.");
-    if (stattrak !== undefined) {
-        assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
-        assert(
-            stattrak >= CS_MIN_STATTRAK && stattrak <= CS_MAX_STATTRAK,
-            "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
-        );
+    if (stattrak === undefined) {
+        return true;
     }
+    assert(item === undefined || CS_hasStatTrak(item), "The provided item does not support stattrak.");
+    assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
+    assert(
+        stattrak >= CS_MIN_STATTRAK && stattrak <= CS_MAX_STATTRAK,
+        "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
+    );
     return true;
 }
 
@@ -295,7 +295,7 @@ export function CS_isNametagTool(toolItem: number | CS_Item): boolean {
     return type === "tool" && def === CS_NAMETAG_TOOL_DEF;
 }
 
-export function CS_expectNametagTool(item: CS_Item) {
+export function CS_expectNametagTool(item: number | CS_Item) {
     assert(CS_isNametagTool(item), "Item is not a nametag tool");
     return true;
 }

@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy, CS_MAX_STATTRAK, CS_NO_STICKER } from "./economy";
+import { CS_Economy, CS_MAX_STATTRAK, CS_NONE } from "./economy";
 import { CS_unlockCase } from "./economy-case";
 import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
 import { CS_TEAM_CT, CS_TEAM_T } from "./teams";
 import { float } from "./util";
 
-CS_Economy.initialize(CS_ITEMS);
-let inventory = new CS_Inventory({ limit: 5 });
+CS_Economy.use(CS_ITEMS);
+let inventory = new CS_Inventory({ maxItems: 5 });
 
 test("initially is empty", () => {
     expect(inventory.size()).toBe(0);
@@ -37,14 +37,16 @@ test("try to invalid item", () => {
 
 test("try to add more than limit", () => {
     for (let i = 0; i < 5; i++) {
-        inventory.add({
-            id: 307,
-            wear: 0.02,
-            stattrak: 2,
-            seed: 10
-        });
+        try {
+            inventory.add({
+                id: 307,
+                wear: 0.02,
+                stattrak: 2,
+                seed: 10
+            });
+        } catch {}
     }
-    expect(inventory.full()).toBeTruthy();
+    expect(inventory.isFull()).toBeTruthy();
     expect(inventory.size()).toBe(5);
 });
 
@@ -120,7 +122,7 @@ test("rename item", () => {
 });
 
 test("apply item sticker", () => {
-    inventory = new CS_Inventory({ limit: 16 });
+    inventory = new CS_Inventory({ maxItems: 16 });
     inventory.add({ id: 7305 });
     inventory.add({ id: 7307 });
     inventory.add({ id: 7308 });
@@ -146,7 +148,7 @@ test("apply item sticker", () => {
 
 test("scrape item sticker", () => {
     inventory.removeAll();
-    inventory.add({ id: 307, stickers: [7306, 7306, CS_NO_STICKER, CS_NO_STICKER] });
+    inventory.add({ id: 307, stickers: [7306, 7306, CS_NONE, CS_NONE] });
     expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
     expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
     inventory.scrapeItemSticker(0, 0);
@@ -157,7 +159,7 @@ test("scrape item sticker", () => {
         expect(inventory.get(0).stickerswear![0]).toBe(float(0.1 + 0.1 * scrape));
     }
     inventory.scrapeItemSticker(0, 0);
-    expect(inventory.get(0).stickers![0]).toBe(CS_NO_STICKER);
+    expect(inventory.get(0).stickers![0]).toBe(CS_NONE);
     expect(inventory.get(0).stickerswear).toBe(undefined);
     for (let scrape = 0; scrape < 10; scrape++) {
         inventory.scrapeItemSticker(0, 1);
@@ -244,7 +246,7 @@ test("swap items stattrak", () => {
 });
 
 test("storage unit", () => {
-    inventory = new CS_Inventory({ limit: 32, storageUnitLimit: 2 });
+    inventory = new CS_Inventory({ maxItems: 32, storageUnitMaxItems: 2 });
     inventory.add({ id: 307, stattrak: 3 }); // 0
     inventory.add({ id: 313, stattrak: 4 }); // 1
     inventory.add({ id: 1841, stattrak: 5 }); // 2
@@ -254,7 +256,7 @@ test("storage unit", () => {
 
     expect(inventory.size()).toBe(6);
     expect(inventory.isStorageUnitFull(4)).toBe(false);
-    expect(inventory.hasItemsInStorageUnit(4)).toBe(false);
+    expect(inventory.isStorageUnitFilled(4)).toBe(false);
     expect(inventory.canDepositToStorageUnit(4)).toBe(false);
     expect(() => inventory.depositToStorageUnit(4, [0, 1])).toThrow();
     inventory.renameStorageUnit(4, "storage unit");
