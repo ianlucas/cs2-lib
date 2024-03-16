@@ -6,14 +6,6 @@
 import { CS_Economy, CS_Item, CS_safeValidateNametag } from "./economy";
 import { CS_RARITY_COMMON_COLOR } from "./economy-case";
 
-test("nametag validation", () => {
-    expect(CS_safeValidateNametag(" fail")).toBeFalsy();
-    expect(CS_safeValidateNametag("小島 秀夫")).toBeTruthy();
-    expect(CS_safeValidateNametag("孔子")).toBeTruthy();
-    expect(CS_safeValidateNametag("bo$$u")).toBeTruthy();
-    expect(CS_safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
-});
-
 describe("CS_Economy", () => {
     test("use should add items to the economy", () => {
         const items: CS_Item[] = [
@@ -69,4 +61,12 @@ describe("CS_Economy", () => {
         expect(translatedItem2.name).toBe("Translated Item 2");
         expect(untranslatedItem.name).toBe("Item 3");
     });
+});
+
+test("nametag validation", () => {
+    expect(CS_safeValidateNametag(" fail")).toBeFalsy();
+    expect(CS_safeValidateNametag("小島 秀夫")).toBeTruthy();
+    expect(CS_safeValidateNametag("孔子")).toBeTruthy();
+    expect(CS_safeValidateNametag("bo$$u")).toBeTruthy();
+    expect(CS_safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
 });
