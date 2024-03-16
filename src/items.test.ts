@@ -12,32 +12,31 @@ test("has every types and categories", () => {
         itemMap.set(item.id, item);
         if (item.type === "weapon") {
             if (item.category === undefined) {
-                throw new Error("weapon with category undefined.");
+                throw new Error("Weapon with category undefined.");
             }
             weaponCategories.add(item.category);
         }
         itemTypes.add(item.type);
     }
 
-    expect(Array.from(weaponCategories).sort()).toMatchObject(
-        ["c4", "equipment", "heavy", "rifle", "secondary", "smg"].sort()
-    );
-    expect(Array.from(itemTypes).sort()).toMatchObject(
-        [
-            "agent",
-            "case",
-            "glove",
-            "graffiti",
-            "key",
-            "melee",
-            "musickit",
-            "patch",
-            "pin",
-            "sticker",
-            "tool",
-            "weapon"
-        ].sort()
-    );
+    const expectedWeaponCategories = ["c4", "equipment", "heavy", "rifle", "secondary", "smg"].sort();
+    const expectedItemTypes = [
+        "agent",
+        "case",
+        "glove",
+        "graffiti",
+        "key",
+        "melee",
+        "musickit",
+        "patch",
+        "pin",
+        "sticker",
+        "tool",
+        "weapon"
+    ].sort();
+
+    expect(Array.from(weaponCategories).sort()).toEqual(expectedWeaponCategories);
+    expect(Array.from(itemTypes).sort()).toEqual(expectedItemTypes);
 });
 
 test("compare repository items with current items", async () => {
