@@ -103,7 +103,7 @@ export class ItemGenerator {
         className?: string;
         nameToken: string;
     })[] = [];
-    generatedItems: CS_Item[] = [];
+    generatedItems = new Map<number, CS_Item>();
 
     caseContents = new Map<string, number>();
     casesScraper = new CaseScraper();
@@ -148,7 +148,7 @@ export class ItemGenerator {
             languages[language] = {};
             translations[language] = {};
             const kv = languages[language];
-            warning(`Parsing csgo_${language}.txt...`);
+            warning(`Parsing 'csgo_${language}.txt'...`);
             const parsed = CS_parseValveKeyValue<CS_CsgoLanguageTXT>(contents);
             for (const key of Object.keys(parsed.lang.Tokens)) {
                 const k = key.toLowerCase();
@@ -431,7 +431,7 @@ export class ItemGenerator {
                 push(this.lookupWeaponLegacy, baseItem.def!, paintKit.index);
             }
 
-            this.generatedItems.push({
+            this.generatedItems.set(id, {
                 ...baseItem,
                 base: undefined,
                 free: undefined,
@@ -464,7 +464,7 @@ export class ItemGenerator {
                 this.addTranslation(id, "name", name, musicProps.loc_name);
                 this.addCaseContent(itemKey, id);
 
-                this.generatedItems.push({
+                this.generatedItems.set(id, {
                     base: true,
                     free: FREE_MUSIC_KITS.includes(musicIndex) ? true : undefined,
                     id,
@@ -537,7 +537,7 @@ export class ItemGenerator {
             }
             this.addCaseContent(itemKey, id);
 
-            this.generatedItems.push({
+            this.generatedItems.set(id, {
                 category,
                 id,
                 image:
@@ -582,7 +582,7 @@ export class ItemGenerator {
                     const itemKey = `[${graffitiProps.name}]spray`;
                     this.addTranslation(id, "name", name, graffitiProps.item_name, " (", tintToken, ")");
 
-                    this.generatedItems.push({
+                    this.generatedItems.set(id, {
                         id,
                         image,
                         index: Number(graffitiIndex),
@@ -604,7 +604,7 @@ export class ItemGenerator {
                 this.addTranslation(id, "name", name, graffitiProps.item_name);
                 this.addCaseContent(itemKey, id);
 
-                this.generatedItems.push({
+                this.generatedItems.set(id, {
                     id,
                     image:
                         this.itemManager.get(id)?.image ??
@@ -639,7 +639,7 @@ export class ItemGenerator {
             this.addTranslation(id, "name", name, patchProps.item_name);
             this.addCaseContent(itemKey, id);
 
-            this.generatedItems.push({
+            this.generatedItems.set(id, {
                 id,
                 image:
                     this.itemManager.get(id)?.image ?? this.getImage(id, `econ/patches/${patchProps.patch_material}`),
@@ -672,7 +672,7 @@ export class ItemGenerator {
             this.addTranslation(id, "name", name, itemProps.item_name);
             this.lookupAgentModel[itemIndex] = model;
 
-            this.generatedItems.push({
+            this.generatedItems.set(id, {
                 def: Number(itemIndex),
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
@@ -706,7 +706,7 @@ export class ItemGenerator {
             this.addTranslation(id, "name", name, itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
-            this.generatedItems.push({
+            this.generatedItems.set(id, {
                 altname: itemProps.name,
                 def: Number(itemIndex),
                 id,
@@ -737,7 +737,7 @@ export class ItemGenerator {
             this.addTranslation(id, "name", name, itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
-            this.generatedItems.push({
+            this.generatedItems.set(id, {
                 def: Number(itemIndex),
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
@@ -752,7 +752,7 @@ export class ItemGenerator {
 
     parseCases() {
         warning("Parsing cases...");
-        this.casesScraper.populate(this.baseItems, this.generatedItems);
+        this.casesScraper.populate([...this.baseItems, ...this.generatedItems.values()]);
         const keyItems = new Map<string, number>();
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
@@ -781,8 +781,20 @@ export class ItemGenerator {
                 continue;
             }
             for (const itemKey of this.getClientLootListItems(clientLootListKey)) {
-                assert(this.caseContents.has(itemKey), `Item '${itemKey}' not found.`);
-                contents.push(this.caseContents.get(itemKey)!);
+                const id = this.caseContents.get(itemKey);
+                assert(id !== undefined, `Item '${itemKey}' not found.`);
+                const item = this.generatedItems.get(id);
+                assert(item !== undefined, `Item '${itemKey}' not found.`);
+                if (item.tint !== undefined) {
+                    assert(item.index, `Item '${id}' has no index.`);
+                    for (const other of this.generatedItems.values()) {
+                        if (other.tint !== undefined && other.index === item.index) {
+                            contents.push(other.id);
+                        }
+                    }
+                } else {
+                    contents.push(id);
+                }
             }
             if (contents.length === 0) {
                 log(`No contents for case '${itemProps.name}'.`);
@@ -823,7 +835,7 @@ export class ItemGenerator {
                     assert(itemProps.image_inventory, `image_inventory not found for key of '${itemIndex}'.`);
                     const name = this.requireTranslation(itemProps.item_name);
                     this.addTranslation(id, "name", name, itemProps.item_name);
-                    this.generatedItems.push({
+                    this.generatedItems.set(id, {
                         def: Number(itemIndex),
                         id,
                         image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
@@ -836,7 +848,7 @@ export class ItemGenerator {
                     return id;
                 });
 
-                this.generatedItems.push({
+                this.generatedItems.set(id, {
                     category: name.includes("Music Kit")
                         ? name.includes("StatTrak")
                             ? "StatTrak-only"
@@ -862,7 +874,7 @@ export class ItemGenerator {
     }
 
     persist() {
-        const items = [...this.baseItems, ...this.generatedItems].map((item) => ({
+        const items = [...this.baseItems, ...this.generatedItems.values()].map((item) => ({
             ...item,
             className: undefined,
             nameToken: undefined
