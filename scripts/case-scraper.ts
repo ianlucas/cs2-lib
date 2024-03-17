@@ -65,9 +65,9 @@ export class CaseScraper {
         return items;
     }
 
-    populate(baseItems: CS_Item[], generatedItems: CS_Item[]) {
+    populate(items: CS_Item[]) {
         const lookup: Record<string, number> = {};
-        for (const item of [...baseItems, ...generatedItems]) {
+        for (const item of items) {
             if (["melee", "glove"].includes(item.type)) {
                 // item.name (as in `specialsData`) => item.id
                 lookup[item.base ? `${item.name} | ★ (Vanilla)` : item.name] = item.id;
