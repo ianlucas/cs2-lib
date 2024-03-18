@@ -210,7 +210,7 @@ export function CS_resolveCaseSpecialsImage(baseUrl: string, item: number | CS_I
     item = CS_Economy.get(item);
     CS_expectCase(item);
     const { id, specialsimage, specials } = item;
-    assert(specials === undefined, "Case does not have special items.");
+    assert(specials, "Case does not have special items.");
     if (specialsimage) {
         return `${baseUrl}/${id}_rare.png`;
     }
