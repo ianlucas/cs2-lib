@@ -172,8 +172,7 @@ export class CS_Inventory {
     readonly options: Readonly<CS_InventoryOptions>;
 
     constructor({ items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec>) {
-        this.items =
-            items !== undefined ? (items instanceof Map ? items : new Map(CS_asInventoryItemMap(items))) : new Map();
+        this.items = items !== undefined ? (items instanceof Map ? items : CS_asInventoryItemMap(items)) : new Map();
         this.options = {
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
