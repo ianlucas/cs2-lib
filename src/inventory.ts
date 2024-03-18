@@ -344,6 +344,10 @@ export class CS_Inventory {
         );
     }
 
+    canRetrieveFromStorageUnit(storageUid: number, size = 1) {
+        return this.getStorageUnitSize(storageUid) - size >= 0 && this.size() + size <= this.options.maxItems;
+    }
+
     getStorageUnitSize(storageUid: number) {
         return this.get(storageUid).storage?.size ?? 0;
     }
@@ -358,8 +362,7 @@ export class CS_Inventory {
         assert(depositUids.length > 0, "No items to deposit.");
         assert(this.canDepositToStorageUnit(storageUid, depositUids.length), "Cannot deposit to storage unit.");
         for (const sourceUid of depositUids) {
-            const item = CS_Economy.getById(this.get(sourceUid).id);
-            assert(!CS_isStorageUnitTool(item), "Cannot deposit storage unit.");
+            assert(!CS_isStorageUnitTool(this.get(sourceUid).data), "Cannot deposit storage unit.");
         }
         const storage = item.storage ?? new Map<number, CS_InventoryItem>();
         for (const sourceUid of depositUids) {
@@ -386,7 +389,7 @@ export class CS_Inventory {
         const storage = item.storage;
         assert(storage, "Storage unit is empty.");
         assert(retrieveUids.length > 0, "No items to retrieve.");
-        assert(this.isStorageUnitFilled(storageUid), "Storage unit is empty.");
+        assert(this.canRetrieveFromStorageUnit(storageUid, retrieveUids.length), "Cannot retrieve from storage unit.");
         for (const uid of retrieveUids) {
             assert(storage.has(uid), "Item not found.");
         }
