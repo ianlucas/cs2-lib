@@ -484,6 +484,10 @@ export class CS_Inventory {
         return item;
     }
 
+    getAll() {
+        return Array.from(this.items.values());
+    }
+
     size() {
         return this.items.size;
     }
