@@ -1,6 +1,7 @@
 import { CS_Item } from "./economy";
 import { CS_ITEMS } from "./items";
 import fetch from "node-fetch";
+import { fail } from "./util";
 
 const itemMap = new Map<number, CS_Item>();
 
@@ -12,7 +13,7 @@ test("has every types and categories", () => {
         itemMap.set(item.id, item);
         if (item.type === "weapon") {
             if (item.category === undefined) {
-                throw new Error("Weapon with category undefined.");
+                fail("Weapon with category undefined.");
             }
             weaponCategories.add(item.category);
         }
@@ -47,7 +48,7 @@ test("compare repository items with current items", async () => {
     for (const repItem of repositoryItems) {
         const item = itemMap.get(repItem.id);
         if (item === undefined) {
-            throw new Error(`item not found.`);
+            fail(`item not found.`);
         }
         expect(item.type).toBe(repItem.type);
         if (item.type === "weapon") {

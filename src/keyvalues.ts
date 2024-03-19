@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { fail } from "./util";
+
 type KeyValue = [string, string | KeyValue[]];
 
 export function CS_parseValveKeyValue<T = any>(data: string) {
@@ -37,7 +39,7 @@ export function CS_parseValveKeyValue<T = any>(data: string) {
                 }
             }
             if (data[index] !== '"') {
-                throw new Error("Bad end of string.");
+                fail("Bad end of string.");
             }
             index += 1;
             return value;
@@ -62,7 +64,7 @@ export function CS_parseValveKeyValue<T = any>(data: string) {
                 data.substring(index + 1, Math.min(data.length, index + 63))
         );
         console.log("".padStart(64, " ") + "^");
-        throw new Error(`Unexpected character at index ${index}.`);
+        fail(`Unexpected character at index ${index}.`);
     }
 
     function parsePairs() {

@@ -24,3 +24,7 @@ export function float(literal: number, fractionDigits: number = 2) {
 }
 
 export const assert: typeof invariant = invariant;
+
+export function fail(message: string): never {
+    throw new Error(message);
+}
