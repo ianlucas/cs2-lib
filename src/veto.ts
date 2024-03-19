@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS_Map } from "./maps.js";
+import { assert, fail } from "./util.js";
 
 export const CS_VETO_AVAILABLE = 0;
 export const CS_VETO_PICK = 1;
@@ -28,13 +29,13 @@ export class CS_Veto {
             console.warn('stack provided, but the type is not "custom".');
         }
         if (type === "custom" && actions === undefined) {
-            throw new Error("provide the stack for the custom type.");
+            fail("provide the stack for the custom type.");
         }
         if (maps.length !== 7) {
-            throw new Error("you need to provide 7 maps to veto.");
+            fail("you need to provide 7 maps to veto.");
         }
         if (actions !== undefined && actions.length !== 6) {
-            throw new Error("you need to provide 6 actions to veto.");
+            fail("you need to provide 6 actions to veto.");
         }
         this.maps = maps.map((map) => ({
             mapname: map.mapname,
@@ -111,9 +112,7 @@ export class CS_Veto {
         }
         const index = Math.floor(Math.random() * available.length);
         const mapname = available[index];
-        if (mapname === undefined) {
-            throw new Error("unable to get random mapname.");
-        }
+        assert(mapname, "Unable to get random mapname.");
         return this.choose(mapname);
     }
 

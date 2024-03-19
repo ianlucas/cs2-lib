@@ -25,7 +25,8 @@ import {
     StickerKitsRecord,
     UnsafeRaritiesRecord
 } from "./item-generator-types.js";
-import { assert, log, push, readJson, replaceInFile, warning, writeJson } from "./util.js";
+import { log, push, readJson, replaceInFile, warning, writeJson } from "./util.js";
+import { assert, fail } from "../src/util.js";
 
 const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
 const CS2_ITEMS_TXT_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
@@ -954,7 +955,7 @@ export class ItemGenerator {
                 case "terrorists":
                     return CS_TEAM_T;
             }
-            throw new Error(`Unknown team '${team}'.`);
+            fail(`Unknown team '${team}'.`);
         });
     }
 

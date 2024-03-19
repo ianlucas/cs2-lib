@@ -6,11 +6,9 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { decode as htmlEntitiesDecode } from "html-entities";
 import { resolve } from "path";
-import invariant from "tiny-invariant";
 
 export const log = console.log;
 export const warning = console.warn;
-export const assert: typeof invariant = invariant;
 
 export function writeJson(path: string, contents: any) {
     const file = resolve(process.cwd(), path);

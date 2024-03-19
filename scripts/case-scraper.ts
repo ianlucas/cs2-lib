@@ -7,6 +7,7 @@ import * as cheerio from "cheerio";
 import { basename } from "path";
 import { CS_Item } from "../src/economy.js";
 import { dedupe, fetchText, log, readJson, sleep, writeJson } from "./util.js";
+import { fail } from "../src/util.js";
 
 export class CaseScraper {
     specialsData = readJson<Record<string, string[]>>("assets/data/case-specials.json", {});
@@ -77,7 +78,7 @@ export class CaseScraper {
             this.specials[caseName] = specials.map((name) => {
                 const id = lookup[name];
                 if (!id) {
-                    throw new Error(`Item '${name}' not found.`);
+                    fail(`Item '${name}' not found.`);
                 }
                 return id;
             });
