@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { fail } from "./util";
+import { fail } from "./util.js";
 
 type KeyValue = [string, string | KeyValue[]];
 
