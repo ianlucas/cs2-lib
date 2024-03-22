@@ -17,7 +17,7 @@ For any module that deals with economy items, you need to setup the available it
 ```typescript
 import { CS_Economy, CS_ITEMS } from "@ianlucas/cslib";
 
-CS_Economy.initialize(CS_ITEMS);
+CS_Economy.use(CS_ITEMS);
 
 const item = CS_Economy.getById(307);
 
