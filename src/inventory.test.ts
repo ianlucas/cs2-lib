@@ -5,7 +5,7 @@
 
 import { CS_Economy, CS_MAX_STATTRAK, CS_NONE } from "./economy";
 import { CS_unlockCase } from "./economy-case";
-import { CS_BaseInventoryItem, CS_Inventory } from "./inventory";
+import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
 import { CS_TEAM_CT, CS_TEAM_T } from "./teams";
 import { float } from "./util";
@@ -37,6 +37,8 @@ const USP_BLOOD_TIGER_ID = 1126;
 const AWP_ELITE_BUILD_ID = 313;
 const TKLIKSPHILIP_HEADING_FOR_THE_SOURCE_ID = 1841;
 const AWOLNATION_I_AM_ID = 1801;
+const BROKEN_FANG_GLOVES_ID = 56;
+const BROKEN_FANG_GLOVES_JADE_ID = 1707;
 
 CS_Economy.use(CS_ITEMS);
 
@@ -61,6 +63,9 @@ describe("CS_Inventory methods", () => {
     test("add should add items to the inventory", () => {
         inventory.add({ id: AWP_DRAGON_LORE_ID });
         expect(inventory.size()).toBe(1);
+        expect(() => inventory.add({ id: BROKEN_FANG_GLOVES_ID })).toThrow();
+        inventory.add({ id: BROKEN_FANG_GLOVES_JADE_ID });
+        expect(inventory.size()).toBe(2);
     });
 
     test("add should throw an error if the inventory is full", () => {
