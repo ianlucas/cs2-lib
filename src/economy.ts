@@ -65,7 +65,7 @@ export const CS_MIN_SEED = 1;
 export const CS_MAX_SEED = 1000;
 export const CS_WEARABLE_ITEMS = ["glove", "melee", "weapon"];
 export const CS_NAMETAGGABLE_ITEMS = ["melee", "weapon"];
-export const CS_SEEDABLE_ITEMS = ["weapon", "melee"];
+export const CS_SEEDABLE_ITEMS = ["weapon", "melee", "glove"];
 export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon", "musickit"];
 export const CS_STICKERABLE_ITEMS = ["weapon"];
 export const CS_NAMETAG_RE =
@@ -159,6 +159,10 @@ export function CS_isC4(item: number | CS_Item): boolean {
 
 export function CS_isSticker(item: number | CS_Item): boolean {
     return CS_Economy.get(item).type === "sticker";
+}
+
+export function CS_isGlove(item: number | CS_Item): boolean {
+    return CS_Economy.get(item).type === "glove";
 }
 
 export function CS_expectSticker(item: number | CS_Item) {

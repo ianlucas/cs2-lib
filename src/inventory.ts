@@ -15,6 +15,7 @@ import {
     CS_expectSticker,
     CS_expectStorageUnitTool,
     CS_hasStickers,
+    CS_isGlove,
     CS_isStorageUnitTool,
     CS_requireNametag,
     CS_trimNametag,
@@ -98,6 +99,12 @@ export function CS_validateStorage(storage?: CS_BaseInventoryItem[]) {
     }
 }
 
+export function CS_validateEquippable(item: CS_Item) {
+    if (CS_isGlove(item)) {
+        assert(!item.base, "Glove base cannot be equipped.");
+    }
+}
+
 export function CS_validateBaseInventoryItem({
     id,
     nametag,
@@ -109,6 +116,7 @@ export function CS_validateBaseInventoryItem({
     wear
 }: Omit<CS_BaseInventoryItem, "uid">) {
     const item = CS_Economy.getById(id);
+    CS_validateEquippable(item);
     CS_validateWear(wear, item);
     CS_validateSeed(seed, item);
     CS_validateStickers(stickers, stickerswear, item);
