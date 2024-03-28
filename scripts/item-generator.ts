@@ -754,8 +754,8 @@ export class ItemGenerator {
             }
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.itemIdentifierManager.get(`tool_${itemIndex}`);
-            const prefab = this.getPrefab(itemProps.prefab);
-            const image = itemProps.image_inventory || prefab.image_inventory;
+            const prefab = this.prefabs[itemProps.prefab];
+            const image = itemProps.image_inventory || prefab?.image_inventory;
             assert(image, `Image not found for tool '${itemProps.name}'.`);
             this.addTranslation(id, "name", name, itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
@@ -763,6 +763,7 @@ export class ItemGenerator {
             this.generatedItems.set(id, {
                 category: this.getContainerCategory(id, name, "tool"),
                 def: Number(itemIndex),
+                free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, image),
                 index: undefined,
