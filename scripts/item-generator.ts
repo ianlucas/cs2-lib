@@ -10,12 +10,14 @@ import { format } from "util";
 import { CS_DEFAULT_MAX_WEAR, CS_DEFAULT_MIN_WEAR, CS_Item, CS_ItemTranslations } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
 import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
+import { assert, fail } from "../src/util.js";
 import { CaseScraper } from "./case-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import {
     CS_CsgoLanguageTXT,
     CS_ItemsGameTXT,
     ClientLootListRecord,
+    ItemSetsRecord,
     ItemsRecord,
     LanguagesRecord,
     PaintKitsProps,
@@ -26,7 +28,6 @@ import {
     UnsafeRaritiesRecord
 } from "./item-generator-types.js";
 import { log, push, readJson, replaceInFile, warning, writeJson } from "./util.js";
-import { assert, fail } from "../src/util.js";
 
 const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
 const CS2_ITEMS_TXT_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
@@ -87,6 +88,8 @@ export class ItemGenerator {
     items: ItemsRecord = null!;
     itemsGameParsed: CS_ItemsGameTXT = null!;
     itemsRaritiesColorHex: SafeRaritiesRecord = null!;
+    itemSets: ItemSetsRecord = null!;
+    itemSetItemKey: Record<string, string> = null!;
     languages: LanguagesRecord = null!;
     paintKits: PaintKitsProps[] = null!;
     paintKitsRaritiesColorHex: SafeRaritiesRecord = null!;
@@ -170,6 +173,8 @@ export class ItemGenerator {
         this.clientLootList = {};
         this.graffitiTints = [];
         this.items = {};
+        this.itemSetItemKey = {};
+        this.itemSets = {};
         this.itemsGameParsed = parsed;
         this.itemsRaritiesColorHex = {};
         this.paintKits = [];
@@ -273,6 +278,15 @@ export class ItemGenerator {
                 name: this.requireTranslation(tintToken),
                 token: tintToken
             });
+        }
+        for (const kv of parsed.items_game.item_sets) {
+            for (const [itemSetKey, itemSetProps] of Object.entries(kv)) {
+                this.itemSets[itemSetKey] = itemSetProps;
+                this.getCollectionImage(itemSetKey);
+                for (const itemKey of Object.keys(itemSetProps.items)) {
+                    this.itemSetItemKey[itemKey] = itemSetKey;
+                }
+            }
         }
     }
 
@@ -432,9 +446,14 @@ export class ItemGenerator {
                 push(this.lookupWeaponLegacy, baseItem.def!, paintKit.index);
             }
 
+            const { collection, collectiondesc, collectionname } = this.getItemCollection(id, itemKey);
+
             this.generatedItems.set(id, {
                 ...baseItem,
                 base: undefined,
+                collection,
+                collectiondesc,
+                collectionname,
                 free: undefined,
                 id,
                 index: paintKit.index,
@@ -725,23 +744,27 @@ export class ItemGenerator {
         warning("Parsing tools...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
-                itemProps.image_inventory === undefined ||
                 itemProps.item_name === undefined ||
-                !itemProps.image_inventory.includes("econ/tools/") ||
-                !itemProps.prefab.includes("csgo_tool")
+                ((itemProps.image_inventory === undefined ||
+                    !itemProps.image_inventory.includes("econ/tools/") ||
+                    !itemProps.prefab.includes("csgo_tool")) &&
+                    itemProps.prefab !== "recipe")
             ) {
                 continue;
             }
             const name = this.requireTranslation(itemProps.item_name);
             const id = this.itemIdentifierManager.get(`tool_${itemIndex}`);
-
+            const prefab = this.getPrefab(itemProps.prefab);
+            const image = itemProps.image_inventory || prefab.image_inventory;
+            assert(image, `Image not found for tool '${itemProps.name}'.`);
             this.addTranslation(id, "name", name, itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.set(id, {
+                category: this.getContainerCategory(id, name, "tool"),
                 def: Number(itemIndex),
                 id,
-                image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
+                image: this.itemManager.get(id)?.image ?? this.getImage(id, image),
                 index: undefined,
                 name,
                 rarity: this.getRarityColorHex(["common"]),
@@ -767,6 +790,7 @@ export class ItemGenerator {
             ) {
                 continue;
             }
+            let contentsType: CS_Item["type"] | undefined;
             const contents = [] as number[];
             const revolvingLootListKey = itemProps.attributes?.["set supply crate series"]?.value;
             assert(
@@ -790,10 +814,12 @@ export class ItemGenerator {
                     assert(item.index, `Item '${id}' has no index.`);
                     for (const other of this.generatedItems.values()) {
                         if (other.tint !== undefined && other.index === item.index) {
+                            contentsType = "graffiti";
                             contents.push(other.id);
                         }
                     }
                 } else {
+                    contentsType = this.generatedItems.get(id)?.type;
                     contents.push(id);
                 }
             }
@@ -849,12 +875,11 @@ export class ItemGenerator {
                     return id;
                 });
 
+                const isMusicKitCase = name.includes("Music Kit");
+                const containsStatTrak = name.includes("StatTrak");
+
                 this.generatedItems.set(id, {
-                    category: name.includes("Music Kit")
-                        ? name.includes("StatTrak")
-                            ? "StatTrak-only"
-                            : "StatTrakless"
-                        : undefined,
+                    category: this.getContainerCategory(id, name, contentsType),
                     contents,
                     def: Number(itemIndex),
                     id,
@@ -867,6 +892,8 @@ export class ItemGenerator {
                         itemProps.image_unusual_item !== undefined
                             ? this.getSpecialsImage(id, itemProps.image_unusual_item)
                             : undefined,
+                    stattrakonly: isMusicKitCase && containsStatTrak ? true : undefined,
+                    stattrakless: isMusicKitCase && !containsStatTrak ? true : undefined,
                     teams: undefined,
                     type: "case"
                 });
@@ -1082,6 +1109,67 @@ export class ItemGenerator {
             return true;
         }
         return undefined;
+    }
+
+    getCollectionImage(name: string) {
+        const src = resolve(CS2_IMAGES_PATH, `econ/set_icons/${name}_png.png`);
+        const dest = resolve(process.cwd(), `assets/images/${name}.png`);
+        copyFileSync(src, dest);
+    }
+
+    getItemCollection(id: number, itemKey: string) {
+        const collection = this.itemSetItemKey[itemKey] as string | undefined;
+        let collectionname: string | undefined;
+        let collectiondesc: string | undefined;
+        if (collection !== undefined) {
+            const collectionProps = this.itemSets[collection];
+            assert(collectionProps, `Collection '${collection}' not found.`);
+            assert(collectionProps.name, `Collection name not found for '${collection}'.`);
+            collectionname = this.requireTranslation(collectionProps.name);
+            this.addTranslation(id, "collectionname", collectionname, collectionProps.name);
+            if (collectionProps.set_description !== undefined) {
+                collectiondesc = this.findTranslation(collectionProps.set_description) || undefined;
+                if (collectiondesc) {
+                    this.addTranslation(id, "collectiondesc", collectiondesc, collectionProps.set_description);
+                }
+            }
+        }
+        return {
+            collection,
+            collectiondesc,
+            collectionname
+        };
+    }
+
+    getContainerCategoryKey(name: string, type?: CS_Item["type"]) {
+        if (name.includes("Souvenir")) {
+            return "#Inv_Category_souvenircase";
+        }
+        if (type === undefined) {
+            return undefined;
+        }
+        switch (type) {
+            case "weapon":
+                return "#Inv_Category_weaponcase";
+            case "sticker":
+                return "#Inv_Category_stickercapsule";
+            case "graffiti":
+                return "#Inv_Category_graffitibox";
+            case "tool":
+                return "#Inv_Category_tools";
+            default:
+                return undefined;
+        }
+    }
+
+    getContainerCategory(id: number, name: string, type?: CS_Item["type"]) {
+        const key = this.getContainerCategoryKey(name, type);
+        if (key === undefined) {
+            return undefined;
+        }
+        const category = this.requireTranslation(key);
+        this.addTranslation(id, "category", category, key);
+        return category;
     }
 }
 

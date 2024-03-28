@@ -10,6 +10,9 @@ export interface CS_Item {
     altname?: string;
     base?: boolean;
     category?: string;
+    collection?: string;
+    collectiondesc?: string;
+    collectionname?: string;
     contents?: number[];
     def?: number;
     free?: boolean;
@@ -22,6 +25,8 @@ export interface CS_Item {
     name: string;
     specials?: number[];
     specialsimage?: boolean;
+    stattrakonly?: boolean;
+    stattrakless?: boolean;
     rarity: string;
     teams?: CS_Team[];
     tint?: number;
@@ -357,4 +362,11 @@ export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wea
         return `${baseUrl}${image}`;
     }
     return image;
+}
+
+export function CS_resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
+    item = CS_Economy.get(item);
+    const { collection } = item;
+    assert(collection, "Item does not have a collection.");
+    return `${baseUrl}/${collection}.png`;
 }
