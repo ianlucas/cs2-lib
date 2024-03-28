@@ -14,6 +14,8 @@ export interface CS_ItemsGameTXT {
         };
         item_sets: {
             [itemSetKey: string]: {
+                name?: string;
+                set_description?: string;
                 items: {
                     [itemId: string]: string;
                 };
@@ -155,3 +157,5 @@ export type StickerKitsRecord = Record<string, StickerKitsProps>;
 export type ClientLootListItems = CS_ItemsGameTXT["items_game"]["client_loot_lists"][number][string];
 export type ClientLootListRecord = Record<string, ClientLootListItems>;
 export type RevolvingLootListRecord = Record<string, string>;
+export type ItemSetProps = CS_ItemsGameTXT["items_game"]["item_sets"][number][string];
+export type ItemSetsRecord = Record<string, ItemSetProps>;

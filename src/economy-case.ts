@@ -156,6 +156,7 @@ export function CS_listCaseContents(item: number | CS_Item, hideSpecials = false
  * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
  */
 export function CS_unlockCase(item: number | CS_Item) {
+    item = CS_Economy.get(item);
     const contents = CS_groupCaseContents(item);
     const keys = Object.keys(contents);
     const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
@@ -173,8 +174,8 @@ export function CS_unlockCase(item: number | CS_Item) {
         }
     }
     const unlocked = contents[rollRarity][Math.floor(Math.random() * contents[rollRarity].length)];
-    const hasStatTrak = unlocked.category !== "StatTrakless";
-    const alwaysStatTrak = unlocked.category === "StatTrak-only";
+    const hasStatTrak = item.stattrakless !== true;
+    const alwaysStatTrak = item.stattrakonly === true;
     return {
         attributes: {
             seed: CS_hasSeed(unlocked) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
