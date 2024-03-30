@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy, CS_Item, CS_hasSeed, CS_safeValidateNametag } from "./economy";
+import { CS_Economy, CS_Item } from "./economy";
 import { CS_RARITY_COMMON_COLOR } from "./economy-case";
 import { CS_ITEMS } from "./items";
 
@@ -65,17 +65,17 @@ describe("CS_Economy", () => {
 });
 
 test("nametag validation", () => {
-    expect(CS_safeValidateNametag(" fail")).toBeFalsy();
-    expect(CS_safeValidateNametag("小島 秀夫")).toBeTruthy();
-    expect(CS_safeValidateNametag("孔子")).toBeTruthy();
-    expect(CS_safeValidateNametag("bo$$u")).toBeTruthy();
-    expect(CS_safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
+    expect(CS_Economy.safeValidateNametag(" fail")).toBeFalsy();
+    expect(CS_Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
+    expect(CS_Economy.safeValidateNametag("孔子")).toBeTruthy();
+    expect(CS_Economy.safeValidateNametag("bo$$u")).toBeTruthy();
+    expect(CS_Economy.safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
 });
 
 test("has seed", () => {
     CS_Economy.use(CS_ITEMS);
     const baseGlove = CS_Economy.getById(56);
     const skinGlove = CS_Economy.getById(1707);
-    expect(CS_hasSeed(baseGlove)).toBe(false);
-    expect(CS_hasSeed(skinGlove)).toBe(true);
+    expect(CS_Economy.hasSeed(baseGlove)).toBe(false);
+    expect(CS_Economy.hasSeed(skinGlove)).toBe(true);
 });

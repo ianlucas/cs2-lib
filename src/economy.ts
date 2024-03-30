@@ -3,6 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import {
+    CS_BASE_ODD,
+    CS_RARITY_COLORS,
+    CS_RARITY_COLOR_DEFAULT,
+    CS_RARITY_COLOR_ORDER,
+    CS_RARITY_FOR_SOUNDS,
+    CS_RARITY_ORDER,
+    CS_STATTRAK_ODD,
+    CS_randomFloat,
+    CS_randomInt
+} from "./economy-case.js";
 import { CS_Team } from "./teams.js";
 import { assert, compare, safe } from "./util.js";
 
@@ -121,7 +132,7 @@ export class CS_EconomyInstance {
                 collectionname: item.collectionname!,
                 collectiondesc: item.collectiondesc!
             });
-            if (CS_isSticker(item)) {
+            if (this.isSticker(item)) {
                 assert(item.category, `Sticker item '${item.id}' does not have a category.`);
                 this.stickers.add(clone);
                 this.categories.add(item.category);
@@ -162,231 +173,375 @@ export class CS_EconomyInstance {
             }
         }
     }
+
+    findItem(predicate: CS_EconomyPredicate): CS_Item {
+        const item = this.itemsAsArray.find(filterItems(predicate));
+        assert(item, "No items found.");
+        return item;
+    }
+
+    filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
+        const items = this.itemsAsArray.filter(filterItems(predicate));
+        assert(items.length > 0, "No items found.");
+        return items;
+    }
+
+    isC4(item: number | CS_Item): boolean {
+        return this.get(item).category === "c4";
+    }
+
+    isSticker(item: number | CS_Item): boolean {
+        return this.get(item).type === "sticker";
+    }
+
+    isGlove(item: number | CS_Item): boolean {
+        return this.get(item).type === "glove";
+    }
+
+    expectSticker(item: number | CS_Item) {
+        assert(this.isSticker(item), `Item is not a sticker.`);
+        return true;
+    }
+
+    hasWear(item: CS_Item): boolean {
+        return CS_WEARABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
+    }
+
+    validateWear(wear?: number, item?: CS_Item): boolean {
+        if (wear === undefined) {
+            return true;
+        }
+        assert(!Number.isNaN(wear), "Wear must be a number.");
+        assert(String(wear).length <= String(CS_WEAR_FACTOR).length, "Wear value is too long.");
+        assert(wear >= CS_MIN_WEAR && wear <= CS_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
+        if (item !== undefined) {
+            assert(this.hasWear(item), "Item does not have wear.");
+            assert(item.wearmin === undefined || wear >= item.wearmin, "Wear value is below the minimum allowed.");
+            assert(item.wearmax === undefined || wear <= item.wearmax, "Wear value is above the maximum allowed.");
+        }
+        return true;
+    }
+
+    safeValidateWear = safe(this.validateWear);
+
+    hasSeed(item: CS_Item): boolean {
+        return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
+    }
+
+    validateSeed(seed?: number, item?: CS_Item): boolean {
+        if (seed === undefined) {
+            return true;
+        }
+        assert(!Number.isNaN(seed), "Seed must be a valid number.");
+        assert(item === undefined || this.hasSeed(item), "Item does not have a seed.");
+        assert(Number.isInteger(seed), "Seed must be an integer.");
+        assert(seed >= CS_MIN_SEED && seed <= CS_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
+        return true;
+    }
+
+    safeValidateSeed = safe(this.validateSeed);
+
+    hasStickers(item: CS_Item): boolean {
+        return CS_STICKERABLE_ITEMS.includes(item.type) && !this.isC4(item);
+    }
+
+    validateStickers(stickers?: number[], wears?: number[], item?: CS_Item): boolean {
+        if (stickers === undefined) {
+            assert(wears === undefined, "Stickers array is undefined.");
+            return true;
+        }
+        assert(stickers.length === 4, "Stickers array must contain exactly 4 elements.");
+        assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
+        assert(item === undefined || this.hasStickers(item), "The provided item does not have stickers.");
+        for (const [index, stickerId] of stickers.entries()) {
+            if (stickerId === CS_NONE) {
+                assert(wears === undefined || wears[index] === CS_NONE, "Sticker wear value is invalid.");
+                continue;
+            }
+            assert(this.isSticker(stickerId), "The provided ID does not correspond to a sticker.");
+            if (wears !== undefined) {
+                const wear = wears[index];
+                assert(!Number.isNaN(wear), "Sticker wear value must be a valid number.");
+                assert(String(wear).length <= String(CS_STICKER_WEAR_FACTOR).length, "Sticker wear value is too long.");
+                assert(
+                    wear >= CS_MIN_STICKER_WEAR && wear <= CS_MAX_STICKER_WEAR,
+                    "Sticker wear value must be between CS_MIN_STICKER_WEAR and CS_MAX_STICKER_WEAR."
+                );
+            }
+        }
+        return true;
+    }
+
+    hasNametag(item: CS_Item): boolean {
+        return CS_NAMETAGGABLE_ITEMS.includes(item.type) || this.isStorageUnitTool(item);
+    }
+
+    trimNametag(nametag?: string) {
+        const trimmed = nametag?.trim();
+        return trimmed === "" ? undefined : trimmed;
+    }
+
+    validateNametag(nametag?: string, item?: CS_Item): boolean {
+        if (nametag !== undefined) {
+            assert(item === undefined || this.hasNametag(item), "The provided item does not have a nametag.");
+            assert(nametag[0] !== " " && CS_NAMETAG_RE.test(nametag), "Invalid nametag format.");
+        }
+        return true;
+    }
+
+    safeValidateNametag = safe(this.validateNametag);
+
+    requireNametag(nametag?: string, item?: CS_Item): boolean {
+        assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
+        return this.validateNametag(nametag, item);
+    }
+
+    safeRequireNametag = safe(this.requireNametag);
+
+    hasStatTrak(item: CS_Item): boolean {
+        return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
+    }
+
+    validateStatTrak(stattrak?: number, item?: CS_Item): boolean {
+        if (stattrak === undefined) {
+            return true;
+        }
+        assert(item === undefined || this.hasStatTrak(item), "The provided item does not support stattrak.");
+        assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
+        assert(
+            stattrak >= CS_MIN_STATTRAK && stattrak <= CS_MAX_STATTRAK,
+            "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
+        );
+        return true;
+    }
+
+    safeValidateStatTrak = safe(this.validateStatTrak);
+
+    isStorageUnitTool(item: number | CS_Item): boolean {
+        const { def, type } = this.get(item);
+        return type === "tool" && def === CS_STORAGE_UNIT_TOOL_DEF;
+    }
+
+    expectStorageUnitTool(item: CS_Item) {
+        assert(this.isStorageUnitTool(item), "Item is not a storage unit.");
+        return true;
+    }
+
+    isNametagTool(toolItem: number | CS_Item): boolean {
+        const { def, type } = this.get(toolItem);
+        return type === "tool" && def === CS_NAMETAG_TOOL_DEF;
+    }
+
+    expectNametagTool(item: number | CS_Item) {
+        assert(this.isNametagTool(item), "Item is not a nametag tool");
+        return true;
+    }
+
+    isStatTrakSwapTool(item: number | CS_Item): boolean {
+        const { def, type } = this.get(item);
+        return type === "tool" && def === CS_STATTRAK_SWAP_TOOL_DEF;
+    }
+
+    expectStatTrakSwapTool(item: CS_Item) {
+        assert(this.isStatTrakSwapTool(item), "Item is not a stattrak swap tool.");
+        return true;
+    }
+
+    getWearLabel(wear: number): string {
+        switch (true) {
+            case wear <= CS_MAX_FACTORY_NEW_WEAR:
+                return "FN";
+            case wear <= CS_MAX_MINIMAL_WEAR_WEAR:
+                return "MW";
+            case wear <= CS_MAX_FIELD_TESTED_WEAR:
+                return "FT";
+            case wear <= CS_MAX_WELL_WORN_WEAR:
+                return "WW";
+            default:
+                return "BS";
+        }
+    }
+
+    getStickerCategories(): string[] {
+        return Array.from(this.categories).sort();
+    }
+
+    getStickers(): CS_Item[] {
+        return Array.from(this.stickers);
+    }
+
+    resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
+        item = this.get(item);
+        const { id, image } = item;
+        if (this.hasWear(item) && wear !== undefined) {
+            switch (true) {
+                case wear < 1 / 3:
+                    return `${baseUrl}/${id}_light.png`;
+                case wear < 2 / 3:
+                    return `${baseUrl}/${id}_medium.png`;
+                default:
+                    return `${baseUrl}/${id}_heavy.png`;
+            }
+        }
+        if (image === undefined) {
+            return `${baseUrl}/${id}.png`;
+        }
+        if (image.charAt(0) === "/") {
+            return `${baseUrl}${image}`;
+        }
+        return image;
+    }
+
+    resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
+        item = this.get(item);
+        const { collection } = item;
+        assert(collection, "Item does not have a collection.");
+        return `${baseUrl}/${collection}.png`;
+    }
+
+    isCase(item: number | CS_Item) {
+        return this.get(item).type === "case";
+    }
+
+    isKey(item: number | CS_Item) {
+        return this.get(item).type === "key";
+    }
+
+    expectCase(item: number | CS_Item) {
+        assert(this.isCase(item), "Item is not a case.");
+        return true;
+    }
+
+    expectKey(item: number | CS_Item) {
+        assert(this.isKey(item), `Item is not a key.`);
+        return true;
+    }
+
+    validateCaseKey(caseItem: number | CS_Item, keyItem?: number | CS_Item) {
+        caseItem = this.get(caseItem);
+        this.expectCase(caseItem);
+        keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
+        if (keyItem !== undefined) {
+            assert(caseItem.keys !== undefined, "Case does not require a key.");
+            assert(this.expectKey(keyItem), "Invalid key item.");
+            assert(caseItem.keys.includes(keyItem.id), "Invalid key for this case.");
+        } else {
+            assert(caseItem.keys === undefined, "Case requires a key.");
+        }
+    }
+
+    safeValidateCaseKey = safe(this.validateCaseKey);
+
+    getCaseContents(item: number | CS_Item) {
+        item = this.get(item);
+        this.expectCase(item);
+        const { contents, specials } = item;
+        assert(contents, `Case has no contents.`);
+        return { contents, specials };
+    }
+
+    groupCaseContents(item: number | CS_Item) {
+        const { contents, specials } = this.getCaseContents(item);
+        const items: Record<string, CS_Item[]> = {};
+        for (const id of contents) {
+            const item = this.getById(id);
+            const rarity = CS_RARITY_COLORS[item.rarity];
+            if (!items[rarity]) {
+                items[rarity] = [];
+            }
+            items[rarity].push(item);
+        }
+        if (specials) {
+            for (const id of specials) {
+                const item = this.getById(id);
+                const rarity = "special";
+                if (!items[rarity]) {
+                    items[rarity] = [];
+                }
+                items[rarity].push(item);
+            }
+        }
+        return items;
+    }
+
+    listCaseContents(item: number | CS_Item, hideSpecials = false) {
+        const { contents, specials } = this.getCaseContents(item);
+        const items = [...contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
+        return items
+            .map((id) => this.getById(id))
+            .sort((a, b) => {
+                return (
+                    (CS_RARITY_COLOR_ORDER[a.rarity] ?? CS_RARITY_COLOR_DEFAULT) -
+                    (CS_RARITY_COLOR_ORDER[b.rarity] ?? CS_RARITY_COLOR_DEFAULT)
+                );
+            });
+    }
+
+    /**
+     * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
+     */
+    unlockCase(item: number | CS_Item) {
+        item = this.get(item);
+        const contents = this.groupCaseContents(item);
+        const keys = Object.keys(contents);
+        const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
+        const odds = rarities.map((_, index) => CS_BASE_ODD / Math.pow(5, index));
+        const total = odds.reduce((acc, cur) => acc + cur, 0);
+        const entries = rarities.map((rarity, index) => [rarity, odds[index] / total] as const);
+        const roll = Math.random();
+        let [rollRarity] = entries[0];
+        let acc = 0;
+        for (const [rarity, odd] of entries) {
+            acc += odd;
+            if (roll <= acc) {
+                rollRarity = rarity;
+                break;
+            }
+        }
+        const unlocked = contents[rollRarity][Math.floor(Math.random() * contents[rollRarity].length)];
+        const hasStatTrak = item.stattrakless !== true;
+        const alwaysStatTrak = item.stattrakonly === true;
+        return {
+            attributes: {
+                seed: this.hasSeed(unlocked) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
+                stattrak: hasStatTrak
+                    ? this.hasStatTrak(unlocked)
+                        ? alwaysStatTrak || Math.random() <= CS_STATTRAK_ODD
+                            ? 0
+                            : undefined
+                        : undefined
+                    : undefined,
+                wear: this.hasWear(unlocked)
+                    ? Number(
+                          CS_randomFloat(unlocked.wearmin ?? CS_MIN_WEAR, unlocked.wearmax ?? CS_MAX_WEAR)
+                              .toString()
+                              .substring(0, CS_WEAR_FACTOR.toString().length)
+                      )
+                    : undefined
+            },
+            id: unlocked.id,
+            rarity: CS_RARITY_FOR_SOUNDS[unlocked.rarity],
+            special: rollRarity === "special"
+        };
+    }
+
+    validateUnlockedItem(item: number | CS_Item, { id }: ReturnType<typeof this.unlockCase>) {
+        item = this.get(item);
+        this.expectCase(item);
+        const { contents, specials } = item;
+        assert(contents?.includes(id) || specials?.includes(id), `Unlocked item is not from this case.`);
+    }
+
+    resolveCaseSpecialsImage(baseUrl: string, item: number | CS_Item): string {
+        item = this.get(item);
+        this.expectCase(item);
+        const { id, specialsimage, specials } = item;
+        assert(specials, "Case does not have special items.");
+        if (specialsimage) {
+            return `${baseUrl}/${id}_rare.png`;
+        }
+        return `${baseUrl}/default_rare_item.png`;
+    }
 }
 
 export const CS_Economy = new CS_EconomyInstance();
-
-export function CS_findItem(predicate: CS_EconomyPredicate): CS_Item {
-    const item = CS_Economy.itemsAsArray.find(filterItems(predicate));
-    assert(item, "No items found.");
-    return item;
-}
-
-export function CS_filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
-    const items = CS_Economy.itemsAsArray.filter(filterItems(predicate));
-    assert(items.length > 0, "No items found.");
-    return items;
-}
-
-export function CS_isC4(item: number | CS_Item): boolean {
-    return CS_Economy.get(item).category === "c4";
-}
-
-export function CS_isSticker(item: number | CS_Item): boolean {
-    return CS_Economy.get(item).type === "sticker";
-}
-
-export function CS_isGlove(item: number | CS_Item): boolean {
-    return CS_Economy.get(item).type === "glove";
-}
-
-export function CS_expectSticker(item: number | CS_Item) {
-    assert(CS_isSticker(item), `Item is not a sticker.`);
-    return true;
-}
-
-export function CS_hasWear(item: CS_Item): boolean {
-    return CS_WEARABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
-}
-
-export function CS_validateWear(wear?: number, item?: CS_Item): boolean {
-    if (wear === undefined) {
-        return true;
-    }
-    assert(!Number.isNaN(wear), "Wear must be a number.");
-    assert(String(wear).length <= String(CS_WEAR_FACTOR).length, "Wear value is too long.");
-    assert(wear >= CS_MIN_WEAR && wear <= CS_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
-    if (item !== undefined) {
-        assert(CS_hasWear(item), "Item does not have wear.");
-        assert(item.wearmin === undefined || wear >= item.wearmin, "Wear value is below the minimum allowed.");
-        assert(item.wearmax === undefined || wear <= item.wearmax, "Wear value is above the maximum allowed.");
-    }
-    return true;
-}
-
-export const CS_safeValidateWear = safe(CS_validateWear);
-
-export function CS_hasSeed(item: CS_Item): boolean {
-    return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
-}
-
-export function CS_validateSeed(seed?: number, item?: CS_Item): boolean {
-    if (seed === undefined) {
-        return true;
-    }
-    assert(!Number.isNaN(seed), "Seed must be a valid number.");
-    assert(item === undefined || CS_hasSeed(item), "Item does not have a seed.");
-    assert(Number.isInteger(seed), "Seed must be an integer.");
-    assert(seed >= CS_MIN_SEED && seed <= CS_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
-    return true;
-}
-
-export const CS_safeValidateSeed = safe(CS_validateSeed);
-
-export function CS_hasStickers(item: CS_Item): boolean {
-    return CS_STICKERABLE_ITEMS.includes(item.type) && !CS_isC4(item);
-}
-
-export function CS_validateStickers(stickers?: number[], wears?: number[], item?: CS_Item): boolean {
-    if (stickers === undefined) {
-        assert(wears === undefined, "Stickers array is undefined.");
-        return true;
-    }
-    assert(stickers.length === 4, "Stickers array must contain exactly 4 elements.");
-    assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
-    assert(item === undefined || CS_hasStickers(item), "The provided item does not have stickers.");
-    for (const [index, stickerId] of stickers.entries()) {
-        if (stickerId === CS_NONE) {
-            assert(wears === undefined || wears[index] === CS_NONE, "Sticker wear value is invalid.");
-            continue;
-        }
-        assert(CS_isSticker(stickerId), "The provided ID does not correspond to a sticker.");
-        if (wears !== undefined) {
-            const wear = wears[index];
-            assert(!Number.isNaN(wear), "Sticker wear value must be a valid number.");
-            assert(String(wear).length <= String(CS_STICKER_WEAR_FACTOR).length, "Sticker wear value is too long.");
-            assert(
-                wear >= CS_MIN_STICKER_WEAR && wear <= CS_MAX_STICKER_WEAR,
-                "Sticker wear value must be between CS_MIN_STICKER_WEAR and CS_MAX_STICKER_WEAR."
-            );
-        }
-    }
-    return true;
-}
-
-export function CS_hasNametag(item: CS_Item): boolean {
-    return CS_NAMETAGGABLE_ITEMS.includes(item.type) || CS_isStorageUnitTool(item);
-}
-
-export function CS_trimNametag(nametag?: string) {
-    const trimmed = nametag?.trim();
-    return trimmed === "" ? undefined : trimmed;
-}
-
-export function CS_validateNametag(nametag?: string, item?: CS_Item): boolean {
-    if (nametag !== undefined) {
-        assert(item === undefined || CS_hasNametag(item), "The provided item does not have a nametag.");
-        assert(nametag[0] !== " " && CS_NAMETAG_RE.test(nametag), "Invalid nametag format.");
-    }
-    return true;
-}
-
-export const CS_safeValidateNametag = safe(CS_validateNametag);
-
-export function CS_requireNametag(nametag?: string, item?: CS_Item): boolean {
-    assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
-    return CS_validateNametag(nametag, item);
-}
-
-export const CS_safeRequireNametag = safe(CS_requireNametag);
-
-export function CS_hasStatTrak(item: CS_Item): boolean {
-    return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
-}
-
-export function CS_validateStatTrak(stattrak?: number, item?: CS_Item): boolean {
-    if (stattrak === undefined) {
-        return true;
-    }
-    assert(item === undefined || CS_hasStatTrak(item), "The provided item does not support stattrak.");
-    assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
-    assert(
-        stattrak >= CS_MIN_STATTRAK && stattrak <= CS_MAX_STATTRAK,
-        "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
-    );
-    return true;
-}
-
-export const CS_safeValidateStatTrak = safe(CS_validateStatTrak);
-
-export function CS_isStorageUnitTool(item: number | CS_Item): boolean {
-    const { def, type } = CS_Economy.get(item);
-    return type === "tool" && def === CS_STORAGE_UNIT_TOOL_DEF;
-}
-
-export function CS_expectStorageUnitTool(item: CS_Item) {
-    assert(CS_isStorageUnitTool(item), "Item is not a storage unit.");
-    return true;
-}
-
-export function CS_isNametagTool(toolItem: number | CS_Item): boolean {
-    const { def, type } = CS_Economy.get(toolItem);
-    return type === "tool" && def === CS_NAMETAG_TOOL_DEF;
-}
-
-export function CS_expectNametagTool(item: number | CS_Item) {
-    assert(CS_isNametagTool(item), "Item is not a nametag tool");
-    return true;
-}
-
-export function CS_isStatTrakSwapTool(item: number | CS_Item): boolean {
-    const { def, type } = CS_Economy.get(item);
-    return type === "tool" && def === CS_STATTRAK_SWAP_TOOL_DEF;
-}
-
-export function expectStatTrakSwapTool(item: CS_Item) {
-    assert(CS_isStatTrakSwapTool(item), "Item is not a stattrak swap tool.");
-    return true;
-}
-
-export function CS_getWearLabel(wear: number): string {
-    switch (true) {
-        case wear <= CS_MAX_FACTORY_NEW_WEAR:
-            return "FN";
-        case wear <= CS_MAX_MINIMAL_WEAR_WEAR:
-            return "MW";
-        case wear <= CS_MAX_FIELD_TESTED_WEAR:
-            return "FT";
-        case wear <= CS_MAX_WELL_WORN_WEAR:
-            return "WW";
-        default:
-            return "BS";
-    }
-}
-
-export function CS_getStickerCategories(): string[] {
-    return Array.from(CS_Economy.categories).sort();
-}
-
-export function CS_getStickers(): CS_Item[] {
-    return Array.from(CS_Economy.stickers);
-}
-
-export function CS_resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
-    item = CS_Economy.get(item);
-    const { id, image } = item;
-    if (CS_hasWear(item) && wear !== undefined) {
-        switch (true) {
-            case wear < 1 / 3:
-                return `${baseUrl}/${id}_light.png`;
-            case wear < 2 / 3:
-                return `${baseUrl}/${id}_medium.png`;
-            default:
-                return `${baseUrl}/${id}_heavy.png`;
-        }
-    }
-    if (image === undefined) {
-        return `${baseUrl}/${id}.png`;
-    }
-    if (image.charAt(0) === "/") {
-        return `${baseUrl}${image}`;
-    }
-    return image;
-}
-
-export function CS_resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
-    item = CS_Economy.get(item);
-    const { collection } = item;
-    assert(collection, "Item does not have a collection.");
-    return `${baseUrl}/${collection}.png`;
-}
