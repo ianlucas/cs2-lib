@@ -98,53 +98,73 @@ function filterItems(predicate: CS_EconomyPredicate) {
     };
 }
 
-export class CS_Economy {
-    static categories = new Set<string>();
-    static items = new Map<number, CS_Item>();
-    static itemsAsArray: CS_Item[] = [];
-    static stickers = new Set<CS_Item>();
+export class CS_EconomyInstance {
+    categories = new Set<string>();
+    items = new Map<number, CS_Item>();
+    itemsAsArray: CS_Item[] = [];
+    texts = new Map<number, Record<string, string>>();
+    stickers = new Set<CS_Item>();
 
-    static use(items: CS_Item[]) {
-        CS_Economy.categories.clear();
-        CS_Economy.items.clear();
-        CS_Economy.itemsAsArray = [];
-        CS_Economy.stickers.clear();
+    use(items: CS_Item[]) {
+        this.categories.clear();
+        this.items.clear();
+        this.itemsAsArray = [];
+        this.texts.clear();
+        this.stickers.clear();
         for (const item of items) {
             const clone = { ...item };
-            CS_Economy.itemsAsArray.push(clone);
-            CS_Economy.items.set(item.id, clone);
+            this.itemsAsArray.push(clone);
+            this.items.set(item.id, clone);
+            this.texts.set(item.id, {
+                name: item.name,
+                category: item.category!,
+                collectionname: item.collectionname!,
+                collectiondesc: item.collectiondesc!
+            });
             if (CS_isSticker(item)) {
                 assert(item.category, `Sticker item '${item.id}' does not have a category.`);
-                CS_Economy.stickers.add(clone);
-                CS_Economy.categories.add(item.category);
+                this.stickers.add(clone);
+                this.categories.add(item.category);
             }
         }
     }
 
-    static getById(id: number) {
-        const item = CS_Economy.items.get(id);
+    getById(id: number) {
+        const item = this.items.get(id);
         assert(item, `The given id '${id}' was not present in CS_Economy.items.`);
         return item;
     }
 
-    static get(idOrItem: number | CS_Item) {
-        return typeof idOrItem === "number" ? CS_Economy.getById(idOrItem) : idOrItem;
+    get(idOrItem: number | CS_Item) {
+        return typeof idOrItem === "number" ? this.getById(idOrItem) : idOrItem;
     }
 
-    static applyTranslation(translation: CS_ItemTranslations[number]) {
-        CS_Economy.categories.clear();
-        for (const [id, fields] of Object.entries(translation)) {
-            const item = CS_Economy.items.get(Number(id));
+    applyTranslation(translation: CS_ItemTranslations[number]) {
+        this.categories.clear();
+        for (const [id, fields] of Object.entries(this.texts)) {
+            const item = this.items.get(Number(id));
             if (item === undefined) {
                 continue;
             }
             Object.assign(item, fields);
             if (fields.category !== undefined && item.type === "sticker") {
-                CS_Economy.categories.add(fields.category);
+                this.categories.add(fields.category);
+            }
+        }
+        for (const [id, fields] of Object.entries(translation)) {
+            const item = this.items.get(Number(id));
+            if (item === undefined) {
+                continue;
+            }
+            Object.assign(item, fields);
+            if (fields.category !== undefined && item.type === "sticker") {
+                this.categories.add(fields.category);
             }
         }
     }
 }
+
+export const CS_Economy = new CS_EconomyInstance();
 
 export function CS_findItem(predicate: CS_EconomyPredicate): CS_Item {
     const item = CS_Economy.itemsAsArray.find(filterItems(predicate));
