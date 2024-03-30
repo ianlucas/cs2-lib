@@ -3,28 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_unlockCase, CS_validateCaseKey, CS_validateUnlockedItem } from "./economy-case.js";
 import {
     CS_Economy,
+    CS_EconomyInstance,
     CS_Item,
     CS_MAX_STATTRAK,
     CS_MAX_WEAR,
     CS_NONE,
-    CS_STICKER_WEAR_FACTOR,
-    CS_expectNametagTool,
-    CS_expectSticker,
-    CS_expectStorageUnitTool,
-    CS_hasStickers,
-    CS_isGlove,
-    CS_isStorageUnitTool,
-    CS_requireNametag,
-    CS_trimNametag,
-    CS_validateNametag,
-    CS_validateSeed,
-    CS_validateStatTrak,
-    CS_validateStickers,
-    CS_validateWear,
-    expectStatTrakSwapTool
+    CS_STICKER_WEAR_FACTOR
 } from "./economy.js";
 import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 import { assert, float } from "./util.js";
@@ -56,6 +42,7 @@ export interface CS_InventoryOptions {
 }
 
 export interface CS_InventorySpec extends CS_InventoryOptions {
+    economy: CS_EconomyInstance;
     items: CS_BaseInventoryItem[] | Map<number, CS_InventoryItem>;
 }
 
@@ -87,100 +74,95 @@ export function CS_getNextUid(map: Map<number, unknown>): number {
     }
 }
 
-export function CS_validateStorage(storage?: CS_BaseInventoryItem[]) {
-    if (storage !== undefined) {
-        let uids = new Set<number>();
-        for (const item of storage) {
-            assert(!uids.has(item.uid), "Duplicate storage unit item uid.");
-            assert(!CS_isStorageUnitTool(item.id), "Storage unit cannot be stored in storage unit.");
-            CS_validateBaseInventoryItem(item);
-            uids.add(item.uid);
+export class CS_Inventory {
+    private validateStorage(storage?: CS_BaseInventoryItem[]) {
+        if (storage !== undefined) {
+            let uids = new Set<number>();
+            for (const item of storage) {
+                assert(!uids.has(item.uid), "Duplicate storage unit item uid.");
+                assert(!this.economy.isStorageUnitTool(item.id), "Storage unit cannot be stored in storage unit.");
+                this.validateBaseInventoryItem(item);
+                uids.add(item.uid);
+            }
         }
     }
-}
 
-export function CS_validateEquippable(item: CS_Item) {
-    if (CS_isGlove(item)) {
-        assert(!item.base, "Glove base cannot be equipped.");
+    private validateEquippable(item: CS_Item) {
+        if (this.economy.isGlove(item)) {
+            assert(!item.base, "Glove base cannot be equipped.");
+        }
     }
-}
 
-export function CS_validateBaseInventoryItem({
-    id,
-    nametag,
-    seed,
-    stattrak,
-    stickers,
-    stickerswear,
-    storage,
-    wear
-}: Omit<CS_BaseInventoryItem, "uid">) {
-    const item = CS_Economy.getById(id);
-    CS_validateEquippable(item);
-    CS_validateWear(wear, item);
-    CS_validateSeed(seed, item);
-    CS_validateStickers(stickers, stickerswear, item);
-    CS_validateNametag(nametag, item);
-    CS_validateStatTrak(stattrak, item);
-    if (storage !== undefined) {
-        CS_expectStorageUnitTool(item);
-        CS_validateStorage(storage);
+    private validateBaseInventoryItem({
+        id,
+        nametag,
+        seed,
+        stattrak,
+        stickers,
+        stickerswear,
+        storage,
+        wear
+    }: Omit<CS_BaseInventoryItem, "uid">) {
+        const item = this.economy.getById(id);
+        this.validateEquippable(item);
+        this.economy.validateWear(wear, item);
+        this.economy.validateSeed(seed, item);
+        this.economy.validateStickers(stickers, stickerswear, item);
+        this.economy.validateNametag(nametag, item);
+        this.economy.validateStatTrak(stattrak, item);
+        if (storage !== undefined) {
+            this.economy.expectStorageUnitTool(item);
+            this.validateStorage(storage);
+        }
     }
-}
 
-export function CS_storageToMap(storage?: CS_BaseInventoryItem[]) {
-    return storage !== undefined ? new Map(storage.map((item) => [item.uid, item])) : undefined;
-}
-
-export function CS_asPartialInventoryItem({
-    storage,
-    ...base
-}: Partial<CS_BaseInventoryItem>): Partial<CS_InventoryItem> {
-    const item: Partial<CS_InventoryItem> = { ...base };
-    if (base.id) {
-        item.data = CS_Economy.getById(base.id);
+    private asPartialInventoryItem({ storage, ...base }: Partial<CS_BaseInventoryItem>): Partial<CS_InventoryItem> {
+        const item: Partial<CS_InventoryItem> = { ...base };
+        if (base.id) {
+            item.data = this.economy.getById(base.id);
+        }
+        if (storage) {
+            item.storage = new Map(storage.map((item) => [item.uid, this.asInventoryItem(item)]));
+        }
+        return item;
     }
-    if (storage) {
-        item.storage = new Map(storage.map((item) => [item.uid, CS_asInventoryItem(item)]));
+
+    private asInventoryItem(base: CS_BaseInventoryItem) {
+        return this.asPartialInventoryItem(base) as CS_InventoryItem;
     }
-    return item;
-}
 
-export function CS_asInventoryItem(base: CS_BaseInventoryItem) {
-    return CS_asPartialInventoryItem(base) as CS_InventoryItem;
-}
-
-export function CS_asPartialBaseInventoryItem({
-    data,
-    storage,
-    ...rest
-}: Partial<CS_InventoryItem>): Partial<CS_BaseInventoryItem> {
-    const base: Partial<CS_BaseInventoryItem> = { ...rest };
-    if (storage) {
-        base.storage = Array.from(storage.values()).map((item) => CS_asBaseInventoryItem(item));
+    private asPartialBaseInventoryItem({
+        data,
+        storage,
+        ...rest
+    }: Partial<CS_InventoryItem>): Partial<CS_BaseInventoryItem> {
+        const base: Partial<CS_BaseInventoryItem> = { ...rest };
+        if (storage) {
+            base.storage = Array.from(storage.values()).map((item) => this.asBaseInventoryItem(item));
+        }
+        return base;
     }
-    return base;
-}
 
-export function CS_asBaseInventoryItem(item: CS_InventoryItem) {
-    return CS_asPartialBaseInventoryItem(item) as CS_BaseInventoryItem;
-}
-
-export function CS_asInventoryItemMap(items: CS_BaseInventoryItem[]) {
-    const map = new Map<number, CS_InventoryItem>();
-    for (const item of items) {
-        assert(!map.has(item.uid), "Duplicate inventory item uid.");
-        map.set(item.uid, CS_asInventoryItem(item));
+    private asBaseInventoryItem(item: CS_InventoryItem) {
+        return this.asPartialBaseInventoryItem(item) as CS_BaseInventoryItem;
     }
-    return map;
-}
 
-export class CS_Inventory {
+    private asInventoryItemMap(items: CS_BaseInventoryItem[]) {
+        const map = new Map<number, CS_InventoryItem>();
+        for (const item of items) {
+            assert(!map.has(item.uid), "Duplicate inventory item uid.");
+            map.set(item.uid, this.asInventoryItem(item));
+        }
+        return map;
+    }
+
+    private economy: CS_EconomyInstance;
     private items: Map<number, CS_InventoryItem>;
     readonly options: Readonly<CS_InventoryOptions>;
 
-    constructor({ items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec>) {
-        this.items = items !== undefined ? (items instanceof Map ? items : CS_asInventoryItemMap(items)) : new Map();
+    constructor({ economy, items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec>) {
+        this.economy = economy ?? CS_Economy;
+        this.items = items !== undefined ? (items instanceof Map ? items : this.asInventoryItemMap(items)) : new Map();
         this.options = {
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
@@ -197,11 +179,11 @@ export class CS_Inventory {
         }
     ) {
         assert(!this.isFull(), "Inventory is full.");
-        CS_validateBaseInventoryItem(item);
+        this.validateBaseInventoryItem(item);
         const uid = CS_getNextUid(this.items);
         this.items.set(
             uid,
-            CS_asInventoryItem(
+            this.asInventoryItem(
                 Object.assign(item, {
                     equipped: undefined,
                     equippedCT: undefined,
@@ -216,7 +198,7 @@ export class CS_Inventory {
 
     private addInventoryItem(item: CS_InventoryItem) {
         assert(!this.isFull(), "Inventory is full.");
-        CS_validateBaseInventoryItem(CS_asBaseInventoryItem(item));
+        this.validateBaseInventoryItem(this.asBaseInventoryItem(item));
         const uid = CS_getNextUid(this.items);
         this.items.set(
             uid,
@@ -233,8 +215,8 @@ export class CS_Inventory {
 
     addWithNametag(toolUid: number, id: number, nametag: string) {
         const tool = this.get(toolUid);
-        CS_expectNametagTool(tool.data);
-        CS_requireNametag(nametag);
+        this.economy.expectNametagTool(tool.data);
+        this.economy.requireNametag(nametag);
         this.items.delete(toolUid);
         this.add({ id, nametag });
         return this;
@@ -242,7 +224,7 @@ export class CS_Inventory {
 
     addWithSticker(stickerUid: number, id: number, stickerIndex: number) {
         const sticker = this.get(stickerUid);
-        CS_expectSticker(sticker.data);
+        this.economy.expectSticker(sticker.data);
         this.items.delete(stickerUid);
         this.add({
             id,
@@ -255,8 +237,8 @@ export class CS_Inventory {
         const item = this.get(itemUid);
         assert(!attributes.uid || item.uid === attributes.uid, "Item uid cannot be modified.");
         assert(!attributes.id || item.id === attributes.id, "Item id cannot be modified.");
-        CS_validateBaseInventoryItem({ ...attributes, id: item.id });
-        Object.assign(item, CS_asPartialInventoryItem(attributes), {
+        this.validateBaseInventoryItem({ ...attributes, id: item.id });
+        Object.assign(item, this.asPartialInventoryItem(attributes), {
             updatedat: CS_getTimestamp()
         });
         return this;
@@ -297,11 +279,11 @@ export class CS_Inventory {
         return this;
     }
 
-    unlockCase(unlockedItem: ReturnType<typeof CS_unlockCase>, caseUid: number, keyUid?: number) {
+    unlockCase(unlockedItem: ReturnType<typeof this.economy.unlockCase>, caseUid: number, keyUid?: number) {
         const caseItem = this.get(caseUid);
-        CS_validateUnlockedItem(caseItem.data, unlockedItem);
+        this.economy.validateUnlockedItem(caseItem.data, unlockedItem);
         const keyItem = keyUid !== undefined ? this.get(keyUid) : undefined;
-        CS_validateCaseKey(caseItem.data, keyItem?.data);
+        this.economy.validateCaseKey(caseItem.data, keyItem?.data);
         this.items.delete(caseUid);
         if (keyUid !== undefined) {
             this.items.delete(keyUid);
@@ -315,11 +297,11 @@ export class CS_Inventory {
     }
 
     renameItem(toolUid: number, renameableUid: number, nametag?: string) {
-        nametag = CS_trimNametag(nametag);
+        nametag = this.economy.trimNametag(nametag);
         const tool = this.get(toolUid);
-        CS_expectNametagTool(tool.data);
+        this.economy.expectNametagTool(tool.data);
         const renameable = this.get(renameableUid);
-        CS_validateNametag(nametag, renameable.data);
+        this.economy.validateNametag(nametag, renameable.data);
         renameable.nametag = nametag;
         renameable.updatedat = CS_getTimestamp();
         this.items.delete(toolUid);
@@ -327,10 +309,10 @@ export class CS_Inventory {
     }
 
     renameStorageUnit(storageUid: number, nametag: string) {
-        const trimmed = CS_trimNametag(nametag);
+        const trimmed = this.economy.trimNametag(nametag);
         const storageUnit = this.get(storageUid);
-        CS_expectStorageUnitTool(storageUnit.data);
-        CS_requireNametag(trimmed);
+        this.economy.expectStorageUnitTool(storageUnit.data);
+        this.economy.requireNametag(trimmed);
         storageUnit.nametag = trimmed;
         storageUnit.updatedat = CS_getTimestamp();
         return this;
@@ -365,11 +347,11 @@ export class CS_Inventory {
 
     depositToStorageUnit(storageUid: number, depositUids: number[]) {
         const item = this.get(storageUid);
-        CS_expectStorageUnitTool(item.data);
+        this.economy.expectStorageUnitTool(item.data);
         assert(depositUids.length > 0, "No items to deposit.");
         assert(this.canDepositToStorageUnit(storageUid, depositUids.length), "Cannot deposit to storage unit.");
         for (const sourceUid of depositUids) {
-            assert(!CS_isStorageUnitTool(this.get(sourceUid).data), "Cannot deposit storage unit.");
+            assert(!this.economy.isStorageUnitTool(this.get(sourceUid).data), "Cannot deposit storage unit.");
         }
         const storage = item.storage ?? new Map<number, CS_InventoryItem>();
         for (const sourceUid of depositUids) {
@@ -392,7 +374,7 @@ export class CS_Inventory {
 
     retrieveFromStorageUnit(storageUid: number, retrieveUids: number[]) {
         const item = this.get(storageUid);
-        CS_expectStorageUnitTool(item.data);
+        this.economy.expectStorageUnitTool(item.data);
         const storage = item.storage;
         assert(storage, "Storage unit is empty.");
         assert(retrieveUids.length > 0, "No items to retrieve.");
@@ -413,8 +395,8 @@ export class CS_Inventory {
     applyItemSticker(targetUid: number, stickerUid: number, stickerIndex: number) {
         const target = this.get(targetUid);
         const sticker = this.get(stickerUid);
-        assert(CS_hasStickers(target.data), "Target item does not have stickers.");
-        CS_expectSticker(sticker.data);
+        assert(this.economy.hasStickers(target.data), "Target item does not have stickers.");
+        this.economy.expectSticker(sticker.data);
         const stickers = target.stickers ?? [...CS_INVENTORY_STICKERS];
         assert(stickers[stickerIndex] === CS_NONE, "Sticker already applied.");
         stickers[stickerIndex] = sticker.id;
@@ -458,7 +440,7 @@ export class CS_Inventory {
     swapItemsStatTrak(toolUid: number, fromUid: number, toUid: number) {
         assert(fromUid !== toUid, "Uids must be different.");
         const tool = this.get(toolUid);
-        expectStatTrakSwapTool(tool.data);
+        this.economy.expectStatTrakSwapTool(tool.data);
         const fromItem = this.get(fromUid);
         const toItem = this.get(toUid);
         assert(fromItem.stattrak !== undefined && toItem.stattrak !== undefined, "Invalid inventory items.");
@@ -508,6 +490,6 @@ export class CS_Inventory {
     }
 
     export() {
-        return Array.from(this.items.values()).map(CS_asBaseInventoryItem);
+        return Array.from(this.items.values()).map(this.asBaseInventoryItem);
     }
 }

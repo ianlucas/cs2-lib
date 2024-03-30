@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS_Economy, CS_MAX_STATTRAK, CS_NONE } from "./economy";
-import { CS_unlockCase } from "./economy-case";
 import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
 import { CS_TEAM_CT, CS_TEAM_T } from "./teams";
@@ -245,7 +244,7 @@ describe("CS_Inventory methods", () => {
         inventory.add({ id: ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID }); // uid:0
         inventory.add({ id: KILOWATT_CASE_ID }); // uid:1
         inventory.add({ id: KILOWATT_CASE_KEY_ID }); // uid:2
-        const unlocked1 = CS_unlockCase(ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID);
+        const unlocked1 = CS_Economy.unlockCase(ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID);
         expect(() => inventory.unlockCase(unlocked1, 0, 2)).toThrow();
         inventory.unlockCase(unlocked1, 0); // uid:0
         expect(inventory.size()).toBe(3);
@@ -261,7 +260,7 @@ describe("CS_Inventory methods", () => {
         expect(result1.updatedat).not.toBe(undefined);
         expect(result1.wear).toEqual(unlocked1.attributes.wear);
         expect(size(result1)).toBe(10);
-        const unlocked2 = CS_unlockCase(KILOWATT_CASE_ID);
+        const unlocked2 = CS_Economy.unlockCase(KILOWATT_CASE_ID);
         inventory.unlockCase(unlocked2, 1, 2); // uid:1
         expect(inventory.size()).toBe(2);
         const result2 = inventory.get(1);
