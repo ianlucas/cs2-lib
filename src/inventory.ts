@@ -485,6 +485,7 @@ export class CS_Inventory {
     move() {
         return new CS_Inventory({
             ...this.options,
+            economy: this.economy,
             items: this.items
         });
     }
