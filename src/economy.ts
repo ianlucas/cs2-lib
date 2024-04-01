@@ -152,7 +152,7 @@ export class CS_EconomyInstance {
 
     applyTranslation(translation: CS_ItemTranslations[number]) {
         this.categories.clear();
-        for (const [id, fields] of Object.entries(this.texts)) {
+        for (const [id, fields] of this.texts.entries()) {
             const item = this.items.get(Number(id));
             if (item === undefined) {
                 continue;
