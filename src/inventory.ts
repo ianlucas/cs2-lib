@@ -491,6 +491,6 @@ export class CS_Inventory {
     }
 
     export() {
-        return Array.from(this.items.values()).map(this.asBaseInventoryItem);
+        return Array.from(this.items.values()).map((value) => this.asBaseInventoryItem(value));
     }
 }
