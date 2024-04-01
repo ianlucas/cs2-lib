@@ -61,6 +61,12 @@ describe("CS_Economy", () => {
         expect(translatedItem1.name).toBe("Translated Item 1");
         expect(translatedItem2.name).toBe("Translated Item 2");
         expect(untranslatedItem.name).toBe("Item 3");
+
+        CS_Economy.applyTranslation({});
+
+        expect(CS_Economy.getById(1).name).toBe("Item 1");
+        expect(CS_Economy.getById(2).name).toBe("Item 2");
+        expect(CS_Economy.getById(3).name).toBe("Item 3");
     });
 });
 
