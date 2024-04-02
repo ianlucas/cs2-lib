@@ -24,11 +24,6 @@ export function readJson<T>(path: string, fallback?: T) {
     return JSON.parse(readFileSync(file, "utf-8")) as T;
 }
 
-export function replaceInFile(path: string, pattern: RegExp, replaceValue: string) {
-    const file = readFileSync(path, "utf-8");
-    writeFileSync(path, file.replace(pattern, replaceValue), "utf-8");
-}
-
 export function writeTxt(path: string, contents: string) {
     const file = resolve(process.cwd(), path);
     writeFileSync(file, contents, "utf-8");
