@@ -13,6 +13,7 @@ import { CS_TEAM_CT, CS_TEAM_T } from "../src/teams.js";
 import { assert, fail } from "../src/util.js";
 import { CaseScraper } from "./case-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
+import { getItemsTsContents } from "./item-generator-items-ts.js";
 import {
     CS_CsgoLanguageTXT,
     CS_ItemsGameTXT,
@@ -27,7 +28,7 @@ import {
     StickerKitsRecord,
     UnsafeRaritiesRecord
 } from "./item-generator-types.js";
-import { log, push, readJson, replaceInFile, warning, writeJson } from "./util.js";
+import { log, push, readJson, warning, writeJson, writeTxt } from "./util.js";
 
 const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
 const CS2_ITEMS_TXT_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
@@ -478,10 +479,10 @@ export class ItemGenerator {
                     continue;
                 }
                 const itemKey = `[${musicProps.name}]musickit`;
-                const name = this.requireTranslation(musicProps.loc_name);
+                const name = `Music Kit | ${this.requireTranslation(musicProps.loc_name)}`;
                 const id = this.itemIdentifierManager.get(`musickit_${musicIndex}`);
 
-                this.addTranslation(id, "name", name, musicProps.loc_name);
+                this.addTranslation(id, "name", name, "#CSGO_Type_MusicKit", " | ", musicProps.loc_name);
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.set(id, {
@@ -543,15 +544,16 @@ export class ItemGenerator {
                 category = this.findTranslation(categoryToken);
             }
             assert(category, `unable to define a category for '${stickerProps.item_name}'.`);
-            const name = this.findTranslation(stickerProps.item_name);
+            let name = this.findTranslation(stickerProps.item_name);
             if (name === undefined) {
                 log(`unable to find translation for '${stickerProps.item_name}'.`);
                 continue;
             }
+            name = `Sticker | ${name}`;
             const id = this.itemIdentifierManager.get(`sticker_${stickerIndex}`);
             const itemKey = `[${stickerProps.name}]sticker`;
 
-            this.addTranslation(id, "name", name, stickerProps.item_name);
+            this.addTranslation(id, "name", name, "#CSGO_Tool_Sticker", " | ", stickerProps.item_name);
             if (categoryToken !== "") {
                 this.addTranslation(id, "category", category, categoryToken);
             }
@@ -583,7 +585,7 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const name = this.findTranslation(graffitiProps.item_name);
+            let name = this.findTranslation(graffitiProps.item_name);
             if (name === undefined) {
                 log(`Translation not found for graffiti '${graffitiProps.item_name}'.`);
                 continue;
@@ -593,14 +595,24 @@ export class ItemGenerator {
                 let addedToCaseContents = false;
                 for (const { name: tintName, token: tintToken, id: tintId } of this.graffitiTints) {
                     const id = this.itemIdentifierManager.get(`spray_${graffitiIndex}_${tintId}`);
-                    const name = `${graffitiName} (${tintName})`;
+                    const name = `Graffiti | ${graffitiName} (${tintName})`;
                     const image = this.itemManager.get(id)?.image ?? tintGraffitiImages[name];
                     if (!image) {
                         log(`Image not found for graffiti '${name}'.`);
                         continue;
                     }
                     const itemKey = `[${graffitiProps.name}]spray`;
-                    this.addTranslation(id, "name", name, graffitiProps.item_name, " (", tintToken, ")");
+                    this.addTranslation(
+                        id,
+                        "name",
+                        name,
+                        "#CSGO_Type_Spray",
+                        " | ",
+                        graffitiProps.item_name,
+                        " (",
+                        tintToken,
+                        ")"
+                    );
 
                     this.generatedItems.set(id, {
                         id,
@@ -618,10 +630,11 @@ export class ItemGenerator {
                     }
                 }
             } else {
+                name = `Graffiti | ${name}`;
                 const id = this.itemIdentifierManager.get(`spray_${graffitiIndex}`);
                 const itemKey = `[${graffitiProps.name}]spray`;
 
-                this.addTranslation(id, "name", name, graffitiProps.item_name);
+                this.addTranslation(id, "name", name, "#CSGO_Type_Spray", " | ", graffitiProps.item_name);
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.set(id, {
@@ -648,15 +661,11 @@ export class ItemGenerator {
             if (patchProps.item_name.indexOf("#PatchKit") !== 0 && patchProps.patch_material === undefined) {
                 continue;
             }
-            const name = this.requireTranslation(patchProps.item_name);
-            if (!name) {
-                log(`Name not found for patch '${patchProps.item_name}'.`);
-                continue;
-            }
+            const name = `Patch | ${this.requireTranslation(patchProps.item_name)}`;
             const id = this.itemIdentifierManager.get(`patch_${patchIndex}`);
             const itemKey = `[${patchProps.name}]patch`;
 
-            this.addTranslation(id, "name", name, patchProps.item_name);
+            this.addTranslation(id, "name", name, "#CSGO_Tool_Patch", " | ", patchProps.item_name);
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.set(id, {
@@ -933,7 +942,7 @@ export class ItemGenerator {
             warning(`Generated '${path}'.`);
         }
 
-        replaceInFile(ITEMS_TS_PATH, /CS_Item\[\] = [^;]+;/, `CS_Item[] = ${JSON.stringify(items)};`);
+        writeTxt(ITEMS_TS_PATH, getItemsTsContents(items));
         warning(`Updated '${ITEMS_TS_PATH}'.`);
         warning("Script completed.");
     }

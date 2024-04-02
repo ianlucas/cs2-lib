@@ -1,6 +1,6 @@
+import fetch from "node-fetch";
 import { CS_Item } from "./economy";
 import { CS_ITEMS } from "./items";
-import fetch from "node-fetch";
 import { fail } from "./util";
 
 const itemMap = new Map<number, CS_Item>();
@@ -56,6 +56,18 @@ test("compare repository items with current items", async () => {
         }
         if (item.type === "agent") {
             expect(item.model).not.toBeUndefined();
+        }
+        if (item.type === "musickit" && !repItem.name.startsWith("Music Kit | ")) {
+            expect(item.name).toBe(`Music Kit | ${repItem.name}`);
+        }
+        if (item.type === "sticker" && !repItem.name.startsWith("Sticker | ")) {
+            expect(item.name).toBe("Sticker | " + repItem.name);
+        }
+        if (item.type === "graffiti" && !repItem.name.startsWith("Graffiti | ")) {
+            expect(item.name).toBe(`Graffiti | ${repItem.name}`);
+        }
+        if (item.type === "patch" && !repItem.name.startsWith("Patch | ")) {
+            expect(item.name).toBe(`Patch | ${repItem.name}`);
         }
         expect(item.def).toBe(repItem.def);
         expect(item.index).toBe(repItem.index);
