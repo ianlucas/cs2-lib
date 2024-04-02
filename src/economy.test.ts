@@ -78,6 +78,25 @@ test("nametag validation", () => {
     expect(CS_Economy.safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
 });
 
+test("wear validation", () => {
+    expect(CS_Economy.safeValidateWear(0.1)).toBeTruthy();
+    expect(CS_Economy.safeValidateWear(0.5)).toBeTruthy();
+    expect(CS_Economy.safeValidateWear(1)).toBeTruthy();
+    expect(CS_Economy.safeValidateWear(1.1)).toBeFalsy();
+    expect(CS_Economy.safeValidateWear(-0.1)).toBeFalsy();
+    const item = {
+        id: 1,
+        name: "Item 1",
+        rarity: CS_RARITY_COMMON_COLOR,
+        type: "weapon" as const,
+        wearmin: 0.2,
+        wearmax: 0.6
+    };
+    expect(CS_Economy.safeValidateWear(0.1, item)).toBeFalsy();
+    expect(CS_Economy.safeValidateWear(0.7, item)).toBeFalsy();
+    expect(CS_Economy.safeValidateWear(0.3, item)).toBeTruthy();
+});
+
 test("has seed", () => {
     CS_Economy.use(CS_ITEMS);
     const baseGlove = CS_Economy.getById(56);

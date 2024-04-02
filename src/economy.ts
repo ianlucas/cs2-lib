@@ -15,7 +15,7 @@ import {
     CS_randomInt
 } from "./economy-case.js";
 import { CS_Team } from "./teams.js";
-import { assert, compare, safe } from "./util.js";
+import { assert, compare } from "./util.js";
 
 export interface CS_Item {
     altname?: string;
@@ -222,7 +222,13 @@ export class CS_EconomyInstance {
         return true;
     }
 
-    safeValidateWear = safe(this.validateWear);
+    safeValidateWear(wear?: number, item?: CS_Item): boolean {
+        try {
+            return this.validateWear(wear, item);
+        } catch {
+            return false;
+        }
+    }
 
     hasSeed(item: CS_Item): boolean {
         return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
@@ -239,7 +245,13 @@ export class CS_EconomyInstance {
         return true;
     }
 
-    safeValidateSeed = safe(this.validateSeed);
+    safeValidateSeed(seed?: number, item?: CS_Item): boolean {
+        try {
+            return this.validateSeed(seed, item);
+        } catch {
+            return false;
+        }
+    }
 
     hasStickers(item: CS_Item): boolean {
         return CS_STICKERABLE_ITEMS.includes(item.type) && !this.isC4(item);
@@ -289,14 +301,26 @@ export class CS_EconomyInstance {
         return true;
     }
 
-    safeValidateNametag = safe(this.validateNametag);
+    safeValidateNametag(nametag?: string, item?: CS_Item): boolean {
+        try {
+            return this.validateNametag(nametag, item);
+        } catch {
+            return false;
+        }
+    }
 
     requireNametag(nametag?: string, item?: CS_Item): boolean {
         assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
         return this.validateNametag(nametag, item);
     }
 
-    safeRequireNametag = safe(this.requireNametag);
+    safeRequireNametag(nametag?: string, item?: CS_Item): boolean {
+        try {
+            return this.requireNametag(nametag, item);
+        } catch {
+            return false;
+        }
+    }
 
     hasStatTrak(item: CS_Item): boolean {
         return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
@@ -315,7 +339,13 @@ export class CS_EconomyInstance {
         return true;
     }
 
-    safeValidateStatTrak = safe(this.validateStatTrak);
+    safeValidateStatTrak(stattrak?: number, item?: CS_Item): boolean {
+        try {
+            return this.validateStatTrak(stattrak, item);
+        } catch {
+            return false;
+        }
+    }
 
     isStorageUnitTool(item: number | CS_Item): boolean {
         const { def, type } = this.get(item);
@@ -430,7 +460,13 @@ export class CS_EconomyInstance {
         }
     }
 
-    safeValidateCaseKey = safe(this.validateCaseKey);
+    safeValidateCaseKey(caseItem: number | CS_Item, keyItem?: number | CS_Item) {
+        try {
+            return this.validateCaseKey(caseItem, keyItem);
+        } catch {
+            return false;
+        }
+    }
 
     getCaseContents(item: number | CS_Item) {
         item = this.get(item);
