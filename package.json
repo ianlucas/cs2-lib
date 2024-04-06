@@ -16,11 +16,11 @@
         "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts",
         "tint-graffiti-image-scraper": "tsx scripts/tint-graffiti-image-scraper.ts",
         "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts",
-        "upgrade": "npx npm-check-updates@latest --reject \"@types/node isbot\" --target minor -u"
+        "upgrade": "npx npm-check-updates@latest --target minor -u"
     },
     "devDependencies": {
         "@types/jest": "^29.5.12",
-        "@types/node": "^18.15.11",
+        "@types/node": "^18.19.30",
         "@types/node-fetch": "^2.6.11",
         "cheerio": "^1.0.0-rc.12",
         "dotenv": "^16.4.5",
@@ -29,8 +29,8 @@
         "node-fetch": "^2.7.0",
         "prettier": "3.2.5",
         "ts-jest": "^29.1.2",
-        "tsx": "^4.7.1",
-        "typescript": "^5.4.2"
+        "tsx": "^4.7.2",
+        "typescript": "^5.4.4"
     },
     "dependencies": {
         "tiny-invariant": "^1.3.3"
