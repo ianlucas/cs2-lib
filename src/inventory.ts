@@ -16,6 +16,7 @@ import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
 import { assert, float } from "./util.js";
 
 export interface CS_BaseInventoryItem {
+    caseid?: number;
     equipped?: boolean;
     equippedCT?: boolean;
     equippedT?: boolean;

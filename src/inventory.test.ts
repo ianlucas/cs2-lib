@@ -249,6 +249,7 @@ describe("CS_Inventory methods", () => {
         inventory.unlockCase(unlocked1, 0); // uid:0
         expect(inventory.size()).toBe(3);
         const result1 = inventory.get(0);
+        expect(result1.caseid).toBe(unlocked1.attributes.caseid);
         expect(result1.data).toBe(CS_Economy.getById(unlocked1.id));
         expect(result1.equipped).toBe(undefined);
         expect(result1.equippedCT).toBe(undefined);
@@ -259,11 +260,12 @@ describe("CS_Inventory methods", () => {
         expect(result1.uid).toBe(0);
         expect(result1.updatedat).not.toBe(undefined);
         expect(result1.wear).toEqual(unlocked1.attributes.wear);
-        expect(size(result1)).toBe(10);
+        expect(size(result1)).toBe(11);
         const unlocked2 = CS_Economy.unlockCase(KILOWATT_CASE_ID);
         inventory.unlockCase(unlocked2, 1, 2); // uid:1
         expect(inventory.size()).toBe(2);
         const result2 = inventory.get(1);
+        expect(result2.caseid).toBe(unlocked2.attributes.caseid);
         expect(result2.data).toBe(CS_Economy.getById(unlocked2.id));
         expect(result2.equipped).toBe(undefined);
         expect(result2.equippedCT).toBe(undefined);
@@ -274,7 +276,7 @@ describe("CS_Inventory methods", () => {
         expect(result2.uid).toBe(1);
         expect(result2.updatedat).not.toBe(undefined);
         expect(result2.wear).toEqual(unlocked2.attributes.wear);
-        expect(size(result2)).toBe(10);
+        expect(size(result2)).toBe(11);
     });
 
     test("renameItem should rename the item with the given id", () => {

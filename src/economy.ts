@@ -539,6 +539,7 @@ export class CS_EconomyInstance {
         const alwaysStatTrak = item.stattrakonly === true;
         return {
             attributes: {
+                caseid: item.id,
                 seed: this.hasSeed(unlocked) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
                 stattrak: hasStatTrak
                     ? this.hasStatTrak(unlocked)
