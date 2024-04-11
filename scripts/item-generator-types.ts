@@ -72,6 +72,7 @@ export interface CS_ItemsGameTXT {
                     use_string?: string;
                 };
                 used_by_classes?: Record<string, string>;
+                vo_prefix?: string;
             };
         }[];
         music_definitions: {

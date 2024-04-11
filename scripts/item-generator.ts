@@ -710,7 +710,8 @@ export class ItemGenerator {
                 name,
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
                 teams,
-                type: "agent"
+                type: "agent",
+                voprefix: this.getVoPrefix(itemProps.model_player, itemProps.vo_prefix)
             });
         }
     }
@@ -1180,6 +1181,37 @@ export class ItemGenerator {
         const category = this.requireTranslation(key);
         this.addTranslation(id, "category", category, key);
         return category;
+    }
+
+    getVoPrefix(model: string, prefix?: string) {
+        if (prefix !== undefined) {
+            return prefix;
+        }
+        if (model.includes("tm_leet")) {
+            return "leet";
+        }
+        if (model.includes("ctm_st6")) {
+            return "seal";
+        }
+        if (model.includes("ctm_swat")) {
+            return "swat";
+        }
+        if (model.includes("tm_balkan")) {
+            return "balkan";
+        }
+        if (model.includes("tm_professional")) {
+            return "professional";
+        }
+        if (model.includes("tm_phoenix")) {
+            return "phoenix";
+        }
+        if (model.includes("ctm_fbi")) {
+            return "fbihrt";
+        }
+        if (model.includes("ctm_sas")) {
+            return "sas";
+        }
+        fail(`Voice prefix not found for model '${model}'.`);
     }
 }
 
