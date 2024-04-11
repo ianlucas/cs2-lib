@@ -4,7 +4,7 @@
     "description": "A TypeScript library for manipulating Counter-Strike 2 data",
     "license": "MIT",
     "author": "Ian Lucas",
-    "repository": "ianlucas/cslib",
+    "repository": "ianlucas/cs2-lib",
     "type": "module",
     "main": "dist/index.js",
     "scripts": {
