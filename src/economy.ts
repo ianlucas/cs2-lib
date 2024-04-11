@@ -54,6 +54,7 @@ export interface CS_Item {
         | "sticker"
         | "tool"
         | "weapon";
+    voprefix?: string;
     wearmax?: number;
     wearmin?: number;
 }
