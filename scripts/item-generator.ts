@@ -33,6 +33,7 @@ import { log, push, readJson, warning, writeJson, writeTxt } from "./util.js";
 const CS2_RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
 const CS2_ITEMS_TXT_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
 const CS2_IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
+const CS2_AGENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const LOOKUP_AGENT_MODEL_JSON_PATH = "assets/data/lookup-agent-model.json";
 const LOOKUP_WEAPON_MODEL_JSON_PATH = "assets/data/lookup-weapon-model.json";
 const LOOKUP_WEAPON_LEGACY_JSON_PATH = "assets/data/lookup-weapon-legacy.json";
@@ -712,6 +713,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
                 teams,
                 type: "agent",
+                vofallback: this.getVoFallback(voprefix),
                 vofemale: this.getVoFemale(voprefix),
                 voprefix
             });
@@ -1186,6 +1188,9 @@ export class ItemGenerator {
     }
 
     getVoPrefix(model: string, prefix?: string) {
+        if (prefix === "ctm_gsg9") {
+            return "gsg9";
+        }
         if (prefix !== undefined) {
             return prefix;
         }
@@ -1224,6 +1229,12 @@ export class ItemGenerator {
             return true;
         }
         return undefined;
+    }
+
+    getVoFallback(prefix: string) {
+        return readFileSync(resolve(CS2_AGENTS_PATH, `game_sounds_${prefix}.vsndevts`), "utf-8").includes("radiobot")
+            ? true
+            : undefined;
     }
 }
 
