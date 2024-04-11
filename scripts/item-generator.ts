@@ -697,6 +697,7 @@ export class ItemGenerator {
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.itemIdentifierManager.get(`agent_${teams.join("_")}_${itemIndex}`);
             const model = itemProps.model_player.replace("characters/models/", "").replace(".vmdl", "");
+            const voprefix = this.getVoPrefix(itemProps.model_player, itemProps.vo_prefix);
 
             this.addTranslation(id, "name", name, itemProps.item_name);
             this.lookupAgentModel[itemIndex] = model;
@@ -711,7 +712,8 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([itemProps.name, itemProps.item_rarity]),
                 teams,
                 type: "agent",
-                voprefix: this.getVoPrefix(itemProps.model_player, itemProps.vo_prefix)
+                vofemale: this.getVoFemale(voprefix),
+                voprefix
             });
         }
     }
@@ -1212,6 +1214,16 @@ export class ItemGenerator {
             return "sas";
         }
         fail(`Voice prefix not found for model '${model}'.`);
+    }
+
+    getVoFemale(prefix: string) {
+        if (prefix.includes("_fem")) {
+            return true;
+        }
+        if (prefix === "fbihrt_epic") {
+            return true;
+        }
+        return undefined;
     }
 }
 
