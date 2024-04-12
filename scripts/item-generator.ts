@@ -694,13 +694,13 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const name = this.requireTranslation(itemProps.item_name);
+            const name = `Agent | ${this.requireTranslation(itemProps.item_name)}`;
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.itemIdentifierManager.get(`agent_${teams.join("_")}_${itemIndex}`);
             const model = itemProps.model_player.replace("characters/models/", "").replace(".vmdl", "");
             const voprefix = this.getVoPrefix(itemProps.model_player, itemProps.vo_prefix);
 
-            this.addTranslation(id, "name", name, itemProps.item_name);
+            this.addTranslation(id, "name", name, "#Type_CustomPlayer", " | ", itemProps.item_name);
             this.lookupAgentModel[itemIndex] = model;
 
             this.generatedItems.set(id, {
@@ -734,10 +734,10 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const name = this.requireTranslation(itemProps.item_name);
+            const name = `Collectible | ${this.requireTranslation(itemProps.item_name)}`;
             const id = this.itemIdentifierManager.get(`pin_${itemIndex}`);
 
-            this.addTranslation(id, "name", name, itemProps.item_name);
+            this.addTranslation(id, "name", name, "#CSGO_Type_Collectible", " | ", itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.set(id, {
