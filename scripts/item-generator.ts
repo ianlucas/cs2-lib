@@ -521,10 +521,6 @@ export class ItemGenerator {
                 category = "Valve";
             }
             if (!category) {
-                categoryToken = `#CSGO_sticker_crate_key_${folder}`;
-                category = this.findTranslation(categoryToken);
-            }
-            if (!category) {
                 categoryToken = `#CSGO_crate_sticker_pack_${folder}`;
                 category = this.findTranslation(categoryToken);
             }
@@ -539,6 +535,10 @@ export class ItemGenerator {
             }
             if (!category) {
                 categoryToken = `#CSGO_crate_sticker_pack_${subfolder}_capsule`;
+                category = this.findTranslation(categoryToken);
+            }
+            if (!category) {
+                categoryToken = `#CSGO_sticker_crate_key_${folder}`;
                 category = this.findTranslation(categoryToken);
             }
             assert(category, `unable to define a category for '${stickerProps.item_name}'.`);
@@ -839,10 +839,10 @@ export class ItemGenerator {
                 log(`No contents for case '${itemProps.name}'.`);
             }
             if (contents.length > 0) {
-                const name = this.requireTranslation(itemProps.item_name);
+                const name = `Container | ${this.requireTranslation(itemProps.item_name)}`;
                 const id = this.itemIdentifierManager.get(`case_${itemIndex}`);
                 const specials = this.casesScraper.getSpecials(name);
-                this.addTranslation(id, "name", name, itemProps.item_name);
+                this.addTranslation(id, "name", name, "#CSGO_Type_WeaponCase", " | ", itemProps.item_name);
 
                 if (!itemProps.associated_items) {
                     assert(
@@ -872,8 +872,8 @@ export class ItemGenerator {
                         itemProps.item_name = "#CSGO_base_crate_key";
                     }
                     assert(itemProps.image_inventory, `image_inventory not found for key of '${itemIndex}'.`);
-                    const name = this.requireTranslation(itemProps.item_name);
-                    this.addTranslation(id, "name", name, itemProps.item_name);
+                    const name = `Key | ${this.requireTranslation(itemProps.item_name)}`;
+                    this.addTranslation(id, "name", name, "#CSGO_Tool_WeaponCase_KeyTag", " | ", itemProps.item_name);
                     this.generatedItems.set(id, {
                         def: Number(itemIndex),
                         id,

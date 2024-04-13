@@ -424,8 +424,7 @@ export class CS_EconomyInstance {
     }
 
     resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
-        item = this.get(item);
-        const { collectionid } = item;
+        const { collectionid } = this.get(item);
         assert(collectionid, "Item does not have a collection.");
         return `${baseUrl}/${collectionid}.png`;
     }
