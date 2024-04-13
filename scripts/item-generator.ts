@@ -763,12 +763,12 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const name = this.requireTranslation(itemProps.item_name);
+            const name = `Tool | ${this.requireTranslation(itemProps.item_name)}`;
             const id = this.itemIdentifierManager.get(`tool_${itemIndex}`);
             const prefab = this.prefabs[itemProps.prefab];
             const image = itemProps.image_inventory || prefab?.image_inventory;
             assert(image, `Image not found for tool '${itemProps.name}'.`);
-            this.addTranslation(id, "name", name, itemProps.item_name);
+            this.addTranslation(id, "name", name, "#CSGO_Type_Tool", " | ", itemProps.item_name);
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.set(id, {

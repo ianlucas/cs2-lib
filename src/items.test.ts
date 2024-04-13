@@ -72,8 +72,49 @@ test("compare repository items with current items", async () => {
         if (item.type === "key" && !repItem.name.startsWith("Key | ")) {
             expect(item.name).toBe(`Key | ${repItem.name}`);
         }
-        if (item.type === "case" && !repItem.name.startsWith("Case | ")) {
+        if (item.type === "case" && !repItem.name.startsWith("Container | ")) {
             expect(item.name).toBe(`Container | ${repItem.name}`);
+        }
+        if (item.type === "tool" && !repItem.name.startsWith("Tool | ")) {
+            expect(item.name).toBe(`Tool | ${repItem.name}`);
+        }
+        switch (item.type) {
+            case "agent":
+                expect(item.name).toContain("Agent | ");
+                break;
+            case "case":
+                expect(item.name).toContain("Container | ");
+                break;
+            case "collectible":
+                expect(item.name).toContain("Collectible | ");
+                break;
+            case "glove":
+                !item.free && !item.base && expect(item.name).toContain(" | ");
+                break;
+            case "graffiti":
+                expect(item.name).toContain("Graffiti | ");
+                break;
+            case "key":
+                expect(item.name).toContain("Key | ");
+                break;
+            case "melee":
+                !item.free && !item.base && expect(item.name).toContain(" | ");
+                break;
+            case "musickit":
+                expect(item.name).toContain("Music Kit | ");
+                break;
+            case "patch":
+                expect(item.name).toContain("Patch | ");
+                break;
+            case "sticker":
+                expect(item.name).toContain("Sticker | ");
+                break;
+            case "tool":
+                expect(item.name).toContain("Tool | ");
+                break;
+            case "weapon":
+                !item.free && !item.base && expect(item.name).toContain(" | ");
+                break;
         }
         expect(item.def).toBe(repItem.def);
         expect(item.index).toBe(repItem.index);
