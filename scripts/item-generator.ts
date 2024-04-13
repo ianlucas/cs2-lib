@@ -6,6 +6,7 @@
 import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
+import { stripHtml } from 'string-strip-html';
 import { format } from "util";
 import { CS_DEFAULT_MAX_WEAR, CS_DEFAULT_MIN_WEAR, CS_Item, CS_ItemTranslations } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
@@ -986,7 +987,8 @@ export class ItemGenerator {
     }
 
     findTranslation(key: string, language = "english"): string | undefined {
-        return this.languages[language][key.substring(1).toLowerCase()];
+        const value = this.languages[language][key.substring(1).toLowerCase()]
+        return value !== undefined ? stripHtml(value).result : undefined;
     }
 
     getTeams(teams: Record<string, string>) {
