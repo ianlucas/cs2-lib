@@ -21,7 +21,7 @@ export interface CS_Item {
     altname?: string;
     base?: boolean;
     category?: string;
-    collection?: string;
+    collectionid?: string;
     collectiondesc?: string;
     collectionname?: string;
     contents?: number[];
@@ -425,7 +425,7 @@ export class CS_EconomyInstance {
 
     resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
         item = this.get(item);
-        const { collection } = item;
+        const { collectionid: collection } = item;
         assert(collection, "Item does not have a collection.");
         return `${baseUrl}/${collection}.png`;
     }

@@ -449,14 +449,10 @@ export class ItemGenerator {
                 push(this.lookupWeaponLegacy, baseItem.def!, paintKit.index);
             }
 
-            const { collection, collectiondesc, collectionname } = this.getItemCollection(id, itemKey);
-
             this.generatedItems.set(id, {
                 ...baseItem,
                 base: undefined,
-                collection,
-                collectiondesc,
-                collectionname,
+                ...this.getItemCollection(id, itemKey),
                 free: undefined,
                 id,
                 index: paintKit.index,
@@ -1134,26 +1130,26 @@ export class ItemGenerator {
         copyFileSync(src, dest);
     }
 
-    getItemCollection(id: number, itemKey: string) {
-        const collection = this.itemSetItemKey[itemKey] as string | undefined;
+    getItemCollection(itemId: number, itemKey: string) {
+        const collectionid = this.itemSetItemKey[itemKey] as string | undefined;
         let collectionname: string | undefined;
         let collectiondesc: string | undefined;
-        if (collection !== undefined) {
-            const collectionProps = this.itemSets[collection];
-            assert(collectionProps, `Collection '${collection}' not found.`);
-            assert(collectionProps.name, `Collection name not found for '${collection}'.`);
-            collectionname = this.requireTranslation(collectionProps.name);
-            this.addTranslation(id, "collectionname", collectionname, collectionProps.name);
-            if (collectionProps.set_description !== undefined) {
-                collectiondesc = this.findTranslation(collectionProps.set_description) || undefined;
+        if (collectionid !== undefined) {
+            const collection = this.itemSets[collectionid];
+            assert(collection, `Collection '${collectionid}' not found.`);
+            assert(collection.name, `Collection name not found for '${collectionid}'.`);
+            collectionname = this.requireTranslation(collection.name);
+            this.addTranslation(itemId, "collectionname", collectionname, collection.name);
+            if (collection.set_description !== undefined) {
+                collectiondesc = this.findTranslation(collection.set_description) || undefined;
                 if (collectiondesc) {
-                    this.addTranslation(id, "collectiondesc", collectiondesc, collectionProps.set_description);
+                    this.addTranslation(itemId, "collectiondesc", collectiondesc, collection.set_description);
                 }
             }
         }
         return {
-            collection,
             collectiondesc,
+            collectionid,
             collectionname
         };
     }
