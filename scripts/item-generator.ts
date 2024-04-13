@@ -6,7 +6,7 @@
 import { createHash } from "crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
-import { stripHtml } from 'string-strip-html';
+import { stripHtml } from "string-strip-html";
 import { format } from "util";
 import { CS_DEFAULT_MAX_WEAR, CS_DEFAULT_MIN_WEAR, CS_Item, CS_ItemTranslations } from "../src/economy.js";
 import { CS_parseValveKeyValue } from "../src/keyvalues.js";
@@ -130,7 +130,7 @@ export class ItemGenerator {
         this.parseGraffiti();
         this.parseAgents();
         this.parsePatches();
-        this.parsePins();
+        this.parseCollectibles();
         this.parseTools();
         this.parseCases();
 
@@ -721,8 +721,8 @@ export class ItemGenerator {
         }
     }
 
-    parsePins() {
-        warning("Parsing pins...");
+    parseCollectibles() {
+        warning("Parsing collectibles...");
         for (const [itemIndex, itemProps] of Object.entries(this.items)) {
             if (
                 itemProps.image_inventory === undefined ||
@@ -750,7 +750,7 @@ export class ItemGenerator {
                 name,
                 rarity: this.getRarityColorHex([itemProps.item_rarity, "ancient"]),
                 teams: undefined,
-                type: "pin"
+                type: "collectible"
             });
         }
     }
@@ -987,7 +987,7 @@ export class ItemGenerator {
     }
 
     findTranslation(key: string, language = "english"): string | undefined {
-        const value = this.languages[language][key.substring(1).toLowerCase()]
+        const value = this.languages[language][key.substring(1).toLowerCase()];
         return value !== undefined ? stripHtml(value).result : undefined;
     }
 

@@ -24,13 +24,13 @@ test("has every types and categories", () => {
     const expectedItemTypes = [
         "agent",
         "case",
+        "collectible",
         "glove",
         "graffiti",
         "key",
         "melee",
         "musickit",
         "patch",
-        "pin",
         "sticker",
         "tool",
         "weapon"
@@ -50,7 +50,7 @@ test("compare repository items with current items", async () => {
         if (item === undefined) {
             fail(`item not found.`);
         }
-        expect(item.type).toBe(repItem.type);
+        expect(item.type).toBe((repItem.type as any) === "pin" ? "collectible" : repItem.type);
         if (item.type === "weapon") {
             expect(item.category).toBe(repItem.category);
         }

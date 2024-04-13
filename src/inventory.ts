@@ -52,12 +52,12 @@ export const CS_INVENTORY_STICKERS = [CS_NONE, CS_NONE, CS_NONE, CS_NONE] as con
 export const CS_INVENTORY_STICKERS_WEAR = [CS_NONE, CS_NONE, CS_NONE, CS_NONE] as const;
 export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
     "agent",
+    "collectible",
     "glove",
     "graffiti",
     "melee",
     "musickit",
     "patch",
-    "pin",
     "weapon"
 ];
 
