@@ -157,22 +157,20 @@ export class CS_EconomyInstance {
         this.categories.clear();
         for (const [id, fields] of this.texts.entries()) {
             const item = this.items.get(Number(id));
-            if (item === undefined) {
-                continue;
-            }
-            Object.assign(item, fields);
-            if (fields.category !== undefined && item.type === "sticker") {
-                this.categories.add(fields.category);
+            if (item !== undefined) {
+                Object.assign(item, fields);
+                if (fields.category !== undefined && item.type === "sticker") {
+                    this.categories.add(fields.category);
+                }
             }
         }
         for (const [id, fields] of Object.entries(translation)) {
             const item = this.items.get(Number(id));
-            if (item === undefined) {
-                continue;
-            }
-            Object.assign(item, fields);
-            if (fields.category !== undefined && item.type === "sticker") {
-                this.categories.add(fields.category);
+            if (item !== undefined) {
+                Object.assign(item, fields);
+                if (fields.category !== undefined && item.type === "sticker") {
+                    this.categories.add(fields.category);
+                }
             }
         }
     }
