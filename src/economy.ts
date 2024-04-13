@@ -44,13 +44,13 @@ export interface CS_Item {
     type:
         | "agent"
         | "case"
+        | "collectible"
         | "glove"
         | "graffiti"
         | "key"
         | "melee"
         | "musickit"
         | "patch"
-        | "pin"
         | "sticker"
         | "tool"
         | "weapon";
