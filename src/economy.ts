@@ -425,9 +425,9 @@ export class CS_EconomyInstance {
 
     resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
         item = this.get(item);
-        const { collectionid: collection } = item;
-        assert(collection, "Item does not have a collection.");
-        return `${baseUrl}/${collection}.png`;
+        const { collectionid } = item;
+        assert(collectionid, "Item does not have a collection.");
+        return `${baseUrl}/${collectionid}.png`;
     }
 
     isCase(item: number | CS_Item) {
