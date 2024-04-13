@@ -69,6 +69,12 @@ test("compare repository items with current items", async () => {
         if (item.type === "patch" && !repItem.name.startsWith("Patch | ")) {
             expect(item.name).toBe(`Patch | ${repItem.name}`);
         }
+        if (item.type === "key" && !repItem.name.startsWith("Key | ")) {
+            expect(item.name).toBe(`Key | ${repItem.name}`);
+        }
+        if (item.type === "case" && !repItem.name.startsWith("Case | ")) {
+            expect(item.name).toBe(`Container | ${repItem.name}`);
+        }
         expect(item.def).toBe(repItem.def);
         expect(item.index).toBe(repItem.index);
     }
