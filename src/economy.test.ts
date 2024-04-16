@@ -3,7 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Economy, CS_Item } from "./economy";
+import {
+    CS_Economy,
+    CS_GRAFFITI_BOX_ID,
+    CS_Item,
+    CS_SOUVENIR_CASE_ID,
+    CS_STICKER_CAPSULE_ID,
+    CS_WEAPON_CASE_ID
+} from "./economy";
 import { CS_RARITY_COMMON_COLOR } from "./economy-case";
 import { CS_ITEMS } from "./items";
 
@@ -103,4 +110,15 @@ test("has seed", () => {
     const skinGlove = CS_Economy.getById(1707);
     expect(CS_Economy.hasSeed(baseGlove)).toBe(false);
     expect(CS_Economy.hasSeed(skinGlove)).toBe(true);
+});
+
+test("category check helpers", () => {
+    expect(CS_Economy.getById(CS_WEAPON_CASE_ID).category).toBe("Weapon Cases");
+    expect(CS_Economy.isWeaponCase(CS_Economy.getById(9131))).toBe(true);
+    expect(CS_Economy.getById(CS_STICKER_CAPSULE_ID).category).toBe("Sticker Capsules");
+    expect(CS_Economy.isStickerCapsule(CS_Economy.getById(9155))).toBe(true);
+    expect(CS_Economy.getById(CS_GRAFFITI_BOX_ID).category).toBe("Graffiti Boxes");
+    expect(CS_Economy.isGraffitiBox(CS_Economy.getById(11254))).toBe(true);
+    expect(CS_Economy.getById(CS_SOUVENIR_CASE_ID).category).toBe("Souvenir Cases");
+    expect(CS_Economy.isSouvenirCase(CS_Economy.getById(9153))).toBe(true);
 });
