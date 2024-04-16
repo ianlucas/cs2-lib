@@ -96,6 +96,10 @@ export const CS_NAMETAG_TOOL_DEF = 1200;
 export const CS_STATTRAK_SWAP_TOOL_DEF = 1324;
 export const CS_STORAGE_UNIT_TOOL_DEF = 1201;
 export const CS_NONE = 0;
+export const CS_WEAPON_CASE_ID = 9129;
+export const CS_STICKER_CAPSULE_ID = 9134;
+export const CS_GRAFFITI_BOX_ID = 11234;
+export const CS_SOUVENIR_CASE_ID = 9147;
 
 type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
 
@@ -399,6 +403,22 @@ export class CS_EconomyInstance {
 
     getStickers(): CS_Item[] {
         return Array.from(this.stickers);
+    }
+
+    isWeaponCase(item: CS_Item) {
+        return item.category === this.getById(CS_WEAPON_CASE_ID).category;
+    }
+
+    isStickerCapsule(item: CS_Item) {
+        return item.category === this.getById(CS_STICKER_CAPSULE_ID).category;
+    }
+
+    isGraffitiBox(item: CS_Item) {
+        return item.category === this.getById(CS_GRAFFITI_BOX_ID).category;
+    }
+
+    isSouvenirCase(item: CS_Item) {
+        return item.category === this.getById(CS_SOUVENIR_CASE_ID).category;
     }
 
     resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
