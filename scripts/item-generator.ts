@@ -891,6 +891,7 @@ export class ItemGenerator {
                 const containsStatTrak = name.includes("StatTrak");
 
                 this.generatedItems.set(id, {
+                    ...this.getCollection(id, itemProps.tags?.ItemSet?.tag_value),
                     category: this.getContainerCategory(id, name, contentsType),
                     contents,
                     def: Number(itemIndex),
@@ -1130,8 +1131,7 @@ export class ItemGenerator {
         copyFileSync(src, dest);
     }
 
-    getItemCollection(itemId: number, itemKey: string) {
-        const collectionid = this.itemSetItemKey[itemKey] as string | undefined;
+    getCollection(itemId: number, collectionid?: string) {
         let collectionname: string | undefined;
         let collectiondesc: string | undefined;
         if (collectionid !== undefined) {
@@ -1152,6 +1152,10 @@ export class ItemGenerator {
             collectionid,
             collectionname
         };
+    }
+
+    getItemCollection(itemId: number, itemKey: string) {
+        return this.getCollection(itemId, this.itemSetItemKey[itemKey]);
     }
 
     getContainerCategoryKey(name: string, type?: CS_Item["type"]) {
