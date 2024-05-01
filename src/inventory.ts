@@ -161,7 +161,7 @@ export class CS_Inventory {
     private items: Map<number, CS_InventoryItem>;
     readonly options: Readonly<CS_InventoryOptions>;
 
-    constructor({ economy, items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec>) {
+    constructor({ economy, items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec> = {}) {
         this.economy = economy ?? CS_Economy;
         this.items = items !== undefined ? (items instanceof Map ? items : this.asInventoryItemMap(items)) : new Map();
         this.options = {
