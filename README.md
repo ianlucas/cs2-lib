@@ -20,7 +20,7 @@ import { CS_Economy, CS_ITEMS } from "@ianlucas/cs2-lib";
 
 CS_Economy.use({
     items: CS_ITEMS,
-    language: english
+    translation: english
 });
 
 const item = CS_Economy.getById(307);
