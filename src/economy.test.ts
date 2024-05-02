@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import english from "../assets/translations/items-english.json";
 import {
     CS_Economy,
     CS_GRAFFITI_BOX_ID,
@@ -21,7 +22,14 @@ describe("CS_Economy", () => {
             { id: 2, name: "Item 2", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" },
             { id: 3, name: "Item 3", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" }
         ];
-        CS_Economy.use(items);
+        CS_Economy.use({
+            items,
+            translation: {
+                1: { name: "Item 1" },
+                2: { name: "Item 2" },
+                3: { name: "Item 3" }
+            }
+        });
         expect(CS_Economy.items.size).toBe(3);
         expect(CS_Economy.items.get(1)).toEqual(items[0]);
         expect(CS_Economy.items.get(2)).toEqual(items[1]);
@@ -30,14 +38,24 @@ describe("CS_Economy", () => {
 
     test("getById should return the item with the given id", () => {
         const item: CS_Item = { id: 1, name: "Item 1", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" };
-        CS_Economy.use([item]);
+        CS_Economy.use({
+            items: [item],
+            translation: {
+                1: { name: "Item 1" }
+            }
+        });
         const result = CS_Economy.getById(1);
         expect(result).toEqual(item);
     });
 
     test("get should return the item with the given id or item object", () => {
         const item: CS_Item = { id: 1, name: "Item 1", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" };
-        CS_Economy.use([item]);
+        CS_Economy.use({
+            items: [item],
+            translation: {
+                1: { name: "Item 1" }
+            }
+        });
 
         const result1 = CS_Economy.get(1);
         const result2 = CS_Economy.get(item);
@@ -47,7 +65,13 @@ describe("CS_Economy", () => {
     });
 
     test("applyTranslation should apply translations to the items", () => {
-        const translation = {
+        const translation1 = {
+            1: { name: "Item 1" },
+            2: { name: "Item 2" },
+            3: { name: "Item 3" }
+        };
+
+        const translation2 = {
             1: { name: "Translated Item 1" },
             2: { name: "Translated Item 2" }
         };
@@ -58,8 +82,7 @@ describe("CS_Economy", () => {
             { id: 3, name: "Item 3", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" }
         ];
 
-        CS_Economy.use(items);
-        CS_Economy.applyTranslation(translation);
+        CS_Economy.use({ items, translation: translation2 });
 
         const translatedItem1 = CS_Economy.getById(1);
         const translatedItem2 = CS_Economy.getById(2);
@@ -69,7 +92,7 @@ describe("CS_Economy", () => {
         expect(translatedItem2.name).toBe("Translated Item 2");
         expect(untranslatedItem.name).toBe("Item 3");
 
-        CS_Economy.applyTranslation({});
+        CS_Economy.use({ items, translation: translation1 });
 
         expect(CS_Economy.getById(1).name).toBe("Item 1");
         expect(CS_Economy.getById(2).name).toBe("Item 2");
@@ -78,6 +101,7 @@ describe("CS_Economy", () => {
 });
 
 test("nametag validation", () => {
+    CS_Economy.use({ items: CS_ITEMS, translation: english });
     expect(CS_Economy.safeValidateNametag(" fail")).toBeFalsy();
     expect(CS_Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
     expect(CS_Economy.safeValidateNametag("孔子")).toBeTruthy();
@@ -86,6 +110,7 @@ test("nametag validation", () => {
 });
 
 test("wear validation", () => {
+    CS_Economy.use({ items: CS_ITEMS, translation: english });
     expect(CS_Economy.safeValidateWear(0.1)).toBeTruthy();
     expect(CS_Economy.safeValidateWear(0.5)).toBeTruthy();
     expect(CS_Economy.safeValidateWear(1)).toBeTruthy();
@@ -105,7 +130,7 @@ test("wear validation", () => {
 });
 
 test("has seed", () => {
-    CS_Economy.use(CS_ITEMS);
+    CS_Economy.use({ items: CS_ITEMS, translation: english });
     const baseGlove = CS_Economy.getById(56);
     const skinGlove = CS_Economy.getById(1707);
     expect(CS_Economy.hasSeed(baseGlove)).toBe(false);
@@ -113,6 +138,7 @@ test("has seed", () => {
 });
 
 test("category check helpers", () => {
+    CS_Economy.use({ items: CS_ITEMS, translation: english });
     expect(CS_Economy.getById(CS_WEAPON_CASE_ID).category).toBe("Weapon Cases");
     expect(CS_Economy.isWeaponCase(CS_Economy.getById(9131))).toBe(true);
     expect(CS_Economy.getById(CS_STICKER_CAPSULE_ID).category).toBe("Sticker Capsules");

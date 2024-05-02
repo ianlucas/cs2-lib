@@ -1,15 +1,22 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import fetch from "node-fetch";
-import { CS_Item } from "./economy";
+import english from "../assets/translations/items-english.json";
+import { CS_Economy, CS_Item } from "./economy";
 import { CS_ITEMS } from "./items";
 import { fail } from "./util";
 
 const itemMap = new Map<number, CS_Item>();
+CS_Economy.use({ items: CS_ITEMS, translation: english });
 
 test("has every types and categories", () => {
     const weaponCategories = new Set<string>();
     const itemTypes = new Set<string>();
 
-    for (const item of CS_ITEMS) {
+    for (const item of CS_Economy.itemsAsArray) {
         itemMap.set(item.id, item);
         if (item.type === "weapon") {
             if (item.category === undefined) {

@@ -120,29 +120,29 @@ export class CS_EconomyInstance {
     categories = new Set<string>();
     items = new Map<number, CS_Item>();
     itemsAsArray: CS_Item[] = [];
-    texts = new Map<number, Record<string, string>>();
     stickers = new Set<CS_Item>();
 
-    use(items: CS_Item[]) {
+    use({ items, translation }: { items: CS_Item[]; translation: CS_ItemTranslations[number] }) {
         this.categories.clear();
         this.items.clear();
         this.itemsAsArray = [];
-        this.texts.clear();
         this.stickers.clear();
         for (const item of items) {
             const clone = { ...item };
             this.itemsAsArray.push(clone);
             this.items.set(item.id, clone);
-            this.texts.set(item.id, {
-                name: item.name,
-                category: item.category!,
-                collectionname: item.collectionname!,
-                collectiondesc: item.collectiondesc!
-            });
             if (this.isSticker(item)) {
-                assert(item.category, `Sticker item '${item.id}' does not have a category.`);
                 this.stickers.add(clone);
-                this.categories.add(item.category);
+            }
+        }
+        for (const [id, fields] of Object.entries(translation)) {
+            const item = this.items.get(Number(id));
+            if (item !== undefined) {
+                Object.assign(item, fields);
+                if (item.type === "sticker") {
+                    assert(item.category, `Sticker item '${item.id}' does not have a category.`);
+                    this.categories.add(item.category);
+                }
             }
         }
     }
@@ -150,33 +150,12 @@ export class CS_EconomyInstance {
     getById(id: number) {
         const item = this.items.get(id);
         assert(item, `The given id '${id}' was not present in CS_Economy.items.`);
+        assert(item.name, `Item with id '${id}' does not have a name.`);
         return item;
     }
 
     get(idOrItem: number | CS_Item) {
         return typeof idOrItem === "number" ? this.getById(idOrItem) : idOrItem;
-    }
-
-    applyTranslation(translation: CS_ItemTranslations[number]) {
-        this.categories.clear();
-        for (const [id, fields] of this.texts.entries()) {
-            const item = this.items.get(Number(id));
-            if (item !== undefined) {
-                Object.assign(item, fields);
-                if (fields.category !== undefined && item.type === "sticker") {
-                    this.categories.add(fields.category);
-                }
-            }
-        }
-        for (const [id, fields] of Object.entries(translation)) {
-            const item = this.items.get(Number(id));
-            if (item !== undefined) {
-                Object.assign(item, fields);
-                if (fields.category !== undefined && item.type === "sticker") {
-                    this.categories.add(fields.category);
-                }
-            }
-        }
     }
 
     findItem(predicate: CS_EconomyPredicate): CS_Item {
