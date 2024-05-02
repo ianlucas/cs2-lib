@@ -15,9 +15,13 @@ npm install @ianlucas/cs2-lib
 For any module that deals with economy items, you need to setup the available items (`CS_ITEMS` contains all items from the game):
 
 ```typescript
+import english from "@ianlucas/cslib/assets/translations/items-english.json";
 import { CS_Economy, CS_ITEMS } from "@ianlucas/cs2-lib";
 
-CS_Economy.use(CS_ITEMS);
+CS_Economy.use({
+    items: CS_ITEMS,
+    language: english
+});
 
 const item = CS_Economy.getById(307);
 

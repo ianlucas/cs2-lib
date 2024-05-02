@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import english from "../assets/translations/items-english.json";
 import { CS_Economy, CS_MAX_STATTRAK, CS_NONE } from "./economy";
 import { CS_Inventory } from "./inventory";
 import { CS_ITEMS } from "./items";
@@ -39,7 +40,7 @@ const AWOLNATION_I_AM_ID = 1801;
 const BROKEN_FANG_GLOVES_ID = 56;
 const BROKEN_FANG_GLOVES_JADE_ID = 1707;
 
-CS_Economy.use(CS_ITEMS);
+CS_Economy.use({ items: CS_ITEMS, translation: english });
 
 function size<T extends {}>(obj: T): number {
     return Object.keys(obj).length;

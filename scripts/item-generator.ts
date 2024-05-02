@@ -552,13 +552,10 @@ export class ItemGenerator {
             const itemKey = `[${stickerProps.name}]sticker`;
 
             this.addTranslation(id, "name", name, "#CSGO_Tool_Sticker", " | ", stickerProps.item_name);
-            if (categoryToken !== "") {
-                this.addTranslation(id, "category", category, categoryToken);
-            }
+            this.addTranslation(id, "category", category, categoryToken !== "" ? categoryToken : category);
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.set(id, {
-                category,
                 id,
                 image:
                     this.itemManager.get(id)?.image ??
@@ -918,7 +915,11 @@ export class ItemGenerator {
         const items = [...this.baseItems, ...this.generatedItems.values()].map((item) => ({
             ...item,
             className: undefined,
-            nameToken: undefined
+            nameToken: undefined,
+            // Remove translation properties.
+            collectiondesc: undefined,
+            collectionname: undefined,
+            name: undefined
         }));
 
         writeJson(LOOKUP_AGENT_MODEL_JSON_PATH, this.lookupAgentModel);
@@ -952,10 +953,14 @@ export class ItemGenerator {
 
     addTranslation(id: number, field: string, englishName: string, ...keys: string[]) {
         for (const language of Object.keys(this.languages)) {
+            if (this.translations[language][id] === undefined) {
+                this.translations[language][id] = {};
+            }
             if (language === "english") {
+                this.translations[language][id][field] = englishName;
                 continue;
             }
-            const translatedName = keys
+            this.translations[language][id][field] = keys
                 .map((key) => {
                     if (key.at(0) !== "#") {
                         return key;
@@ -967,13 +972,6 @@ export class ItemGenerator {
                     return translation || this.requireTranslation(key);
                 })
                 .join("");
-
-            if (translatedName !== englishName) {
-                if (this.translations[language][id] === undefined) {
-                    this.translations[language][id] = {};
-                }
-                this.translations[language][id][field] = translatedName;
-            }
         }
     }
 
