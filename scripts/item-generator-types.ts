@@ -126,7 +126,7 @@ export interface CS_ItemsGameTXT {
                 name: string;
                 patch_material?: string;
                 sticker_material: string;
-                tournament_event_id: string;
+                tournament_event_id?: string;
             };
         }[];
     };

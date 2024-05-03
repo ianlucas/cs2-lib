@@ -36,13 +36,14 @@ export interface CS_Item {
     legacy?: boolean;
     model?: string;
     name: string;
+    rarity: string;
     specials?: number[];
     specialsimage?: boolean;
-    stattrakonly?: boolean;
     stattrakless?: boolean;
-    rarity: string;
+    stattrakonly?: boolean;
     teams?: CS_Team[];
     tint?: number;
+    tournamentdesc?: string;
     type:
         | "agent"
         | "case"

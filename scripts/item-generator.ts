@@ -557,7 +557,7 @@ export class ItemGenerator {
                 categoryToken = `#CSGO_crate_sticker_pack_${folder}_capsule`;
                 category = this.findTranslation(categoryToken);
             }
-            if (stickerProps.tournament_event_id) {
+            if (stickerProps.tournament_event_id !== undefined) {
                 categoryToken = `#CSGO_Tournament_Event_NameShort_${stickerProps.tournament_event_id}`;
                 category = this.findTranslation(categoryToken);
                 assert(category, `unable to find the short name for tournament '${stickerProps.tournament_event_id}'.`);
@@ -588,6 +588,14 @@ export class ItemGenerator {
             this.addTranslation(id, "desc", desc, "#CSGO_Tool_Sticker_Desc");
             if (customdesc) {
                 this.addTranslation(id, "customdesc", customdesc, customdescToken);
+            }
+            if (stickerProps.tournament_event_id !== undefined) {
+                this.addFormattedTranslation(
+                    id,
+                    "tournamentdesc",
+                    "#CSGO_Event_Desc",
+                    `#CSGO_Tournament_Event_Name_${stickerProps.tournament_event_id}`
+                );
             }
             this.addCaseContent(itemKey, id);
 
@@ -1072,6 +1080,24 @@ export class ItemGenerator {
     findTranslation(key: string, language = "english"): string | undefined {
         const value = this.languages[language][key.substring(1).toLowerCase()];
         return value !== undefined ? stripHtml(value).result : undefined;
+    }
+
+    addFormattedTranslation(id: number, field: string, key: string, ...values: string[]) {
+        for (const language of Object.keys(this.languages)) {
+            if (this.translations[language][id] === undefined) {
+                this.translations[language][id] = {};
+            }
+            let template = this.findTranslation(key, language);
+            if (template === undefined) {
+                log(`Translation not found for '${key}'.`);
+                template = this.requireTranslation(key, "english");
+            }
+            this.translations[language][id][field] = template.replace(/%s(\d+)/g, (_, index) => {
+                const key = values[parseInt(index, 10) - 1];
+                const translation = this.findTranslation(key, language);
+                return translation !== undefined ? translation : this.requireTranslation(key, "english");
+            });
+        }
     }
 
     getTeams(teams: Record<string, string>) {
