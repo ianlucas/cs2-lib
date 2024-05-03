@@ -242,12 +242,19 @@ export class ItemGenerator {
                     continue;
                 }
                 const name = this.requireTranslation(paintKitProps.description_tag);
+                assert(
+                    paintKitProps.description_string,
+                    `Translation not found for paint kit '${paintKitProps.description_tag}'.`
+                );
+                const customDesc = this.requireTranslation(paintKitProps.description_string);
                 this.paintKits.push({
                     className: paintKitProps.name,
+                    customDesc,
+                    customDescToken: paintKitProps.description_string,
+                    index: Number(paintKitIndex),
                     name,
                     nameToken: paintKitProps.description_tag,
                     rarityColorHex: this.getRarityColorHex([paintKitProps.name]),
-                    index: Number(paintKitIndex),
                     wearmax:
                         paintKitProps.wear_remap_max !== undefined
                             ? Number(paintKitProps.wear_remap_max)
@@ -309,10 +316,13 @@ export class ItemGenerator {
             }
             const prefab = this.getPrefab(itemProps.prefab);
             const name = this.requireTranslation(prefab.item_name);
+            assert(prefab.item_description, `Description not found for weapon '${prefab.item_name}'.`);
+            const desc = this.requireTranslation(prefab.item_description);
             const teams = this.getTeams(prefab.used_by_classes);
             const id = this.itemIdentifierManager.get(`weapon_${teams.join("_")}_${itemIndex}`);
 
             this.addTranslation(id, "name", name, prefab.item_name);
+            this.addTranslation(id, "desc", desc, prefab.item_description);
             this.lookupWeaponModel[itemIndex] = itemProps.name;
 
             this.baseItems.push({
@@ -320,6 +330,7 @@ export class ItemGenerator {
                 category: this.getWeaponCategory(itemProps.name, category),
                 className: itemProps.name,
                 def: Number(itemIndex),
+                desc,
                 free: true,
                 id,
                 image:
@@ -355,17 +366,21 @@ export class ItemGenerator {
                 log(`Translation not found for melee '${itemProps.item_name}'.`);
                 continue;
             }
+            assert(itemProps.item_description, `Description not found for melee '${itemProps.item_name}'.`);
+            const desc = this.requireTranslation(itemProps.item_description);
             const prefab = this.getPrefab(itemProps.prefab);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.itemIdentifierManager.get(`melee_${teams.join("_")}_${itemIndex}`);
 
             this.addTranslation(id, "name", name, itemProps.item_name);
+            this.addTranslation(id, "desc", desc, itemProps.item_description);
             this.lookupWeaponModel[itemIndex] = itemProps.name;
 
             this.baseItems.push({
                 base: true,
                 className: itemProps.name,
                 def: Number(itemIndex),
+                desc,
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image: this.getImage(id, itemProps.image_inventory),
@@ -391,14 +406,19 @@ export class ItemGenerator {
                 continue;
             }
             const name = this.requireTranslation(itemProps.item_name);
+            assert(itemProps.item_description, `Description not found for glove '${itemProps.item_name}'.`);
+            const desc = this.requireTranslation(itemProps.item_description);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.itemIdentifierManager.get(`glove_${teams.join("_")}_${itemIndex}`);
+
             this.addTranslation(id, "name", name, itemProps.item_name);
+            this.addTranslation(id, "desc", desc, itemProps.item_description);
 
             this.baseItems.push({
                 base: true,
                 className: itemProps.name,
                 def: Number(itemIndex),
+                desc,
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image:
@@ -439,10 +459,12 @@ export class ItemGenerator {
             }
             const itemKey = `[${paintKit.className}]${baseItem.className}`;
             const name = `${baseItem.name} | ${paintKit.name}`;
+            const customdesc = paintKit.customDesc;
             const id = this.itemIdentifierManager.get(`paint_${baseItem.def}_${paintKit.index}`);
             const legacy = this.itemManager.get(id)?.legacy;
 
             this.addTranslation(id, "name", name, baseItem.nameToken, " | ", paintKit.nameToken);
+            this.addTranslation(id, "customdesc", customdesc, paintKit.customDescToken);
             this.addCaseContent(itemKey, id);
 
             if (legacy) {
@@ -451,8 +473,9 @@ export class ItemGenerator {
 
             this.generatedItems.set(id, {
                 ...baseItem,
-                base: undefined,
                 ...this.getItemCollection(id, itemKey),
+                base: undefined,
+                customdesc,
                 free: undefined,
                 id,
                 index: paintKit.index,
@@ -478,13 +501,19 @@ export class ItemGenerator {
                 }
                 const itemKey = `[${musicProps.name}]musickit`;
                 const name = `Music Kit | ${this.requireTranslation(musicProps.loc_name)}`;
+                const desc = this.requireTranslation("#CSGO_musickit_desc");
+                const customdesc = this.requireTranslation(musicProps.loc_description);
                 const id = this.itemIdentifierManager.get(`musickit_${musicIndex}`);
 
                 this.addTranslation(id, "name", name, "#CSGO_Type_MusicKit", " | ", musicProps.loc_name);
+                this.addTranslation(id, "desc", desc, "#CSGO_musickit_desc");
+                this.addTranslation(id, "customdesc", customdesc, musicProps.loc_description);
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.set(id, {
                     base: true,
+                    customdesc,
+                    desc,
                     free: FREE_MUSIC_KITS.includes(musicIndex) ? true : undefined,
                     id,
                     image: this.itemManager.get(id)?.image ?? this.getImage(id, musicProps.image_inventory),
@@ -550,12 +579,21 @@ export class ItemGenerator {
             name = `Sticker | ${name}`;
             const id = this.itemIdentifierManager.get(`sticker_${stickerIndex}`);
             const itemKey = `[${stickerProps.name}]sticker`;
+            const desc = this.requireTranslation("#CSGO_Tool_Sticker_Desc");
+            const customdescToken = stickerProps.description_string ?? "";
+            const customdesc = this.findTranslation(customdescToken);
 
             this.addTranslation(id, "name", name, "#CSGO_Tool_Sticker", " | ", stickerProps.item_name);
             this.addTranslation(id, "category", category, categoryToken !== "" ? categoryToken : category);
+            this.addTranslation(id, "desc", desc, "#CSGO_Tool_Sticker_Desc");
+            if (customdesc) {
+                this.addTranslation(id, "customdesc", customdesc, customdescToken);
+            }
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.set(id, {
+                customdesc,
+                desc,
                 id,
                 image:
                     this.itemManager.get(id)?.image ??
@@ -585,6 +623,13 @@ export class ItemGenerator {
                 log(`Translation not found for graffiti '${graffitiProps.item_name}'.`);
                 continue;
             }
+            const desc = this.requireTranslation("#CSGO_Tool_SprayPaint_Desc");
+            assert(
+                graffitiProps.description_string,
+                `Description not found for graffiti '${graffitiProps.item_name}'.`
+            );
+            const customdesc = this.requireTranslation(graffitiProps.description_string);
+
             if (tintGraffitiNames.includes(name)) {
                 const graffitiName = this.findTranslation(graffitiProps.item_name);
                 let addedToCaseContents = false;
@@ -608,8 +653,12 @@ export class ItemGenerator {
                         tintToken,
                         ")"
                     );
+                    this.addTranslation(id, "desc", desc, "#CSGO_Tool_SprayPaint_Desc");
+                    this.addTranslation(id, "customdesc", customdesc, graffitiProps.description_string);
 
                     this.generatedItems.set(id, {
+                        customdesc,
+                        desc,
                         id,
                         image,
                         index: Number(graffitiIndex),
@@ -630,9 +679,13 @@ export class ItemGenerator {
                 const itemKey = `[${graffitiProps.name}]spray`;
 
                 this.addTranslation(id, "name", name, "#CSGO_Type_Spray", " | ", graffitiProps.item_name);
+                this.addTranslation(id, "desc", desc, "#CSGO_Tool_SprayPaint_Desc");
+                this.addTranslation(id, "customdesc", customdesc, graffitiProps.description_string);
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.set(id, {
+                    customdesc,
+                    desc,
                     id,
                     image:
                         this.itemManager.get(id)?.image ??
@@ -659,11 +712,17 @@ export class ItemGenerator {
             const name = `Patch | ${this.requireTranslation(patchProps.item_name)}`;
             const id = this.itemIdentifierManager.get(`patch_${patchIndex}`);
             const itemKey = `[${patchProps.name}]patch`;
+            const desc = this.requireTranslation("#CSGO_Tool_Patch_Desc");
+            assert(patchProps.description_string, `Description not found for patch '${patchProps.item_name}'.`);
+            const customdesc = this.requireTranslation(patchProps.description_string);
 
             this.addTranslation(id, "name", name, "#CSGO_Tool_Patch", " | ", patchProps.item_name);
+            this.addTranslation(id, "desc", desc, "#CSGO_Tool_Patch_Desc");
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.set(id, {
+                customdesc,
+                desc,
                 id,
                 image:
                     this.itemManager.get(id)?.image ?? this.getImage(id, `econ/patches/${patchProps.patch_material}`),
@@ -689,16 +748,20 @@ export class ItemGenerator {
                 continue;
             }
             const name = `Agent | ${this.requireTranslation(itemProps.item_name)}`;
+            assert(itemProps.item_description, `Description not found for agent '${itemProps.item_name}'.`);
+            const desc = this.requireTranslation(itemProps.item_description);
             const teams = this.getTeams(itemProps.used_by_classes);
             const id = this.itemIdentifierManager.get(`agent_${teams.join("_")}_${itemIndex}`);
             const model = itemProps.model_player.replace("characters/models/", "").replace(".vmdl", "");
             const voprefix = this.getVoPrefix(itemProps.model_player, itemProps.vo_prefix);
 
             this.addTranslation(id, "name", name, "#Type_CustomPlayer", " | ", itemProps.item_name);
+            this.addTranslation(id, "desc", desc, itemProps.item_description);
             this.lookupAgentModel[itemIndex] = model;
 
             this.generatedItems.set(id, {
                 def: Number(itemIndex),
+                desc,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                 index: undefined,
@@ -729,13 +792,19 @@ export class ItemGenerator {
                 continue;
             }
             const name = `Collectible | ${this.requireTranslation(itemProps.item_name)}`;
+            const descToken = itemProps.item_description ?? `${itemProps.item_name}_Desc`;
+            const desc = this.findTranslation(descToken);
             const id = this.itemIdentifierManager.get(`pin_${itemIndex}`);
 
             this.addTranslation(id, "name", name, "#CSGO_Type_Collectible", " | ", itemProps.item_name);
+            if (desc !== undefined) {
+                this.addTranslation(id, "desc", desc, descToken);
+            }
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.set(id, {
                 altname: itemProps.name,
+                desc,
                 def: Number(itemIndex),
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
@@ -761,16 +830,21 @@ export class ItemGenerator {
                 continue;
             }
             const name = `Tool | ${this.requireTranslation(itemProps.item_name)}`;
+            assert(itemProps.item_description, `Description not found for tool '${itemProps.item_name}'.`);
+            const desc = this.requireTranslation(itemProps.item_description);
             const id = this.itemIdentifierManager.get(`tool_${itemIndex}`);
             const prefab = this.prefabs[itemProps.prefab];
             const image = itemProps.image_inventory || prefab?.image_inventory;
             assert(image, `Image not found for tool '${itemProps.name}'.`);
+
             this.addTranslation(id, "name", name, "#CSGO_Type_Tool", " | ", itemProps.item_name);
+            this.addTranslation(id, "desc", desc, itemProps.item_description);
             this.addCaseContent(itemProps.name, id);
 
             this.generatedItems.set(id, {
                 category: this.getContainerCategory(id, name, "tool"),
                 def: Number(itemIndex),
+                desc,
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, image),
@@ -837,9 +911,14 @@ export class ItemGenerator {
             }
             if (contents.length > 0) {
                 const name = `Container | ${this.requireTranslation(itemProps.item_name)}`;
+                const descToken = itemProps.item_description ?? "";
+                const desc = this.findTranslation(descToken);
                 const id = this.itemIdentifierManager.get(`case_${itemIndex}`);
                 const specials = this.casesScraper.getSpecials(name);
                 this.addTranslation(id, "name", name, "#CSGO_Type_WeaponCase", " | ", itemProps.item_name);
+                if (desc) {
+                    this.addTranslation(id, "desc", desc, descToken);
+                }
 
                 if (!itemProps.associated_items) {
                     assert(
@@ -870,9 +949,15 @@ export class ItemGenerator {
                     }
                     assert(itemProps.image_inventory, `image_inventory not found for key of '${itemIndex}'.`);
                     const name = `Key | ${this.requireTranslation(itemProps.item_name)}`;
+                    const descToken = itemProps.item_description ?? "";
+                    const desc = this.findTranslation(descToken);
                     this.addTranslation(id, "name", name, "#CSGO_Tool_WeaponCase_KeyTag", " | ", itemProps.item_name);
+                    if (desc !== undefined) {
+                        this.addTranslation(id, "desc", desc, descToken);
+                    }
                     this.generatedItems.set(id, {
                         def: Number(itemIndex),
+                        desc,
                         id,
                         image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                         name,
@@ -892,6 +977,7 @@ export class ItemGenerator {
                     category: this.getContainerCategory(id, name, contentsType),
                     contents,
                     def: Number(itemIndex),
+                    desc,
                     id,
                     image: this.itemManager.get(id)?.image ?? this.getImage(id, itemProps.image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
@@ -919,6 +1005,8 @@ export class ItemGenerator {
             // Remove translation properties.
             collectiondesc: undefined,
             collectionname: undefined,
+            customdesc: undefined,
+            desc: undefined,
             name: undefined
         }));
 
@@ -977,7 +1065,7 @@ export class ItemGenerator {
 
     requireTranslation(key: string, language = "english") {
         const translation = this.findTranslation(key, language);
-        assert(translation, `Translation not found for '${key}', but it's required.`);
+        assert(translation !== undefined, `Translation not found for '${key}', but it's required.`);
         return translation;
     }
 

@@ -53,6 +53,7 @@ export interface CS_ItemsGameTXT {
                 flexible_loadout_slot?: string;
                 image_inventory?: string;
                 image_unusual_item?: string;
+                item_description?: string;
                 item_name?: string;
                 item_rarity: string;
                 loot_list_name?: string;
@@ -77,13 +78,15 @@ export interface CS_ItemsGameTXT {
         }[];
         music_definitions: {
             [musicIndex: string]: {
-                name: string;
-                loc_name: string;
                 image_inventory: string;
+                loc_description: string;
+                loc_name: string;
+                name: string;
             };
         }[];
         paint_kits: {
             [paintKitKey: string]: {
+                description_string?: string;
                 description_tag?: string;
                 name: string;
                 wear_remap_max?: string;
@@ -95,11 +98,12 @@ export interface CS_ItemsGameTXT {
         }[];
         prefabs: {
             [prefabKey: string]: {
-                prefab: string;
+                image_inventory?: string;
                 item_class: string;
+                item_description?: string;
                 item_name: string;
                 item_rarity: string;
-                image_inventory?: string;
+                prefab: string;
                 used_by_classes: Record<string, string>;
                 visuals: {
                     weapon_type: string;
@@ -144,6 +148,8 @@ export type ItemProps = CS_ItemsGameTXT["items_game"]["items"][number][string];
 export type ItemsRecord = Record<string, ItemProps>;
 export type PaintKitsProps = {
     className: string;
+    customDesc: string;
+    customDescToken: string;
     index: number;
     name: string;
     nameToken: string;
