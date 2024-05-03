@@ -21,11 +21,13 @@ export interface CS_Item {
     altname?: string;
     base?: boolean;
     category?: string;
-    collectionid?: string;
     collectiondesc?: string;
+    collectionid?: string;
     collectionname?: string;
     contents?: number[];
+    customdesc?: string;
     def?: number;
+    desc?: string;
     free?: boolean;
     id: number;
     image?: string;

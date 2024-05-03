@@ -30,7 +30,12 @@ export function CS_parseValveKeyValue<T = any>(data: string) {
             while (data[index] && data[index] !== '"') {
                 while (data[index] && data[index] === "\\") {
                     index += 1;
-                    value += data[index];
+                    const char = data[index];
+                    if (char === "n") {
+                        value += "\n";
+                    } else {
+                        value += char;
+                    }
                     index += 1;
                 }
                 if (data[index] !== '"') {
