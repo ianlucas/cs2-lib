@@ -1,6 +1,6 @@
 {
     "name": "@ianlucas/cs2-lib",
-    "version": "4.1.0",
+    "version": "4.2.0",
     "description": "A TypeScript library for manipulating Counter-Strike 2 data",
     "license": "MIT",
     "author": "Ian Lucas",
