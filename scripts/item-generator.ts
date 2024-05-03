@@ -109,6 +109,7 @@ export class ItemGenerator {
     baseItems: (CS_Item & {
         className?: string;
         nameToken: string;
+        descToken: string;
     })[] = [];
     generatedItems = new Map<number, CS_Item>();
 
@@ -341,6 +342,7 @@ export class ItemGenerator {
                 model: itemProps.name.replace("weapon_", ""),
                 name,
                 nameToken: prefab.item_name,
+                descToken: prefab.item_description,
                 rarity: this.raritiesColorHex.default,
                 teams,
                 type: "weapon"
@@ -381,6 +383,7 @@ export class ItemGenerator {
                 className: itemProps.name,
                 def: Number(itemIndex),
                 desc,
+                descToken: itemProps.item_description,
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image: this.getImage(id, itemProps.image_inventory),
@@ -419,6 +422,7 @@ export class ItemGenerator {
                 className: itemProps.name,
                 def: Number(itemIndex),
                 desc,
+                descToken: itemProps.item_description,
                 free: itemProps.baseitem === "1" ? true : undefined,
                 id,
                 image:
@@ -464,6 +468,9 @@ export class ItemGenerator {
             const legacy = this.itemManager.get(id)?.legacy;
 
             this.addTranslation(id, "name", name, baseItem.nameToken, " | ", paintKit.nameToken);
+            if (baseItem.desc !== undefined) {
+                this.addTranslation(id, "desc", baseItem.desc, baseItem.descToken);
+            }
             this.addTranslation(id, "customdesc", customdesc, paintKit.customDescToken);
             this.addCaseContent(itemKey, id);
 
@@ -1009,6 +1016,7 @@ export class ItemGenerator {
         const items = [...this.baseItems, ...this.generatedItems.values()].map((item) => ({
             ...item,
             className: undefined,
+            descToken: undefined,
             nameToken: undefined,
             // Remove translation properties.
             collectiondesc: undefined,
