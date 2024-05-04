@@ -466,6 +466,7 @@ export class ItemGenerator {
             const customdesc = paintKit.customDesc;
             const id = this.itemIdentifierManager.get(`paint_${baseItem.def}_${paintKit.index}`);
             const legacy = this.itemManager.get(id)?.legacy;
+            let altname: string | undefined;
 
             this.addTranslation(id, "name", name, baseItem.nameToken, " | ", paintKit.nameToken);
             if (baseItem.desc !== undefined) {
@@ -474,6 +475,23 @@ export class ItemGenerator {
             this.addTranslation(id, "customdesc", customdesc, paintKit.customDescToken);
             this.addCaseContent(itemKey, id);
 
+            if (paintKit.className.includes("_phase")) {
+                const [, phase] = paintKit.className.match(/_phase(\d)/)!;
+                altname = `Phase ${phase}`;
+            }
+            if (paintKit.className.includes("sapphire_marbleized")) {
+                altname = "Sapphire";
+            }
+            if (paintKit.className.includes("ruby_marbleized")) {
+                altname = "Ruby";
+            }
+            if (paintKit.className.includes("blackpearl_marbleized")) {
+                altname = "Black Pearl";
+            }
+            if (paintKit.className.includes("emerald_marbleized")) {
+                altname = "Emerald";
+            }
+
             if (legacy) {
                 push(this.lookupWeaponLegacy, baseItem.def!, paintKit.index);
             }
@@ -481,6 +499,7 @@ export class ItemGenerator {
             this.generatedItems.set(id, {
                 ...baseItem,
                 ...this.getItemCollection(id, itemKey),
+                altname,
                 base: undefined,
                 customdesc,
                 free: undefined,
