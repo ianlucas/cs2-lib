@@ -48,6 +48,9 @@ export interface CS_ItemsGameTXT {
                         value?: string;
                     };
                     ["pedestal display model"]?: string;
+                    ["tournament event id"]?: {
+                        value: string;
+                    };
                 };
                 baseitem: string;
                 flexible_loadout_slot?: string;
