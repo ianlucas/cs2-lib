@@ -629,7 +629,8 @@ export class ItemGenerator {
             if (
                 !graffitiProps.item_name?.includes("#SprayKit") &&
                 graffitiProps.item_name?.indexOf("spray_") !== 0 &&
-                !graffitiProps.description_string?.includes("#SprayKit")
+                !graffitiProps.description_string?.includes("#SprayKit") &&
+                !graffitiProps.sticker_material?.includes("_graffiti")
             ) {
                 continue;
             }
@@ -696,6 +697,14 @@ export class ItemGenerator {
                 this.addTranslation(id, "name", name, "#CSGO_Type_Spray", " | ", graffitiProps.item_name);
                 this.addTranslation(id, "desc", desc, "#CSGO_Tool_SprayPaint_Desc");
                 this.addTranslation(id, "customdesc", customdesc, graffitiProps.description_string);
+                if (graffitiProps.tournament_event_id !== undefined) {
+                    this.addFormattedTranslation(
+                        id,
+                        "tournamentdesc",
+                        "#CSGO_Event_Desc",
+                        `#CSGO_Tournament_Event_Name_${graffitiProps.tournament_event_id}`
+                    );
+                }
                 this.addCaseContent(itemKey, id);
 
                 this.generatedItems.set(id, {
@@ -733,6 +742,14 @@ export class ItemGenerator {
 
             this.addTranslation(id, "name", name, "#CSGO_Tool_Patch", " | ", patchProps.item_name);
             this.addTranslation(id, "desc", desc, "#CSGO_Tool_Patch_Desc");
+            if (patchProps.tournament_event_id !== undefined) {
+                this.addFormattedTranslation(
+                    id,
+                    "tournamentdesc",
+                    "#CSGO_Event_Desc",
+                    `#CSGO_Tournament_Event_Name_${patchProps.tournament_event_id}`
+                );
+            }
             this.addCaseContent(itemKey, id);
 
             this.generatedItems.set(id, {
@@ -814,6 +831,14 @@ export class ItemGenerator {
             this.addTranslation(id, "name", name, "#CSGO_Type_Collectible", " | ", itemProps.item_name);
             if (desc !== undefined) {
                 this.addTranslation(id, "desc", desc, descToken);
+            }
+            if (itemProps.attributes?.["tournament event id"] !== undefined) {
+                this.addFormattedTranslation(
+                    id,
+                    "tournamentdesc",
+                    "#CSGO_Event_Desc",
+                    `#CSGO_Tournament_Event_Name_${itemProps.attributes?.["tournament event id"].value}`
+                );
             }
             this.addCaseContent(itemProps.name, id);
 
