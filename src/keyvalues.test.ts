@@ -94,7 +94,7 @@ test("handles string escaping", () => {
             '"Cstrike_TitlesTXT_Alias_Not_Avail"  "\\"%s1\\"\\nnão está disponível para compra pela sua equipe."'
         )
     ).toStrictEqual({
-        Cstrike_TitlesTXT_Alias_Not_Avail: '"%s1"nnão está disponível para compra pela sua equipe.'
+        Cstrike_TitlesTXT_Alias_Not_Avail: '"%s1"\nnão está disponível para compra pela sua equipe.'
     });
 });
 

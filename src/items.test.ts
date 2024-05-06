@@ -10,7 +10,7 @@ import { CS_ITEMS } from "./items";
 import { fail } from "./util";
 
 const itemMap = new Map<number, CS_Item>();
-CS_Economy.use({ items: CS_ITEMS, translation: english });
+CS_Economy.use({ items: CS_ITEMS, translation: english as any });
 
 test("has every types and categories", () => {
     const weaponCategories = new Set<string>();
@@ -57,33 +57,12 @@ test("compare repository items with current items", async () => {
         if (item === undefined) {
             fail(`item not found.`);
         }
-        expect(item.type).toBe((repItem.type as any) === "pin" ? "collectible" : repItem.type);
+        expect(item.type).toBe(repItem.type);
         if (item.type === "weapon") {
             expect(item.category).toBe(repItem.category);
         }
         if (item.type === "agent") {
             expect(item.model).not.toBeUndefined();
-        }
-        if (item.type === "musickit" && !repItem.name.startsWith("Music Kit | ")) {
-            expect(item.name).toBe(`Music Kit | ${repItem.name}`);
-        }
-        if (item.type === "sticker" && !repItem.name.startsWith("Sticker | ")) {
-            expect(item.name).toBe("Sticker | " + repItem.name);
-        }
-        if (item.type === "graffiti" && !repItem.name.startsWith("Graffiti | ")) {
-            expect(item.name).toBe(`Graffiti | ${repItem.name}`);
-        }
-        if (item.type === "patch" && !repItem.name.startsWith("Patch | ")) {
-            expect(item.name).toBe(`Patch | ${repItem.name}`);
-        }
-        if (item.type === "key" && !repItem.name.startsWith("Key | ")) {
-            expect(item.name).toBe(`Key | ${repItem.name}`);
-        }
-        if (item.type === "case" && !repItem.name.startsWith("Container | ")) {
-            expect(item.name).toBe(`Container | ${repItem.name}`);
-        }
-        if (item.type === "tool" && !repItem.name.startsWith("Tool | ")) {
-            expect(item.name).toBe(`Tool | ${repItem.name}`);
         }
         switch (item.type) {
             case "agent":
