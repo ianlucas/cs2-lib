@@ -5,9 +5,9 @@
 
 import * as cheerio from "cheerio";
 import { basename } from "path";
-import { CS_Item } from "../src/economy.js";
+import { assert, fail } from "../src/util.js";
+import { TechnicalItem } from "./item-generator-types.js";
 import { dedupe, fetchText, log, readJson, sleep, writeJson } from "./util.js";
-import { fail } from "../src/util.js";
 
 export class CaseScraper {
     specialsData = readJson<Record<string, string[]>>("assets/data/case-specials.json", {});
@@ -66,12 +66,13 @@ export class CaseScraper {
         return items;
     }
 
-    populate(items: CS_Item[]) {
+    populate(items: (readonly [string | undefined, TechnicalItem])[]) {
         const lookup: Record<string, number> = {};
-        for (const item of items) {
+        for (const [name, item] of items) {
+            assert(name, "Item name is required.");
             if (["melee", "glove"].includes(item.type)) {
                 // item.name (as in `specialsData`) => item.id
-                lookup[item.base ? `${item.name} | ★ (Vanilla)` : item.name] = item.id;
+                lookup[item.base ? `${name} | ★ (Vanilla)` : name] = item.id;
             }
         }
         for (const [caseName, specials] of Object.entries(this.specialsData)) {

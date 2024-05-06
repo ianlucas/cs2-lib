@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { CS_Item } from "../src/economy";
+
 export interface CS_ItemsGameTXT {
     items_game: {
         alternate_icons2: {
@@ -169,3 +171,16 @@ export type ClientLootListRecord = Record<string, ClientLootListItems>;
 export type RevolvingLootListRecord = Record<string, string>;
 export type ItemSetProps = CS_ItemsGameTXT["items_game"]["item_sets"][number][string];
 export type ItemSetsRecord = Record<string, ItemSetProps>;
+export type ItemHelpers = {
+    className?: string;
+    nameToken: string;
+    descToken?: string;
+};
+export type ItemTranslatedProps = "collectiondesc" | "collectionname" | "customdesc" | "desc" | "name";
+export type BaseTechnicalItem = Omit<CS_Item, ItemTranslatedProps> & ItemHelpers;
+export type TechnicalItem = Omit<CS_Item, ItemTranslatedProps> & Partial<ItemHelpers>;
+export type PartialItem = Omit<CS_Item, ItemTranslatedProps> & {
+    [K in keyof ItemHelpers]?: undefined;
+} & {
+    [K in ItemTranslatedProps]?: undefined;
+};
