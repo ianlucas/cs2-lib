@@ -908,7 +908,7 @@ export class ItemGenerator {
                 log(`No contents for case '${itemProps.name}'.`);
             }
             if (contents.length > 0) {
-                const name = `Container | ${this.requireTranslation(itemProps.item_name)}`;
+                const name = this.requireTranslation(itemProps.item_name);
                 const id = this.itemIdentifierManager.get(`case_${itemIndex}`);
                 const specials = this.casesScraper.getSpecials(name);
 
