@@ -19,7 +19,7 @@ test("bo1", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_inferno")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_overpass")).toBe(true);
+    expect(veto.choose("de_dust2")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
     expect(veto.getMaps()).toStrictEqual(["de_mirage"]);
 });
@@ -37,7 +37,7 @@ test("bo3", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_inferno")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_overpass")).toBe(true);
+    expect(veto.choose("de_dust2")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
     expect(veto.getMaps()).toStrictEqual(["de_ancient", "de_anubis", "de_mirage"]);
 });
@@ -55,9 +55,9 @@ test("bo5", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_inferno")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_overpass")).toBe(true);
+    expect(veto.choose("de_dust2")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
-    expect(veto.getMaps()).toStrictEqual(["de_ancient", "de_anubis", "de_inferno", "de_overpass", "de_mirage"]);
+    expect(veto.getMaps()).toStrictEqual(["de_ancient", "de_anubis", "de_inferno", "de_dust2", "de_mirage"]);
 });
 
 test("custom", () => {
@@ -80,7 +80,7 @@ test("custom", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_inferno")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_overpass")).toBe(true);
+    expect(veto.choose("de_dust2")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
     expect(veto.getMaps()).toStrictEqual(["de_nuke", "de_vertigo", "de_mirage"]);
 });
