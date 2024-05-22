@@ -92,12 +92,12 @@ export function CS_parseValveKeyValue<T = any>(data: string) {
     function walk(context: any, pairs: KeyValue[]) {
         return pairs.reduce((object, pair) => {
             const [key, value] = pair;
-            if (object[key] && !Array.isArray(object[key])) {
-                object[key] = [object[key]];
-            }
             const newValue = typeof value === "string" ? value : walk({}, value);
-            if (Array.isArray(object[key])) {
-                object[key].push(newValue);
+            if (typeof newValue === "object") {
+                if (typeof object[key] !== "object") {
+                    object[key] = {};
+                }
+                Object.assign(object[key], newValue);
             } else {
                 object[key] = newValue;
             }
