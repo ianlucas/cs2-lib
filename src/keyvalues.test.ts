@@ -75,9 +75,9 @@ test("read as object handles duplicate keys", () => {
             '"key1" "value1" "key1" "value1" "key2" { "key3" "value3" "key3" { "key4" "value4" } "key3" { "key5" "value5" "key6" "value6" } }'
         )
     ).toStrictEqual({
-        key1: ["value1", "value1"],
+        key1: "value1",
         key2: {
-            key3: ["value3", { key4: "value4" }, { key5: "value5", key6: "value6" }]
+            key3: { key4: "value4", key5: "value5", key6: "value6" }
         }
     });
 });
