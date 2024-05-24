@@ -8,6 +8,7 @@ import { readFile, readdir } from "fs/promises";
 import { resolve } from "path";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
+import { KeyValues } from "../src/keyvalues.js";
 import {
     CS2_DEFAULT_MAX_WEAR,
     CS2_DEFAULT_MIN_WEAR,
@@ -16,11 +17,10 @@ import {
     Cs2ItemType,
     Cs2ItemTypeValues
 } from "../src/new-economy.js";
-import { KeyValues } from "../src/new-keyvalues.js";
 import { assert, fail } from "../src/util.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
-import { getItemsTsContents } from "./item-generator-items-ts.js";
+import { getItemsTsContents } from "./item-generator-template.js";
 import { Cs2ExportItem, Cs2ExtendedItem, Cs2GameItems, Cs2Language } from "./item-generator-types.js";
 import { ensure, isNotUndefined, readJson, shouldRun, warning, writeJson, writeTxt } from "./util.js";
 
