@@ -5,7 +5,9 @@
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { decode as htmlEntitiesDecode } from "html-entities";
-import { resolve } from "path";
+import { basename, resolve } from "path";
+import { fileURLToPath } from "url";
+import { assert } from "../src/util";
 
 export const log = console.log;
 export const warning = console.warn;
@@ -56,4 +58,17 @@ export function push<T, U extends Record<string | number, U[]>>(obj: T, key: str
         return;
     }
     obj[key].push(value);
+}
+
+export function isNotUndefined<T>(value: T): value is NonNullable<T> {
+    return value !== undefined;
+}
+
+export function shouldRun(url: string) {
+    return basename(process.argv[1]) === basename(fileURLToPath(url));
+}
+
+export function ensure<T>(value: T): NonNullable<T> {
+    assert(value !== undefined && value !== null);
+    return value;
 }
