@@ -12,7 +12,7 @@
         "prepack": "([ -d dist ] && rm -rf dist); tsc",
         "test": "jest",
         "case-scraper": "tsx scripts/case-scraper.ts",
-        "item-generator": "tsx scripts/item-generator.ts > generate-log.txt",
+        "item-generator": "tsx scripts/item-generator.ts",
         "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts",
         "tint-graffiti-image-scraper": "tsx scripts/tint-graffiti-image-scraper.ts",
         "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts",
