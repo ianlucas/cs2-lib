@@ -26,12 +26,12 @@ export function readJson<T>(path: string, fallback?: T) {
     return JSON.parse(readFileSync(file, "utf-8")) as T;
 }
 
-export function writeTxt(path: string, contents: string) {
+export function write(path: string, contents: string) {
     const file = resolve(process.cwd(), path);
     writeFileSync(file, contents, "utf-8");
 }
 
-export function readTxt(path: string) {
+export function read(path: string) {
     const file = resolve(process.cwd(), path);
     return readFileSync(file, "utf-8");
 }

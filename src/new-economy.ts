@@ -13,7 +13,7 @@ export const Cs2ItemType = {
     Agent: "agent",
     Collectible: "collectible",
     Container: "container",
-    ContainerKey: "container-key",
+    ContainerKey: "containerkey",
     Gloves: "gloves",
     Graffiti: "graffiti",
     Melee: "melee",
@@ -55,6 +55,15 @@ export interface Cs2Item {
     voPrefix?: string;
     wearMax?: number;
     wearMin?: number;
+}
+
+export interface Cs2ItemLanguage {
+    category?: string;
+    collectionDesc?: string;
+    collectionName?: string;
+    desc?: string;
+    name: string;
+    tournamentDesc?: string;
 }
 
 export interface Cs2EconomyItem extends Cs2Item {

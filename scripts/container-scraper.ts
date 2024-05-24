@@ -5,7 +5,6 @@
 
 import * as cheerio from "cheerio";
 import { Cs2ItemType, Cs2ItemTypeValues } from "../src/new-economy.js";
-import { assert } from "../src/util.js";
 import { Cs2ExtendedItem } from "./item-generator-types.js";
 import { dedupe, ensure, fetchText, readJson, shouldRun, sleep, writeJson } from "./util.js";
 
@@ -66,10 +65,9 @@ export class ContainerScraper {
         return items;
     }
 
-    populate(items: (readonly [string | undefined, Cs2ExtendedItem])[]) {
+    populate(items: (readonly [string, Cs2ExtendedItem])[]) {
         const lookup: Record<string, number> = {};
         for (const [name, item] of items) {
-            assert(name);
             if (MELEE_OR_GLOVES_TYPES.includes(item.type)) {
                 lookup[item.base ? `${name} | ★ (Vanilla)` : name] = item.id;
             }
