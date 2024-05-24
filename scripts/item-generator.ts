@@ -12,7 +12,7 @@ import { KeyValues } from "../src/keyvalues.js";
 import {
     CS2_DEFAULT_MAX_WEAR,
     CS2_DEFAULT_MIN_WEAR,
-    Cs2EconomyItem,
+    Cs2ItemLanguage,
     Cs2ItemTeam,
     Cs2ItemType,
     Cs2ItemTypeValues
@@ -22,7 +22,7 @@ import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { getItemsTsContents } from "./item-generator-template.js";
 import { Cs2ExportItem, Cs2ExtendedItem, Cs2GameItems, Cs2Language } from "./item-generator-types.js";
-import { ensure, isNotUndefined, readJson, shouldRun, warning, writeJson, writeTxt } from "./util.js";
+import { ensure, isNotUndefined, readJson, shouldRun, warning, write, writeJson } from "./util.js";
 
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
@@ -690,11 +690,11 @@ export class ItemGenerator {
     private parseContainers() {
         warning("Parsing containers...");
         this.containerScraper.populate(
-            Array.from(this.items.values()).map((item) => [this.itemNames.get(item.id), item])
+            Array.from(this.itemNames.entries()).map(([id, name]) => [name, ensure(this.items.get(id))])
         );
         const keyItems = new Map<string, number>();
         for (const [
-            itemIndex,
+            containerIndex,
             {
                 associated_items,
                 attributes,
@@ -773,7 +773,7 @@ export class ItemGenerator {
                     this.addTranslation(id, "name", "#CSGO_Tool_WeaponCase_KeyTag", " | ", nameToken);
                     this.tryAddTranslation(id, "desc", item_description);
                     this.addItem({
-                        def: Number(itemIndex),
+                        def: Number(keyItemDef),
                         id,
                         image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
                         rarity: this.getRarityColorHex(["common"]),
@@ -783,17 +783,17 @@ export class ItemGenerator {
                     return id;
                 });
                 const containerName = this.requireTranslation(item_name);
-                const id = this.itemIdentifierManager.get(`case_${itemIndex}`);
-                const specials = this.containerScraper.getSpecials(name);
+                const id = this.itemIdentifierManager.get(`case_${containerIndex}`);
+                const specials = this.containerScraper.getSpecials(containerName);
                 const containsMusicKit = containerName.includes("Music Kit");
                 const containsStatTrak = containerName.includes("StatTrak");
                 this.addTranslation(id, "name", "#CSGO_Type_WeaponCase", " | ", item_name);
-                this.tryAddTranslation(id, "category", this.getContainerCategoryToken(name, contentsType));
+                this.tryAddTranslation(id, "category", this.getContainerCategoryToken(containerName, contentsType));
                 this.tryAddTranslation(id, "desc", item_description);
                 this.addItem({
                     ...this.getCollection(id, tags?.ItemSet?.tag_value),
                     contents,
-                    def: Number(itemIndex),
+                    def: Number(containerIndex),
                     id,
                     image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
@@ -832,7 +832,7 @@ export class ItemGenerator {
         writeJson(ITEMS_GAME_JSON_PATH, this.gameItems);
         warning(`Generated '${ITEMS_GAME_JSON_PATH}'.`);
 
-        writeTxt(ITEMS_TS_PATH, getItemsTsContents(items));
+        write(ITEMS_TS_PATH, getItemsTsContents(items));
         warning(`Generated '${ITEMS_TS_PATH}'.`);
         warning("Script completed.");
     }
@@ -882,7 +882,7 @@ export class ItemGenerator {
         return token !== undefined && this.csgoLanguages.english[token.substring(1).toLowerCase()] !== undefined;
     }
 
-    private addTranslation(id: number, property: keyof Cs2EconomyItem, ...tokens: (string | undefined)[]) {
+    private addTranslation(id: number, property: keyof Cs2ItemLanguage, ...tokens: (string | undefined)[]) {
         for (const [language, items] of Object.entries(this.itemLanguages)) {
             const itemLanguage = (items[id] ??= {});
             const string = tokens
@@ -907,14 +907,14 @@ export class ItemGenerator {
         }
     }
 
-    private tryAddTranslation(id: number, property: keyof Cs2EconomyItem, ...tokens: (string | undefined)[]) {
+    private tryAddTranslation(id: number, property: keyof Cs2ItemLanguage, ...tokens: (string | undefined)[]) {
         if (tokens.some((token) => token === undefined || (token.charAt(0) === "#" && !this.hasTranslation(token)))) {
             return undefined;
         }
         return this.addTranslation(id, property, ...tokens);
     }
 
-    private addFormattedTranslation(id: number, property: keyof Cs2EconomyItem, key?: string, ...values: string[]) {
+    private addFormattedTranslation(id: number, property: keyof Cs2ItemLanguage, key?: string, ...values: string[]) {
         for (const [language, items] of Object.entries(this.itemLanguages)) {
             (items[id] ??= {})[property] = (
                 this.findTranslation(key, language) ?? this.requireTranslation(key, "english")
@@ -1182,7 +1182,7 @@ export class ItemGenerator {
 
     createStub(name: string, descToken: string) {
         const id = this.itemIdentifierManager.get(`stub_${name}`, false);
-        this.addTranslation(id, "name", descToken);
+        this.addTranslation(id, "desc", descToken);
         this.addItem({
             id,
             type: Cs2ItemType.Stub
