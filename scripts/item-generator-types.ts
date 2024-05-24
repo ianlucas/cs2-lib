@@ -3,9 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Item } from "../src/economy";
+import { Cs2Item } from "../src/new-economy";
 
-export interface CS_ItemsGameTXT {
+export type Cs2Language = {
+    lang: {
+        Tokens: { [key: string]: string | undefined };
+    };
+};
+
+export type Cs2GameItems = {
     items_game: {
         alternate_icons2: {
             weapon_icons: {
@@ -22,16 +28,18 @@ export interface CS_ItemsGameTXT {
                     [itemId: string]: string;
                 };
             };
-        }[];
+        };
         client_loot_lists: {
             [clientLootListKey: string]: {
                 [itemOrLootListKey: string]: string;
             };
-        }[];
+        };
         colors: {
-            [colorKey: string]: {
-                hex_color: string;
-            };
+            [colorKey: string]:
+                | {
+                      hex_color: string;
+                  }
+                | undefined;
         };
         graffiti_tints: {
             [graffitiTintKey: string]: {
@@ -54,7 +62,7 @@ export interface CS_ItemsGameTXT {
                         value: string;
                     };
                 };
-                baseitem: string;
+                baseitem?: string;
                 flexible_loadout_slot?: string;
                 image_inventory?: string;
                 image_unusual_item?: string;
@@ -64,7 +72,7 @@ export interface CS_ItemsGameTXT {
                 loot_list_name?: string;
                 model_player?: string;
                 name: string;
-                prefab: string;
+                prefab?: string;
                 tags?: {
                     ItemSet?: {
                         tag_value?: string;
@@ -80,7 +88,7 @@ export interface CS_ItemsGameTXT {
                 used_by_classes?: Record<string, string>;
                 vo_prefix?: string;
             };
-        }[];
+        };
         music_definitions: {
             [musicIndex: string]: {
                 image_inventory: string;
@@ -88,41 +96,43 @@ export interface CS_ItemsGameTXT {
                 loc_name: string;
                 name: string;
             };
-        }[];
+        };
         paint_kits: {
             [paintKitKey: string]: {
                 description_string?: string;
                 description_tag?: string;
-                name: string;
+                name?: string;
                 wear_remap_max?: string;
                 wear_remap_min?: string;
             };
-        }[];
+        };
         paint_kits_rarity: {
             [paintKitKey: string]: string;
-        }[];
+        };
         prefabs: {
-            [prefabKey: string]: {
-                image_inventory?: string;
-                item_class: string;
-                item_description?: string;
-                item_name: string;
-                item_rarity: string;
-                prefab: string;
-                used_by_classes: Record<string, string>;
-                visuals: {
-                    weapon_type: string;
-                };
-            };
-        }[];
+            [prefabKey: string]:
+                | {
+                      image_inventory?: string;
+                      item_class: string;
+                      item_description?: string;
+                      item_name: string;
+                      item_rarity: string;
+                      prefab: string;
+                      used_by_classes: Record<string, string>;
+                      visuals: {
+                          weapon_type: string;
+                      };
+                  }
+                | undefined;
+        };
         rarities: {
             [rarityKey: string]: {
-                color: string;
+                color?: string;
             };
         };
         revolving_loot_lists: {
             [revolvingLootListKey: string]: string;
-        }[];
+        };
         sticker_kits: {
             [stickerIndex: string]: {
                 description_string?: string;
@@ -133,54 +143,18 @@ export interface CS_ItemsGameTXT {
                 sticker_material: string;
                 tournament_event_id?: string;
             };
-        }[];
+        };
     };
-}
-
-export interface CS_CsgoLanguageTXT {
-    lang: {
-        Tokens: { [key: string]: string };
-    };
-}
-
-export type LanguagesRecord = Record<string, Record<string, string>> & {
-    english: Record<string, string>;
 };
 
-export type PrefabProps = CS_ItemsGameTXT["items_game"]["prefabs"][number][string];
-export type PrefabsRecord = Record<string, PrefabProps | undefined>;
-export type ItemProps = CS_ItemsGameTXT["items_game"]["items"][number][string];
-export type ItemsRecord = Record<string, ItemProps>;
-export type PaintKitsProps = {
-    className: string;
-    customDesc: string;
-    customDescToken: string;
-    index: number;
-    name: string;
-    nameToken: string;
-    rarityColorHex: string;
-    wearmax: number;
-    wearmin: number;
-};
-export type SafeRaritiesRecord = Record<string, string | undefined>;
-export type UnsafeRaritiesRecord = Record<string, string>;
-export type StickerKitsProps = CS_ItemsGameTXT["items_game"]["sticker_kits"][number][string];
-export type StickerKitsRecord = Record<string, StickerKitsProps>;
-export type ClientLootListItems = CS_ItemsGameTXT["items_game"]["client_loot_lists"][number][string];
-export type ClientLootListRecord = Record<string, ClientLootListItems>;
-export type RevolvingLootListRecord = Record<string, string>;
-export type ItemSetProps = CS_ItemsGameTXT["items_game"]["item_sets"][number][string];
-export type ItemSetsRecord = Record<string, ItemSetProps>;
-export type ItemHelpers = {
+export type Cs2ExtendedItem = Cs2Item & {
     className?: string;
-    nameToken: string;
     descToken?: string;
+    nameToken?: string;
 };
-export type ItemTranslatedProps = "collectiondesc" | "collectionname" | "customdesc" | "desc" | "name";
-export type BaseTechnicalItem = Omit<CS_Item, ItemTranslatedProps> & ItemHelpers;
-export type TechnicalItem = Omit<CS_Item, ItemTranslatedProps> & Partial<ItemHelpers>;
-export type PartialItem = Omit<CS_Item, ItemTranslatedProps> & {
-    [K in keyof ItemHelpers]?: undefined;
-} & {
-    [K in ItemTranslatedProps]?: undefined;
+
+export type Cs2ExportItem = Cs2Item & {
+    className: undefined;
+    descToken: undefined;
+    nameToken: undefined;
 };

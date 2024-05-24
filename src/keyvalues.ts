@@ -7,103 +7,105 @@ import { fail } from "./util.js";
 
 type KeyValue = [string, string | KeyValue[]];
 
-export function CS_parseValveKeyValue<T = any>(data: string) {
-    data = data.replace(/\[[\$!][^\]]+\]/g, "");
-    let index = 0;
+export class KeyValues {
+    static parse<T = any>(data: string) {
+        data = data.replace(/\[[\$!][^\]]+\]/g, "");
+        let index = 0;
 
-    function skipWhitespace() {
-        while (data[index] && data[index].match(/[\s\t\r\n]/)) {
-            index += 1;
-        }
-        if (data[index] === "/" && data[index + 1] === "/") {
-            while (data[index] && data[index] !== "\n") {
+        function skipWhitespace() {
+            while (data[index] && data[index].match(/[\s\t\r\n]/)) {
                 index += 1;
             }
-            skipWhitespace();
+            if (data[index] === "/" && data[index + 1] === "/") {
+                while (data[index] && data[index] !== "\n") {
+                    index += 1;
+                }
+                skipWhitespace();
+            }
         }
-    }
 
-    function parseString() {
-        if (data[index] === '"') {
-            index += 1;
-            let value = "";
-            while (data[index] && data[index] !== '"') {
-                while (data[index] && data[index] === "\\") {
-                    index += 1;
-                    const char = data[index];
-                    if (char === "n") {
-                        value += "\n";
-                    } else {
-                        value += char;
+        function parseString() {
+            if (data[index] === '"') {
+                index += 1;
+                let value = "";
+                while (data[index] && data[index] !== '"') {
+                    while (data[index] && data[index] === "\\") {
+                        index += 1;
+                        const char = data[index];
+                        if (char === "n") {
+                            value += "\n";
+                        } else {
+                            value += char;
+                        }
+                        index += 1;
                     }
-                    index += 1;
+                    if (data[index] !== '"') {
+                        value += data[index];
+                        index += 1;
+                    }
                 }
                 if (data[index] !== '"') {
-                    value += data[index];
-                    index += 1;
+                    fail("Bad end of string.");
                 }
+                index += 1;
+                return value;
             }
-            if (data[index] !== '"') {
-                fail("Bad end of string.");
-            }
-            index += 1;
-            return value;
-        }
-        return "";
-    }
-
-    function parseValue() {
-        if (data[index] === '"') {
-            return parseString();
-        }
-        if (data[index] === "{") {
-            index += 1;
-            return parsePairs();
-        }
-        if (data[index] === "}") {
             return "";
         }
-        console.log(
-            data.substring(Math.max(0, index - 64), index) +
-                data[index] +
-                data.substring(index + 1, Math.min(data.length, index + 63))
-        );
-        console.log("".padStart(64, " ") + "^");
-        fail(`Unexpected character at index ${index}.`);
-    }
 
-    function parsePairs() {
-        const pairs: KeyValue[] = [];
-        while (data[index]) {
-            if (data[index] === "}") {
+        function parseValue() {
+            if (data[index] === '"') {
+                return parseString();
+            }
+            if (data[index] === "{") {
                 index += 1;
-                return pairs;
+                return parsePairs();
             }
-            skipWhitespace();
-            const key = parseString();
-            skipWhitespace();
-            const value = parseValue();
-            skipWhitespace();
-            pairs.push([key, value]);
+            if (data[index] === "}") {
+                return "";
+            }
+            console.log(
+                data.substring(Math.max(0, index - 64), index) +
+                    data[index] +
+                    data.substring(index + 1, Math.min(data.length, index + 63))
+            );
+            console.log("".padStart(64, " ") + "^");
+            fail(`Unexpected character at index ${index}.`);
         }
-        return pairs;
-    }
 
-    function walk(context: any, pairs: KeyValue[]) {
-        return pairs.reduce((object, pair) => {
-            const [key, value] = pair;
-            const newValue = typeof value === "string" ? value : walk({}, value);
-            if (typeof newValue === "object") {
-                if (typeof object[key] !== "object") {
-                    object[key] = {};
+        function parsePairs() {
+            const pairs: KeyValue[] = [];
+            while (data[index]) {
+                if (data[index] === "}") {
+                    index += 1;
+                    return pairs;
                 }
-                Object.assign(object[key], newValue);
-            } else {
-                object[key] = newValue;
+                skipWhitespace();
+                const key = parseString();
+                skipWhitespace();
+                const value = parseValue();
+                skipWhitespace();
+                pairs.push([key, value]);
             }
-            return object;
-        }, context);
-    }
+            return pairs;
+        }
 
-    return walk({}, parsePairs()) as T;
+        function walk(context: any, pairs: KeyValue[]) {
+            return pairs.reduce((object, pair) => {
+                const [key, value] = pair;
+                const newValue = typeof value === "string" ? value : walk({}, value);
+                if (typeof newValue === "object") {
+                    if (typeof object[key] !== "object") {
+                        object[key] = {};
+                    }
+                    Object.assign(object[key], newValue);
+                } else {
+                    object[key] = newValue;
+                }
+                return object;
+            }, context);
+        }
+
+        return walk({}, parsePairs()) as T;
+    }
 }
