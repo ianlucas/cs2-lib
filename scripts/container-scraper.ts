@@ -23,7 +23,6 @@ export class ContainerScraper {
         const containerUrls = dedupe(Array.from(contents.matchAll(containerUrlRE)).map(([, url]) => url)).filter(
             (url) => !url.includes("?")
         );
-
         for (const containerUrl of containerUrls) {
             const contents = await fetchText(containerUrl);
             const specialsUrl = this.getSpecialsUrl(containerUrl, contents);
@@ -38,7 +37,6 @@ export class ContainerScraper {
                 await sleep(1000);
             }
         }
-
         writeJson("assets/data/container-contents.json", containerContents);
         writeJson("assets/data/container-specials.json", containerSpecials);
     }

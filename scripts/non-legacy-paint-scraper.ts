@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename } from "path";
-import { fetchText, writeJson } from "./util.js";
+import { fetchText, shouldRun, writeJson } from "./util.js";
 
 export class NonLegacyPaintScraper {
     async run() {
@@ -15,7 +14,6 @@ export class NonLegacyPaintScraper {
         const listItemRE = /<li>(.*?)<\/li>/g;
         const nonLegacyPaints: Record<string, string[]> = {};
         let count = 0;
-
         for (const [, weaponHtml, paintsHtml] of contents.matchAll(groupRE)) {
             const weapon = weaponHtml.replace(anchorRE, "$1").trim();
             for (const [, paint] of paintsHtml.matchAll(listItemRE)) {
@@ -26,12 +24,11 @@ export class NonLegacyPaintScraper {
                 count++;
             }
         }
-
         console.log(`Scraped ${Object.keys(nonLegacyPaints).length} weapons, ${count} skins.`);
         writeJson("assets/data/non-legacy-paints.json", nonLegacyPaints);
     }
 }
 
-if (basename(process.argv[1]) === "non-legacy-paint-scraper.ts") {
+if (shouldRun(import.meta.url)) {
     new NonLegacyPaintScraper().run();
 }

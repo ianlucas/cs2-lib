@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename } from "path";
-import { fetchText, readJson, sleep, writeJson } from "./util.js";
+import { fetchText, readJson, shouldRun, sleep, writeJson } from "./util.js";
 
 export class TintGraffitiImageScraper {
     async run() {
@@ -15,7 +14,6 @@ export class TintGraffitiImageScraper {
         const imageRE = /src="([^"]+)" alt="([^"]+)"/g;
         const urls: string[] = [];
         const images: Record<string, string> = {};
-
         for (let page = min; page <= max; page++) {
             const url = `https://csgostash.com/graffiti?page=${page}`;
             const contents = await fetchText(url);
@@ -35,12 +33,11 @@ export class TintGraffitiImageScraper {
                 await sleep(1000);
             }
         }
-
         console.log(`Scraped ${Object.keys(images).length} items.`);
         writeJson("assets/data/tint-graffiti-images.json", images);
     }
 }
 
-if (basename(process.argv[1]) === "tint-graffiti-image-scraper.ts") {
+if (shouldRun(import.meta.url)) {
     new TintGraffitiImageScraper().run();
 }

@@ -3,32 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename } from "path";
 import { ItemGenerator } from "./item-generator.js";
-import { writeJson } from "./util.js";
+import { isNotUndefined, shouldRun, writeJson } from "./util.js";
 
 export class TintGraffitiNameGenerator {
     async run() {
         const generator = new ItemGenerator();
-        generator.readCsgoLanguage(["english"]);
-        generator.readItemsGame();
-        const graffiti: string[] = [];
-
-        for (const stickerProps of Object.values(generator.stickerKits)) {
-            if (
-                !stickerProps.sticker_material?.includes("default/") &&
-                !stickerProps.sticker_material?.includes("default2019/") &&
-                !stickerProps.sticker_material?.includes("default2020/")
-            ) {
-                continue;
-            }
-            graffiti.push(generator.requireTranslation(stickerProps.item_name));
-        }
-
-        writeJson("assets/data/tint-graffiti-names.json", graffiti);
+        generator.readCsgoLanguageFiles(["english"]);
+        generator.readItemsGameFile();
+        writeJson(
+            "assets/data/tint-graffiti-names.json",
+            Object.values(generator.gameItems.sticker_kits)
+                .map(({ item_name, sticker_material }) =>
+                    !sticker_material?.includes("default/") &&
+                    !sticker_material?.includes("default2019/") &&
+                    !sticker_material?.includes("default2020/")
+                        ? undefined
+                        : generator.requireTranslation(item_name)
+                )
+                .filter(isNotUndefined)
+        );
     }
 }
 
-if (basename(process.argv[1]) === "tint-graffiti-name-generator.ts") {
+if (shouldRun(import.meta.url)) {
     new TintGraffitiNameGenerator().run();
 }

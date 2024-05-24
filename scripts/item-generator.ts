@@ -89,7 +89,7 @@ export class DefaultGraffitiManager {
 
 export class ItemGenerator {
     private csgoLanguages: Record<string, Cs2Language["lang"]["Tokens"]> = null!;
-    private gameItems: Cs2GameItems["items_game"] = null!;
+    gameItems: Cs2GameItems["items_game"] = null!;
     private raritiesColorHex: Record<string, string | undefined> = null!;
     private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
     private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
@@ -140,7 +140,7 @@ export class ItemGenerator {
         this.persist();
     }
 
-    async readCsgoLanguageFiles() {
+    async readCsgoLanguageFiles(include?: string[]) {
         this.itemLanguages = {};
         this.csgoLanguages = Object.fromEntries(
             await Promise.all(
@@ -150,6 +150,7 @@ export class ItemGenerator {
                         return matches !== null ? ([file, matches[1]] as const) : undefined;
                     })
                     .filter(isNotUndefined)
+                    .filter(([_, language]) => include === undefined || include.includes(language))
                     .map(async ([file, language]) => {
                         this.itemLanguages[language] = {};
                         return [
@@ -874,7 +875,7 @@ export class ItemGenerator {
         return value !== undefined ? stripHtml(value).result : undefined;
     }
 
-    private requireTranslation(token?: string, language = "english") {
+    requireTranslation(token?: string, language = "english") {
         return ensure(this.findTranslation(token, language));
     }
 
