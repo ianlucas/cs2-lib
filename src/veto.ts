@@ -4,27 +4,29 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Cs2Map } from "./maps.js";
-import { assert, fail } from "./utils.js";
+import { EnumValues, assert, fail } from "./utils.js";
 
-export const VETO_AVAILABLE = 0;
-export const VETO_PICK = 1;
-export const VETO_BAN = 2;
+export const Cs2VetoAction = {
+    Available: 0,
+    Pick: 1,
+    Ban: 2
+};
 
-export type VetoValue = 0 | 1 | 2;
-export type VetoType = "bo1" | "bo3" | "bo5" | "custom";
+export type Cs2VetoActionValues = EnumValues<typeof Cs2VetoAction>;
+export type Cs2VetoType = "bo1" | "bo3" | "bo5" | "custom";
 
-export interface VetoMap {
+export interface Cs2VetoMap {
     mapname: string;
-    value: VetoValue;
+    value: Cs2VetoActionValues;
     team?: number;
 }
 
-export class Veto {
-    private maps: VetoMap[];
-    private actions: VetoValue[];
+export class Cs2Veto {
+    private maps: Cs2VetoMap[];
+    private actions: Cs2VetoActionValues[];
     private pickedMaps: string[] = [];
 
-    constructor(type: VetoType, maps: Cs2Map[], actions?: VetoValue[]) {
+    constructor(type: Cs2VetoType, maps: Cs2Map[], actions?: Cs2VetoActionValues[]) {
         if (type !== "custom" && actions !== undefined) {
             console.warn('stack provided, but the type is not "custom".');
         }
@@ -39,17 +41,38 @@ export class Veto {
         }
         this.maps = maps.map((map) => ({
             mapname: map.mapname,
-            value: VETO_AVAILABLE
+            value: Cs2VetoAction.Available
         }));
         switch (type) {
             case "bo1":
-                this.actions = [VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN];
+                this.actions = [
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban
+                ];
                 break;
             case "bo3":
-                this.actions = [VETO_BAN, VETO_BAN, VETO_PICK, VETO_PICK, VETO_BAN, VETO_BAN];
+                this.actions = [
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Pick,
+                    Cs2VetoAction.Pick,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban
+                ];
                 break;
             case "bo5":
-                this.actions = [VETO_BAN, VETO_BAN, VETO_PICK, VETO_PICK, VETO_PICK, VETO_PICK];
+                this.actions = [
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Ban,
+                    Cs2VetoAction.Pick,
+                    Cs2VetoAction.Pick,
+                    Cs2VetoAction.Pick,
+                    Cs2VetoAction.Pick
+                ];
                 break;
             case "custom":
                 this.actions = actions!;
@@ -58,7 +81,7 @@ export class Veto {
     }
 
     private getAvailableMaps() {
-        return this.maps.filter((map) => map.value === VETO_AVAILABLE);
+        return this.maps.filter((map) => map.value === Cs2VetoAction.Available);
     }
 
     private getMap(mapname: string) {
@@ -81,7 +104,7 @@ export class Veto {
             return this.random();
         }
         const map = this.getMap(mapname);
-        if (map === undefined || map.value !== VETO_AVAILABLE) {
+        if (map === undefined || map.value !== Cs2VetoAction.Available) {
             return false;
         }
         const team = this.getCurrentTeam();
@@ -89,7 +112,7 @@ export class Veto {
         if (value === undefined) {
             return false;
         }
-        if (value === VETO_PICK) {
+        if (value === Cs2VetoAction.Pick) {
             this.pickedMaps.push(mapname);
         }
         this.maps = this.maps.map((map) => {
@@ -116,7 +139,7 @@ export class Veto {
         return this.choose(mapname);
     }
 
-    getState(): VetoMap[] {
+    getState(): Cs2VetoMap[] {
         return this.maps;
     }
 
