@@ -5,14 +5,6 @@
 
 import { EnumValues } from "./utils.js";
 
-export const Cs2Team = {
-    None: 0,
-    T: 2,
-    CT: 3
-} as const;
-
-export type Cs2TeamValues = EnumValues<typeof Cs2Team>;
-
 export const Cs2ItemTeam = {
     T: 0,
     CT: 1,

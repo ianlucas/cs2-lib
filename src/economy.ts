@@ -56,9 +56,9 @@ import {
     Cs2ItemType,
     Cs2ItemTypeValues,
     Cs2ItemWear,
-    Cs2ItemWearValues,
-    Cs2TeamValues
+    Cs2ItemWearValues
 } from "./economy-types.js";
+import { Cs2TeamValues } from "./teams.js";
 import { Interface, assert, compare, ensure, safe } from "./utils.js";
 
 type CSEconomyItemPredicate = Partial<Cs2EconomyItem> & { team?: Cs2TeamValues };

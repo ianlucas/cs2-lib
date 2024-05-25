@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export type CS_Team = 0 | 2 | 3;
-export const CS_TEAM_NONE: CS_Team = 0;
-export const CS_TEAM_T: CS_Team = 2;
-export const CS_TEAM_CT: CS_Team = 3;
+import { EnumValues } from "./utils.js";
 
-export function CS_toggleTeam(team: CS_Team): CS_Team {
-    return team === CS_TEAM_CT ? CS_TEAM_T : CS_TEAM_CT;
-}
+export const Cs2Team = {
+    None: 0,
+    T: 2,
+    CT: 3
+} as const;
 
-export function CS_getTeamLabel(team: CS_Team): string {
-    return team === CS_TEAM_CT ? "ct" : "t";
+export type Cs2TeamValues = EnumValues<typeof Cs2Team>;
+
+export function CS2_toggleTeam(team: Cs2TeamValues): Cs2TeamValues {
+    return team === Cs2Team.CT ? Cs2Team.T : Cs2Team.CT;
 }
