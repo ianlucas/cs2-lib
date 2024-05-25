@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Adapted from https://stackoverflow.com/a/69895725
+export type EnumValues<T> = T[keyof T];
+
+// @see https://stackoverflow.com/a/69895725
 export type Interface<T extends object> = {
     [key in T extends any ? { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T] : never]: T[key];
 } & {
@@ -11,8 +13,6 @@ export type Interface<T extends object> = {
         | T[key]
         | undefined;
 };
-
-export type EnumValues<T> = T[keyof T];
 
 export function compare<T, U>(var1: T, var2: U): boolean {
     return var1 === undefined || var1 === (typeof var1 === "boolean" ? var2 || false : var2);

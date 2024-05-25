@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_ACTIVE_MAP_POOL } from "./maps";
-import { CS_VETO_BAN, CS_VETO_PICK, CS_Veto } from "./veto";
+import { ACTIVE_MAP_POOL } from "./maps";
+import { VETO_BAN, VETO_PICK, Veto } from "./veto";
 
 test("bo1", () => {
-    const veto = new CS_Veto("bo1", CS_ACTIVE_MAP_POOL);
+    const veto = new Veto("bo1", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -25,7 +25,7 @@ test("bo1", () => {
 });
 
 test("bo3", () => {
-    const veto = new CS_Veto("bo3", CS_ACTIVE_MAP_POOL);
+    const veto = new Veto("bo3", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -43,7 +43,7 @@ test("bo3", () => {
 });
 
 test("bo5", () => {
-    const veto = new CS_Veto("bo5", CS_ACTIVE_MAP_POOL);
+    const veto = new Veto("bo5", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -61,14 +61,7 @@ test("bo5", () => {
 });
 
 test("custom", () => {
-    const veto = new CS_Veto("custom", CS_ACTIVE_MAP_POOL, [
-        CS_VETO_PICK,
-        CS_VETO_PICK,
-        CS_VETO_BAN,
-        CS_VETO_BAN,
-        CS_VETO_BAN,
-        CS_VETO_BAN
-    ]);
+    const veto = new Veto("custom", ACTIVE_MAP_POOL, [VETO_PICK, VETO_PICK, VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN]);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -86,7 +79,7 @@ test("custom", () => {
 });
 
 test("random", () => {
-    const veto = new CS_Veto("bo1", CS_ACTIVE_MAP_POOL);
+    const veto = new Veto("bo1", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose()).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);

@@ -3,28 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS_Map } from "./maps.js";
-import { assert, fail } from "./util.js";
+import { Cs2Map } from "./maps.js";
+import { assert, fail } from "./utils.js";
 
-export const CS_VETO_AVAILABLE = 0;
-export const CS_VETO_PICK = 1;
-export const CS_VETO_BAN = 2;
+export const VETO_AVAILABLE = 0;
+export const VETO_PICK = 1;
+export const VETO_BAN = 2;
 
-export type CS_VetoValue = 0 | 1 | 2;
-export type CS_VetoType = "bo1" | "bo3" | "bo5" | "custom";
+export type VetoValue = 0 | 1 | 2;
+export type VetoType = "bo1" | "bo3" | "bo5" | "custom";
 
-export interface CS_VetoMap {
+export interface VetoMap {
     mapname: string;
-    value: CS_VetoValue;
+    value: VetoValue;
     team?: number;
 }
 
-export class CS_Veto {
-    private maps: CS_VetoMap[];
-    private actions: CS_VetoValue[];
+export class Veto {
+    private maps: VetoMap[];
+    private actions: VetoValue[];
     private pickedMaps: string[] = [];
 
-    constructor(type: CS_VetoType, maps: CS_Map[], actions?: CS_VetoValue[]) {
+    constructor(type: VetoType, maps: Cs2Map[], actions?: VetoValue[]) {
         if (type !== "custom" && actions !== undefined) {
             console.warn('stack provided, but the type is not "custom".');
         }
@@ -39,17 +39,17 @@ export class CS_Veto {
         }
         this.maps = maps.map((map) => ({
             mapname: map.mapname,
-            value: CS_VETO_AVAILABLE
+            value: VETO_AVAILABLE
         }));
         switch (type) {
             case "bo1":
-                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN];
+                this.actions = [VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN];
                 break;
             case "bo3":
-                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_BAN, CS_VETO_BAN];
+                this.actions = [VETO_BAN, VETO_BAN, VETO_PICK, VETO_PICK, VETO_BAN, VETO_BAN];
                 break;
             case "bo5":
-                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_PICK];
+                this.actions = [VETO_BAN, VETO_BAN, VETO_PICK, VETO_PICK, VETO_PICK, VETO_PICK];
                 break;
             case "custom":
                 this.actions = actions!;
@@ -58,7 +58,7 @@ export class CS_Veto {
     }
 
     private getAvailableMaps() {
-        return this.maps.filter((map) => map.value === CS_VETO_AVAILABLE);
+        return this.maps.filter((map) => map.value === VETO_AVAILABLE);
     }
 
     private getMap(mapname: string) {
@@ -81,7 +81,7 @@ export class CS_Veto {
             return this.random();
         }
         const map = this.getMap(mapname);
-        if (map === undefined || map.value !== CS_VETO_AVAILABLE) {
+        if (map === undefined || map.value !== VETO_AVAILABLE) {
             return false;
         }
         const team = this.getCurrentTeam();
@@ -89,7 +89,7 @@ export class CS_Veto {
         if (value === undefined) {
             return false;
         }
-        if (value === CS_VETO_PICK) {
+        if (value === VETO_PICK) {
             this.pickedMaps.push(mapname);
         }
         this.maps = this.maps.map((map) => {
@@ -116,7 +116,7 @@ export class CS_Veto {
         return this.choose(mapname);
     }
 
-    getState(): CS_VetoMap[] {
+    getState(): VetoMap[] {
         return this.maps;
     }
 
