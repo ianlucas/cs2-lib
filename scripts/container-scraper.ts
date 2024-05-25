@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as cheerio from "cheerio";
-import { Cs2ItemType, Cs2ItemTypeValues } from "../src/new-economy.js";
+import { Cs2ItemType, Cs2ItemTypeValues } from "../src/economy-types.js";
+import { ensure } from "../src/utils.js";
 import { Cs2ExtendedItem } from "./item-generator-types.js";
-import { dedupe, ensure, fetchText, readJson, shouldRun, sleep, writeJson } from "./util.js";
+import { dedupe, fetchText, readJson, shouldRun, sleep, writeJson } from "./utils.js";
 
 const MELEE_OR_GLOVES_TYPES: Cs2ItemTypeValues[] = [Cs2ItemType.Melee, Cs2ItemType.Gloves];
 

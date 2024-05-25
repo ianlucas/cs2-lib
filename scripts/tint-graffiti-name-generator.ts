@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ItemGenerator } from "./item-generator.js";
-import { isNotUndefined, shouldRun, writeJson } from "./util.js";
+import { isNotUndefined, shouldRun, writeJson } from "./utils.js";
 
 export class TintGraffitiNameGenerator {
     async run() {

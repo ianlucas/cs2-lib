@@ -7,7 +7,6 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { decode as htmlEntitiesDecode } from "html-entities";
 import { basename, resolve } from "path";
 import { fileURLToPath } from "url";
-import { assert } from "../src/util";
 
 export const log = console.log;
 export const warning = console.warn;
@@ -66,9 +65,4 @@ export function isNotUndefined<T>(value: T): value is NonNullable<T> {
 
 export function shouldRun(url: string) {
     return basename(process.argv[1]) === basename(fileURLToPath(url));
-}
-
-export function ensure<T>(value: T): NonNullable<T> {
-    assert(value !== undefined && value !== null);
-    return value;
 }

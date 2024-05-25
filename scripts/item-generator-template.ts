@@ -9,7 +9,7 @@ export function getItemsTsContents(items: unknown) {
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2Item } from "./new-economy.js";
+import { Cs2Item } from "./economy-types.js";
 
 // @generated
 // @ts-ignore

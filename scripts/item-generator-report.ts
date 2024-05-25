@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Cs2ItemTeam, Cs2ItemType } from "../src/economy-types.js";
 import { CS2_ITEMS } from "../src/items.js";
-import { Cs2ItemTeam, Cs2ItemType } from "../src/new-economy.js";
-import { assert } from "../src/util";
-import { ensure, log, readJson, shouldRun } from "./util";
+import { assert, ensure } from "../src/utils.js";
+import { log, readJson, shouldRun } from "./utils.js";
 
 const v4BaseUrl = "https://raw.githubusercontent.com/ianlucas/cs2-lib/172d584a9b60f51ec8a197fe257d4ac8f4a8fd1b";
 

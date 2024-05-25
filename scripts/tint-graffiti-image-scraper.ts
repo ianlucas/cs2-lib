@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { fetchText, readJson, shouldRun, sleep, writeJson } from "./util.js";
+import { fetchText, readJson, shouldRun, sleep, writeJson } from "./utils.js";
 
 export class TintGraffitiImageScraper {
     async run() {
