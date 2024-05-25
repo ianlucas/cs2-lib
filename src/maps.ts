@@ -4,78 +4,70 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ensure } from "./utils.js";
-export interface CS2Map {
+export interface Cs2Map {
     mapname: string;
     name: string;
 }
 
-export const CS2_ANCIENT_MAP: CS2Map = {
+export const ANCIENT_MAP: Cs2Map = {
     mapname: "de_ancient",
     name: "Ancient"
 };
 
-export const CS2_ANUBIS_MAP: CS2Map = {
+export const ANUBIS_MAP: Cs2Map = {
     mapname: "de_anubis",
     name: "Anubis"
 };
 
-export const CS2_INFERNO_MAP: CS2Map = {
+export const INFERNO_MAP: Cs2Map = {
     mapname: "de_inferno",
     name: "Inferno"
 };
 
-export const CS2_MIRAGE_MAP: CS2Map = {
+export const MIRAGE_MAP: Cs2Map = {
     mapname: "de_mirage",
     name: "Mirage"
 };
 
-export const CS2_DUST2_MAP: CS2Map = {
+export const DUST2_MAP: Cs2Map = {
     mapname: "de_dust2",
     name: "Dust 2"
 };
 
-export const CS2_NUKE_MAP: CS2Map = {
+export const NUKE_MAP: Cs2Map = {
     mapname: "de_nuke",
     name: "Nuke"
 };
 
-export const CS2_OVERPASS_MAP: CS2Map = {
+export const OVERPASS_MAP: Cs2Map = {
     mapname: "de_overpass",
     name: "Overpass"
 };
 
-export const CS2_VERTIGO_MAP: CS2Map = {
+export const VERTIGO_MAP: Cs2Map = {
     mapname: "de_vertigo",
     name: "Vertigo"
 };
 
-export const CS2_TRAIN_MAP: CS2Map = {
+export const TRAIN_MAP: Cs2Map = {
     mapname: "de_train",
     name: "Train"
 };
 
-export const CS2_ACTIVE_MAP_POOL = [
-    CS2_ANCIENT_MAP,
-    CS2_ANUBIS_MAP,
-    CS2_DUST2_MAP,
-    CS2_INFERNO_MAP,
-    CS2_MIRAGE_MAP,
-    CS2_NUKE_MAP,
-    CS2_VERTIGO_MAP
+export const ACTIVE_MAP_POOL = [ANCIENT_MAP, ANUBIS_MAP, DUST2_MAP, INFERNO_MAP, MIRAGE_MAP, NUKE_MAP, VERTIGO_MAP];
+
+export const ALL_MAPS = [
+    ANCIENT_MAP,
+    ANUBIS_MAP,
+    DUST2_MAP,
+    INFERNO_MAP,
+    MIRAGE_MAP,
+    NUKE_MAP,
+    TRAIN_MAP,
+    OVERPASS_MAP,
+    VERTIGO_MAP
 ];
 
-export const CS2_ALL_MAPS = [
-    CS2_ANCIENT_MAP,
-    CS2_ANUBIS_MAP,
-    CS2_DUST2_MAP,
-    CS2_INFERNO_MAP,
-    CS2_MIRAGE_MAP,
-    CS2_NUKE_MAP,
-    CS2_TRAIN_MAP,
-    CS2_OVERPASS_MAP,
-    CS2_VERTIGO_MAP
-];
-
-export function CS2_getMapnameName(mapname: string): string {
-    return ensure(CS2_ALL_MAPS.find((map) => map.mapname.includes(mapname))?.name);
+export function getMapnameName(mapname: string): string {
+    return ensure(ALL_MAPS.find((map) => map.mapname.includes(mapname))?.name);
 }

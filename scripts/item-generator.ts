@@ -8,7 +8,7 @@ import { readFile, readdir } from "fs/promises";
 import { resolve } from "path";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
-import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
+import { DEFAULT_MAX_WEAR, DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
 import { Cs2ItemLanguage, Cs2ItemTeam, Cs2ItemType, Cs2ItemTypeValues } from "../src/economy-types.js";
 import { KeyValues } from "../src/keyvalues.js";
 import { assert, ensure, fail } from "../src/utils.js";
@@ -217,8 +217,8 @@ export class ItemGenerator {
                     index: Number(paintKitIndex),
                     nameToken: description_tag,
                     rarityColorHex: this.getRarityColorHex([name]),
-                    wearMax: wear_remap_max !== undefined ? Number(wear_remap_max) : CS2_DEFAULT_MAX_WEAR,
-                    wearMin: wear_remap_min !== undefined ? Number(wear_remap_min) : CS2_DEFAULT_MIN_WEAR
+                    wearMax: wear_remap_max !== undefined ? Number(wear_remap_max) : DEFAULT_MAX_WEAR,
+                    wearMin: wear_remap_min !== undefined ? Number(wear_remap_min) : DEFAULT_MIN_WEAR
                 };
             })
             .filter(isNotUndefined);
