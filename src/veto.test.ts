@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ACTIVE_MAP_POOL } from "./maps";
-import { VETO_BAN, VETO_PICK, Veto } from "./veto";
+import { Cs2Veto, Cs2VetoAction } from "./veto";
 
 test("bo1", () => {
-    const veto = new Veto("bo1", ACTIVE_MAP_POOL);
+    const veto = new Cs2Veto("bo1", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -25,7 +25,7 @@ test("bo1", () => {
 });
 
 test("bo3", () => {
-    const veto = new Veto("bo3", ACTIVE_MAP_POOL);
+    const veto = new Cs2Veto("bo3", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -43,7 +43,7 @@ test("bo3", () => {
 });
 
 test("bo5", () => {
-    const veto = new Veto("bo5", ACTIVE_MAP_POOL);
+    const veto = new Cs2Veto("bo5", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -61,7 +61,14 @@ test("bo5", () => {
 });
 
 test("custom", () => {
-    const veto = new Veto("custom", ACTIVE_MAP_POOL, [VETO_PICK, VETO_PICK, VETO_BAN, VETO_BAN, VETO_BAN, VETO_BAN]);
+    const veto = new Cs2Veto("custom", ACTIVE_MAP_POOL, [
+        Cs2VetoAction.Pick,
+        Cs2VetoAction.Pick,
+        Cs2VetoAction.Ban,
+        Cs2VetoAction.Ban,
+        Cs2VetoAction.Ban,
+        Cs2VetoAction.Ban
+    ]);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -79,7 +86,7 @@ test("custom", () => {
 });
 
 test("random", () => {
-    const veto = new Veto("bo1", ACTIVE_MAP_POOL);
+    const veto = new Cs2Veto("bo1", ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose()).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
