@@ -1,4 +1,5 @@
 assets
 dist
 node_modules
+src/economy-constants.ts
 src/items.ts

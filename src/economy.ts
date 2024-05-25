@@ -4,110 +4,67 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    CS_BASE_ODD,
-    CS_RARITY_COLORS,
-    CS_RARITY_COLOR_DEFAULT,
-    CS_RARITY_COLOR_ORDER,
-    CS_RARITY_FOR_SOUNDS,
-    CS_RARITY_ORDER,
-    CS_STATTRAK_ODD,
-    CS_randomFloat,
-    CS_randomInt
-} from "./economy-case.js";
-import { CS_Team } from "./teams.js";
-import { assert, compare } from "./util.js";
+    CS2_GRAFFITI_BOX_ID,
+    CS2_MAX_FACTORY_NEW_WEAR,
+    CS2_MAX_FIELD_TESTED_WEAR,
+    CS2_MAX_MINIMAL_WEAR_WEAR,
+    CS2_MAX_SEED,
+    CS2_MAX_STATTRAK,
+    CS2_MAX_STICKER_WEAR,
+    CS2_MAX_WEAR,
+    CS2_MAX_WELL_WORN_WEAR,
+    CS2_MIN_SEED,
+    CS2_MIN_STATTRAK,
+    CS2_MIN_STICKER_WEAR,
+    CS2_MIN_WEAR,
+    CS2_NAMETAGGABLE_ITEMS,
+    CS2_NAMETAG_RE,
+    CS2_NAMETAG_TOOL_DEF,
+    CS2_NONE,
+    CS2_SEEDABLE_ITEMS,
+    CS2_SOUVENIR_CASE_ID,
+    CS2_STATTRAKABLE_ITEMS,
+    CS2_STATTRAK_SWAP_TOOL_DEF,
+    CS2_STICKERABLE_ITEMS,
+    CS2_STICKER_CAPSULE_ID,
+    CS2_STICKER_WEAR_FACTOR,
+    CS2_STORAGE_UNIT_TOOL_DEF,
+    CS2_TEAMS_BOTH,
+    CS2_TEAMS_CT,
+    CS2_TEAMS_T,
+    CS2_WEAPON_CASE_ID,
+    CS2_WEARABLE_ITEMS,
+    CS2_WEAR_FACTOR
+} from "./economy-constants.js";
+import {
+    CS2_BASE_ODD,
+    CS2_RARITY_COLORS,
+    CS2_RARITY_COLOR_DEFAULT,
+    CS2_RARITY_COLOR_ORDER,
+    CS2_RARITY_FOR_SOUNDS,
+    CS2_RARITY_ORDER,
+    CS2_STATTRAK_ODD,
+    CS2_randomFloat,
+    CS2_randomInt
+} from "./economy-container.js";
+import {
+    Cs2Item,
+    Cs2ItemLanguage,
+    Cs2ItemLanguageFile,
+    Cs2ItemTeam,
+    Cs2ItemTeamValues,
+    Cs2ItemType,
+    Cs2ItemTypeValues,
+    Cs2ItemWear,
+    Cs2ItemWearValues,
+    Cs2TeamValues
+} from "./economy-types.js";
+import { Interface, assert, compare, ensure, safe } from "./utils.js";
 
-export interface CS_Item {
-    altname?: string;
-    base?: boolean;
-    category?: string;
-    collectiondesc?: string;
-    collectionid?: string;
-    collectionname?: string;
-    contents?: number[];
-    customdesc?: string;
-    def?: number;
-    desc?: string;
-    free?: boolean;
-    id: number;
-    image?: string;
-    index?: number;
-    keys?: number[];
-    legacy?: boolean;
-    model?: string;
-    name: string;
-    rarity: string;
-    specials?: number[];
-    specialsimage?: boolean;
-    stattrakless?: boolean;
-    stattrakonly?: boolean;
-    teams?: CS_Team[];
-    tint?: number;
-    tournamentdesc?: string;
-    type:
-        | "agent"
-        | "case"
-        | "collectible"
-        | "glove"
-        | "graffiti"
-        | "key"
-        | "melee"
-        | "musickit"
-        | "patch"
-        | "sticker"
-        | "tool"
-        | "weapon";
-    vofallback?: boolean;
-    vofemale?: boolean;
-    voprefix?: string;
-    wearmax?: number;
-    wearmin?: number;
-}
+type CSEconomyItemPredicate = Partial<Cs2EconomyItem> & { team?: Cs2TeamValues };
 
-export type CS_ItemTranslations = Record<string, Record<number, Record<string, string>>>;
-
-export const CS_MIN_STATTRAK = 0;
-export const CS_MAX_STATTRAK = 999999;
-export const CS_WEAR_FACTOR = 0.000001;
-export const CS_MIN_WEAR = 0;
-export const CS_MAX_WEAR = 1;
-export const CS_DEFAULT_MIN_WEAR = 0.06;
-export const CS_DEFAULT_MAX_WEAR = 0.8;
-export const CS_MIN_FACTORY_NEW_WEAR = CS_MIN_WEAR;
-export const CS_MAX_FACTORY_NEW_WEAR = 0.07;
-export const CS_MIN_MINIMAL_WEAR_WEAR = 0.070001;
-export const CS_MAX_MINIMAL_WEAR_WEAR = 0.15;
-export const CS_MIN_FIELD_TESTED_WEAR = 0.150001;
-export const CS_MAX_FIELD_TESTED_WEAR = 0.37;
-export const CS_MIN_WELL_WORN_WEAR = 0.370001;
-export const CS_MAX_WELL_WORN_WEAR = 0.44;
-export const CS_MIN_BATTLE_SCARRED_WEAR = 0.440001;
-export const CS_MAX_BATTLE_SCARRED_WEAR = CS_MAX_WEAR;
-export const CS_MIN_SEED = 1;
-export const CS_MAX_SEED = 1000;
-export const CS_WEARABLE_ITEMS = ["glove", "melee", "weapon"];
-export const CS_NAMETAGGABLE_ITEMS = ["melee", "weapon"];
-export const CS_SEEDABLE_ITEMS = ["weapon", "melee", "glove"];
-export const CS_STATTRAKABLE_ITEMS = ["melee", "weapon", "musickit"];
-export const CS_STICKERABLE_ITEMS = ["weapon"];
-export const CS_NAMETAG_RE =
-    /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
-export const CS_STICKER_WEAR_FACTOR = 0.1;
-export const CS_MIN_STICKER_WEAR = 0;
-export const CS_MAX_STICKER_WEAR = 0.9;
-export const CS_NAMETAG_TOOL_DEF = 1200;
-export const CS_STATTRAK_SWAP_TOOL_DEF = 1324;
-export const CS_STORAGE_UNIT_TOOL_DEF = 1201;
-export const CS_NONE = 0;
-export const CS_WEAPON_CASE_ID = 9129;
-export const CS_STICKER_CAPSULE_ID = 9134;
-export const CS_GRAFFITI_BOX_ID = 11234;
-export const CS_SOUVENIR_CASE_ID = 9147;
-
-type CS_EconomyPredicate = Partial<CS_Item> & { team?: CS_Team };
-
-function filterItems(predicate: CS_EconomyPredicate) {
-    return function filter(item: CS_Item) {
+function filterItems(predicate: CSEconomyItemPredicate) {
+    return function filter(item: Cs2EconomyItem) {
         return (
             compare(predicate.type, item.type) &&
             compare(predicate.free, item.free) &&
@@ -119,151 +76,103 @@ function filterItems(predicate: CS_EconomyPredicate) {
     };
 }
 
-export class CS_EconomyInstance {
+export class Cs2EconomyInstance {
     categories = new Set<string>();
-    items = new Map<number, CS_Item>();
-    itemsAsArray: CS_Item[] = [];
-    stickers = new Set<CS_Item>();
+    items = new Map<number, Cs2EconomyItem>();
+    itemsAsArray: Cs2EconomyItem[] = [];
+    stickers = new Set<Cs2EconomyItem>();
 
-    use({ items, translation }: { items: CS_Item[]; translation: CS_ItemTranslations[number] }) {
+    use({ items, language }: { items: Cs2Item[]; language: Cs2ItemLanguageFile }) {
         this.categories.clear();
         this.items.clear();
         this.itemsAsArray = [];
         this.stickers.clear();
         for (const item of items) {
-            const clone = { ...item };
-            this.itemsAsArray.push(clone);
-            this.items.set(item.id, clone);
-            if (this.isSticker(item)) {
-                this.stickers.add(clone);
-            }
-        }
-        for (const [id, fields] of Object.entries(translation)) {
-            const item = this.items.get(Number(id));
-            if (item !== undefined) {
-                Object.assign(item, fields);
-                if (item.type === "sticker") {
-                    assert(item.category, `Sticker item '${item.id}' does not have a category.`);
-                    this.categories.add(item.category);
-                }
+            const economyItem = new Cs2EconomyItem(this, item, ensure(language[item.id]));
+            this.itemsAsArray.push(economyItem);
+            this.items.set(item.id, economyItem);
+            if (economyItem.isSticker()) {
+                this.stickers.add(economyItem);
+                this.categories.add(ensure(economyItem.category));
             }
         }
     }
 
-    getById(id: number) {
-        const item = this.items.get(id);
-        assert(item, `The given id '${id}' was not present in CS_Economy.items.`);
-        assert(item.name, `Item with id '${id}' does not have a name.`);
-        return item;
+    getById(id: number): Cs2EconomyItem {
+        return ensure(this.items.get(id));
     }
 
-    get(idOrItem: number | CS_Item) {
+    get(idOrItem: number | Cs2EconomyItem): Cs2EconomyItem {
         return typeof idOrItem === "number" ? this.getById(idOrItem) : idOrItem;
     }
 
-    findItem(predicate: CS_EconomyPredicate): CS_Item {
-        const item = this.itemsAsArray.find(filterItems(predicate));
-        assert(item, "No items found.");
-        return item;
+    findItem(predicate: CSEconomyItemPredicate): Cs2EconomyItem {
+        return ensure(this.itemsAsArray.find(filterItems(predicate)));
     }
 
-    filterItems(predicate: CS_EconomyPredicate): CS_Item[] {
+    filterItems(predicate: CSEconomyItemPredicate): Cs2EconomyItem[] {
         const items = this.itemsAsArray.filter(filterItems(predicate));
         assert(items.length > 0, "No items found.");
         return items;
     }
 
-    isC4(item: number | CS_Item): boolean {
-        return this.get(item).category === "c4";
-    }
-
-    isSticker(item: number | CS_Item): boolean {
-        return this.get(item).type === "sticker";
-    }
-
-    isGlove(item: number | CS_Item): boolean {
-        return this.get(item).type === "glove";
-    }
-
-    expectSticker(item: number | CS_Item) {
-        assert(this.isSticker(item), `Item is not a sticker.`);
-        return true;
-    }
-
-    hasWear(item: CS_Item): boolean {
-        return CS_WEARABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
-    }
-
-    validateWear(wear?: number, item?: CS_Item): boolean {
+    validateWear(wear?: number, item?: Cs2EconomyItem): boolean {
         if (wear === undefined) {
             return true;
         }
         assert(!Number.isNaN(wear), "Wear must be a number.");
-        assert(String(wear).length <= String(CS_WEAR_FACTOR).length, "Wear value is too long.");
-        assert(wear >= CS_MIN_WEAR && wear <= CS_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
+        assert(String(wear).length <= String(CS2_WEAR_FACTOR).length, "Wear value is too long.");
+        assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
         if (item !== undefined) {
-            assert(this.hasWear(item), "Item does not have wear.");
-            assert(item.wearmin === undefined || wear >= item.wearmin, "Wear value is below the minimum allowed.");
-            assert(item.wearmax === undefined || wear <= item.wearmax, "Wear value is above the maximum allowed.");
+            assert(item.hasWear(), "Item does not have wear.");
+            assert(item.wearMin === undefined || wear >= item.wearMin, "Wear value is below the minimum allowed.");
+            assert(item.wearMax === undefined || wear <= item.wearMax, "Wear value is above the maximum allowed.");
         }
         return true;
     }
 
-    safeValidateWear(wear?: number, item?: CS_Item): boolean {
-        try {
-            return this.validateWear(wear, item);
-        } catch {
-            return false;
-        }
+    safeValidateWear(wear?: number, item?: Cs2EconomyItem): boolean {
+        return safe(() => this.validateWear(wear, item));
     }
 
-    hasSeed(item: CS_Item): boolean {
-        return CS_SEEDABLE_ITEMS.includes(item.type) && !item.free && item.index !== 0;
-    }
-
-    validateSeed(seed?: number, item?: CS_Item): boolean {
+    validateSeed(seed?: number, item?: Cs2EconomyItem): boolean {
         if (seed === undefined) {
             return true;
         }
         assert(!Number.isNaN(seed), "Seed must be a valid number.");
-        assert(item === undefined || this.hasSeed(item), "Item does not have a seed.");
+        assert(item === undefined || item.hasSeed(), "Item does not have a seed.");
         assert(Number.isInteger(seed), "Seed must be an integer.");
-        assert(seed >= CS_MIN_SEED && seed <= CS_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
+        assert(seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
         return true;
     }
 
-    safeValidateSeed(seed?: number, item?: CS_Item): boolean {
-        try {
-            return this.validateSeed(seed, item);
-        } catch {
-            return false;
-        }
+    safeValidateSeed(seed?: number, item?: Cs2EconomyItem): boolean {
+        return safe(() => this.validateSeed(seed, item));
     }
 
-    hasStickers(item: CS_Item): boolean {
-        return CS_STICKERABLE_ITEMS.includes(item.type) && !this.isC4(item);
-    }
-
-    validateStickers(stickers?: number[], wears?: number[], item?: CS_Item): boolean {
+    validateStickers(stickers?: number[], wears?: number[], item?: Cs2EconomyItem): boolean {
         if (stickers === undefined) {
             assert(wears === undefined, "Stickers array is undefined.");
             return true;
         }
         assert(stickers.length === 4, "Stickers array must contain exactly 4 elements.");
         assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
-        assert(item === undefined || this.hasStickers(item), "The provided item does not have stickers.");
-        for (const [index, stickerId] of stickers.entries()) {
-            if (stickerId === CS_NONE) {
-                assert(wears === undefined || wears[index] === CS_NONE, "Sticker wear value is invalid.");
+        assert(item === undefined || item.hasStickers(), "The provided item does not have stickers.");
+        for (const [slot, stickerId] of stickers.entries()) {
+            if (stickerId === CS2_NONE) {
+                assert(wears === undefined || wears[slot] === CS2_NONE, "Sticker wear value is invalid.");
                 continue;
             }
-            assert(this.isSticker(stickerId), "The provided ID does not correspond to a sticker.");
+            this.get(stickerId).expectSticker();
             if (wears !== undefined) {
-                const wear = wears[index];
+                const wear = wears[slot];
                 assert(!Number.isNaN(wear), "Sticker wear value must be a valid number.");
-                assert(String(wear).length <= String(CS_STICKER_WEAR_FACTOR).length, "Sticker wear value is too long.");
                 assert(
-                    wear >= CS_MIN_STICKER_WEAR && wear <= CS_MAX_STICKER_WEAR,
+                    String(wear).length <= String(CS2_STICKER_WEAR_FACTOR).length,
+                    "Sticker wear value is too long."
+                );
+                assert(
+                    wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR,
                     "Sticker wear value must be between CS_MIN_STICKER_WEAR and CS_MAX_STICKER_WEAR."
                 );
             }
@@ -271,111 +180,61 @@ export class CS_EconomyInstance {
         return true;
     }
 
-    hasNametag(item: CS_Item): boolean {
-        return CS_NAMETAGGABLE_ITEMS.includes(item.type) || this.isStorageUnitTool(item);
-    }
-
-    trimNametag(nametag?: string) {
+    trimNametag(nametag?: string): string | undefined {
         const trimmed = nametag?.trim();
         return trimmed === "" ? undefined : trimmed;
     }
 
-    validateNametag(nametag?: string, item?: CS_Item): boolean {
+    validateNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
         if (nametag !== undefined) {
-            assert(item === undefined || this.hasNametag(item), "The provided item does not have a nametag.");
-            assert(nametag[0] !== " " && CS_NAMETAG_RE.test(nametag), "Invalid nametag format.");
+            assert(item === undefined || item.hasNametag(), "The provided item does not have a nametag.");
+            assert(nametag[0] !== " " && CS2_NAMETAG_RE.test(nametag), "Invalid nametag format.");
         }
         return true;
     }
 
-    safeValidateNametag(nametag?: string, item?: CS_Item): boolean {
-        try {
-            return this.validateNametag(nametag, item);
-        } catch {
-            return false;
-        }
+    safeValidateNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
+        return safe(() => this.validateNametag(nametag, item));
     }
 
-    requireNametag(nametag?: string, item?: CS_Item): boolean {
+    requireNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
         assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
         return this.validateNametag(nametag, item);
     }
 
-    safeRequireNametag(nametag?: string, item?: CS_Item): boolean {
-        try {
-            return this.requireNametag(nametag, item);
-        } catch {
-            return false;
-        }
+    safeRequireNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
+        return safe(() => this.requireNametag(nametag, item));
     }
 
-    hasStatTrak(item: CS_Item): boolean {
-        return CS_STATTRAKABLE_ITEMS.includes(item.type) && !item.free;
-    }
-
-    validateStatTrak(stattrak?: number, item?: CS_Item): boolean {
+    validateStatTrak(stattrak?: number, item?: Cs2EconomyItem): boolean {
         if (stattrak === undefined) {
             return true;
         }
-        assert(item === undefined || this.hasStatTrak(item), "The provided item does not support stattrak.");
+        assert(item === undefined || item.hasStatTrak(), "The provided item does not support stattrak.");
         assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
         assert(
-            stattrak >= CS_MIN_STATTRAK && stattrak <= CS_MAX_STATTRAK,
+            stattrak >= CS2_MIN_STATTRAK && stattrak <= CS2_MAX_STATTRAK,
             "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
         );
         return true;
     }
 
-    safeValidateStatTrak(stattrak?: number, item?: CS_Item): boolean {
-        try {
-            return this.validateStatTrak(stattrak, item);
-        } catch {
-            return false;
-        }
+    safeValidateStatTrak(stattrak?: number, item?: Cs2EconomyItem): boolean {
+        return safe(() => this.validateStatTrak(stattrak, item));
     }
 
-    isStorageUnitTool(item: number | CS_Item): boolean {
-        const { def, type } = this.get(item);
-        return type === "tool" && def === CS_STORAGE_UNIT_TOOL_DEF;
-    }
-
-    expectStorageUnitTool(item: CS_Item) {
-        assert(this.isStorageUnitTool(item), "Item is not a storage unit.");
-        return true;
-    }
-
-    isNametagTool(toolItem: number | CS_Item): boolean {
-        const { def, type } = this.get(toolItem);
-        return type === "tool" && def === CS_NAMETAG_TOOL_DEF;
-    }
-
-    expectNametagTool(item: number | CS_Item) {
-        assert(this.isNametagTool(item), "Item is not a nametag tool");
-        return true;
-    }
-
-    isStatTrakSwapTool(item: number | CS_Item): boolean {
-        const { def, type } = this.get(item);
-        return type === "tool" && def === CS_STATTRAK_SWAP_TOOL_DEF;
-    }
-
-    expectStatTrakSwapTool(item: CS_Item) {
-        assert(this.isStatTrakSwapTool(item), "Item is not a stattrak swap tool.");
-        return true;
-    }
-
-    getWearLabel(wear: number): string {
+    getWearFromValue(value: number): Cs2ItemWearValues {
         switch (true) {
-            case wear <= CS_MAX_FACTORY_NEW_WEAR:
-                return "FN";
-            case wear <= CS_MAX_MINIMAL_WEAR_WEAR:
-                return "MW";
-            case wear <= CS_MAX_FIELD_TESTED_WEAR:
-                return "FT";
-            case wear <= CS_MAX_WELL_WORN_WEAR:
-                return "WW";
+            case value <= CS2_MAX_FACTORY_NEW_WEAR:
+                return Cs2ItemWear.FactoryNew;
+            case value <= CS2_MAX_MINIMAL_WEAR_WEAR:
+                return Cs2ItemWear.MinimalWear;
+            case value <= CS2_MAX_FIELD_TESTED_WEAR:
+                return Cs2ItemWear.FieldTested;
+            case value <= CS2_MAX_WELL_WORN_WEAR:
+                return Cs2ItemWear.WellWorn;
             default:
-                return "BS";
+                return Cs2ItemWear.BattleScarred;
         }
     }
 
@@ -383,30 +242,14 @@ export class CS_EconomyInstance {
         return Array.from(this.categories).sort();
     }
 
-    getStickers(): CS_Item[] {
+    getStickers(): Cs2EconomyItem[] {
         return Array.from(this.stickers);
     }
 
-    isWeaponCase(item: CS_Item) {
-        return item.category === this.getById(CS_WEAPON_CASE_ID).category;
-    }
-
-    isStickerCapsule(item: CS_Item) {
-        return item.category === this.getById(CS_STICKER_CAPSULE_ID).category;
-    }
-
-    isGraffitiBox(item: CS_Item) {
-        return item.category === this.getById(CS_GRAFFITI_BOX_ID).category;
-    }
-
-    isSouvenirCase(item: CS_Item) {
-        return item.category === this.getById(CS_SOUVENIR_CASE_ID).category;
-    }
-
-    resolveItemImage(baseUrl: string, item: number | CS_Item, wear?: number): string {
+    resolveItemImage(baseUrl: string, item: number | Cs2EconomyItem, wear?: number): string {
         item = this.get(item);
         const { id, image } = item;
-        if (this.hasWear(item) && wear !== undefined) {
+        if (item.hasWear() && wear !== undefined) {
             switch (true) {
                 case wear < 1 / 3:
                     return `${baseUrl}/${id}_light.png`;
@@ -425,73 +268,262 @@ export class CS_EconomyInstance {
         return image;
     }
 
-    resolveCollectionImage(baseUrl: string, item: number | CS_Item): string {
-        const { collectionid } = this.get(item);
-        assert(collectionid, "Item does not have a collection.");
-        return `${baseUrl}/${collectionid}.png`;
+    resolveCollectionImage(baseUrl: string, item: number | Cs2EconomyItem): string {
+        const { collection } = this.get(item);
+        assert(collection, "Item does not have a collection.");
+        return `${baseUrl}/${collection}.png`;
     }
 
-    isCase(item: number | CS_Item) {
-        return this.get(item).type === "case";
+    resolveContainerSpecialsImage(baseUrl: string, item: number | Cs2EconomyItem): string {
+        item = this.get(item).expectContainer();
+        const { id, specialsImage, rawSpecials } = item;
+        assert(rawSpecials, "Container does not have special items.");
+        return specialsImage ? `${baseUrl}/${id}_rare.png` : `${baseUrl}/default_rare_item.png`;
     }
 
-    isKey(item: number | CS_Item) {
-        return this.get(item).type === "key";
-    }
-
-    expectCase(item: number | CS_Item) {
-        assert(this.isCase(item), "Item is not a case.");
-        return true;
-    }
-
-    expectKey(item: number | CS_Item) {
-        assert(this.isKey(item), `Item is not a key.`);
-        return true;
-    }
-
-    validateCaseKey(caseItem: number | CS_Item, keyItem?: number | CS_Item) {
-        caseItem = this.get(caseItem);
-        this.expectCase(caseItem);
+    validateContainerAndKey(containerItem: number | Cs2EconomyItem, keyItem?: number | Cs2EconomyItem) {
+        containerItem = this.get(containerItem);
+        containerItem.expectContainer();
         keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
         if (keyItem !== undefined) {
-            assert(caseItem.keys !== undefined, "Case does not require a key.");
-            assert(this.expectKey(keyItem), "Invalid key item.");
-            assert(caseItem.keys.includes(keyItem.id), "Invalid key for this case.");
+            keyItem.expectContainerKey();
+            assert(containerItem.keys !== undefined, "Container does not require a key.");
+            assert(containerItem.keys.includes(keyItem.id), "Invalid key for this container.");
         } else {
-            assert(caseItem.keys === undefined, "Case requires a key.");
+            assert(containerItem.keys === undefined, "Container requires a key.");
+        }
+        return true;
+    }
+
+    safeValidateContainerAndKey(containerItem: number | Cs2EconomyItem, keyItem?: number | Cs2EconomyItem) {
+        return safe(() => this.validateContainerAndKey(containerItem, keyItem));
+    }
+
+    validateUnlockedItem(
+        item: number | Cs2EconomyItem,
+        { id }: ReturnType<InstanceType<typeof Cs2EconomyItem>["unlock"]>
+    ) {
+        item = this.get(item).expectContainer();
+        assert(
+            item.rawContents?.includes(id) || item.rawSpecials?.includes(id),
+            `Unlocked item is not from this container.`
+        );
+    }
+}
+
+export class Cs2EconomyItem
+    implements
+        Interface<
+            Omit<Cs2Item, "contents" | "specials" | "teams"> &
+                Cs2ItemLanguage & {
+                    contents: Cs2EconomyItem[] | undefined;
+                    teams: Cs2TeamValues[] | undefined;
+                }
+        >
+{
+    altName: string | undefined;
+    base: boolean | undefined;
+    baseId: number | undefined;
+    category: string | undefined;
+    collection: string | undefined;
+    collectionDesc: string | undefined;
+    collectionName: string | undefined;
+    def: number | undefined;
+    desc: string | undefined;
+    free: boolean | undefined;
+    id: number = null!;
+    image: string | undefined;
+    index: number | undefined;
+    keys: number[] | undefined;
+    legacy: boolean | undefined;
+    model: string | undefined;
+    name: string = null!;
+    rarity: string = null!;
+    specialsImage: boolean | undefined;
+    statTrakless: boolean | undefined;
+    statTrakOnly: boolean | undefined;
+    tint: number | undefined;
+    tournamentDesc: string | undefined;
+    type: Cs2ItemTypeValues = null!;
+    voFallback: boolean | undefined;
+    voFemale: boolean | undefined;
+    voPrefix: string | undefined;
+    wearMax: number | undefined;
+    wearMin: number | undefined;
+
+    private $contents: number[] | undefined;
+    private $economyInstance: Cs2EconomyInstance;
+    private $specials: number[] | undefined;
+    private $teams: Cs2ItemTeamValues | undefined;
+
+    constructor(economyInstance: Cs2EconomyInstance, item: Cs2Item, language: Cs2ItemLanguage) {
+        this.$economyInstance = economyInstance;
+        Object.assign(this, { ...item, teams: undefined });
+        Object.assign(this, language);
+        assert(this.id);
+        assert(this.type);
+        assert(this.name);
+        assert(this.rarity);
+        assert(this.type);
+    }
+
+    set contents(value: number[] | undefined) {
+        this.$contents = value;
+    }
+
+    get contents(): Cs2EconomyItem[] {
+        this.expectContainer();
+        return ensure(this.$contents).map((id) => this.$economyInstance.get(id));
+    }
+
+    get parent(): Cs2EconomyItem | undefined {
+        return this.baseId !== undefined ? this.$economyInstance.get(this.baseId) : undefined;
+    }
+
+    get rawContents(): number[] | undefined {
+        return this.$contents;
+    }
+
+    get rawSpecials(): number[] | undefined {
+        return this.$specials;
+    }
+
+    set specials(value: number[] | undefined) {
+        this.$specials = value;
+    }
+
+    get specials(): Cs2EconomyItem[] | undefined {
+        this.expectContainer();
+        return this.$specials?.map((id) => this.$economyInstance.get(id));
+    }
+
+    set teams(value: Cs2ItemTeamValues) {
+        this.$teams = value;
+    }
+
+    get teams(): Cs2TeamValues[] | undefined {
+        switch (this.$teams) {
+            case Cs2ItemTeam.Both:
+                return CS2_TEAMS_BOTH;
+            case Cs2ItemTeam.T:
+                return CS2_TEAMS_T;
+            case Cs2ItemTeam.CT:
+                return CS2_TEAMS_CT;
+            default:
+                return undefined;
         }
     }
 
-    safeValidateCaseKey(caseItem: number | CS_Item, keyItem?: number | CS_Item) {
-        try {
-            return this.validateCaseKey(caseItem, keyItem);
-        } catch {
-            return false;
-        }
+    isC4(): boolean {
+        return this.category === "c4";
     }
 
-    getCaseContents(item: number | CS_Item) {
-        item = this.get(item);
-        this.expectCase(item);
-        const { contents, specials } = item;
-        assert(contents, `Case has no contents.`);
-        return { contents, specials };
+    isSticker(): boolean {
+        return this.type === Cs2ItemType.Sticker;
     }
 
-    groupCaseContents(item: number | CS_Item) {
-        const { contents, specials } = this.getCaseContents(item);
-        const items: Record<string, CS_Item[]> = {};
-        for (const id of contents) {
-            const item = this.getById(id);
-            const rarity = CS_RARITY_COLORS[item.rarity];
+    isGloves(): boolean {
+        return this.type === Cs2ItemType.Gloves;
+    }
+
+    isStorageUnit(): boolean {
+        return this.type === Cs2ItemType.Tool && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
+    }
+
+    isNameTag(): boolean {
+        return this.type === Cs2ItemType.Tool && this.def === CS2_NAMETAG_TOOL_DEF;
+    }
+
+    isStatTrakSwapTool(): boolean {
+        return this.type === Cs2ItemType.Tool && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
+    }
+
+    isContainer(): boolean {
+        return this.type === Cs2ItemType.Container;
+    }
+
+    isContainerKey(): boolean {
+        return this.type === Cs2ItemType.ContainerKey;
+    }
+
+    expectSticker(): this {
+        assert(this.isSticker(), "Expected a Sticker.");
+        return this;
+    }
+
+    expectStorageUnit(): this {
+        assert(this.isStorageUnit(), "Expected a Storage Unit.");
+        return this;
+    }
+
+    expectNameTag(): this {
+        assert(this.isNameTag(), "Expected a Name Tag.");
+        return this;
+    }
+
+    expectStatTrakSwapTool(): this {
+        assert(this.isStatTrakSwapTool(), "Expected a StatTrak Swap Tool.");
+        return this;
+    }
+
+    expectContainer(): this {
+        assert(this.isContainer(), "Expected a Container.");
+        return this;
+    }
+
+    expectContainerKey(): this {
+        assert(this.isContainerKey(), "Expected a Key.");
+        return this;
+    }
+
+    hasWear(): boolean {
+        return CS2_WEARABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+    }
+
+    hasSeed(): boolean {
+        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+    }
+
+    hasStickers(): boolean {
+        return CS2_STICKERABLE_ITEMS.includes(this.type) && !this.isC4();
+    }
+
+    hasNametag(): boolean {
+        return CS2_NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit();
+    }
+
+    hasStatTrak(): boolean {
+        return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.free;
+    }
+
+    isWeaponCase(): boolean {
+        return this.category === this.$economyInstance.getById(CS2_WEAPON_CASE_ID).category;
+    }
+
+    isStickerCapsule(): boolean {
+        return this.category === this.$economyInstance.getById(CS2_STICKER_CAPSULE_ID).category;
+    }
+
+    isGraffitiBox(): boolean {
+        return this.category === this.$economyInstance.getById(CS2_GRAFFITI_BOX_ID).category;
+    }
+
+    isSouvenirCase(): boolean {
+        return this.category === this.$economyInstance.getById(CS2_SOUVENIR_CASE_ID).category;
+    }
+
+    groupContents(): Record<string, Cs2EconomyItem[]> {
+        const items: Record<string, Cs2EconomyItem[]> = {};
+        const specials = this.specials;
+        for (const item of this.contents) {
+            const rarity = CS2_RARITY_COLORS[item.rarity];
             if (!items[rarity]) {
                 items[rarity] = [];
             }
             items[rarity].push(item);
         }
-        if (specials) {
-            for (const id of specials) {
-                const item = this.getById(id);
+        if (specials !== undefined) {
+            for (const item of specials) {
                 const rarity = "special";
                 if (!items[rarity]) {
                     items[rarity] = [];
@@ -502,28 +534,35 @@ export class CS_EconomyInstance {
         return items;
     }
 
-    listCaseContents(item: number | CS_Item, hideSpecials = false) {
-        const { contents, specials } = this.getCaseContents(item);
-        const items = [...contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
-        return items
-            .map((id) => this.getById(id))
-            .sort((a, b) => {
-                return (
-                    (CS_RARITY_COLOR_ORDER[a.rarity] ?? CS_RARITY_COLOR_DEFAULT) -
-                    (CS_RARITY_COLOR_ORDER[b.rarity] ?? CS_RARITY_COLOR_DEFAULT)
-                );
-            });
+    listContents(hideSpecials = false): Cs2EconomyItem[] {
+        const specials = this.specials;
+        const items = [...this.contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
+        return items.sort((a, b) => {
+            return (
+                (CS2_RARITY_COLOR_ORDER[a.rarity] ?? CS2_RARITY_COLOR_DEFAULT) -
+                (CS2_RARITY_COLOR_ORDER[b.rarity] ?? CS2_RARITY_COLOR_DEFAULT)
+            );
+        });
     }
 
     /**
      * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
      */
-    unlockCase(item: number | CS_Item) {
-        item = this.get(item);
-        const contents = this.groupCaseContents(item);
+    unlock(): {
+        attributes: {
+            containerid: number;
+            seed: number | undefined;
+            stattrak: number | undefined;
+            wear: number | undefined;
+        };
+        id: number;
+        rarity: string;
+        special: boolean;
+    } {
+        const contents = this.groupContents();
         const keys = Object.keys(contents);
-        const rarities = CS_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
-        const odds = rarities.map((_, index) => CS_BASE_ODD / Math.pow(5, index));
+        const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
+        const odds = rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
         const total = odds.reduce((acc, cur) => acc + cur, 0);
         const entries = rarities.map((rarity, index) => [rarity, odds[index] / total] as const);
         const roll = Math.random();
@@ -537,50 +576,32 @@ export class CS_EconomyInstance {
             }
         }
         const unlocked = contents[rollRarity][Math.floor(Math.random() * contents[rollRarity].length)];
-        const hasStatTrak = item.stattrakless !== true;
-        const alwaysStatTrak = item.stattrakonly === true;
+        const hasStatTrak = this.statTrakless !== true;
+        const alwaysStatTrak = this.statTrakOnly === true;
         return {
             attributes: {
-                caseid: item.id,
-                seed: this.hasSeed(unlocked) ? CS_randomInt(CS_MIN_SEED, CS_MAX_SEED) : undefined,
+                containerid: this.id,
+                seed: unlocked.hasSeed() ? CS2_randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
                 stattrak: hasStatTrak
-                    ? this.hasStatTrak(unlocked)
-                        ? alwaysStatTrak || Math.random() <= CS_STATTRAK_ODD
+                    ? unlocked.hasStatTrak()
+                        ? alwaysStatTrak || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
                             : undefined
                         : undefined
                     : undefined,
-                wear: this.hasWear(unlocked)
+                wear: unlocked.hasWear()
                     ? Number(
-                          CS_randomFloat(unlocked.wearmin ?? CS_MIN_WEAR, unlocked.wearmax ?? CS_MAX_WEAR)
+                          CS2_randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR)
                               .toString()
-                              .substring(0, CS_WEAR_FACTOR.toString().length)
+                              .substring(0, CS2_WEAR_FACTOR.toString().length)
                       )
                     : undefined
             },
             id: unlocked.id,
-            rarity: CS_RARITY_FOR_SOUNDS[unlocked.rarity],
+            rarity: CS2_RARITY_FOR_SOUNDS[unlocked.rarity],
             special: rollRarity === "special"
         };
     }
-
-    validateUnlockedItem(item: number | CS_Item, { id }: ReturnType<typeof this.unlockCase>) {
-        item = this.get(item);
-        this.expectCase(item);
-        const { contents, specials } = item;
-        assert(contents?.includes(id) || specials?.includes(id), `Unlocked item is not from this case.`);
-    }
-
-    resolveCaseSpecialsImage(baseUrl: string, item: number | CS_Item): string {
-        item = this.get(item);
-        this.expectCase(item);
-        const { id, specialsimage, specials } = item;
-        assert(specials, "Case does not have special items.");
-        if (specialsimage) {
-            return `${baseUrl}/${id}_rare.png`;
-        }
-        return `${baseUrl}/default_rare_item.png`;
-    }
 }
 
-export const CS_Economy = new CS_EconomyInstance();
+export const Cs2Economy = new Cs2EconomyInstance();

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { fetchText, shouldRun, writeJson } from "./util.js";
+import { fetchText, shouldRun, writeJson } from "./utils.js";
 
 export class NonLegacyPaintScraper {
     async run() {

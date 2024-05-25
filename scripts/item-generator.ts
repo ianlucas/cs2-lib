@@ -8,21 +8,15 @@ import { readFile, readdir } from "fs/promises";
 import { resolve } from "path";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
+import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
+import { Cs2ItemLanguage, Cs2ItemTeam, Cs2ItemType, Cs2ItemTypeValues } from "../src/economy-types.js";
 import { KeyValues } from "../src/keyvalues.js";
-import {
-    CS2_DEFAULT_MAX_WEAR,
-    CS2_DEFAULT_MIN_WEAR,
-    Cs2ItemLanguage,
-    Cs2ItemTeam,
-    Cs2ItemType,
-    Cs2ItemTypeValues
-} from "../src/new-economy.js";
-import { assert, fail } from "../src/util.js";
+import { assert, ensure, fail } from "../src/utils.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { getItemsTsContents } from "./item-generator-template.js";
 import { Cs2ExportItem, Cs2ExtendedItem, Cs2GameItems, Cs2Language } from "./item-generator-types.js";
-import { ensure, isNotUndefined, readJson, shouldRun, warning, write, writeJson } from "./util.js";
+import { isNotUndefined, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
