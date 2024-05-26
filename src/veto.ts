@@ -3,30 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2Map } from "./maps.js";
-import { EnumValues, assert, fail } from "./utils.js";
+import { CS_Map } from "./maps.js";
+import { assert, fail } from "./util.js";
 
-export const Cs2VetoAction = {
-    Available: 0,
-    Pick: 1,
-    Ban: 2
-};
+export const CS_VETO_AVAILABLE = 0;
+export const CS_VETO_PICK = 1;
+export const CS_VETO_BAN = 2;
 
-export type Cs2VetoActionValues = EnumValues<typeof Cs2VetoAction>;
-export type Cs2VetoType = "bo1" | "bo3" | "bo5" | "custom";
+export type CS_VetoValue = 0 | 1 | 2;
+export type CS_VetoType = "bo1" | "bo3" | "bo5" | "custom";
 
-export interface Cs2VetoMap {
+export interface CS_VetoMap {
     mapname: string;
-    value: Cs2VetoActionValues;
+    value: CS_VetoValue;
     team?: number;
 }
 
-export class Cs2Veto {
-    private maps: Cs2VetoMap[];
-    private actions: Cs2VetoActionValues[];
+export class CS_Veto {
+    private maps: CS_VetoMap[];
+    private actions: CS_VetoValue[];
     private pickedMaps: string[] = [];
 
-    constructor(type: Cs2VetoType, maps: Cs2Map[], actions?: Cs2VetoActionValues[]) {
+    constructor(type: CS_VetoType, maps: CS_Map[], actions?: CS_VetoValue[]) {
         if (type !== "custom" && actions !== undefined) {
             console.warn('stack provided, but the type is not "custom".');
         }
@@ -41,38 +39,17 @@ export class Cs2Veto {
         }
         this.maps = maps.map((map) => ({
             mapname: map.mapname,
-            value: Cs2VetoAction.Available
+            value: CS_VETO_AVAILABLE
         }));
         switch (type) {
             case "bo1":
-                this.actions = [
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban
-                ];
+                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN, CS_VETO_BAN];
                 break;
             case "bo3":
-                this.actions = [
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Pick,
-                    Cs2VetoAction.Pick,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban
-                ];
+                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_BAN, CS_VETO_BAN];
                 break;
             case "bo5":
-                this.actions = [
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Ban,
-                    Cs2VetoAction.Pick,
-                    Cs2VetoAction.Pick,
-                    Cs2VetoAction.Pick,
-                    Cs2VetoAction.Pick
-                ];
+                this.actions = [CS_VETO_BAN, CS_VETO_BAN, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_PICK, CS_VETO_PICK];
                 break;
             case "custom":
                 this.actions = actions!;
@@ -81,7 +58,7 @@ export class Cs2Veto {
     }
 
     private getAvailableMaps() {
-        return this.maps.filter((map) => map.value === Cs2VetoAction.Available);
+        return this.maps.filter((map) => map.value === CS_VETO_AVAILABLE);
     }
 
     private getMap(mapname: string) {
@@ -104,7 +81,7 @@ export class Cs2Veto {
             return this.random();
         }
         const map = this.getMap(mapname);
-        if (map === undefined || map.value !== Cs2VetoAction.Available) {
+        if (map === undefined || map.value !== CS_VETO_AVAILABLE) {
             return false;
         }
         const team = this.getCurrentTeam();
@@ -112,7 +89,7 @@ export class Cs2Veto {
         if (value === undefined) {
             return false;
         }
-        if (value === Cs2VetoAction.Pick) {
+        if (value === CS_VETO_PICK) {
             this.pickedMaps.push(mapname);
         }
         this.maps = this.maps.map((map) => {
@@ -139,7 +116,7 @@ export class Cs2Veto {
         return this.choose(mapname);
     }
 
-    getState(): Cs2VetoMap[] {
+    getState(): CS_VetoMap[] {
         return this.maps;
     }
 

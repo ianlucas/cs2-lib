@@ -13,6 +13,6 @@ export const Cs2Team = {
 
 export type Cs2TeamValues = EnumValues<typeof Cs2Team>;
 
-export function toggleTeam(team: Cs2TeamValues): Cs2TeamValues {
+export function CS2_toggleTeam(team: Cs2TeamValues): Cs2TeamValues {
     return team === Cs2Team.CT ? Cs2Team.T : Cs2Team.CT;
 }

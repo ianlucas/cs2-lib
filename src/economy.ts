@@ -4,48 +4,48 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    GRAFFITI_BOX_ID,
-    MAX_FACTORY_NEW_WEAR,
-    MAX_FIELD_TESTED_WEAR,
-    MAX_MINIMAL_WEAR_WEAR,
-    MAX_SEED,
-    MAX_STATTRAK,
-    MAX_STICKER_WEAR,
-    MAX_WEAR,
-    MAX_WELL_WORN_WEAR,
-    MIN_SEED,
-    MIN_STATTRAK,
-    MIN_STICKER_WEAR,
-    MIN_WEAR,
-    NAMETAGGABLE_ITEMS,
-    NAMETAG_RE,
-    NAMETAG_TOOL_DEF,
-    NONE,
-    SEEDABLE_ITEMS,
-    SOUVENIR_CASE_ID,
-    STATTRAKABLE_ITEMS,
-    STATTRAK_SWAP_TOOL_DEF,
-    STICKERABLE_ITEMS,
-    STICKER_CAPSULE_ID,
-    STICKER_WEAR_FACTOR,
-    STORAGE_UNIT_TOOL_DEF,
-    TEAMS_BOTH,
-    TEAMS_CT,
-    TEAMS_T,
-    WEAPON_CASE_ID,
-    WEARABLE_ITEMS,
-    WEAR_FACTOR
+    CS2_GRAFFITI_BOX_ID,
+    CS2_MAX_FACTORY_NEW_WEAR,
+    CS2_MAX_FIELD_TESTED_WEAR,
+    CS2_MAX_MINIMAL_WEAR_WEAR,
+    CS2_MAX_SEED,
+    CS2_MAX_STATTRAK,
+    CS2_MAX_STICKER_WEAR,
+    CS2_MAX_WEAR,
+    CS2_MAX_WELL_WORN_WEAR,
+    CS2_MIN_SEED,
+    CS2_MIN_STATTRAK,
+    CS2_MIN_STICKER_WEAR,
+    CS2_MIN_WEAR,
+    CS2_NAMETAGGABLE_ITEMS,
+    CS2_NAMETAG_RE,
+    CS2_NAMETAG_TOOL_DEF,
+    CS2_NONE,
+    CS2_SEEDABLE_ITEMS,
+    CS2_SOUVENIR_CASE_ID,
+    CS2_STATTRAKABLE_ITEMS,
+    CS2_STATTRAK_SWAP_TOOL_DEF,
+    CS2_STICKERABLE_ITEMS,
+    CS2_STICKER_CAPSULE_ID,
+    CS2_STICKER_WEAR_FACTOR,
+    CS2_STORAGE_UNIT_TOOL_DEF,
+    CS2_TEAMS_BOTH,
+    CS2_TEAMS_CT,
+    CS2_TEAMS_T,
+    CS2_WEAPON_CASE_ID,
+    CS2_WEARABLE_ITEMS,
+    CS2_WEAR_FACTOR
 } from "./economy-constants.js";
 import {
-    BASE_ODD,
-    RARITY_COLORS,
-    RARITY_COLOR_DEFAULT,
-    RARITY_COLOR_ORDER,
-    RARITY_FOR_SOUNDS,
-    RARITY_ORDER,
-    STATTRAK_ODD,
-    randomFloat,
-    randomInt
+    CS2_BASE_ODD,
+    CS2_RARITY_COLORS,
+    CS2_RARITY_COLOR_DEFAULT,
+    CS2_RARITY_COLOR_ORDER,
+    CS2_RARITY_FOR_SOUNDS,
+    CS2_RARITY_ORDER,
+    CS2_STATTRAK_ODD,
+    CS2_randomFloat,
+    CS2_randomInt
 } from "./economy-container.js";
 import {
     Cs2Item,
@@ -121,8 +121,8 @@ export class Cs2EconomyInstance {
             return true;
         }
         assert(!Number.isNaN(wear), "Wear must be a number.");
-        assert(String(wear).length <= String(WEAR_FACTOR).length, "Wear value is too long.");
-        assert(wear >= MIN_WEAR && wear <= MAX_WEAR, "Wear value must be between MIN_WEAR and MAX_WEAR.");
+        assert(String(wear).length <= String(CS2_WEAR_FACTOR).length, "Wear value is too long.");
+        assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
         if (item !== undefined) {
             assert(item.hasWear(), "Item does not have wear.");
             assert(item.wearMin === undefined || wear >= item.wearMin, "Wear value is below the minimum allowed.");
@@ -142,7 +142,7 @@ export class Cs2EconomyInstance {
         assert(!Number.isNaN(seed), "Seed must be a valid number.");
         assert(item === undefined || item.hasSeed(), "Item does not have a seed.");
         assert(Number.isInteger(seed), "Seed must be an integer.");
-        assert(seed >= MIN_SEED && seed <= MAX_SEED, `Seed must be between MIN_SEED and MAX_SEED.`);
+        assert(seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
         return true;
     }
 
@@ -159,18 +159,21 @@ export class Cs2EconomyInstance {
         assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
         assert(item === undefined || item.hasStickers(), "The provided item does not have stickers.");
         for (const [slot, stickerId] of stickers.entries()) {
-            if (stickerId === NONE) {
-                assert(wears === undefined || wears[slot] === NONE, "Sticker wear value is invalid.");
+            if (stickerId === CS2_NONE) {
+                assert(wears === undefined || wears[slot] === CS2_NONE, "Sticker wear value is invalid.");
                 continue;
             }
             this.get(stickerId).expectSticker();
             if (wears !== undefined) {
                 const wear = wears[slot];
                 assert(!Number.isNaN(wear), "Sticker wear value must be a valid number.");
-                assert(String(wear).length <= String(STICKER_WEAR_FACTOR).length, "Sticker wear value is too long.");
                 assert(
-                    wear >= MIN_STICKER_WEAR && wear <= MAX_STICKER_WEAR,
-                    "Sticker wear value must be between MIN_STICKER_WEAR and MAX_STICKER_WEAR."
+                    String(wear).length <= String(CS2_STICKER_WEAR_FACTOR).length,
+                    "Sticker wear value is too long."
+                );
+                assert(
+                    wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR,
+                    "Sticker wear value must be between CS_MIN_STICKER_WEAR and CS_MAX_STICKER_WEAR."
                 );
             }
         }
@@ -185,7 +188,7 @@ export class Cs2EconomyInstance {
     validateNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
         if (nametag !== undefined) {
             assert(item === undefined || item.hasNametag(), "The provided item does not have a nametag.");
-            assert(nametag[0] !== " " && NAMETAG_RE.test(nametag), "Invalid nametag format.");
+            assert(nametag[0] !== " " && CS2_NAMETAG_RE.test(nametag), "Invalid nametag format.");
         }
         return true;
     }
@@ -210,8 +213,8 @@ export class Cs2EconomyInstance {
         assert(item === undefined || item.hasStatTrak(), "The provided item does not support stattrak.");
         assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
         assert(
-            stattrak >= MIN_STATTRAK && stattrak <= MAX_STATTRAK,
-            "Stattrak value must be between MIN_STATTRAK and MAX_STATTRAK."
+            stattrak >= CS2_MIN_STATTRAK && stattrak <= CS2_MAX_STATTRAK,
+            "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
         );
         return true;
     }
@@ -222,13 +225,13 @@ export class Cs2EconomyInstance {
 
     getWearFromValue(value: number): Cs2ItemWearValues {
         switch (true) {
-            case value <= MAX_FACTORY_NEW_WEAR:
+            case value <= CS2_MAX_FACTORY_NEW_WEAR:
                 return Cs2ItemWear.FactoryNew;
-            case value <= MAX_MINIMAL_WEAR_WEAR:
+            case value <= CS2_MAX_MINIMAL_WEAR_WEAR:
                 return Cs2ItemWear.MinimalWear;
-            case value <= MAX_FIELD_TESTED_WEAR:
+            case value <= CS2_MAX_FIELD_TESTED_WEAR:
                 return Cs2ItemWear.FieldTested;
-            case value <= MAX_WELL_WORN_WEAR:
+            case value <= CS2_MAX_WELL_WORN_WEAR:
                 return Cs2ItemWear.WellWorn;
             default:
                 return Cs2ItemWear.BattleScarred;
@@ -401,11 +404,11 @@ export class Cs2EconomyItem
     get teams(): Cs2TeamValues[] | undefined {
         switch (this.$teams) {
             case Cs2ItemTeam.Both:
-                return TEAMS_BOTH;
+                return CS2_TEAMS_BOTH;
             case Cs2ItemTeam.T:
-                return TEAMS_T;
+                return CS2_TEAMS_T;
             case Cs2ItemTeam.CT:
-                return TEAMS_CT;
+                return CS2_TEAMS_CT;
             default:
                 return undefined;
         }
@@ -424,15 +427,15 @@ export class Cs2EconomyItem
     }
 
     isStorageUnit(): boolean {
-        return this.type === Cs2ItemType.Tool && this.def === STORAGE_UNIT_TOOL_DEF;
+        return this.type === Cs2ItemType.Tool && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
     }
 
     isNameTag(): boolean {
-        return this.type === Cs2ItemType.Tool && this.def === NAMETAG_TOOL_DEF;
+        return this.type === Cs2ItemType.Tool && this.def === CS2_NAMETAG_TOOL_DEF;
     }
 
     isStatTrakSwapTool(): boolean {
-        return this.type === Cs2ItemType.Tool && this.def === STATTRAK_SWAP_TOOL_DEF;
+        return this.type === Cs2ItemType.Tool && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
     }
 
     isContainer(): boolean {
@@ -474,46 +477,46 @@ export class Cs2EconomyItem
     }
 
     hasWear(): boolean {
-        return WEARABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_WEARABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
     }
 
     hasSeed(): boolean {
-        return SEEDABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
     }
 
     hasStickers(): boolean {
-        return STICKERABLE_ITEMS.includes(this.type) && !this.isC4();
+        return CS2_STICKERABLE_ITEMS.includes(this.type) && !this.isC4();
     }
 
     hasNametag(): boolean {
-        return NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit();
+        return CS2_NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit();
     }
 
     hasStatTrak(): boolean {
-        return STATTRAKABLE_ITEMS.includes(this.type) && !this.free;
+        return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.free;
     }
 
     isWeaponCase(): boolean {
-        return this.category === this.$economyInstance.getById(WEAPON_CASE_ID).category;
+        return this.category === this.$economyInstance.getById(CS2_WEAPON_CASE_ID).category;
     }
 
     isStickerCapsule(): boolean {
-        return this.category === this.$economyInstance.getById(STICKER_CAPSULE_ID).category;
+        return this.category === this.$economyInstance.getById(CS2_STICKER_CAPSULE_ID).category;
     }
 
     isGraffitiBox(): boolean {
-        return this.category === this.$economyInstance.getById(GRAFFITI_BOX_ID).category;
+        return this.category === this.$economyInstance.getById(CS2_GRAFFITI_BOX_ID).category;
     }
 
     isSouvenirCase(): boolean {
-        return this.category === this.$economyInstance.getById(SOUVENIR_CASE_ID).category;
+        return this.category === this.$economyInstance.getById(CS2_SOUVENIR_CASE_ID).category;
     }
 
     groupContents(): Record<string, Cs2EconomyItem[]> {
         const items: Record<string, Cs2EconomyItem[]> = {};
         const specials = this.specials;
         for (const item of this.contents) {
-            const rarity = RARITY_COLORS[item.rarity];
+            const rarity = CS2_RARITY_COLORS[item.rarity];
             if (!items[rarity]) {
                 items[rarity] = [];
             }
@@ -536,12 +539,15 @@ export class Cs2EconomyItem
         const items = [...this.contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
         return items.sort((a, b) => {
             return (
-                (RARITY_COLOR_ORDER[a.rarity] ?? RARITY_COLOR_DEFAULT) -
-                (RARITY_COLOR_ORDER[b.rarity] ?? RARITY_COLOR_DEFAULT)
+                (CS2_RARITY_COLOR_ORDER[a.rarity] ?? CS2_RARITY_COLOR_DEFAULT) -
+                (CS2_RARITY_COLOR_ORDER[b.rarity] ?? CS2_RARITY_COLOR_DEFAULT)
             );
         });
     }
 
+    /**
+     * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
+     */
     unlock(): {
         attributes: {
             containerid: number;
@@ -553,11 +559,10 @@ export class Cs2EconomyItem
         rarity: string;
         special: boolean;
     } {
-        // @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
         const contents = this.groupContents();
         const keys = Object.keys(contents);
-        const rarities = RARITY_ORDER.filter((rarity) => keys.includes(rarity));
-        const odds = rarities.map((_, index) => BASE_ODD / Math.pow(5, index));
+        const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
+        const odds = rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
         const total = odds.reduce((acc, cur) => acc + cur, 0);
         const entries = rarities.map((rarity, index) => [rarity, odds[index] / total] as const);
         const roll = Math.random();
@@ -576,24 +581,24 @@ export class Cs2EconomyItem
         return {
             attributes: {
                 containerid: this.id,
-                seed: unlocked.hasSeed() ? randomInt(MIN_SEED, MAX_SEED) : undefined,
+                seed: unlocked.hasSeed() ? CS2_randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
                 stattrak: hasStatTrak
                     ? unlocked.hasStatTrak()
-                        ? alwaysStatTrak || Math.random() <= STATTRAK_ODD
+                        ? alwaysStatTrak || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
                             : undefined
                         : undefined
                     : undefined,
                 wear: unlocked.hasWear()
                     ? Number(
-                          randomFloat(unlocked.wearMin ?? MIN_WEAR, unlocked.wearMax ?? MAX_WEAR)
+                          CS2_randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR)
                               .toString()
-                              .substring(0, WEAR_FACTOR.toString().length)
+                              .substring(0, CS2_WEAR_FACTOR.toString().length)
                       )
                     : undefined
             },
             id: unlocked.id,
-            rarity: RARITY_FOR_SOUNDS[unlocked.rarity],
+            rarity: CS2_RARITY_FOR_SOUNDS[unlocked.rarity],
             special: rollRarity === "special"
         };
     }
