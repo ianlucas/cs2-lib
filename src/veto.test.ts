@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ACTIVE_MAP_POOL } from "./maps";
-import { Cs2Veto, Cs2VetoAction } from "./veto";
+import { CS_ACTIVE_MAP_POOL } from "./maps";
+import { CS_VETO_BAN, CS_VETO_PICK, CS_Veto } from "./veto";
 
 test("bo1", () => {
-    const veto = new Cs2Veto("bo1", ACTIVE_MAP_POOL);
+    const veto = new CS_Veto("bo1", CS_ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -25,7 +25,7 @@ test("bo1", () => {
 });
 
 test("bo3", () => {
-    const veto = new Cs2Veto("bo3", ACTIVE_MAP_POOL);
+    const veto = new CS_Veto("bo3", CS_ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -43,7 +43,7 @@ test("bo3", () => {
 });
 
 test("bo5", () => {
-    const veto = new Cs2Veto("bo5", ACTIVE_MAP_POOL);
+    const veto = new CS_Veto("bo5", CS_ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -61,13 +61,13 @@ test("bo5", () => {
 });
 
 test("custom", () => {
-    const veto = new Cs2Veto("custom", ACTIVE_MAP_POOL, [
-        Cs2VetoAction.Pick,
-        Cs2VetoAction.Pick,
-        Cs2VetoAction.Ban,
-        Cs2VetoAction.Ban,
-        Cs2VetoAction.Ban,
-        Cs2VetoAction.Ban
+    const veto = new CS_Veto("custom", CS_ACTIVE_MAP_POOL, [
+        CS_VETO_PICK,
+        CS_VETO_PICK,
+        CS_VETO_BAN,
+        CS_VETO_BAN,
+        CS_VETO_BAN,
+        CS_VETO_BAN
     ]);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
@@ -86,7 +86,7 @@ test("custom", () => {
 });
 
 test("random", () => {
-    const veto = new Cs2Veto("bo1", ACTIVE_MAP_POOL);
+    const veto = new CS_Veto("bo1", CS_ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose()).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
