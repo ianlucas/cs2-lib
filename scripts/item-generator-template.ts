@@ -9,9 +9,9 @@ export function getItemsTsContents(items: unknown) {
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2Item } from "./economy-types.js";
+import { CS2Item } from "./economy-types.js";
 
 // @generated
 // @ts-ignore
-export const CS2_ITEMS: Cs2Item[] = ${JSON.stringify(items)};`;
+export const CS2_ITEMS: CS2Item[] = ${JSON.stringify(items)};`;
 }

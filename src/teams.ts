@@ -5,14 +5,14 @@
 
 import { EnumValues } from "./utils.js";
 
-export const Cs2Team = {
+export const CS2Team = {
     None: 0,
     T: 2,
     CT: 3
 } as const;
 
-export type Cs2TeamValues = EnumValues<typeof Cs2Team>;
+export type CS2TeamValues = EnumValues<typeof CS2Team>;
 
-export function CS2_toggleTeam(team: Cs2TeamValues): Cs2TeamValues {
-    return team === Cs2Team.CT ? Cs2Team.T : Cs2Team.CT;
+export function toggleCS2Team(team: CS2TeamValues): CS2TeamValues {
+    return team === CS2Team.CT ? CS2Team.T : CS2Team.CT;
 }

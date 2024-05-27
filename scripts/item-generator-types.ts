@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2Item } from "../src/economy-types";
+import { CS2Item } from "../src/economy-types";
 
-export type Cs2Language = {
+export type CS2Language = {
     lang: {
         Tokens: { [key: string]: string | undefined };
     };
 };
 
-export type Cs2GameItems = {
+export type CS2GameItems = {
     items_game: {
         alternate_icons2: {
             weapon_icons: {
@@ -147,13 +147,13 @@ export type Cs2GameItems = {
     };
 };
 
-export type Cs2ExtendedItem = Cs2Item & {
+export type CS2ExtendedItem = CS2Item & {
     className?: string;
     descToken?: string;
     nameToken?: string;
 };
 
-export type Cs2ExportItem = Cs2Item & {
+export type CS2ExportItem = CS2Item & {
     className: undefined;
     descToken: undefined;
     nameToken: undefined;

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2ItemType, Cs2ItemTypeValues } from "./economy-types.js";
-import { Cs2Team } from "./teams.js";
+import { CS2ItemType, CS2ItemTypeValues } from "./economy-types.js";
+import { CS2Team } from "./teams.js";
 
 export const CS2_MIN_STATTRAK = 0;
 export const CS2_MAX_STATTRAK = 999999;
@@ -42,12 +42,12 @@ export const CS2_SOUVENIR_CASE_ID = 9147;
 export const CS2_STICKER_CAPSULE_ID = 9134;
 export const CS2_WEAPON_CASE_ID = 9129;
 
-export const CS2_NAMETAGGABLE_ITEMS: Cs2ItemTypeValues[] = [Cs2ItemType.Melee, Cs2ItemType.Weapon];
-export const CS2_SEEDABLE_ITEMS: Cs2ItemTypeValues[] = [Cs2ItemType.Weapon, Cs2ItemType.Melee, Cs2ItemType.Gloves];
-export const CS2_STATTRAKABLE_ITEMS: Cs2ItemTypeValues[] = [Cs2ItemType.Melee, Cs2ItemType.Weapon, Cs2ItemType.MusicKit]
-export const CS2_STICKERABLE_ITEMS: Cs2ItemTypeValues[] = [Cs2ItemType.Weapon];
-export const CS2_WEARABLE_ITEMS: Cs2ItemTypeValues[] = [Cs2ItemType.Gloves, Cs2ItemType.Melee, Cs2ItemType.Weapon];
+export const CS2_NAMETAGGABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon];
+export const CS2_SEEDABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2ItemType.Melee, CS2ItemType.Gloves];
+export const CS2_STATTRAKABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit]
+export const CS2_STICKERABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon];
+export const CS2_WEARABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
 
-export const CS2_TEAMS_BOTH = [Cs2Team.T, Cs2Team.CT];
-export const CS2_TEAMS_CT = [Cs2Team.CT];
-export const CS2_TEAMS_T = [Cs2Team.T];
+export const CS2_TEAMS_BOTH = [CS2Team.T, CS2Team.CT];
+export const CS2_TEAMS_CT = [CS2Team.CT];
+export const CS2_TEAMS_T = [CS2Team.T];

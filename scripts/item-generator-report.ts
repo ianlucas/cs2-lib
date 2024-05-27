@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2ItemTeam, Cs2ItemType } from "../src/economy-types.js";
+import { CS2ItemTeam, CS2ItemType } from "../src/economy-types.js";
 import { CS2_ITEMS } from "../src/items.js";
 import { assert, ensure } from "../src/utils.js";
 import { log, readJson, shouldRun } from "./utils.js";
@@ -31,24 +31,24 @@ const v4PropertiesToV5 = {
 };
 
 const v4TypeToV5 = {
-    agent: Cs2ItemType.Agent,
-    case: Cs2ItemType.Container,
-    collectible: Cs2ItemType.Collectible,
-    glove: Cs2ItemType.Gloves,
-    graffiti: Cs2ItemType.Graffiti,
-    key: Cs2ItemType.ContainerKey,
-    melee: Cs2ItemType.Melee,
-    musickit: Cs2ItemType.MusicKit,
-    patch: Cs2ItemType.Patch,
-    sticker: Cs2ItemType.Sticker,
-    tool: Cs2ItemType.Tool,
-    weapon: Cs2ItemType.Weapon
+    agent: CS2ItemType.Agent,
+    case: CS2ItemType.Container,
+    collectible: CS2ItemType.Collectible,
+    glove: CS2ItemType.Gloves,
+    graffiti: CS2ItemType.Graffiti,
+    key: CS2ItemType.ContainerKey,
+    melee: CS2ItemType.Melee,
+    musickit: CS2ItemType.MusicKit,
+    patch: CS2ItemType.Patch,
+    sticker: CS2ItemType.Sticker,
+    tool: CS2ItemType.Tool,
+    weapon: CS2ItemType.Weapon
 };
 
 function v4TeamsToV5Teams(value: number[]) {
     const t = value.includes(2);
     const ct = value.includes(3);
-    return t && ct ? Cs2ItemTeam.Both : t ? Cs2ItemTeam.T : Cs2ItemTeam.CT;
+    return t && ct ? CS2ItemTeam.Both : t ? CS2ItemTeam.T : CS2ItemTeam.CT;
 }
 
 function equals(a: any, b: any) {
