@@ -49,8 +49,8 @@ import {
 } from "./economy-container.js";
 import {
     CS2Item,
-    CS2ItemLanguage,
-    CS2ItemLanguageFile,
+    CS2ItemLocalization,
+    CS2ItemLocalizationMap,
     CS2ItemTeam,
     CS2ItemTeamValues,
     CS2ItemType,
@@ -82,20 +82,19 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers = new Set<CS2EconomyItem>();
 
-    use({ items, language }: { items: CS2Item[]; language: CS2ItemLanguageFile }) {
+    use({ items, language }: { items: CS2Item[]; language: CS2ItemLocalizationMap }) {
         this.categories.clear();
         this.items.clear();
-        this.itemsAsArray = [];
         this.stickers.clear();
-        for (const item of items) {
+        this.itemsAsArray = items.map((item) => {
             const economyItem = new CS2EconomyItem(this, item, ensure(language[item.id]));
-            this.itemsAsArray.push(economyItem);
             this.items.set(item.id, economyItem);
             if (economyItem.isSticker()) {
                 this.stickers.add(economyItem);
                 this.categories.add(ensure(economyItem.category));
             }
-        }
+            return economyItem;
+        });
     }
 
     getById(id: number): CS2EconomyItem {
@@ -315,7 +314,7 @@ export class CS2EconomyItem
     implements
         Interface<
             Omit<CS2Item, "contents" | "specials" | "teams"> &
-                CS2ItemLanguage & {
+                CS2ItemLocalization & {
                     contents: CS2EconomyItem[] | undefined;
                     teams: CS2TeamValues[] | undefined;
                 }
@@ -356,7 +355,7 @@ export class CS2EconomyItem
     private $specials: number[] | undefined;
     private $teams: CS2ItemTeamValues | undefined;
 
-    constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLanguage) {
+    constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLocalization) {
         this.$economyInstance = economyInstance;
         Object.assign(this, { ...item, teams: undefined });
         Object.assign(this, language);
