@@ -3,50 +3,69 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export const CS2_RARITY_COMMON_COLOR = "#b0c3d9";
-export const CS2_RARITY_UNCOMMON_COLOR = "#5e98d9";
-export const CS2_RARITY_RARE_COLOR = "#4b69ff";
-export const CS2_RARITY_MYTHICAL_COLOR = "#8847ff";
-export const CS2_RARITY_LEGENDARY_COLOR = "#d32ce6";
-export const CS2_RARITY_ANCIENT_COLOR = "#eb4b4b";
-export const CS2_RARITY_IMMORTAL_COLOR = "#e4ae39";
+import { EnumValues } from "./utils.js";
 
-export const CS2_RARITY_COLORS: Record<string, string> = {
-    [CS2_RARITY_COMMON_COLOR]: "common",
-    [CS2_RARITY_UNCOMMON_COLOR]: "uncommon",
-    [CS2_RARITY_RARE_COLOR]: "rare",
-    [CS2_RARITY_MYTHICAL_COLOR]: "mythical",
-    [CS2_RARITY_LEGENDARY_COLOR]: "legendary",
-    [CS2_RARITY_ANCIENT_COLOR]: "ancient",
-    [CS2_RARITY_IMMORTAL_COLOR]: "immortal"
-};
+export const CS2Rarity = {
+    Common: "common",
+    Uncommon: "uncommon",
+    Rare: "rare",
+    Mythical: "mythical",
+    Legendary: "legendary",
+    Ancient: "ancient",
+    Immortal: "immortal"
+} as const;
 
-export const CS2_RARITY_FOR_SOUNDS: Record<string, string> = {
-    [CS2_RARITY_COMMON_COLOR]: "common",
-    [CS2_RARITY_UNCOMMON_COLOR]: "uncommon",
-    [CS2_RARITY_RARE_COLOR]: "rare",
-    [CS2_RARITY_MYTHICAL_COLOR]: "mythical",
-    [CS2_RARITY_LEGENDARY_COLOR]: "legendary",
-    [CS2_RARITY_ANCIENT_COLOR]: "ancient",
-    [CS2_RARITY_IMMORTAL_COLOR]: "ancient" // immortal
-};
+export type CS2RarityKeys = keyof typeof CS2Rarity;
+export type CS2RarityValues = EnumValues<typeof CS2Rarity>;
 
-export const CS2_RARITY_COLOR_DEFAULT = 0;
+export const CS2RarityColor = {
+    Common: "#b0c3d9",
+    Uncommon: "#5e98d9",
+    Rare: "#4b69ff",
+    Mythical: "#8847ff",
+    Legendary: "#d32ce6",
+    Ancient: "#eb4b4b",
+    Immortal: "#e4ae39"
+} as const;
 
-export const CS2_RARITY_COLOR_ORDER: Record<string, number | undefined> = {
-    [CS2_RARITY_COMMON_COLOR]: 1,
-    [CS2_RARITY_UNCOMMON_COLOR]: 2,
-    [CS2_RARITY_RARE_COLOR]: 3,
-    [CS2_RARITY_MYTHICAL_COLOR]: 4,
-    [CS2_RARITY_LEGENDARY_COLOR]: 5,
-    [CS2_RARITY_ANCIENT_COLOR]: 6,
-    [CS2_RARITY_IMMORTAL_COLOR]: 7
-};
+export type CS2RarityColorValues = EnumValues<typeof CS2RarityColor>;
 
-export const CS2_RARITIES = ["common", "uncommon", "rare", "mythical", "legendary", "ancient", "immortal"] as const;
-
+export const CS2_RARITIES = Object.values(CS2Rarity);
 export const CS2_RARITY_ORDER = [...CS2_RARITIES, "special"] as const;
 
+export const CS2RarityColorName = {
+    [CS2RarityColor.Common]: CS2Rarity.Common,
+    [CS2RarityColor.Uncommon]: CS2Rarity.Uncommon,
+    [CS2RarityColor.Rare]: CS2Rarity.Rare,
+    [CS2RarityColor.Mythical]: CS2Rarity.Mythical,
+    [CS2RarityColor.Legendary]: CS2Rarity.Legendary,
+    [CS2RarityColor.Ancient]: CS2Rarity.Ancient,
+    [CS2RarityColor.Immortal]: CS2Rarity.Immortal
+} as const;
+
+export const CS2RaritySoundName = {
+    [CS2RarityColor.Common]: CS2Rarity.Common,
+    [CS2RarityColor.Uncommon]: CS2Rarity.Uncommon,
+    [CS2RarityColor.Rare]: CS2Rarity.Rare,
+    [CS2RarityColor.Mythical]: CS2Rarity.Mythical,
+    [CS2RarityColor.Legendary]: CS2Rarity.Legendary,
+    [CS2RarityColor.Ancient]: CS2Rarity.Ancient,
+    [CS2RarityColor.Immortal]: CS2Rarity.Ancient
+} as const;
+
+export type CS2RaritySoundNameValues = EnumValues<typeof CS2RaritySoundName>;
+
+export const CS2RarityColorOrder = {
+    [CS2RarityColor.Common]: 1,
+    [CS2RarityColor.Uncommon]: 2,
+    [CS2RarityColor.Rare]: 3,
+    [CS2RarityColor.Mythical]: 4,
+    [CS2RarityColor.Legendary]: 5,
+    [CS2RarityColor.Ancient]: 6,
+    [CS2RarityColor.Immortal]: 7
+} as const;
+
+export const CS2_RARITY_COLOR_DEFAULT = 0;
 export const CS2_BASE_ODD = 0.8;
 export const CS2_STATTRAK_ODD = 0.1;
 

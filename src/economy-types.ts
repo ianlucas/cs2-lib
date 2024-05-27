@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { CS2RarityColorValues } from "./economy-container.js";
 import { EnumValues } from "./utils.js";
 
 export const CS2ItemTeam = {
@@ -56,7 +57,7 @@ export interface CS2Item {
     keys?: number[] | undefined;
     legacy?: boolean | undefined;
     model?: string | undefined;
-    rarity?: string | undefined;
+    rarity?: CS2RarityColorValues | undefined;
     specials?: number[] | undefined;
     specialsImage?: boolean | undefined;
     statTrakless?: boolean | undefined;

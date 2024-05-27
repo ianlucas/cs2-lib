@@ -9,6 +9,7 @@ import { resolve } from "path";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
+import { CS2RarityColorValues } from "../src/economy-container.js";
 import {
     CS2ItemLocalization,
     CS2ItemLocalizationByLanguage,
@@ -863,7 +864,7 @@ export class ItemGenerator {
         if (colorHex === undefined) {
             colorHex = this.raritiesColorHex.default;
         }
-        return ensure(colorHex);
+        return ensure(colorHex) as CS2RarityColorValues;
     }
 
     private findTranslation(token?: string, language = "english") {
