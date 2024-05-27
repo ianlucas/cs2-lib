@@ -350,13 +350,13 @@ export class CS2EconomyItem
     wearMax: number | undefined;
     wearMin: number | undefined;
 
-    private $contents: number[] | undefined;
-    private $economyInstance: CS2EconomyInstance;
-    private $specials: number[] | undefined;
-    private $teams: CS2ItemTeamValues | undefined;
+    private _contents: number[] | undefined;
+    private _economyInstance: CS2EconomyInstance;
+    private _specials: number[] | undefined;
+    private _teams: CS2ItemTeamValues | undefined;
 
     constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLocalization) {
-        this.$economyInstance = economyInstance;
+        this._economyInstance = economyInstance;
         Object.assign(this, item);
         Object.assign(this, language);
         assert(this.id);
@@ -367,41 +367,41 @@ export class CS2EconomyItem
     }
 
     set contents(value: number[] | undefined) {
-        this.$contents = value;
+        this._contents = value;
     }
 
     get contents(): CS2EconomyItem[] {
         this.expectContainer();
-        return ensure(this.$contents).map((id) => this.$economyInstance.get(id));
+        return ensure(this._contents).map((id) => this._economyInstance.get(id));
     }
 
     get parent(): CS2EconomyItem | undefined {
-        return this.baseId !== undefined ? this.$economyInstance.get(this.baseId) : undefined;
+        return this.baseId !== undefined ? this._economyInstance.get(this.baseId) : undefined;
     }
 
     get rawContents(): number[] | undefined {
-        return this.$contents;
+        return this._contents;
     }
 
     get rawSpecials(): number[] | undefined {
-        return this.$specials;
+        return this._specials;
     }
 
     set specials(value: number[] | undefined) {
-        this.$specials = value;
+        this._specials = value;
     }
 
     get specials(): CS2EconomyItem[] | undefined {
         this.expectContainer();
-        return this.$specials?.map((id) => this.$economyInstance.get(id));
+        return this._specials?.map((id) => this._economyInstance.get(id));
     }
 
     set teams(value: CS2ItemTeamValues) {
-        this.$teams = value;
+        this._teams = value;
     }
 
     get teams(): CS2TeamValues[] | undefined {
-        switch (this.$teams) {
+        switch (this._teams) {
             case CS2ItemTeam.Both:
                 return CS2_TEAMS_BOTH;
             case CS2ItemTeam.T:
@@ -496,19 +496,19 @@ export class CS2EconomyItem
     }
 
     isWeaponCase(): boolean {
-        return this.category === this.$economyInstance.getById(CS2_WEAPON_CASE_ID).category;
+        return this.category === this._economyInstance.getById(CS2_WEAPON_CASE_ID).category;
     }
 
     isStickerCapsule(): boolean {
-        return this.category === this.$economyInstance.getById(CS2_STICKER_CAPSULE_ID).category;
+        return this.category === this._economyInstance.getById(CS2_STICKER_CAPSULE_ID).category;
     }
 
     isGraffitiBox(): boolean {
-        return this.category === this.$economyInstance.getById(CS2_GRAFFITI_BOX_ID).category;
+        return this.category === this._economyInstance.getById(CS2_GRAFFITI_BOX_ID).category;
     }
 
     isSouvenirCase(): boolean {
-        return this.category === this.$economyInstance.getById(CS2_SOUVENIR_CASE_ID).category;
+        return this.category === this._economyInstance.getById(CS2_SOUVENIR_CASE_ID).category;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {
