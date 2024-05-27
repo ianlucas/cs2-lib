@@ -86,14 +86,15 @@ export class DefaultGraffitiManager {
 }
 
 export class ItemGenerator {
-    private csgoLocalizationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
     gameItems: CS2GameItems["items_game"] = null!;
-    private raritiesColorHex: Record<string, string | undefined> = null!;
-    private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
-    private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
-    private itemSetItemKey: Record<string, string | undefined> = null!;
+
+    private csgoLocalizationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
     private itemLocalizationByLanguage: CS2ItemLocalizationByLanguage = null!;
     private itemNames = new Map<number, string>();
+    private itemSetItemKey: Record<string, string | undefined> = null!;
+    private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
+    private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
+    private raritiesColorHex: Record<string, string | undefined> = null!;
 
     private containerScraper = new ContainerScraper();
     private defaultGraffitiManager = new DefaultGraffitiManager();
