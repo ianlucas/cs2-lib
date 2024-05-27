@@ -9,13 +9,13 @@ import { resolve } from "path";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
-import { Cs2ItemLanguage, Cs2ItemTeam, Cs2ItemType, Cs2ItemTypeValues } from "../src/economy-types.js";
-import { KeyValues } from "../src/keyvalues.js";
+import { CS2ItemLanguage, CS2ItemTeam, CS2ItemType, CS2ItemTypeValues } from "../src/economy-types.js";
+import { CS2KeyValues } from "../src/keyvalues.js";
 import { assert, ensure, fail } from "../src/utils.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { getItemsTsContents } from "./item-generator-template.js";
-import { Cs2ExportItem, Cs2ExtendedItem, Cs2GameItems, Cs2Language } from "./item-generator-types.js";
+import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
 import { isNotUndefined, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
@@ -39,7 +39,7 @@ const WEAPON_CATEGORY_RE = /(c4|[^\d]+)/;
 const BASE_WEAPON_EQUIPMENT = ["weapon_taser"];
 const FREE_MUSIC_KITS = ["1", "70"];
 const HEAVY_WEAPONS = ["weapon_m249", "weapon_mag7", "weapon_negev", "weapon_nova", "weapon_sawedoff", "weapon_xm1014"];
-const MELEE_OR_GLOVES_TYPES: Cs2ItemTypeValues[] = [Cs2ItemType.Melee, Cs2ItemType.Gloves];
+const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 const PAINT_IMAGE_SUFFIXES = ["light", "medium", "heavy"] as const;
 // prettier-ignore
 const UNCATEGORIZED_STICKERS = ["community_mix01", "community02", "danger_zone", "standard", "stickers2", "tournament_assets"];
@@ -82,8 +82,8 @@ export class DefaultGraffitiManager {
 }
 
 export class ItemGenerator {
-    private csgoLanguages: Record<string, Cs2Language["lang"]["Tokens"]> = null!;
-    gameItems: Cs2GameItems["items_game"] = null!;
+    private csgoLanguages: Record<string, CS2Language["lang"]["Tokens"]> = null!;
+    gameItems: CS2GameItems["items_game"] = null!;
     private raritiesColorHex: Record<string, string | undefined> = null!;
     private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
     private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
@@ -96,9 +96,9 @@ export class ItemGenerator {
     private itemIdentifierManager = new ItemIdentifierManager();
     private itemManager = new ItemManager();
 
-    private baseItems: Cs2ExtendedItem[] = [];
+    private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
-    private items = new Map<number, Cs2ExtendedItem>();
+    private items = new Map<number, CS2ExtendedItem>();
 
     private paintKits: {
         className: string;
@@ -150,8 +150,8 @@ export class ItemGenerator {
                         return [
                             language,
                             Object.entries(
-                                KeyValues.parse<Cs2Language>(await readFile(resolve(RESOURCE_PATH, file), "utf-8")).lang
-                                    .Tokens
+                                CS2KeyValues.parse<CS2Language>(await readFile(resolve(RESOURCE_PATH, file), "utf-8"))
+                                    .lang.Tokens
                             ).reduce((tokens, [key, value]) => {
                                 key = key.toLowerCase();
                                 assert(tokens[key] === undefined);
@@ -169,7 +169,7 @@ export class ItemGenerator {
     }
 
     async readItemsGameFile() {
-        this.gameItems = KeyValues.parse<Cs2GameItems>(await readFile(ITEMS_GAME_PATH, "utf-8")).items_game;
+        this.gameItems = CS2KeyValues.parse<CS2GameItems>(await readFile(ITEMS_GAME_PATH, "utf-8")).items_game;
         this.raritiesColorHex = Object.fromEntries(
             Object.entries(this.gameItems.rarities).map(([rarityKey, { color }]) => {
                 return [rarityKey, ensure(this.gameItems.colors[ensure(color)]?.hex_color)] as const;
@@ -268,7 +268,7 @@ export class ItemGenerator {
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
                 teams,
-                type: Cs2ItemType.Weapon
+                type: CS2ItemType.Weapon
             });
         }
     }
@@ -308,7 +308,7 @@ export class ItemGenerator {
                 nameToken: item_name,
                 rarity: this.getRarityColorHex([thePrefab.item_rarity], "default"),
                 teams,
-                type: Cs2ItemType.Melee
+                type: CS2ItemType.Melee
             });
         }
     }
@@ -339,7 +339,7 @@ export class ItemGenerator {
                 nameToken: item_name,
                 rarity: this.getRarityColorHex([baseitem === "1" ? "default" : "ancient"]),
                 teams,
-                type: Cs2ItemType.Gloves
+                type: CS2ItemType.Gloves
             });
         }
     }
@@ -412,7 +412,7 @@ export class ItemGenerator {
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
                 index: Number(index),
                 rarity: this.getRarityColorHex(["rare"]),
-                type: Cs2ItemType.MusicKit
+                type: CS2ItemType.MusicKit
             });
         }
     }
@@ -455,7 +455,7 @@ export class ItemGenerator {
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
-                type: Cs2ItemType.Sticker
+                type: CS2ItemType.Sticker
             });
         }
     }
@@ -497,7 +497,7 @@ export class ItemGenerator {
                         index: Number(index),
                         rarity: this.getRarityColorHex([item_rarity]),
                         tint: tintId,
-                        type: Cs2ItemType.Graffiti
+                        type: CS2ItemType.Graffiti
                     });
                 }
                 continue;
@@ -520,7 +520,7 @@ export class ItemGenerator {
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
-                type: Cs2ItemType.Graffiti
+                type: CS2ItemType.Graffiti
             });
         }
     }
@@ -554,7 +554,7 @@ export class ItemGenerator {
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/patches/${patch_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
-                type: Cs2ItemType.Patch
+                type: CS2ItemType.Patch
             });
         }
     }
@@ -598,7 +598,7 @@ export class ItemGenerator {
                 model,
                 rarity: this.getRarityColorHex([name, item_rarity]),
                 teams,
-                type: Cs2ItemType.Agent,
+                type: CS2ItemType.Agent,
                 voFallback: this.getAgentVoFallback(voPrefix),
                 voFemale: this.getAgentVoFemale(voPrefix),
                 voPrefix
@@ -643,7 +643,7 @@ export class ItemGenerator {
                 index: undefined,
                 rarity: this.getRarityColorHex([item_rarity, "ancient"]),
                 teams: undefined,
-                type: Cs2ItemType.Collectible
+                type: CS2ItemType.Collectible
             });
         }
     }
@@ -677,7 +677,7 @@ export class ItemGenerator {
                 index: undefined,
                 rarity: this.getRarityColorHex(["common"]),
                 teams: undefined,
-                type: Cs2ItemType.Tool
+                type: CS2ItemType.Tool
             });
         }
     }
@@ -724,7 +724,7 @@ export class ItemGenerator {
             if (clientLootListKey === undefined) {
                 continue;
             }
-            let contentsType: Cs2ItemTypeValues | undefined;
+            let contentsType: CS2ItemTypeValues | undefined;
             const contents: number[] = [];
             for (const itemKey of this.getClientLootListItems(clientLootListKey)) {
                 const id = ensure(this.containerItems.get(itemKey));
@@ -773,7 +773,7 @@ export class ItemGenerator {
                         image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
                         rarity: this.getRarityColorHex(["common"]),
                         teams: undefined,
-                        type: Cs2ItemType.ContainerKey
+                        type: CS2ItemType.ContainerKey
                     });
                     return id;
                 });
@@ -798,14 +798,14 @@ export class ItemGenerator {
                     statTrakless: containsMusicKit && !containsStatTrak ? true : undefined,
                     statTrakOnly: containsMusicKit && containsStatTrak ? true : undefined,
                     teams: undefined,
-                    type: Cs2ItemType.Container
+                    type: CS2ItemType.Container
                 });
             }
         }
     }
 
     private persist() {
-        const items: Cs2ExportItem[] = Array.from(this.items.values()).map((item) => ({
+        const items: CS2ExportItem[] = Array.from(this.items.values()).map((item) => ({
             ...item,
             className: undefined,
             descToken: undefined,
@@ -877,7 +877,7 @@ export class ItemGenerator {
         return token !== undefined && this.csgoLanguages.english[token.substring(1).toLowerCase()] !== undefined;
     }
 
-    private addTranslation(id: number, property: keyof Cs2ItemLanguage, ...tokens: (string | undefined)[]) {
+    private addTranslation(id: number, property: keyof CS2ItemLanguage, ...tokens: (string | undefined)[]) {
         for (const [language, items] of Object.entries(this.itemLanguages)) {
             const itemLanguage = (items[id] ??= {});
             const string = tokens
@@ -902,14 +902,14 @@ export class ItemGenerator {
         }
     }
 
-    private tryAddTranslation(id: number, property: keyof Cs2ItemLanguage, ...tokens: (string | undefined)[]) {
+    private tryAddTranslation(id: number, property: keyof CS2ItemLanguage, ...tokens: (string | undefined)[]) {
         if (tokens.some((token) => token === undefined || (token.charAt(0) === "#" && !this.hasTranslation(token)))) {
             return undefined;
         }
         return this.addTranslation(id, property, ...tokens);
     }
 
-    private addFormattedTranslation(id: number, property: keyof Cs2ItemLanguage, key?: string, ...values: string[]) {
+    private addFormattedTranslation(id: number, property: keyof CS2ItemLanguage, key?: string, ...values: string[]) {
         for (const [language, items] of Object.entries(this.itemLanguages)) {
             (items[id] ??= {})[property] = (
                 this.findTranslation(key, language) ?? this.requireTranslation(key, "english")
@@ -930,11 +930,11 @@ export class ItemGenerator {
         const t = keys.includes("terrorists");
         switch (true) {
             case ct && t:
-                return Cs2ItemTeam.Both;
+                return CS2ItemTeam.Both;
             case ct:
-                return Cs2ItemTeam.CT;
+                return CS2ItemTeam.CT;
             case t:
-                return Cs2ItemTeam.T;
+                return CS2ItemTeam.T;
             default:
                 return fail();
         }
@@ -957,7 +957,7 @@ export class ItemGenerator {
             .join("_");
     }
 
-    private addItem(item: Cs2ExtendedItem) {
+    private addItem(item: CS2ExtendedItem) {
         if (item.base) {
             this.baseItems.push(item);
         }
@@ -1158,17 +1158,17 @@ export class ItemGenerator {
         return undefined;
     }
 
-    getContainerCategoryToken(name?: string, type?: Cs2ItemTypeValues) {
+    getContainerCategoryToken(name?: string, type?: CS2ItemTypeValues) {
         switch (true) {
             case name?.includes("Souvenir"):
                 return "#Inv_Category_souvenircase";
-            case type === Cs2ItemType.Weapon:
+            case type === CS2ItemType.Weapon:
                 return "#Inv_Category_weaponcase";
-            case type === Cs2ItemType.Sticker:
+            case type === CS2ItemType.Sticker:
                 return "#Inv_Category_stickercapsule";
-            case type === Cs2ItemType.Graffiti:
+            case type === CS2ItemType.Graffiti:
                 return "#Inv_Category_graffitibox";
-            case type === Cs2ItemType.Tool:
+            case type === CS2ItemType.Tool:
                 return "#Inv_Category_tools";
             default:
                 return undefined;
@@ -1180,7 +1180,7 @@ export class ItemGenerator {
         this.addTranslation(id, "desc", descToken);
         this.addItem({
             id,
-            type: Cs2ItemType.Stub
+            type: CS2ItemType.Stub
         });
         return id;
     }

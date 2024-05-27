@@ -5,15 +5,15 @@
 
 import { EnumValues } from "./utils.js";
 
-export const Cs2ItemTeam = {
+export const CS2ItemTeam = {
     T: 0,
     CT: 1,
     Both: 2
 } as const;
 
-export type Cs2ItemTeamValues = EnumValues<typeof Cs2ItemTeam>;
+export type CS2ItemTeamValues = EnumValues<typeof CS2ItemTeam>;
 
-export const Cs2ItemType = {
+export const CS2ItemType = {
     Agent: "agent",
     Collectible: "collectible",
     Container: "container",
@@ -29,9 +29,9 @@ export const Cs2ItemType = {
     Weapon: "weapon"
 } as const;
 
-export type Cs2ItemTypeValues = EnumValues<typeof Cs2ItemType>;
+export type CS2ItemTypeValues = EnumValues<typeof CS2ItemType>;
 
-export const Cs2ItemWear = {
+export const CS2ItemWear = {
     FactoryNew: 0,
     MinimalWear: 1,
     FieldTested: 2,
@@ -39,9 +39,9 @@ export const Cs2ItemWear = {
     BattleScarred: 4
 } as const;
 
-export type Cs2ItemWearValues = EnumValues<typeof Cs2ItemWear>;
+export type CS2ItemWearValues = EnumValues<typeof CS2ItemWear>;
 
-export interface Cs2Item {
+export interface CS2Item {
     altName?: string | undefined;
     base?: boolean | undefined;
     baseId?: number | undefined;
@@ -61,9 +61,9 @@ export interface Cs2Item {
     specialsImage?: boolean | undefined;
     statTrakless?: boolean | undefined;
     statTrakOnly?: boolean | undefined;
-    teams?: Cs2ItemTeamValues | undefined;
+    teams?: CS2ItemTeamValues | undefined;
     tint?: number | undefined;
-    type: Cs2ItemTypeValues;
+    type: CS2ItemTypeValues;
     voFallback?: boolean | undefined;
     voFemale?: boolean | undefined;
     voPrefix?: string | undefined;
@@ -71,7 +71,7 @@ export interface Cs2Item {
     wearMin?: number | undefined;
 }
 
-export interface Cs2ItemLanguage {
+export interface CS2ItemLanguage {
     category?: string | undefined;
     collectionDesc?: string | undefined;
     collectionName?: string | undefined;
@@ -80,4 +80,4 @@ export interface Cs2ItemLanguage {
     tournamentDesc?: string | undefined;
 }
 
-export type Cs2ItemLanguageFile = Record<string, Cs2ItemLanguage | undefined>;
+export type CS2ItemLanguageFile = Record<string, CS2ItemLanguage | undefined>;

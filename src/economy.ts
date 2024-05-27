@@ -44,27 +44,27 @@ import {
     CS2_RARITY_FOR_SOUNDS,
     CS2_RARITY_ORDER,
     CS2_STATTRAK_ODD,
-    CS2_randomFloat,
-    CS2_randomInt
+    randomFloat,
+    randomInt
 } from "./economy-container.js";
 import {
-    Cs2Item,
-    Cs2ItemLanguage,
-    Cs2ItemLanguageFile,
-    Cs2ItemTeam,
-    Cs2ItemTeamValues,
-    Cs2ItemType,
-    Cs2ItemTypeValues,
-    Cs2ItemWear,
-    Cs2ItemWearValues
+    CS2Item,
+    CS2ItemLanguage,
+    CS2ItemLanguageFile,
+    CS2ItemTeam,
+    CS2ItemTeamValues,
+    CS2ItemType,
+    CS2ItemTypeValues,
+    CS2ItemWear,
+    CS2ItemWearValues
 } from "./economy-types.js";
-import { Cs2TeamValues } from "./teams.js";
+import { CS2TeamValues } from "./teams.js";
 import { Interface, assert, compare, ensure, safe } from "./utils.js";
 
-type CSEconomyItemPredicate = Partial<Cs2EconomyItem> & { team?: Cs2TeamValues };
+type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2TeamValues };
 
-function filterItems(predicate: CSEconomyItemPredicate) {
-    return function filter(item: Cs2EconomyItem) {
+function filterItems(predicate: CS2EconomyItemPredicate) {
+    return function filter(item: CS2EconomyItem) {
         return (
             compare(predicate.type, item.type) &&
             compare(predicate.free, item.free) &&
@@ -76,19 +76,19 @@ function filterItems(predicate: CSEconomyItemPredicate) {
     };
 }
 
-export class Cs2EconomyInstance {
+export class CS2EconomyInstance {
     categories = new Set<string>();
-    items = new Map<number, Cs2EconomyItem>();
-    itemsAsArray: Cs2EconomyItem[] = [];
-    stickers = new Set<Cs2EconomyItem>();
+    items = new Map<number, CS2EconomyItem>();
+    itemsAsArray: CS2EconomyItem[] = [];
+    stickers = new Set<CS2EconomyItem>();
 
-    use({ items, language }: { items: Cs2Item[]; language: Cs2ItemLanguageFile }) {
+    use({ items, language }: { items: CS2Item[]; language: CS2ItemLanguageFile }) {
         this.categories.clear();
         this.items.clear();
         this.itemsAsArray = [];
         this.stickers.clear();
         for (const item of items) {
-            const economyItem = new Cs2EconomyItem(this, item, ensure(language[item.id]));
+            const economyItem = new CS2EconomyItem(this, item, ensure(language[item.id]));
             this.itemsAsArray.push(economyItem);
             this.items.set(item.id, economyItem);
             if (economyItem.isSticker()) {
@@ -98,25 +98,25 @@ export class Cs2EconomyInstance {
         }
     }
 
-    getById(id: number): Cs2EconomyItem {
+    getById(id: number): CS2EconomyItem {
         return ensure(this.items.get(id));
     }
 
-    get(idOrItem: number | Cs2EconomyItem): Cs2EconomyItem {
+    get(idOrItem: number | CS2EconomyItem): CS2EconomyItem {
         return typeof idOrItem === "number" ? this.getById(idOrItem) : idOrItem;
     }
 
-    findItem(predicate: CSEconomyItemPredicate): Cs2EconomyItem {
+    findItem(predicate: CS2EconomyItemPredicate): CS2EconomyItem {
         return ensure(this.itemsAsArray.find(filterItems(predicate)));
     }
 
-    filterItems(predicate: CSEconomyItemPredicate): Cs2EconomyItem[] {
+    filterItems(predicate: CS2EconomyItemPredicate): CS2EconomyItem[] {
         const items = this.itemsAsArray.filter(filterItems(predicate));
         assert(items.length > 0, "No items found.");
         return items;
     }
 
-    validateWear(wear?: number, item?: Cs2EconomyItem): boolean {
+    validateWear(wear?: number, item?: CS2EconomyItem): boolean {
         if (wear === undefined) {
             return true;
         }
@@ -131,11 +131,11 @@ export class Cs2EconomyInstance {
         return true;
     }
 
-    safeValidateWear(wear?: number, item?: Cs2EconomyItem): boolean {
+    safeValidateWear(wear?: number, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateWear(wear, item));
     }
 
-    validateSeed(seed?: number, item?: Cs2EconomyItem): boolean {
+    validateSeed(seed?: number, item?: CS2EconomyItem): boolean {
         if (seed === undefined) {
             return true;
         }
@@ -146,11 +146,11 @@ export class Cs2EconomyInstance {
         return true;
     }
 
-    safeValidateSeed(seed?: number, item?: Cs2EconomyItem): boolean {
+    safeValidateSeed(seed?: number, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateSeed(seed, item));
     }
 
-    validateStickers(stickers?: number[], wears?: number[], item?: Cs2EconomyItem): boolean {
+    validateStickers(stickers?: number[], wears?: number[], item?: CS2EconomyItem): boolean {
         if (stickers === undefined) {
             assert(wears === undefined, "Stickers array is undefined.");
             return true;
@@ -185,7 +185,7 @@ export class Cs2EconomyInstance {
         return trimmed === "" ? undefined : trimmed;
     }
 
-    validateNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
+    validateNametag(nametag?: string, item?: CS2EconomyItem): boolean {
         if (nametag !== undefined) {
             assert(item === undefined || item.hasNametag(), "The provided item does not have a nametag.");
             assert(nametag[0] !== " " && CS2_NAMETAG_RE.test(nametag), "Invalid nametag format.");
@@ -193,20 +193,20 @@ export class Cs2EconomyInstance {
         return true;
     }
 
-    safeValidateNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
+    safeValidateNametag(nametag?: string, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateNametag(nametag, item));
     }
 
-    requireNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
+    requireNametag(nametag?: string, item?: CS2EconomyItem): boolean {
         assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
         return this.validateNametag(nametag, item);
     }
 
-    safeRequireNametag(nametag?: string, item?: Cs2EconomyItem): boolean {
+    safeRequireNametag(nametag?: string, item?: CS2EconomyItem): boolean {
         return safe(() => this.requireNametag(nametag, item));
     }
 
-    validateStatTrak(stattrak?: number, item?: Cs2EconomyItem): boolean {
+    validateStatTrak(stattrak?: number, item?: CS2EconomyItem): boolean {
         if (stattrak === undefined) {
             return true;
         }
@@ -219,22 +219,22 @@ export class Cs2EconomyInstance {
         return true;
     }
 
-    safeValidateStatTrak(stattrak?: number, item?: Cs2EconomyItem): boolean {
+    safeValidateStatTrak(stattrak?: number, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateStatTrak(stattrak, item));
     }
 
-    getWearFromValue(value: number): Cs2ItemWearValues {
+    getWearFromValue(value: number): CS2ItemWearValues {
         switch (true) {
             case value <= CS2_MAX_FACTORY_NEW_WEAR:
-                return Cs2ItemWear.FactoryNew;
+                return CS2ItemWear.FactoryNew;
             case value <= CS2_MAX_MINIMAL_WEAR_WEAR:
-                return Cs2ItemWear.MinimalWear;
+                return CS2ItemWear.MinimalWear;
             case value <= CS2_MAX_FIELD_TESTED_WEAR:
-                return Cs2ItemWear.FieldTested;
+                return CS2ItemWear.FieldTested;
             case value <= CS2_MAX_WELL_WORN_WEAR:
-                return Cs2ItemWear.WellWorn;
+                return CS2ItemWear.WellWorn;
             default:
-                return Cs2ItemWear.BattleScarred;
+                return CS2ItemWear.BattleScarred;
         }
     }
 
@@ -242,11 +242,11 @@ export class Cs2EconomyInstance {
         return Array.from(this.categories).sort();
     }
 
-    getStickers(): Cs2EconomyItem[] {
+    getStickers(): CS2EconomyItem[] {
         return Array.from(this.stickers);
     }
 
-    resolveItemImage(baseUrl: string, item: number | Cs2EconomyItem, wear?: number): string {
+    resolveItemImage(baseUrl: string, item: number | CS2EconomyItem, wear?: number): string {
         item = this.get(item);
         const { id, image } = item;
         if (item.hasWear() && wear !== undefined) {
@@ -268,20 +268,20 @@ export class Cs2EconomyInstance {
         return image;
     }
 
-    resolveCollectionImage(baseUrl: string, item: number | Cs2EconomyItem): string {
+    resolveCollectionImage(baseUrl: string, item: number | CS2EconomyItem): string {
         const { collection } = this.get(item);
         assert(collection, "Item does not have a collection.");
         return `${baseUrl}/${collection}.png`;
     }
 
-    resolveContainerSpecialsImage(baseUrl: string, item: number | Cs2EconomyItem): string {
+    resolveContainerSpecialsImage(baseUrl: string, item: number | CS2EconomyItem): string {
         item = this.get(item).expectContainer();
         const { id, specialsImage, rawSpecials } = item;
         assert(rawSpecials, "Container does not have special items.");
         return specialsImage ? `${baseUrl}/${id}_rare.png` : `${baseUrl}/default_rare_item.png`;
     }
 
-    validateContainerAndKey(containerItem: number | Cs2EconomyItem, keyItem?: number | Cs2EconomyItem) {
+    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem) {
         containerItem = this.get(containerItem);
         containerItem.expectContainer();
         keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
@@ -295,13 +295,13 @@ export class Cs2EconomyInstance {
         return true;
     }
 
-    safeValidateContainerAndKey(containerItem: number | Cs2EconomyItem, keyItem?: number | Cs2EconomyItem) {
+    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem) {
         return safe(() => this.validateContainerAndKey(containerItem, keyItem));
     }
 
     validateUnlockedItem(
-        item: number | Cs2EconomyItem,
-        { id }: ReturnType<InstanceType<typeof Cs2EconomyItem>["unlock"]>
+        item: number | CS2EconomyItem,
+        { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlock"]>
     ) {
         item = this.get(item).expectContainer();
         assert(
@@ -311,13 +311,13 @@ export class Cs2EconomyInstance {
     }
 }
 
-export class Cs2EconomyItem
+export class CS2EconomyItem
     implements
         Interface<
-            Omit<Cs2Item, "contents" | "specials" | "teams"> &
-                Cs2ItemLanguage & {
-                    contents: Cs2EconomyItem[] | undefined;
-                    teams: Cs2TeamValues[] | undefined;
+            Omit<CS2Item, "contents" | "specials" | "teams"> &
+                CS2ItemLanguage & {
+                    contents: CS2EconomyItem[] | undefined;
+                    teams: CS2TeamValues[] | undefined;
                 }
         >
 {
@@ -344,7 +344,7 @@ export class Cs2EconomyItem
     statTrakOnly: boolean | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
-    type: Cs2ItemTypeValues = null!;
+    type: CS2ItemTypeValues = null!;
     voFallback: boolean | undefined;
     voFemale: boolean | undefined;
     voPrefix: string | undefined;
@@ -352,11 +352,11 @@ export class Cs2EconomyItem
     wearMin: number | undefined;
 
     private $contents: number[] | undefined;
-    private $economyInstance: Cs2EconomyInstance;
+    private $economyInstance: CS2EconomyInstance;
     private $specials: number[] | undefined;
-    private $teams: Cs2ItemTeamValues | undefined;
+    private $teams: CS2ItemTeamValues | undefined;
 
-    constructor(economyInstance: Cs2EconomyInstance, item: Cs2Item, language: Cs2ItemLanguage) {
+    constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLanguage) {
         this.$economyInstance = economyInstance;
         Object.assign(this, { ...item, teams: undefined });
         Object.assign(this, language);
@@ -371,12 +371,12 @@ export class Cs2EconomyItem
         this.$contents = value;
     }
 
-    get contents(): Cs2EconomyItem[] {
+    get contents(): CS2EconomyItem[] {
         this.expectContainer();
         return ensure(this.$contents).map((id) => this.$economyInstance.get(id));
     }
 
-    get parent(): Cs2EconomyItem | undefined {
+    get parent(): CS2EconomyItem | undefined {
         return this.baseId !== undefined ? this.$economyInstance.get(this.baseId) : undefined;
     }
 
@@ -392,22 +392,22 @@ export class Cs2EconomyItem
         this.$specials = value;
     }
 
-    get specials(): Cs2EconomyItem[] | undefined {
+    get specials(): CS2EconomyItem[] | undefined {
         this.expectContainer();
         return this.$specials?.map((id) => this.$economyInstance.get(id));
     }
 
-    set teams(value: Cs2ItemTeamValues) {
+    set teams(value: CS2ItemTeamValues) {
         this.$teams = value;
     }
 
-    get teams(): Cs2TeamValues[] | undefined {
+    get teams(): CS2TeamValues[] | undefined {
         switch (this.$teams) {
-            case Cs2ItemTeam.Both:
+            case CS2ItemTeam.Both:
                 return CS2_TEAMS_BOTH;
-            case Cs2ItemTeam.T:
+            case CS2ItemTeam.T:
                 return CS2_TEAMS_T;
-            case Cs2ItemTeam.CT:
+            case CS2ItemTeam.CT:
                 return CS2_TEAMS_CT;
             default:
                 return undefined;
@@ -419,31 +419,31 @@ export class Cs2EconomyItem
     }
 
     isSticker(): boolean {
-        return this.type === Cs2ItemType.Sticker;
+        return this.type === CS2ItemType.Sticker;
     }
 
     isGloves(): boolean {
-        return this.type === Cs2ItemType.Gloves;
+        return this.type === CS2ItemType.Gloves;
     }
 
     isStorageUnit(): boolean {
-        return this.type === Cs2ItemType.Tool && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
+        return this.type === CS2ItemType.Tool && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
     }
 
     isNameTag(): boolean {
-        return this.type === Cs2ItemType.Tool && this.def === CS2_NAMETAG_TOOL_DEF;
+        return this.type === CS2ItemType.Tool && this.def === CS2_NAMETAG_TOOL_DEF;
     }
 
     isStatTrakSwapTool(): boolean {
-        return this.type === Cs2ItemType.Tool && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
+        return this.type === CS2ItemType.Tool && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
     }
 
     isContainer(): boolean {
-        return this.type === Cs2ItemType.Container;
+        return this.type === CS2ItemType.Container;
     }
 
     isContainerKey(): boolean {
-        return this.type === Cs2ItemType.ContainerKey;
+        return this.type === CS2ItemType.ContainerKey;
     }
 
     expectSticker(): this {
@@ -512,8 +512,8 @@ export class Cs2EconomyItem
         return this.category === this.$economyInstance.getById(CS2_SOUVENIR_CASE_ID).category;
     }
 
-    groupContents(): Record<string, Cs2EconomyItem[]> {
-        const items: Record<string, Cs2EconomyItem[]> = {};
+    groupContents(): Record<string, CS2EconomyItem[]> {
+        const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
         for (const item of this.contents) {
             const rarity = CS2_RARITY_COLORS[item.rarity];
@@ -534,7 +534,7 @@ export class Cs2EconomyItem
         return items;
     }
 
-    listContents(hideSpecials = false): Cs2EconomyItem[] {
+    listContents(hideSpecials = false): CS2EconomyItem[] {
         const specials = this.specials;
         const items = [...this.contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
         return items.sort((a, b) => {
@@ -581,7 +581,7 @@ export class Cs2EconomyItem
         return {
             attributes: {
                 containerid: this.id,
-                seed: unlocked.hasSeed() ? CS2_randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
+                seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
                 stattrak: hasStatTrak
                     ? unlocked.hasStatTrak()
                         ? alwaysStatTrak || Math.random() <= CS2_STATTRAK_ODD
@@ -591,7 +591,7 @@ export class Cs2EconomyItem
                     : undefined,
                 wear: unlocked.hasWear()
                     ? Number(
-                          CS2_randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR)
+                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR)
                               .toString()
                               .substring(0, CS2_WEAR_FACTOR.toString().length)
                       )
@@ -604,4 +604,4 @@ export class Cs2EconomyItem
     }
 }
 
-export const Cs2Economy = new Cs2EconomyInstance();
+export const CS2Economy = new CS2EconomyInstance();

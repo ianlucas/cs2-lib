@@ -5,9 +5,9 @@
 
 import { fail } from "./utils.js";
 
-type KeyValue = [string, string | KeyValue[]];
+type CS2KeyValue = [string, string | CS2KeyValue[]];
 
-export class KeyValues {
+export class CS2KeyValues {
     static parse<T = any>(data: string) {
         data = data.replace(/\[[\$!][^\]]+\]/g, "");
         let index = 0;
@@ -74,7 +74,7 @@ export class KeyValues {
         }
 
         function parsePairs() {
-            const pairs: KeyValue[] = [];
+            const pairs: CS2KeyValue[] = [];
             while (data[index]) {
                 if (data[index] === "}") {
                     index += 1;
@@ -90,7 +90,7 @@ export class KeyValues {
             return pairs;
         }
 
-        function walk(context: any, pairs: KeyValue[]) {
+        function walk(context: any, pairs: CS2KeyValue[]) {
             return pairs.reduce((object, pair) => {
                 const [key, value] = pair;
                 const newValue = typeof value === "string" ? value : walk({}, value);

@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as cheerio from "cheerio";
-import { Cs2ItemType, Cs2ItemTypeValues } from "../src/economy-types.js";
+import { CS2ItemType, CS2ItemTypeValues } from "../src/economy-types.js";
 import { ensure } from "../src/utils.js";
-import { Cs2ExtendedItem } from "./item-generator-types.js";
+import { CS2ExtendedItem } from "./item-generator-types.js";
 import { dedupe, fetchText, readJson, shouldRun, sleep, writeJson } from "./utils.js";
 
-const MELEE_OR_GLOVES_TYPES: Cs2ItemTypeValues[] = [Cs2ItemType.Melee, Cs2ItemType.Gloves];
-
+const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 export class ContainerScraper {
     private specialsData = readJson<Record<string, string[]>>("assets/data/container-specials.json", {});
     private specials: Record<string, number[] | undefined> = {};
@@ -64,7 +63,7 @@ export class ContainerScraper {
         return items;
     }
 
-    populate(items: (readonly [string, Cs2ExtendedItem])[]) {
+    populate(items: (readonly [string, CS2ExtendedItem])[]) {
         const lookup: Record<string, number> = {};
         for (const [name, item] of items) {
             if (MELEE_OR_GLOVES_TYPES.includes(item.type)) {
