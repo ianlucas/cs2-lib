@@ -60,11 +60,9 @@ export class ItemIdentifierManager {
     allIdentifiers = readJson<string[]>(ITEM_IDS_JSON_PATH, []);
     uniqueIdentifiers: string[] = [];
 
-    get(identifier: string, performUniqueCheck = true) {
-        if (performUniqueCheck) {
-            assert(!this.uniqueIdentifiers.includes(identifier));
-            this.uniqueIdentifiers.push(identifier);
-        }
+    get(identifier: string) {
+        assert(!this.uniqueIdentifiers.includes(identifier));
+        this.uniqueIdentifiers.push(identifier);
         const index = this.allIdentifiers.indexOf(identifier);
         if (index === -1) {
             this.allIdentifiers.push(identifier);
@@ -1190,7 +1188,7 @@ export class ItemGenerator {
     }
 
     createStub(name: string, descToken: string) {
-        const id = this.itemIdentifierManager.get(`stub_${name}`, false);
+        const id = this.itemIdentifierManager.get(`stub_${name}`);
         this.addTranslation(id, "desc", descToken);
         this.addItem({
             id,
