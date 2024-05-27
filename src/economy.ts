@@ -546,12 +546,9 @@ export class CS2EconomyItem
         });
     }
 
-    /**
-     * @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
-     */
     unlock(): {
         attributes: {
-            containerid: number;
+            containerId: number;
             seed: number | undefined;
             stattrak: number | undefined;
             wear: number | undefined;
@@ -560,6 +557,7 @@ export class CS2EconomyItem
         rarity: CS2RaritySoundNameValues;
         special: boolean;
     } {
+        // @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
         const contents = this.groupContents();
         const keys = Object.keys(contents);
         const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
@@ -581,7 +579,7 @@ export class CS2EconomyItem
         const alwaysStatTrak = this.statTrakOnly === true;
         return {
             attributes: {
-                containerid: this.id,
+                containerId: this.id,
                 seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
                 stattrak: hasStatTrak
                     ? unlocked.hasStatTrak()
