@@ -357,7 +357,7 @@ export class CS2EconomyItem
 
     constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLocalization) {
         this.$economyInstance = economyInstance;
-        Object.assign(this, { ...item, teams: undefined });
+        Object.assign(this, item);
         Object.assign(this, language);
         assert(this.id);
         assert(this.type);
