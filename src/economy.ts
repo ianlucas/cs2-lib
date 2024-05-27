@@ -37,11 +37,13 @@ import {
     CS2_WEAR_FACTOR
 } from "./economy-constants.js";
 import {
+    CS2RarityColorName,
+    CS2RarityColorOrder,
+    CS2RarityColorValues,
+    CS2RaritySoundName,
+    CS2RaritySoundNameValues,
     CS2_BASE_ODD,
-    CS2_RARITY_COLORS,
     CS2_RARITY_COLOR_DEFAULT,
-    CS2_RARITY_COLOR_ORDER,
-    CS2_RARITY_FOR_SOUNDS,
     CS2_RARITY_ORDER,
     CS2_STATTRAK_ODD,
     randomFloat,
@@ -337,7 +339,7 @@ export class CS2EconomyItem
     legacy: boolean | undefined;
     model: string | undefined;
     name: string = null!;
-    rarity: string = null!;
+    rarity: CS2RarityColorValues = null!;
     specialsImage: boolean | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
@@ -360,9 +362,9 @@ export class CS2EconomyItem
         Object.assign(this, item);
         Object.assign(this, language);
         assert(this.id);
-        assert(this.type);
         assert(this.name);
         assert(this.rarity);
+        assert(this.type);
         assert(this.type);
     }
 
@@ -515,7 +517,7 @@ export class CS2EconomyItem
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
         for (const item of this.contents) {
-            const rarity = CS2_RARITY_COLORS[item.rarity];
+            const rarity = CS2RarityColorName[item.rarity];
             if (!items[rarity]) {
                 items[rarity] = [];
             }
@@ -538,8 +540,8 @@ export class CS2EconomyItem
         const items = [...this.contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
         return items.sort((a, b) => {
             return (
-                (CS2_RARITY_COLOR_ORDER[a.rarity] ?? CS2_RARITY_COLOR_DEFAULT) -
-                (CS2_RARITY_COLOR_ORDER[b.rarity] ?? CS2_RARITY_COLOR_DEFAULT)
+                (CS2RarityColorOrder[a.rarity] ?? CS2_RARITY_COLOR_DEFAULT) -
+                (CS2RarityColorOrder[b.rarity] ?? CS2_RARITY_COLOR_DEFAULT)
             );
         });
     }
@@ -555,7 +557,7 @@ export class CS2EconomyItem
             wear: number | undefined;
         };
         id: number;
-        rarity: string;
+        rarity: CS2RaritySoundNameValues;
         special: boolean;
     } {
         const contents = this.groupContents();
@@ -597,7 +599,7 @@ export class CS2EconomyItem
                     : undefined
             },
             id: unlocked.id,
-            rarity: CS2_RARITY_FOR_SOUNDS[unlocked.rarity],
+            rarity: CS2RaritySoundName[unlocked.rarity],
             special: rollRarity === "special"
         };
     }
