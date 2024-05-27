@@ -8,7 +8,7 @@ import { CS2Team } from "./teams.js";
 
 export const CS2_MIN_STATTRAK = 0;
 export const CS2_MAX_STATTRAK = 999999;
-export const CS2_WEAR_FACTOR = 0.000001;
+
 export const CS2_MIN_WEAR = 0;
 export const CS2_MAX_WEAR = 1;
 export const CS2_DEFAULT_MIN_WEAR = 0.06;
@@ -27,6 +27,7 @@ export const CS2_MIN_SEED = 1;
 export const CS2_MAX_SEED = 1000;
 export const CS2_MIN_STICKER_WEAR = 0;
 export const CS2_MAX_STICKER_WEAR = 0.9;
+export const CS2_WEAR_FACTOR = 0.000001;
 
 export const CS2_NONE = 0;
 export const CS2_STICKER_WEAR_FACTOR = 0.1;
