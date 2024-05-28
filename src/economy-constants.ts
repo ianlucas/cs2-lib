@@ -38,16 +38,13 @@ export const CS2_NAMETAG_TOOL_DEF = 1200;
 export const CS2_STATTRAK_SWAP_TOOL_DEF = 1324;
 export const CS2_STORAGE_UNIT_TOOL_DEF = 1201;
 
-export const CS2_GRAFFITI_BOX_ID = 11234;
-export const CS2_SOUVENIR_CASE_ID = 9147;
-export const CS2_STICKER_CAPSULE_ID = 9134;
-export const CS2_WEAPON_CASE_ID = 9129;
-
 export const CS2_NAMETAGGABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon];
 export const CS2_SEEDABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2ItemType.Melee, CS2ItemType.Gloves];
-export const CS2_STATTRAKABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit]
+export const CS2_STATTRAKABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit];
 export const CS2_STICKERABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon];
 export const CS2_WEARABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
+
+export const CS2_CONTAINER_OR_TOOL_ITEM: CS2ItemTypeValues[] = [CS2ItemType.Container, CS2ItemType.Tool];
 
 export const CS2_TEAMS_BOTH = [CS2Team.T, CS2Team.CT];
 export const CS2_TEAMS_CT = [CS2Team.CT];

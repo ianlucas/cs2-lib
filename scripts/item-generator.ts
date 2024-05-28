@@ -11,6 +11,7 @@ import { format } from "util";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
 import { CS2RarityColorValues } from "../src/economy-container.js";
 import {
+    CS2ContainerType,
     CS2ItemLocalization,
     CS2ItemLocalizationByLanguage,
     CS2ItemTeam,
@@ -674,7 +675,6 @@ export class ItemGenerator {
             this.addContainerItem(name, id);
             this.addTranslation(id, "name", "#CSGO_Type_Tool", " | ", item_name);
             this.addTranslation(id, "desc", item_description);
-            this.addTranslation(id, "category", "#Inv_Category_tools");
             this.addItem({
                 def: Number(index),
                 free: baseitem === "1" ? true : undefined,
@@ -789,10 +789,10 @@ export class ItemGenerator {
                 const containsMusicKit = containerName.includes("Music Kit");
                 const containsStatTrak = containerName.includes("StatTrak");
                 this.addTranslation(id, "name", "#CSGO_Type_WeaponCase", " | ", item_name);
-                this.tryAddTranslation(id, "category", this.getContainerCategoryToken(containerName, contentsType));
                 this.tryAddTranslation(id, "desc", item_description);
                 this.addItem({
                     ...this.getCollection(id, tags?.ItemSet?.tag_value),
+                    containerType: this.getContainerType(containerName, contentsType),
                     contents,
                     def: Number(containerIndex),
                     id,
@@ -1172,18 +1172,16 @@ export class ItemGenerator {
         return undefined;
     }
 
-    getContainerCategoryToken(name?: string, type?: CS2ItemTypeValues) {
+    getContainerType(name?: string, type?: CS2ItemTypeValues) {
         switch (true) {
             case name?.includes("Souvenir"):
-                return "#Inv_Category_souvenircase";
+                return CS2ContainerType.SouvenirCase;
             case type === CS2ItemType.Weapon:
-                return "#Inv_Category_weaponcase";
+                return CS2ContainerType.WeaponCase;
             case type === CS2ItemType.Sticker:
-                return "#Inv_Category_stickercapsule";
+                return CS2ContainerType.StickerCapsule;
             case type === CS2ItemType.Graffiti:
-                return "#Inv_Category_graffitibox";
-            case type === CS2ItemType.Tool:
-                return "#Inv_Category_tools";
+                return CS2ContainerType.GraffitiBox;
             default:
                 return undefined;
         }

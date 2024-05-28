@@ -42,12 +42,22 @@ export const CS2ItemWear = {
 
 export type CS2ItemWearValues = EnumValues<typeof CS2ItemWear>;
 
+export const CS2ContainerType = {
+    WeaponCase: 0,
+    StickerCapsule: 1,
+    GraffitiBox: 2,
+    SouvenirCase: 3
+} as const;
+
+export type CS2ContainerTypeValues = EnumValues<typeof CS2ContainerType>;
+
 export interface CS2Item {
     altName?: string | undefined;
     base?: boolean | undefined;
     baseId?: number | undefined;
     category?: string | undefined;
     collection?: string | undefined;
+    containerType?: CS2ContainerTypeValues | undefined;
     contents?: number[] | undefined;
     def?: number | undefined;
     free?: boolean | undefined;
