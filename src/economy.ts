@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    CS2_GRAFFITI_BOX_ID,
+    CS2_CONTAINER_OR_TOOL_ITEM,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
     CS2_MAX_MINIMAL_WEAR_WEAR,
@@ -22,17 +22,14 @@ import {
     CS2_NAMETAG_TOOL_DEF,
     CS2_NONE,
     CS2_SEEDABLE_ITEMS,
-    CS2_SOUVENIR_CASE_ID,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEF,
     CS2_STICKERABLE_ITEMS,
-    CS2_STICKER_CAPSULE_ID,
     CS2_STICKER_WEAR_FACTOR,
     CS2_STORAGE_UNIT_TOOL_DEF,
     CS2_TEAMS_BOTH,
     CS2_TEAMS_CT,
     CS2_TEAMS_T,
-    CS2_WEAPON_CASE_ID,
     CS2_WEARABLE_ITEMS,
     CS2_WEAR_FACTOR
 } from "./economy-constants.js";
@@ -50,6 +47,8 @@ import {
     randomInt
 } from "./economy-container.js";
 import {
+    CS2ContainerType,
+    CS2ContainerTypeValues,
     CS2Item,
     CS2ItemLocalization,
     CS2ItemLocalizationMap,
@@ -329,6 +328,7 @@ export class CS2EconomyItem
     collection: string | undefined;
     collectionDesc: string | undefined;
     collectionName: string | undefined;
+    containerType: CS2ContainerTypeValues | undefined;
     def: number | undefined;
     desc: string | undefined;
     free: boolean | undefined;
@@ -447,6 +447,14 @@ export class CS2EconomyItem
         return this.type === CS2ItemType.ContainerKey;
     }
 
+    isContainerOrTool(): boolean {
+        return CS2_CONTAINER_OR_TOOL_ITEM.includes(this.type);
+    }
+
+    isTool(): boolean {
+        return this.type === CS2ItemType.Tool;
+    }
+
     expectSticker(): this {
         assert(this.isSticker(), "Expected a Sticker.");
         return this;
@@ -498,19 +506,19 @@ export class CS2EconomyItem
     }
 
     isWeaponCase(): boolean {
-        return this.category === this._economyInstance.getById(CS2_WEAPON_CASE_ID).category;
+        return this.containerType === CS2ContainerType.WeaponCase;
     }
 
     isStickerCapsule(): boolean {
-        return this.category === this._economyInstance.getById(CS2_STICKER_CAPSULE_ID).category;
+        return this.containerType === CS2ContainerType.StickerCapsule;
     }
 
     isGraffitiBox(): boolean {
-        return this.category === this._economyInstance.getById(CS2_GRAFFITI_BOX_ID).category;
+        return this.containerType === CS2ContainerType.GraffitiBox;
     }
 
     isSouvenirCase(): boolean {
-        return this.category === this._economyInstance.getById(CS2_SOUVENIR_CASE_ID).category;
+        return this.containerType === CS2ContainerType.SouvenirCase;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

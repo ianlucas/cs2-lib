@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2ItemTeam, CS2ItemType } from "../src/economy-types.js";
+import { CS2ContainerType, CS2ItemTeam, CS2ItemType } from "../src/economy-types.js";
 import { CS2_ITEMS } from "../src/items.js";
 import { assert, ensure } from "../src/utils.js";
 import { log, readJson, shouldRun } from "./utils.js";
@@ -45,6 +45,13 @@ const v4TypeToV5 = {
     weapon: CS2ItemType.Weapon
 };
 
+const v4CategoryToV5 = {
+    "Weapon Cases": CS2ContainerType.WeaponCase,
+    "Sticker Capsules": CS2ContainerType.StickerCapsule,
+    "Graffiti Boxes": CS2ContainerType.GraffitiBox,
+    "Souvenir Cases": CS2ContainerType.SouvenirCase
+};
+
 function v4TeamsToV5Teams(value: number[]) {
     const t = value.includes(2);
     const ct = value.includes(3);
@@ -79,8 +86,13 @@ async function testV5Upgrade() {
                 v4Value = undefined;
             }
             if (v4Key === "category" && ["tool", "case"].includes(v4Item.type)) {
+                v4Value = v4CategoryToV5[v4Value];
+                assert(
+                    v4Value === v5Item.containerType,
+                    `Item ${v4Item.id} has different containerType (${v4Value} vs ${v5Item.containerType})`
+                );
                 // Now Cases & Tools have `category` equals `undefined`.
-                // They're moved to the language file.
+                // `containerType` now specifies the type of the container.
                 v4Value = undefined;
             }
             const v5Key = v4PropertiesToV5[v4Key] ?? v4Key;
@@ -92,7 +104,7 @@ async function testV5Upgrade() {
     }
 
     const v4English = await fetchFromV4("assets/translations/items-english.json");
-    const v5English = readJson<any>("assets/translations/items-english.json");
+    const v5English = readJson<any>("assets/localizations/items-english.json");
     for (const [id, v4Translation] of Object.entries<any>(v4English)) {
         const v5Translation = ensure(v5English[id]);
         const v4Item = ensure(v4Items.get(Number(id)));
@@ -123,6 +135,10 @@ async function testV5Upgrade() {
                     // Patches didn't have description in v4.
                     v4Value = v5Translation.desc;
                 }
+            }
+            if (v4Key === "category" && ["tool", "case"].includes(v4Item.type)) {
+                // Now Cases & Tools have `category` equals `undefined`.
+                v4Value = undefined;
             }
             const v5Key = v4PropertiesToV5[v4Key] ?? v4Key;
             assert(
