@@ -33,11 +33,11 @@ export const CS2ItemType = {
 export type CS2ItemTypeValues = EnumValues<typeof CS2ItemType>;
 
 export const CS2ItemWear = {
-    FactoryNew: 0,
-    MinimalWear: 1,
-    FieldTested: 2,
-    WellWorn: 3,
-    BattleScarred: 4
+    FactoryNew: "FN",
+    MinimalWear: "MW",
+    FieldTested: "FT",
+    WellWorn: "WW",
+    BattleScarred: "BS"
 } as const;
 
 export type CS2ItemWearValues = EnumValues<typeof CS2ItemWear>;
