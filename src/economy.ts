@@ -425,6 +425,11 @@ export class CS2EconomyItem
         return this.type === CS2ItemType.Tool;
     }
 
+    expectAgent(): this {
+        assert(this.isAgent());
+        return this;
+    }
+
     expectPatch(): this {
         assert(this.isPatch());
         return this;

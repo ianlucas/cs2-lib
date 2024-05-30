@@ -452,7 +452,7 @@ export class CS2Inventory {
         assert(patchIndex >= 0 && patchIndex <= CS2_MAX_PATCHES - 1);
         const target = this.get(targetUid);
         const patch = this.get(patchUid);
-        assert(target.props.isAgent());
+        target.props.expectAgent();
         patch.props.expectPatch();
         const patches = target.patches ?? {};
         assert(patches[patchIndex] === undefined);
