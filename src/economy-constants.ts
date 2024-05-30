@@ -28,6 +28,7 @@ export const CS2_MAX_SEED = 1000;
 export const CS2_MIN_STICKER_WEAR = 0;
 export const CS2_MAX_STICKER_WEAR = 0.9;
 export const CS2_MAX_STICKERS = 5;
+export const CS2_MAX_PATCHES = 5;
 
 export const CS2_NONE = 0;
 export const CS2_STICKER_WEAR_FACTOR = 0.1;

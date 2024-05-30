@@ -5,7 +5,7 @@
 
 import english from "../assets/localizations/items-english.json";
 import { CS2Economy } from "./economy";
-import { CS2_MAX_STATTRAK } from "./economy-constants";
+import { CS2_MAX_PATCHES, CS2_MAX_STATTRAK } from "./economy-constants";
 import { CS2Inventory } from "./inventory";
 import { CS2_ITEMS } from "./items";
 import { CS2Team } from "./teams";
@@ -40,6 +40,8 @@ const TKLIKSPHILIP_HEADING_FOR_THE_SOURCE_ID = 1841;
 const AWOLNATION_I_AM_ID = 1801;
 const BROKEN_FANG_GLOVES_ID = 56;
 const BROKEN_FANG_GLOVES_JADE_ID = 1707;
+const BLOODY_DARRYL_THE_STRAPPED_ID = 8657;
+const BLOODHOUND_ID = 8569;
 
 CS2Economy.use({ items: CS2_ITEMS, language: english });
 
@@ -514,5 +516,29 @@ describe("CS2Inventory methods", () => {
         for (let uid = 0; uid < 3; uid++) {
             expect(storage.get(uid)!.statTrak).toBe(uid + 1);
         }
+    });
+
+    test("apply and remove patches", () => {
+        inventory.add({ id: BLOODY_DARRYL_THE_STRAPPED_ID }); // 0
+        inventory.add({ id: BLOODHOUND_ID }); // 1
+        inventory.add({ id: BLOODHOUND_ID }); // 2
+        inventory.add({ id: BLOODHOUND_ID }); // 3
+        inventory.add({ id: BLOODHOUND_ID }); // 4
+        inventory.add({ id: BLOODHOUND_ID }); // 5
+        expect(() => inventory.applyItemPatch(0, 1, -1)).toThrow();
+        expect(() => inventory.applyItemPatch(0, 1, CS2_MAX_PATCHES)).toThrow();
+        for (let uid = 1; uid < 1 + 5; uid++) {
+            const index = uid - 1;
+            inventory.applyItemPatch(0, uid, index);
+            expect(inventory.get(0).patches?.[index]).toBe(BLOODHOUND_ID);
+        }
+        expect(() => inventory.removeItemPatch(0, -1)).toThrow();
+        expect(() => inventory.removeItemPatch(0, CS2_MAX_PATCHES)).toThrow();
+        for (let uid = 1; uid < 1 + 5; uid++) {
+            const index = uid - 1;
+            inventory.removeItemPatch(0, index);
+            expect(inventory.get(0).patches?.[index]).toBe(undefined);
+        }
+        expect(inventory.get(0).patches).toBe(undefined);
     });
 });
