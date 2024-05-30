@@ -43,7 +43,7 @@ export class CS2Veto {
             value: CS2VetoAction.Available
         }));
         switch (type) {
-            case "bo1":
+            case CS2VetoType.BO1:
                 this.actions = [
                     CS2VetoAction.Ban,
                     CS2VetoAction.Ban,
@@ -53,7 +53,7 @@ export class CS2Veto {
                     CS2VetoAction.Ban
                 ];
                 break;
-            case "bo3":
+            case CS2VetoType.BO3:
                 this.actions = [
                     CS2VetoAction.Ban,
                     CS2VetoAction.Ban,
@@ -63,7 +63,7 @@ export class CS2Veto {
                     CS2VetoAction.Ban
                 ];
                 break;
-            case "bo5":
+            case CS2VetoType.BO5:
                 this.actions = [
                     CS2VetoAction.Ban,
                     CS2VetoAction.Ban,
@@ -73,7 +73,7 @@ export class CS2Veto {
                     CS2VetoAction.Pick
                 ];
                 break;
-            case "custom":
+            case CS2VetoType.Custom:
                 this.actions = ensure(actions);
                 break;
         }
@@ -133,8 +133,7 @@ export class CS2Veto {
             return false;
         }
         const index = Math.floor(Math.random() * available.length);
-        const mapname = available[index];
-        assert(mapname, "Unable to get random mapname.");
+        const mapname = ensure(available[index]);
         return this.choose(mapname);
     }
 
