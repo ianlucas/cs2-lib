@@ -112,7 +112,7 @@ export class CS2EconomyInstance {
 
     filterItems(predicate: CS2EconomyItemPredicate): CS2EconomyItem[] {
         const items = this.itemsAsArray.filter(filterItems(predicate));
-        assert(items.length > 0, "No items found.");
+        assert(items.length > 0);
         return items;
     }
 
@@ -120,13 +120,13 @@ export class CS2EconomyInstance {
         if (wear === undefined) {
             return true;
         }
-        assert(!Number.isNaN(wear), "Wear must be a number.");
-        assert(String(wear).length <= String(CS2_WEAR_FACTOR).length, "Wear value is too long.");
-        assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR, "Wear value must be between CS_MIN_WEAR and CS_MAX_WEAR.");
+        assert(!Number.isNaN(wear));
+        assert(String(wear).length <= String(CS2_WEAR_FACTOR).length);
+        assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR);
         if (item !== undefined) {
-            assert(item.hasWear(), "Item does not have wear.");
-            assert(item.wearMin === undefined || wear >= item.wearMin, "Wear value is below the minimum allowed.");
-            assert(item.wearMax === undefined || wear <= item.wearMax, "Wear value is above the maximum allowed.");
+            assert(item.hasWear());
+            assert(item.wearMin === undefined || wear >= item.wearMin);
+            assert(item.wearMax === undefined || wear <= item.wearMax);
         }
         return true;
     }
@@ -139,10 +139,10 @@ export class CS2EconomyInstance {
         if (seed === undefined) {
             return true;
         }
-        assert(!Number.isNaN(seed), "Seed must be a valid number.");
-        assert(item === undefined || item.hasSeed(), "Item does not have a seed.");
-        assert(Number.isInteger(seed), "Seed must be an integer.");
-        assert(seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED, `Seed must be between CS_MIN_SEED and CS_MAX_SEED.`);
+        assert(!Number.isNaN(seed));
+        assert(item === undefined || item.hasSeed());
+        assert(Number.isInteger(seed));
+        assert(seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED);
         return true;
     }
 
@@ -157,8 +157,8 @@ export class CS2EconomyInstance {
 
     validateNametag(nametag?: string, item?: CS2EconomyItem): boolean {
         if (nametag !== undefined) {
-            assert(item === undefined || item.hasNametag(), "The provided item does not have a nametag.");
-            assert(nametag[0] !== " " && CS2_NAMETAG_RE.test(nametag), "Invalid nametag format.");
+            assert(item === undefined || item.hasNametag());
+            assert(nametag[0] !== " " && CS2_NAMETAG_RE.test(nametag));
         }
         return true;
     }
@@ -168,7 +168,7 @@ export class CS2EconomyInstance {
     }
 
     requireNametag(nametag?: string, item?: CS2EconomyItem): boolean {
-        assert(nametag === undefined || nametag.trim().length > 0, "Nametag is required.");
+        assert(nametag === undefined || nametag.trim().length > 0);
         return this.validateNametag(nametag, item);
     }
 
@@ -180,12 +180,9 @@ export class CS2EconomyInstance {
         if (stattrak === undefined) {
             return true;
         }
-        assert(item === undefined || item.hasStatTrak(), "The provided item does not support stattrak.");
-        assert(Number.isInteger(stattrak), "Stattrak value must be an integer.");
-        assert(
-            stattrak >= CS2_MIN_STATTRAK && stattrak <= CS2_MAX_STATTRAK,
-            "Stattrak value must be between CS_MIN_STATTRAK and CS_MAX_STATTRAK."
-        );
+        assert(item === undefined || item.hasStatTrak());
+        assert(Number.isInteger(stattrak));
+        assert(stattrak >= CS2_MIN_STATTRAK && stattrak <= CS2_MAX_STATTRAK);
         return true;
     }
 
@@ -240,14 +237,13 @@ export class CS2EconomyInstance {
 
     resolveCollectionImage(baseUrl: string, item: number | CS2EconomyItem): string {
         const { collection } = this.get(item);
-        assert(collection, "Item does not have a collection.");
-        return `${baseUrl}/${collection}.png`;
+        return `${baseUrl}/${ensure(collection)}.png`;
     }
 
     resolveContainerSpecialsImage(baseUrl: string, item: number | CS2EconomyItem): string {
         item = this.get(item).expectContainer();
         const { id, specialsImage, rawSpecials } = item;
-        assert(rawSpecials, "Container does not have special items.");
+        assert(rawSpecials);
         return specialsImage ? `${baseUrl}/${id}_rare.png` : `${baseUrl}/default_rare_item.png`;
     }
 
@@ -257,10 +253,10 @@ export class CS2EconomyInstance {
         keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
         if (keyItem !== undefined) {
             keyItem.expectContainerKey();
-            assert(containerItem.keys !== undefined, "Container does not require a key.");
-            assert(containerItem.keys.includes(keyItem.id), "Invalid key for this container.");
+            assert(containerItem.keys !== undefined);
+            assert(containerItem.keys.includes(keyItem.id));
         } else {
-            assert(containerItem.keys === undefined, "Container requires a key.");
+            assert(containerItem.keys === undefined);
         }
         return true;
     }
@@ -274,10 +270,7 @@ export class CS2EconomyInstance {
         { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlock"]>
     ): void {
         item = this.get(item).expectContainer();
-        assert(
-            item.rawContents?.includes(id) || item.rawSpecials?.includes(id),
-            `Unlocked item is not from this container.`
-        );
+        assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
     }
 }
 
@@ -433,37 +426,37 @@ export class CS2EconomyItem
     }
 
     expectPatch(): this {
-        assert(this.isPatch(), "Expected a Patch.");
+        assert(this.isPatch());
         return this;
     }
 
     expectSticker(): this {
-        assert(this.isSticker(), "Expected a Sticker.");
+        assert(this.isSticker());
         return this;
     }
 
     expectStorageUnit(): this {
-        assert(this.isStorageUnit(), "Expected a Storage Unit.");
+        assert(this.isStorageUnit());
         return this;
     }
 
     expectNameTag(): this {
-        assert(this.isNameTag(), "Expected a Name Tag.");
+        assert(this.isNameTag());
         return this;
     }
 
     expectStatTrakSwapTool(): this {
-        assert(this.isStatTrakSwapTool(), "Expected a StatTrak Swap Tool.");
+        assert(this.isStatTrakSwapTool());
         return this;
     }
 
     expectContainer(): this {
-        assert(this.isContainer(), "Expected a Container.");
+        assert(this.isContainer());
         return this;
     }
 
     expectContainerKey(): this {
-        assert(this.isContainerKey(), "Expected a Key.");
+        assert(this.isContainerKey());
         return this;
     }
 
