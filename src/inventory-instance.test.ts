@@ -6,7 +6,7 @@
 import english from "../assets/localizations/items-english.json";
 import { CS2Economy } from "./economy";
 import { CS2_MAX_PATCHES, CS2_MAX_STATTRAK } from "./economy-constants";
-import { CS2Inventory } from "./inventory";
+import { CS2InventoryInstance } from "./inventory-instance";
 import { CS2_ITEMS } from "./items";
 import { CS2Team } from "./teams";
 import { float } from "./utils";
@@ -49,11 +49,11 @@ function size<T extends {}>(obj: T): number {
     return Object.keys(obj).length;
 }
 
-describe("CS2Inventory methods", () => {
-    let inventory: CS2Inventory;
+describe("CS2InventoryInstance methods", () => {
+    let inventory: CS2InventoryInstance;
 
     beforeEach(() => {
-        inventory = new CS2Inventory({
+        inventory = new CS2InventoryInstance({
             maxItems: 16,
             storageUnitMaxItems: 3
         });
