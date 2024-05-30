@@ -7,7 +7,6 @@
 assets/data
 assets/images
 assets/sounds
-generate-log.txt
 jest.config.js
 README.md
 scripts
