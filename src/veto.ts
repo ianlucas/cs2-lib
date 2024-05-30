@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS2Map } from "./maps.js";
-import { EnumValues, assert, fail } from "./utils.js";
+import { EnumValues, assert, ensure } from "./utils.js";
 
 export const CS2VetoAction = {
     Available: 0,
@@ -14,7 +14,14 @@ export const CS2VetoAction = {
 
 export type CS2VetoActionValues = EnumValues<typeof CS2VetoAction>;
 
-export type CS2VetoType = "bo1" | "bo3" | "bo5" | "custom";
+export const CS2VetoType = {
+    BO1: "bo1",
+    BO3: "bo3",
+    BO5: "bo5",
+    Custom: "custom"
+} as const;
+
+export type CS2VetoTypeValues = EnumValues<typeof CS2VetoType>;
 
 export interface CS2VetoMap {
     mapname: string;
@@ -23,23 +30,14 @@ export interface CS2VetoMap {
 }
 
 export class CS2Veto {
-    private maps: CS2VetoMap[];
     private actions: CS2VetoActionValues[];
+    private maps: CS2VetoMap[];
     private pickedMaps: string[] = [];
 
-    constructor(type: CS2VetoType, maps: CS2Map[], actions?: CS2VetoActionValues[]) {
-        if (type !== "custom" && actions !== undefined) {
-            console.warn('stack provided, but the type is not "custom".');
-        }
-        if (type === "custom" && actions === undefined) {
-            fail("provide the stack for the custom type.");
-        }
-        if (maps.length !== 7) {
-            fail("you need to provide 7 maps to veto.");
-        }
-        if (actions !== undefined && actions.length !== 6) {
-            fail("you need to provide 6 actions to veto.");
-        }
+    constructor(type: CS2VetoTypeValues, maps: CS2Map[], actions?: CS2VetoActionValues[]) {
+        assert(type !== "custom" || actions !== undefined);
+        assert(maps.length === 7);
+        assert(actions === undefined || actions.length === 6);
         this.maps = maps.map((map) => ({
             mapname: map.mapname,
             value: CS2VetoAction.Available
@@ -76,7 +74,7 @@ export class CS2Veto {
                 ];
                 break;
             case "custom":
-                this.actions = actions!;
+                this.actions = ensure(actions);
                 break;
         }
     }
