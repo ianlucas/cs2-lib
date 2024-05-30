@@ -12,7 +12,7 @@ export class CS2KeyValues {
         data = data.replace(/\[[\$!][^\]]+\]/g, "");
         let index = 0;
 
-        function skipWhitespace() {
+        function skipWhitespace(): void {
             while (data[index] && data[index].match(/[\s\t\r\n]/)) {
                 index += 1;
             }
@@ -24,7 +24,7 @@ export class CS2KeyValues {
             }
         }
 
-        function parseString() {
+        function parseString(): string {
             if (data[index] === '"') {
                 index += 1;
                 let value = "";
@@ -53,7 +53,7 @@ export class CS2KeyValues {
             return "";
         }
 
-        function parseValue() {
+        function parseValue(): string | CS2KeyValue[] {
             if (data[index] === '"') {
                 return parseString();
             }
@@ -73,7 +73,7 @@ export class CS2KeyValues {
             fail(`Unexpected character at index ${index}.`);
         }
 
-        function parsePairs() {
+        function parsePairs(): CS2KeyValue[] {
             const pairs: CS2KeyValue[] = [];
             while (data[index]) {
                 if (data[index] === "}") {
@@ -90,7 +90,7 @@ export class CS2KeyValues {
             return pairs;
         }
 
-        function walk(context: any, pairs: CS2KeyValue[]) {
+        function walk(context: any, pairs: CS2KeyValue[]): any {
             return pairs.reduce((object, pair) => {
                 const [key, value] = pair;
                 const newValue = typeof value === "string" ? value : walk({}, value);

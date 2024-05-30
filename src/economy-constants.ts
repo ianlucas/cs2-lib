@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS2ItemType, CS2ItemTypeValues } from "./economy-types.js";
-import { CS2Team } from "./teams.js";
+import { CS2Team, CS2TeamValues } from "./teams.js";
 
 export const CS2_MIN_STATTRAK = 0;
 export const CS2_MAX_STATTRAK = 999999;
@@ -47,6 +47,6 @@ export const CS2_WEARABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Gloves, CS2I
 
 export const CS2_CONTAINER_OR_TOOL_ITEM: CS2ItemTypeValues[] = [CS2ItemType.Container, CS2ItemType.Tool];
 
-export const CS2_TEAMS_BOTH = [CS2Team.T, CS2Team.CT];
-export const CS2_TEAMS_CT = [CS2Team.CT];
-export const CS2_TEAMS_T = [CS2Team.T];
+export const CS2_TEAMS_BOTH: CS2TeamValues[] = [CS2Team.T, CS2Team.CT];
+export const CS2_TEAMS_CT: CS2TeamValues[] = [CS2Team.CT];
+export const CS2_TEAMS_T: CS2TeamValues[] = [CS2Team.T];

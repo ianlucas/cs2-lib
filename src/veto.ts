@@ -79,19 +79,19 @@ export class CS2Veto {
         }
     }
 
-    private getAvailableMaps() {
+    private getAvailableMaps(): CS2VetoMap[] {
         return this.maps.filter((map) => map.value === CS2VetoAction.Available);
     }
 
-    private getMap(mapname: string) {
+    private getMap(mapname: string): CS2VetoMap | undefined {
         return this.maps.find((map) => map.mapname === mapname);
     }
 
-    private getAvailableMapnames() {
+    private getAvailableMapnames(): string[] {
         return this.getAvailableMaps().map((map) => map.mapname);
     }
 
-    getCurrentTeam() {
+    getCurrentTeam(): number {
         return this.actions.length % 2;
     }
 
