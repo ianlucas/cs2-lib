@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
+    CS2_MAX_PATCHES,
     CS2_MAX_STATTRAK,
     CS2_MAX_STICKERS,
     CS2_MAX_STICKER_WEAR,
@@ -24,7 +25,7 @@ export interface CS2BaseInventoryItem {
     equippedT?: boolean;
     id: number;
     nameTag?: string;
-    patches?: Record<number, number>;
+    patches?: Record<number, number | undefined>;
     seed?: number;
     statTrak?: number;
     stickers?: Record<
@@ -120,13 +121,34 @@ export class CS2Inventory {
         }
     }
 
-    private validateBaseInventoryItem({ id, nameTag, seed, statTrak, stickers, wear }: CS2BaseInventoryItem): void {
+    private validatePatches(patches?: CS2BaseInventoryItem["patches"], item?: CS2EconomyItem): void {
+        if (patches === undefined) {
+            return;
+        }
+        assert(item === undefined || item.isAgent());
+        for (const [slot, patchId] of Object.entries(patches)) {
+            const slotNumber = parseInt(slot, 10);
+            assert(slotNumber >= 0 && slotNumber <= CS2_MAX_PATCHES - 1);
+            assert(patchId === undefined || this.economy.getById(patchId).isPatch());
+        }
+    }
+
+    private validateBaseInventoryItem({
+        id,
+        nameTag,
+        patches,
+        seed,
+        statTrak,
+        stickers,
+        wear
+    }: CS2BaseInventoryItem): void {
         const item = this.economy.getById(id);
         this.economy.validateWear(wear, item);
         this.economy.validateSeed(seed, item);
         this.economy.validateNametag(nameTag, item);
         this.economy.validateStatTrak(statTrak, item);
         this.validateEquippable(item);
+        this.validatePatches(patches, item);
         this.validateStickers(stickers, item);
     }
 
@@ -422,6 +444,33 @@ export class CS2Inventory {
             return this;
         }
         sticker.wear = nextWear;
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    applyItemPatch(targetUid: number, patchUid: number, patchIndex: number): this {
+        assert(patchIndex >= 0 && patchIndex <= CS2_MAX_PATCHES - 1);
+        const target = this.get(targetUid);
+        const patch = this.get(patchUid);
+        assert(target.props.isAgent());
+        patch.props.expectPatch();
+        const patches = target.patches ?? {};
+        assert(patches[patchIndex] === undefined);
+        patches[patchIndex] = patch.id;
+        target.patches = patches;
+        target.updatedAt = getTimestamp();
+        this.items.delete(patchUid);
+        return this;
+    }
+
+    removeItemPatch(targetUid: number, patchIndex: number): this {
+        const target = this.get(targetUid);
+        assert(target.patches !== undefined);
+        assert(target.patches[patchIndex] !== undefined);
+        delete target.patches[patchIndex];
+        if (Object.keys(target.patches).length === 0) {
+            target.patches = undefined;
+        }
         target.updatedAt = getTimestamp();
         return this;
     }

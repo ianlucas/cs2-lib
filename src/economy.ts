@@ -388,8 +388,16 @@ export class CS2EconomyItem
         return this.category === "c4";
     }
 
+    isAgent(): boolean {
+        return this.type === CS2ItemType.Agent;
+    }
+
     isSticker(): boolean {
         return this.type === CS2ItemType.Sticker;
+    }
+
+    isPatch(): boolean {
+        return this.type === CS2ItemType.Patch;
     }
 
     isGloves(): boolean {
@@ -422,6 +430,11 @@ export class CS2EconomyItem
 
     isTool(): boolean {
         return this.type === CS2ItemType.Tool;
+    }
+
+    expectPatch(): this {
+        assert(this.isPatch(), "Expected a Patch.");
+        return this;
     }
 
     expectSticker(): this {
