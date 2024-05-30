@@ -25,7 +25,7 @@ export interface CS2BaseInventoryItem {
     equippedT?: boolean;
     id: number;
     nameTag?: string;
-    patches?: Record<number, number | undefined>;
+    patches?: Record<number, number>;
     seed?: number;
     statTrak?: number;
     stickers?: Record<
