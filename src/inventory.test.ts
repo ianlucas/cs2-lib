@@ -540,5 +540,35 @@ describe("CS2Inventory methods", () => {
             expect(inventory.get(0).patches?.[index]).toBe(undefined);
         }
         expect(inventory.get(0).patches).toBe(undefined);
+        const patches = {
+            0: BLOODHOUND_ID,
+            1: BLOODHOUND_ID,
+            2: BLOODHOUND_ID,
+            3: BLOODHOUND_ID,
+            4: BLOODHOUND_ID
+        };
+        expect(() =>
+            inventory.add({
+                id: BLOODY_DARRYL_THE_STRAPPED_ID,
+                patches: {
+                    [-1]: BLOODHOUND_ID,
+                    ...patches
+                }
+            })
+        ).toThrow();
+        expect(() =>
+            inventory.add({
+                id: BLOODY_DARRYL_THE_STRAPPED_ID,
+                patches: {
+                    ...patches,
+                    5: BLOODHOUND_ID
+                }
+            })
+        ).toThrow();
+        inventory.add({
+            id: BLOODY_DARRYL_THE_STRAPPED_ID,
+            patches
+        });
+        expect(inventory.get(1).patches).toEqual(patches);
     });
 });
