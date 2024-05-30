@@ -3,148 +3,101 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import english from "../assets/translations/items-english.json";
-import {
-    CS_Economy,
-    CS_GRAFFITI_BOX_ID,
-    CS_Item,
-    CS_SOUVENIR_CASE_ID,
-    CS_STICKER_CAPSULE_ID,
-    CS_WEAPON_CASE_ID
-} from "./economy";
-import { CS_RARITY_COMMON_COLOR } from "./economy-case";
-import { CS_ITEMS } from "./items";
+import english from "../assets/localizations/items-english.json";
+import { CS2Economy, CS2EconomyItem } from "./economy";
+import { CS2RarityColor } from "./economy-container";
+import { CS2Item } from "./economy-types";
+import { CS2_ITEMS } from "./items";
 
-describe("CS_Economy", () => {
+describe("CS2Economy", () => {
     test("use should add items to the economy", () => {
-        const items: CS_Item[] = [
-            { id: 1, name: "Item 1", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" },
-            { id: 2, name: "Item 2", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" },
-            { id: 3, name: "Item 3", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" }
+        const items: CS2Item[] = [
+            { id: 1, rarity: CS2RarityColor.Common, type: "weapon" },
+            { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
+            { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
         ];
-        CS_Economy.use({
+        CS2Economy.use({
             items,
-            translation: {
+            language: {
                 1: { name: "Item 1" },
                 2: { name: "Item 2" },
                 3: { name: "Item 3" }
             }
         });
-        expect(CS_Economy.items.size).toBe(3);
-        expect(CS_Economy.items.get(1)).toEqual(items[0]);
-        expect(CS_Economy.items.get(2)).toEqual(items[1]);
-        expect(CS_Economy.items.get(3)).toEqual(items[2]);
+        expect(CS2Economy.items.size).toBe(3);
+        expect(CS2Economy.items.get(1)).toEqual(new CS2EconomyItem(CS2Economy, items[0], { name: "Item 1" }));
+        expect(CS2Economy.items.get(2)).toEqual(new CS2EconomyItem(CS2Economy, items[1], { name: "Item 2" }));
+        expect(CS2Economy.items.get(3)).toEqual(new CS2EconomyItem(CS2Economy, items[2], { name: "Item 3" }));
     });
 
     test("getById should return the item with the given id", () => {
-        const item: CS_Item = { id: 1, name: "Item 1", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" };
-        CS_Economy.use({
+        const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
+        const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
+        CS2Economy.use({
             items: [item],
-            translation: {
+            language: {
                 1: { name: "Item 1" }
             }
         });
-        const result = CS_Economy.getById(1);
-        expect(result).toEqual(item);
+        const result = CS2Economy.getById(1);
+        expect(result).toEqual(economyItem);
     });
 
     test("get should return the item with the given id or item object", () => {
-        const item: CS_Item = { id: 1, name: "Item 1", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" };
-        CS_Economy.use({
+        const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
+        const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
+
+        CS2Economy.use({
             items: [item],
-            translation: {
+            language: {
                 1: { name: "Item 1" }
             }
         });
 
-        const result1 = CS_Economy.get(1);
-        const result2 = CS_Economy.get(item);
+        const result1 = CS2Economy.get(1);
+        const result2 = CS2Economy.get(economyItem);
 
-        expect(result1).toEqual(item);
-        expect(result2).toEqual(item);
-    });
-
-    test("applyTranslation should apply translations to the items", () => {
-        const translation1 = {
-            1: { name: "Item 1" },
-            2: { name: "Item 2" },
-            3: { name: "Item 3" }
-        };
-
-        const translation2 = {
-            1: { name: "Translated Item 1" },
-            2: { name: "Translated Item 2" }
-        };
-
-        const items: CS_Item[] = [
-            { id: 1, name: "Item 1", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" },
-            { id: 2, name: "Item 2", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" },
-            { id: 3, name: "Item 3", rarity: CS_RARITY_COMMON_COLOR, type: "weapon" }
-        ];
-
-        CS_Economy.use({ items, translation: translation2 });
-
-        const translatedItem1 = CS_Economy.getById(1);
-        const translatedItem2 = CS_Economy.getById(2);
-        const untranslatedItem = CS_Economy.getById(3);
-
-        expect(translatedItem1.name).toBe("Translated Item 1");
-        expect(translatedItem2.name).toBe("Translated Item 2");
-        expect(untranslatedItem.name).toBe("Item 3");
-
-        CS_Economy.use({ items, translation: translation1 });
-
-        expect(CS_Economy.getById(1).name).toBe("Item 1");
-        expect(CS_Economy.getById(2).name).toBe("Item 2");
-        expect(CS_Economy.getById(3).name).toBe("Item 3");
+        expect(result1).toEqual(economyItem);
+        expect(result2).toEqual(economyItem);
     });
 });
 
 test("nametag validation", () => {
-    CS_Economy.use({ items: CS_ITEMS, translation: english });
-    expect(CS_Economy.safeValidateNametag(" fail")).toBeFalsy();
-    expect(CS_Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
-    expect(CS_Economy.safeValidateNametag("孔子")).toBeTruthy();
-    expect(CS_Economy.safeValidateNametag("bo$$u")).toBeTruthy();
-    expect(CS_Economy.safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
+    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    expect(CS2Economy.safeValidateNametag(" fail")).toBeFalsy();
+    expect(CS2Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
+    expect(CS2Economy.safeValidateNametag("孔子")).toBeTruthy();
+    expect(CS2Economy.safeValidateNametag("bo$$u")).toBeTruthy();
+    expect(CS2Economy.safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
 });
 
 test("wear validation", () => {
-    CS_Economy.use({ items: CS_ITEMS, translation: english });
-    expect(CS_Economy.safeValidateWear(0.1)).toBeTruthy();
-    expect(CS_Economy.safeValidateWear(0.5)).toBeTruthy();
-    expect(CS_Economy.safeValidateWear(1)).toBeTruthy();
-    expect(CS_Economy.safeValidateWear(1.1)).toBeFalsy();
-    expect(CS_Economy.safeValidateWear(-0.1)).toBeFalsy();
-    const item = {
-        id: 1,
-        name: "Item 1",
-        rarity: CS_RARITY_COMMON_COLOR,
-        type: "weapon" as const,
-        wearmin: 0.2,
-        wearmax: 0.6
-    };
-    expect(CS_Economy.safeValidateWear(0.1, item)).toBeFalsy();
-    expect(CS_Economy.safeValidateWear(0.7, item)).toBeFalsy();
-    expect(CS_Economy.safeValidateWear(0.3, item)).toBeTruthy();
+    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    expect(CS2Economy.safeValidateWear(0.1)).toBeTruthy();
+    expect(CS2Economy.safeValidateWear(0.5)).toBeTruthy();
+    expect(CS2Economy.safeValidateWear(1)).toBeTruthy();
+    expect(CS2Economy.safeValidateWear(1.1)).toBeFalsy();
+    expect(CS2Economy.safeValidateWear(-0.1)).toBeFalsy();
+    const item = new CS2EconomyItem(
+        CS2Economy,
+        {
+            id: 1,
+            rarity: CS2RarityColor.Common,
+            type: "weapon" as const,
+            wearMin: 0.2,
+            wearMax: 0.6
+        },
+        { name: "Item 1" }
+    );
+    expect(CS2Economy.safeValidateWear(0.1, item)).toBeFalsy();
+    expect(CS2Economy.safeValidateWear(0.7, item)).toBeFalsy();
+    expect(CS2Economy.safeValidateWear(0.3, item)).toBeTruthy();
 });
 
 test("has seed", () => {
-    CS_Economy.use({ items: CS_ITEMS, translation: english });
-    const baseGlove = CS_Economy.getById(56);
-    const skinGlove = CS_Economy.getById(1707);
-    expect(CS_Economy.hasSeed(baseGlove)).toBe(false);
-    expect(CS_Economy.hasSeed(skinGlove)).toBe(true);
-});
-
-test("category check helpers", () => {
-    CS_Economy.use({ items: CS_ITEMS, translation: english });
-    expect(CS_Economy.getById(CS_WEAPON_CASE_ID).category).toBe("Weapon Cases");
-    expect(CS_Economy.isWeaponCase(CS_Economy.getById(9131))).toBe(true);
-    expect(CS_Economy.getById(CS_STICKER_CAPSULE_ID).category).toBe("Sticker Capsules");
-    expect(CS_Economy.isStickerCapsule(CS_Economy.getById(9155))).toBe(true);
-    expect(CS_Economy.getById(CS_GRAFFITI_BOX_ID).category).toBe("Graffiti Boxes");
-    expect(CS_Economy.isGraffitiBox(CS_Economy.getById(11254))).toBe(true);
-    expect(CS_Economy.getById(CS_SOUVENIR_CASE_ID).category).toBe("Souvenir Cases");
-    expect(CS_Economy.isSouvenirCase(CS_Economy.getById(9153))).toBe(true);
+    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    const baseGloves = CS2Economy.getById(56);
+    const skinGloves = CS2Economy.getById(1707);
+    expect(baseGloves.hasSeed()).toBe(false);
+    expect(skinGloves.hasSeed()).toBe(true);
 });

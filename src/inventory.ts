@@ -4,68 +4,74 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    CS_Economy,
-    CS_EconomyInstance,
-    CS_Item,
-    CS_MAX_STATTRAK,
-    CS_MAX_WEAR,
-    CS_NONE,
-    CS_STICKER_WEAR_FACTOR
-} from "./economy.js";
-import { CS_TEAM_CT, CS_TEAM_T, CS_Team } from "./teams.js";
-import { assert, float } from "./util.js";
+    CS2_MAX_STATTRAK,
+    CS2_MAX_STICKERS,
+    CS2_MAX_STICKER_WEAR,
+    CS2_MAX_WEAR,
+    CS2_MIN_STICKER_WEAR,
+    CS2_NONE,
+    CS2_STICKER_WEAR_FACTOR
+} from "./economy-constants.js";
+import { CS2ItemType, CS2ItemTypeValues } from "./economy-types.js";
+import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.js";
+import { CS2Team, CS2TeamValues } from "./teams.js";
+import { assert, ensure, float } from "./utils.js";
 
-export interface CS_BaseInventoryItem {
-    caseid?: number;
+export interface CS2BaseInventoryItem {
+    containerId?: number;
     equipped?: boolean;
     equippedCT?: boolean;
     equippedT?: boolean;
     id: number;
-    nametag?: string;
+    nameTag?: string;
+    patches?: Record<number, number>;
     seed?: number;
-    stattrak?: number;
-    stickers?: number[];
-    stickerswear?: number[];
-    storage?: CS_BaseInventoryItem[];
-    uid: number;
-    updatedat?: number;
+    statTrak?: number;
+    stickers?: Record<
+        number,
+        {
+            id: number;
+            wear?: number;
+            x?: number;
+            y?: number;
+        }
+    >;
+    storage?: Record<number, CS2BaseInventoryItem>;
+    updatedAt?: number;
     wear?: number;
 }
 
-export interface CS_InventoryItem extends Omit<CS_BaseInventoryItem, "storage"> {
-    data: CS_Item;
-    storage?: Map<number, CS_InventoryItem>;
+export interface CS2InventoryItem extends Omit<CS2BaseInventoryItem, "storage"> {
+    props: CS2EconomyItem;
+    storage?: Map<number, CS2InventoryItem>;
+    uid: number;
 }
 
-export interface CS_InventoryOptions {
+export interface CS2InventoryData {
+    items: Record<number, CS2BaseInventoryItem>;
+    version: number;
+}
+
+export interface CS2InventoryOptions {
     maxItems: number;
     storageUnitMaxItems: number;
 }
 
-export interface CS_InventorySpec extends CS_InventoryOptions {
-    economy: CS_EconomyInstance;
-    items: CS_BaseInventoryItem[] | Map<number, CS_InventoryItem>;
+export interface CS2InventorySpec extends CS2InventoryOptions {
+    economy: CS2EconomyInstance;
+    data: CS2InventoryData;
 }
 
-export const CS_INVENTORY_TIMESTAMP = 1707696138408;
-export const CS_INVENTORY_STICKERS = [CS_NONE, CS_NONE, CS_NONE, CS_NONE] as const;
-export const CS_INVENTORY_STICKERS_WEAR = [CS_NONE, CS_NONE, CS_NONE, CS_NONE] as const;
-export const CS_INVENTORY_EQUIPPABLE_ITEMS = [
-    "agent",
-    "collectible",
-    "glove",
-    "graffiti",
-    "melee",
-    "musickit",
-    "patch",
-    "weapon"
-];
+export const CS2_INVENTORY_VERSION = 1;
+export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
+// prettier-ignore
+export const CS_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Patch, CS2ItemType.Weapon];
 
-export function CS_getTimestamp() {
-    return Math.ceil((Date.now() - CS_INVENTORY_TIMESTAMP) / 1000);
+export function getTimestamp() {
+    return Math.ceil((Date.now() - CS2_INVENTORY_TIMESTAMP) / 1000);
 }
 
-export function CS_getNextUid(map: Map<number, unknown>): number {
+export function getNextUid(map: Map<number, unknown>): number {
     let uid = 0;
     while (true) {
         if (!map.has(uid)) {
@@ -75,288 +81,278 @@ export function CS_getNextUid(map: Map<number, unknown>): number {
     }
 }
 
-export class CS_Inventory {
-    private validateStorage(storage?: CS_BaseInventoryItem[]) {
-        if (storage !== undefined) {
-            let uids = new Set<number>();
-            for (const item of storage) {
-                assert(!uids.has(item.uid), "Duplicate storage unit item uid.");
-                assert(!this.economy.isStorageUnitTool(item.id), "Storage unit cannot be stored in storage unit.");
-                this.validateBaseInventoryItem(item);
-                uids.add(item.uid);
-            }
-        }
-    }
+export class CS2Inventory {
+    private economy: CS2EconomyInstance;
+    private items: Map<number, CS2InventoryItem>;
+    readonly options: Readonly<CS2InventoryOptions>;
 
-    private validateEquippable(item: CS_Item) {
-        if (this.economy.isGlove(item)) {
-            assert(!item.base, "Glove base cannot be equipped.");
-        }
-    }
-
-    private validateBaseInventoryItem({
-        id,
-        nametag,
-        seed,
-        stattrak,
-        stickers,
-        stickerswear,
-        storage,
-        wear
-    }: Omit<CS_BaseInventoryItem, "uid">) {
-        const item = this.economy.getById(id);
-        this.validateEquippable(item);
-        this.economy.validateWear(wear, item);
-        this.economy.validateSeed(seed, item);
-        this.economy.validateStickers(stickers, stickerswear, item);
-        this.economy.validateNametag(nametag, item);
-        this.economy.validateStatTrak(stattrak, item);
-        if (storage !== undefined) {
-            this.economy.expectStorageUnitTool(item);
-            this.validateStorage(storage);
-        }
-    }
-
-    private asPartialInventoryItem({ storage, ...base }: Partial<CS_BaseInventoryItem>): Partial<CS_InventoryItem> {
-        const item: Partial<CS_InventoryItem> = { ...base };
-        if (base.id) {
-            item.data = this.economy.getById(base.id);
-        }
-        if (storage) {
-            item.storage = new Map(storage.map((item) => [item.uid, this.asInventoryItem(item)]));
-        }
-        return item;
-    }
-
-    private asInventoryItem(base: CS_BaseInventoryItem) {
-        return this.asPartialInventoryItem(base) as CS_InventoryItem;
-    }
-
-    private asPartialBaseInventoryItem({
-        data,
-        storage,
-        ...rest
-    }: Partial<CS_InventoryItem>): Partial<CS_BaseInventoryItem> {
-        const base: Partial<CS_BaseInventoryItem> = { ...rest };
-        if (storage) {
-            base.storage = Array.from(storage.values()).map((item) => this.asBaseInventoryItem(item));
-        }
-        return base;
-    }
-
-    private asBaseInventoryItem(item: CS_InventoryItem) {
-        return this.asPartialBaseInventoryItem(item) as CS_BaseInventoryItem;
-    }
-
-    private asInventoryItemMap(items: CS_BaseInventoryItem[]) {
-        const map = new Map<number, CS_InventoryItem>();
-        for (const item of items) {
-            assert(!map.has(item.uid), "Duplicate inventory item uid.");
-            map.set(item.uid, this.asInventoryItem(item));
-        }
-        return map;
-    }
-
-    private economy: CS_EconomyInstance;
-    private items: Map<number, CS_InventoryItem>;
-    readonly options: Readonly<CS_InventoryOptions>;
-
-    constructor({ economy, items, maxItems, storageUnitMaxItems }: Partial<CS_InventorySpec> = {}) {
-        this.economy = economy ?? CS_Economy;
-        this.items = items !== undefined ? (items instanceof Map ? items : this.asInventoryItemMap(items)) : new Map();
+    constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec>) {
+        this.economy = economy ?? CS2Economy;
+        this.items = data !== undefined ? this.toInventoryItems(data.items) : new Map();
         this.options = {
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
     }
 
-    isFull() {
+    private validateEquippable(item: CS2EconomyItem): void {
+        if (item.isGloves()) {
+            assert(!item.base);
+        }
+    }
+
+    private validateStickers(stickers?: CS2BaseInventoryItem["stickers"], item?: CS2EconomyItem): void {
+        if (stickers === undefined) {
+            return;
+        }
+        const entries = Object.entries(stickers);
+        assert(entries.length <= CS2_MAX_STICKERS);
+        assert(item === undefined || item.hasStickers());
+        for (const [slot, { id: stickerId, wear }] of entries) {
+            const slotNumber = parseInt(slot, 10);
+            assert(slotNumber >= 0 && slotNumber <= CS2_MAX_STICKERS - 1);
+            this.economy.getById(stickerId).expectSticker();
+            if (wear !== undefined) {
+                assert(!Number.isNaN(wear));
+                assert(String(wear).length <= String(CS2_STICKER_WEAR_FACTOR).length);
+                assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
+            }
+        }
+    }
+
+    private validateBaseInventoryItem({ id, nameTag, seed, statTrak, stickers, wear }: CS2BaseInventoryItem): void {
+        const item = this.economy.getById(id);
+        this.economy.validateWear(wear, item);
+        this.economy.validateSeed(seed, item);
+        this.economy.validateNametag(nameTag, item);
+        this.economy.validateStatTrak(statTrak, item);
+        this.validateEquippable(item);
+        this.validateStickers(stickers, item);
+    }
+
+    private toInventoryItem(uid: number, { storage, ...base }: CS2BaseInventoryItem, isStorageUnitItem = false) {
+        assert(storage === undefined || this.economy.getById(base.id).isStorageUnit());
+        assert(!isStorageUnitItem || storage === undefined);
+        this.validateBaseInventoryItem(base);
+        const item: CS2InventoryItem = {
+            ...base,
+            props: this.economy.getById(base.id),
+            uid
+        };
+        if (storage !== undefined) {
+            item.storage = this.toInventoryItems(storage, true);
+        }
+        return item;
+    }
+
+    private toInventoryItems(
+        items: Record<number, CS2BaseInventoryItem>,
+        isStorageUnitItem = false
+    ): Map<number, CS2InventoryItem> {
+        return new Map(
+            Object.entries(items).map(([key, value]) => {
+                const uid = parseInt(key, 10);
+                return [uid, this.toInventoryItem(uid, value, isStorageUnitItem)] as const;
+            })
+        );
+    }
+
+    private toBaseInventoryItem({ props: econ, storage, ...value }: CS2InventoryItem): CS2BaseInventoryItem {
+        return {
+            ...value,
+            storage: storage !== undefined ? this.toBaseInventoryItems(storage) : undefined
+        };
+    }
+
+    private toBaseInventoryItems(items: Map<number, CS2InventoryItem>): Record<number, CS2BaseInventoryItem> {
+        return Object.fromEntries(Array.from(items).map(([key, value]) => [key, this.toBaseInventoryItem(value)]));
+    }
+
+    stringify(): string {
+        return JSON.stringify({
+            items: this.toBaseInventoryItems(this.items),
+            version: CS2_INVENTORY_VERSION
+        });
+    }
+
+    isFull(): boolean {
         return this.items.size >= this.options.maxItems;
     }
 
-    add(
-        item: Omit<CS_BaseInventoryItem, "uid"> & {
-            uid?: number;
-        }
-    ) {
-        assert(!this.isFull(), "Inventory is full.");
-        this.validateBaseInventoryItem(item);
-        const uid = CS_getNextUid(this.items);
+    add(item: CS2BaseInventoryItem): this {
+        assert(!this.isFull());
+        const uid = getNextUid(this.items);
         this.items.set(
             uid,
-            this.asInventoryItem(
+            this.toInventoryItem(
+                uid,
                 Object.assign(item, {
                     equipped: undefined,
                     equippedCT: undefined,
                     equippedT: undefined,
-                    uid,
-                    updatedat: CS_getTimestamp()
+                    updatedAt: getTimestamp()
                 })
             )
         );
         return this;
     }
 
-    private addInventoryItem(item: CS_InventoryItem) {
-        assert(!this.isFull(), "Inventory is full.");
-        this.validateBaseInventoryItem(this.asBaseInventoryItem(item));
-        const uid = CS_getNextUid(this.items);
-        this.items.set(
-            uid,
-            Object.assign(item, {
-                equipped: undefined,
-                equippedCT: undefined,
-                equippedT: undefined,
-                uid,
-                updatedat: CS_getTimestamp()
-            })
-        );
+    private addInventoryItem(item: CS2InventoryItem): this {
+        assert(!this.isFull());
+        const uid = getNextUid(this.items);
+        this.items.set(uid, {
+            ...item,
+            equipped: undefined,
+            equippedCT: undefined,
+            equippedT: undefined,
+            updatedAt: getTimestamp()
+        });
         return this;
     }
 
-    addWithNametag(toolUid: number, id: number, nametag: string) {
-        const tool = this.get(toolUid);
-        this.economy.expectNametagTool(tool.data);
-        this.economy.requireNametag(nametag);
-        this.items.delete(toolUid);
-        this.add({ id, nametag });
+    addWithNametag(nameTagUid: number, id: number, nameTag: string): this {
+        this.get(nameTagUid).props.expectNameTag();
+        this.economy.requireNametag(nameTag);
+        this.items.delete(nameTagUid);
+        this.add({ id, nameTag });
         return this;
     }
 
-    addWithSticker(stickerUid: number, id: number, stickerIndex: number) {
-        const sticker = this.get(stickerUid);
-        this.economy.expectSticker(sticker.data);
+    addWithSticker(stickerUid: number, id: number, stickerIndex: number): this {
+        const sticker = this.get(stickerUid).props.expectSticker();
         this.items.delete(stickerUid);
         this.add({
             id,
-            stickers: CS_INVENTORY_STICKERS.map((_, index) => (index === stickerIndex ? sticker.id : _))
+            stickers: { [stickerIndex]: { id: sticker.id } }
         });
         return this;
     }
 
-    edit(itemUid: number, attributes: Partial<CS_BaseInventoryItem>) {
+    edit(itemUid: number, attributes: Partial<CS2BaseInventoryItem>): this {
         const item = this.get(itemUid);
-        assert(!attributes.uid || item.uid === attributes.uid, "Item uid cannot be modified.");
-        assert(!attributes.id || item.id === attributes.id, "Item id cannot be modified.");
-        this.validateBaseInventoryItem({ ...attributes, id: item.id });
-        Object.assign(item, this.asPartialInventoryItem(attributes), {
-            updatedat: CS_getTimestamp()
+        assert(attributes.id === undefined || attributes.id === item.id);
+        attributes.id = item.id;
+        Object.assign(item, this.toInventoryItem(itemUid, attributes as CS2BaseInventoryItem), {
+            updatedAt: getTimestamp()
         });
         return this;
     }
 
-    equip(itemUid: number, team?: CS_Team) {
+    equip(itemUid: number, team?: CS2TeamValues): this {
         const item = this.get(itemUid);
-        assert(item.equipped === undefined, "Item is already equipped.");
-        assert(team !== CS_TEAM_CT || item.equippedCT === undefined, "Item is already equipped to CT.");
-        assert(team !== CS_TEAM_T || item.equippedT === undefined, "Item is already equipped to T.");
-        assert(CS_INVENTORY_EQUIPPABLE_ITEMS.includes(item.data.type), "Item is not equippable.");
-        assert(team === undefined || item.data.teams?.includes(team), "Item cannot be equipped to this team.");
-        assert(team !== undefined || item.data.teams === undefined, "Item cannot be equipped to any team.");
+        assert(item.equipped === undefined);
+        assert(team !== CS2Team.CT || item.equippedCT === undefined);
+        assert(team !== CS2Team.T || item.equippedT === undefined);
+        assert(CS_INVENTORY_EQUIPPABLE_ITEMS.includes(item.props.type));
+        assert(team === undefined || item.props.teams?.includes(team));
+        assert(team !== undefined || item.props.teams === undefined);
         for (const [otherUid, otherItem] of this.items) {
             if (itemUid === otherUid) {
                 otherItem.equipped = team === undefined ? true : undefined;
-                otherItem.equippedCT = team === CS_TEAM_CT ? true : otherItem.equippedCT;
-                otherItem.equippedT = team === CS_TEAM_T ? true : otherItem.equippedT;
+                otherItem.equippedCT = team === CS2Team.CT ? true : otherItem.equippedCT;
+                otherItem.equippedT = team === CS2Team.T ? true : otherItem.equippedT;
             } else {
                 if (
-                    otherItem.data.type === item.data.type &&
-                    (item.data.type !== "weapon" || otherItem.data.model === item.data.model)
+                    otherItem.props.type === item.props.type &&
+                    (item.props.type !== CS2ItemType.Weapon || otherItem.props.model === item.props.model)
                 ) {
                     otherItem.equipped = team === undefined ? undefined : otherItem.equipped;
-                    otherItem.equippedCT = team === CS_TEAM_CT ? undefined : otherItem.equippedCT;
-                    otherItem.equippedT = team === CS_TEAM_T ? undefined : otherItem.equippedT;
+                    otherItem.equippedCT = team === CS2Team.CT ? undefined : otherItem.equippedCT;
+                    otherItem.equippedT = team === CS2Team.T ? undefined : otherItem.equippedT;
                 }
             }
         }
         return this;
     }
 
-    unequip(uid: number, team?: CS_Team) {
+    unequip(uid: number, team?: CS2TeamValues): this {
         const item = this.get(uid);
         item.equipped = team === undefined ? undefined : item.equipped;
-        item.equippedCT = team === CS_TEAM_CT ? undefined : item.equippedCT;
-        item.equippedT = team === CS_TEAM_T ? undefined : item.equippedT;
+        item.equippedCT = team === CS2Team.CT ? undefined : item.equippedCT;
+        item.equippedT = team === CS2Team.T ? undefined : item.equippedT;
         return this;
     }
 
-    unlockCase(unlockedItem: ReturnType<typeof this.economy.unlockCase>, caseUid: number, keyUid?: number) {
-        const caseItem = this.get(caseUid);
-        this.economy.validateUnlockedItem(caseItem.data, unlockedItem);
+    unlockContainer(
+        unlockedItem: ReturnType<InstanceType<typeof CS2EconomyItem>["unlock"]>,
+        containerUid: number,
+        keyUid?: number
+    ): this {
+        const containerItem = this.get(containerUid);
+        this.economy.validateUnlockedItem(containerItem.props, unlockedItem);
         const keyItem = keyUid !== undefined ? this.get(keyUid) : undefined;
-        this.economy.validateCaseKey(caseItem.data, keyItem?.data);
-        this.items.delete(caseUid);
+        this.economy.validateContainerAndKey(containerItem.props, keyItem?.props);
+        this.items.delete(containerUid);
         if (keyUid !== undefined) {
             this.items.delete(keyUid);
         }
         this.add({
-            id: unlockedItem.id,
             ...unlockedItem.attributes,
-            updatedat: CS_getTimestamp()
+            id: unlockedItem.id,
+            updatedAt: getTimestamp()
         });
         return this;
     }
 
-    renameItem(toolUid: number, renameableUid: number, nametag?: string) {
-        nametag = this.economy.trimNametag(nametag);
-        const tool = this.get(toolUid);
-        this.economy.expectNametagTool(tool.data);
+    renameItem(nameTagUid: number, renameableUid: number, nameTag?: string): this {
+        nameTag = this.economy.trimNametag(nameTag);
+        this.get(nameTagUid).props.expectNameTag();
         const renameable = this.get(renameableUid);
-        this.economy.validateNametag(nametag, renameable.data);
-        renameable.nametag = nametag;
-        renameable.updatedat = CS_getTimestamp();
-        this.items.delete(toolUid);
+        this.economy.validateNametag(nameTag, renameable.props);
+        renameable.nameTag = nameTag;
+        renameable.updatedAt = getTimestamp();
+        this.items.delete(nameTagUid);
         return this;
     }
 
-    renameStorageUnit(storageUid: number, nametag: string) {
-        const trimmed = this.economy.trimNametag(nametag);
+    renameStorageUnit(storageUid: number, nameTag: string): this {
+        const trimmed = this.economy.trimNametag(nameTag);
         const storageUnit = this.get(storageUid);
-        this.economy.expectStorageUnitTool(storageUnit.data);
+        storageUnit.props.expectStorageUnit();
         this.economy.requireNametag(trimmed);
-        storageUnit.nametag = trimmed;
-        storageUnit.updatedat = CS_getTimestamp();
+        storageUnit.nameTag = trimmed;
+        storageUnit.updatedAt = getTimestamp();
         return this;
     }
 
-    isStorageUnitFull(storageUid: number) {
+    isStorageUnitFull(storageUid: number): boolean {
         return this.get(storageUid).storage?.size === this.options.storageUnitMaxItems;
     }
 
-    isStorageUnitFilled(storageUid: number) {
+    getStorageUnitSize(storageUid: number): number {
+        return this.get(storageUid).storage?.size ?? 0;
+    }
+
+    isStorageUnitFilled(storageUid: number): boolean {
         return this.getStorageUnitSize(storageUid) > 0;
     }
 
-    canDepositToStorageUnit(storageUid: number, size = 1) {
+    canDepositToStorageUnit(storageUid: number, size = 1): boolean {
         return (
-            this.get(storageUid).nametag !== undefined &&
+            this.get(storageUid).nameTag !== undefined &&
             this.getStorageUnitSize(storageUid) + size <= this.options.storageUnitMaxItems
         );
     }
 
-    canRetrieveFromStorageUnit(storageUid: number, size = 1) {
+    canRetrieveFromStorageUnit(storageUid: number, size = 1): boolean {
         return this.getStorageUnitSize(storageUid) - size >= 0 && this.size() + size <= this.options.maxItems;
     }
 
-    getStorageUnitSize(storageUid: number) {
-        return this.get(storageUid).storage?.size ?? 0;
-    }
-
-    getStorageUnitItems(storageUid: number) {
+    getStorageUnitItems(storageUid: number): CS2InventoryItem[] {
         return Array.from(this.get(storageUid).storage?.values() ?? []);
     }
 
-    depositToStorageUnit(storageUid: number, depositUids: number[]) {
+    depositToStorageUnit(storageUid: number, depositUids: number[]): this {
         const item = this.get(storageUid);
-        this.economy.expectStorageUnitTool(item.data);
-        assert(depositUids.length > 0, "No items to deposit.");
-        assert(this.canDepositToStorageUnit(storageUid, depositUids.length), "Cannot deposit to storage unit.");
+        item.props.expectStorageUnit();
+        assert(depositUids.length > 0);
+        assert(this.canDepositToStorageUnit(storageUid, depositUids.length));
         for (const sourceUid of depositUids) {
-            assert(!this.economy.isStorageUnitTool(this.get(sourceUid).data), "Cannot deposit storage unit.");
+            assert(!this.get(sourceUid).props.isStorageUnit());
         }
-        const storage = item.storage ?? new Map<number, CS_InventoryItem>();
+        const storage = item.storage ?? new Map<number, CS2InventoryItem>();
         for (const sourceUid of depositUids) {
-            const uid = CS_getNextUid(storage);
+            const uid = getNextUid(storage);
             storage.set(
                 uid,
                 Object.assign(this.get(sourceUid), {
@@ -369,129 +365,121 @@ export class CS_Inventory {
             this.items.delete(sourceUid);
         }
         item.storage = storage;
-        item.updatedat = CS_getTimestamp();
+        item.updatedAt = getTimestamp();
         return this;
     }
 
-    retrieveFromStorageUnit(storageUid: number, retrieveUids: number[]) {
+    retrieveFromStorageUnit(storageUid: number, retrieveUids: number[]): this {
         const item = this.get(storageUid);
-        this.economy.expectStorageUnitTool(item.data);
+        item.props.expectStorageUnit();
         const storage = item.storage;
-        assert(storage, "Storage unit is empty.");
-        assert(retrieveUids.length > 0, "No items to retrieve.");
-        assert(this.canRetrieveFromStorageUnit(storageUid, retrieveUids.length), "Cannot retrieve from storage unit.");
+        assert(storage !== undefined);
+        assert(retrieveUids.length > 0);
+        assert(this.canRetrieveFromStorageUnit(storageUid, retrieveUids.length));
         for (const uid of retrieveUids) {
-            assert(storage.has(uid), "Item not found.");
+            assert(storage.has(uid));
         }
         for (const uid of retrieveUids) {
-            const item = storage.get(uid)!;
+            const item = ensure(storage.get(uid));
             this.addInventoryItem(item);
             storage.delete(uid);
         }
         item.storage = storage.size > 0 ? storage : undefined;
-        item.updatedat = CS_getTimestamp();
+        item.updatedAt = getTimestamp();
         return this;
     }
 
-    applyItemSticker(targetUid: number, stickerUid: number, stickerIndex: number) {
+    applyItemSticker(targetUid: number, stickerUid: number, stickerIndex: number): this {
+        assert(stickerIndex >= 0 && stickerIndex <= CS2_MAX_STICKERS - 1);
         const target = this.get(targetUid);
         const sticker = this.get(stickerUid);
-        assert(this.economy.hasStickers(target.data), "Target item does not have stickers.");
-        this.economy.expectSticker(sticker.data);
-        const stickers = target.stickers ?? [...CS_INVENTORY_STICKERS];
-        assert(stickers[stickerIndex] === CS_NONE, "Sticker already applied.");
-        stickers[stickerIndex] = sticker.id;
+        assert(target.props.hasStickers());
+        sticker.props.expectSticker();
+        const stickers = target.stickers ?? {};
+        assert(stickers[stickerIndex] === undefined);
+        stickers[stickerIndex] = { id: sticker.id };
         target.stickers = stickers;
-        target.updatedat = CS_getTimestamp();
+        target.updatedAt = getTimestamp();
         this.items.delete(stickerUid);
         return this;
     }
 
-    scrapeItemSticker(targetUid: number, stickerIndex: number) {
+    scrapeItemSticker(targetUid: number, stickerIndex: number): this {
         const target = this.get(targetUid);
-        assert(target.stickers !== undefined, "Target item does not have stickers.");
-        const { stickers } = target;
-        assert(typeof stickers[stickerIndex] === "number", "Invalid sticker index.");
-        const wears = target.stickerswear ?? [...CS_INVENTORY_STICKERS_WEAR];
-        const wear = wears[stickerIndex] ?? CS_NONE;
-        const nextWear = float(wear + CS_STICKER_WEAR_FACTOR);
-        if (nextWear > CS_MAX_WEAR) {
-            stickers[stickerIndex] = CS_NONE;
-            wears[stickerIndex] = CS_NONE;
-            target.stickers = stickers.filter((id) => id !== CS_NONE).length > 0 ? stickers : undefined;
-            target.stickerswear = wears.filter((wear) => wear !== CS_NONE).length > 0 ? wears : undefined;
+        assert(target.stickers !== undefined);
+        const sticker = ensure(target.stickers[stickerIndex]);
+        const wear = sticker.wear ?? CS2_NONE;
+        const nextWear = float(wear + CS2_STICKER_WEAR_FACTOR);
+        if (nextWear > CS2_MAX_WEAR) {
+            delete target.stickers[stickerIndex];
+            if (Object.keys(target.stickers).length === 0) {
+                target.stickers = undefined;
+            }
             return this;
         }
-        wears[stickerIndex] = nextWear;
-        target.stickerswear = wears;
-        target.updatedat = CS_getTimestamp();
+        sticker.wear = nextWear;
+        target.updatedAt = getTimestamp();
         return this;
     }
 
-    incrementItemStatTrak(targetUid: number) {
+    incrementItemStatTrak(targetUid: number): this {
         const target = this.get(targetUid);
-        assert(target.stattrak !== undefined, "Target item does not have stattrak.");
-        if (target.stattrak < CS_MAX_STATTRAK) {
-            target.stattrak++;
-            target.updatedat = CS_getTimestamp();
+        assert(target.statTrak !== undefined);
+        if (target.statTrak < CS2_MAX_STATTRAK) {
+            target.statTrak++;
+            target.updatedAt = getTimestamp();
         }
         return this;
     }
 
-    swapItemsStatTrak(toolUid: number, fromUid: number, toUid: number) {
-        assert(fromUid !== toUid, "Uids must be different.");
-        const tool = this.get(toolUid);
-        this.economy.expectStatTrakSwapTool(tool.data);
+    swapItemsStatTrak(statTrakSwapToolUid: number, fromUid: number, toUid: number) {
+        assert(fromUid !== toUid);
+        this.get(statTrakSwapToolUid).props.expectStatTrakSwapTool();
         const fromItem = this.get(fromUid);
         const toItem = this.get(toUid);
-        assert(fromItem.stattrak !== undefined && toItem.stattrak !== undefined, "Invalid inventory items.");
-        assert(fromItem.data.type === toItem.data.type, "Items must be of the same type.");
-        assert(
-            fromItem.data.type === "musickit" || fromItem.data.def === toItem.data.def,
-            "Items must be of the same type."
-        );
-        const fromStattrak = fromItem.stattrak;
-        fromItem.stattrak = toItem.stattrak;
-        fromItem.updatedat = CS_getTimestamp();
-        toItem.stattrak = fromStattrak;
-        toItem.updatedat = CS_getTimestamp();
-        this.items.delete(toolUid);
+        assert(fromItem.statTrak !== undefined && toItem.statTrak !== undefined);
+        assert(fromItem.props.type === toItem.props.type);
+        assert(fromItem.props.type === CS2ItemType.MusicKit || fromItem.props.def === toItem.props.def);
+        const fromStattrak = fromItem.statTrak;
+        fromItem.statTrak = toItem.statTrak;
+        fromItem.updatedAt = getTimestamp();
+        toItem.statTrak = fromStattrak;
+        toItem.updatedAt = getTimestamp();
+        this.items.delete(statTrakSwapToolUid);
         return this;
     }
 
-    remove(uid: number) {
+    remove(uid: number): this {
         this.items.delete(uid);
         return this;
     }
 
-    removeAll() {
+    removeAll(): this {
         this.items.clear();
         return this;
     }
 
-    get(uid: number) {
-        const item = this.items.get(uid);
-        assert(item !== undefined, "Item not found.");
-        return item;
+    get(uid: number): CS2InventoryItem {
+        return ensure(this.items.get(uid));
     }
 
-    getAll() {
+    getAll(): CS2InventoryItem[] {
         return Array.from(this.items.values());
     }
 
-    size() {
+    setAll(items: Map<number, CS2InventoryItem>): this {
+        this.items = items;
+        return this;
+    }
+
+    size(): number {
         return this.items.size;
     }
 
-    move() {
-        return new CS_Inventory({
+    move(): CS2Inventory {
+        return new CS2Inventory({
             ...this.options,
-            economy: this.economy,
-            items: this.items
-        });
-    }
-
-    export() {
-        return Array.from(this.items.values()).map((value) => this.asBaseInventoryItem(value));
+            economy: this.economy
+        }).setAll(this.items);
     }
 }

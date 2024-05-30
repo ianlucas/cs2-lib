@@ -10,22 +10,18 @@ import {
     CS2_MAX_MINIMAL_WEAR_WEAR,
     CS2_MAX_SEED,
     CS2_MAX_STATTRAK,
-    CS2_MAX_STICKER_WEAR,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
-    CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
     CS2_NAMETAGGABLE_ITEMS,
     CS2_NAMETAG_RE,
     CS2_NAMETAG_TOOL_DEF,
-    CS2_NONE,
     CS2_SEEDABLE_ITEMS,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEF,
     CS2_STICKERABLE_ITEMS,
-    CS2_STICKER_WEAR_FACTOR,
     CS2_STORAGE_UNIT_TOOL_DEF,
     CS2_TEAMS_BOTH,
     CS2_TEAMS_CT,
@@ -87,15 +83,19 @@ export class CS2EconomyInstance {
         this.categories.clear();
         this.items.clear();
         this.stickers.clear();
-        this.itemsAsArray = items.map((item) => {
+        this.itemsAsArray = [];
+        for (const item of items) {
+            if (item.type === CS2ItemType.Stub) {
+                continue;
+            }
             const economyItem = new CS2EconomyItem(this, item, ensure(language[item.id]));
             this.items.set(item.id, economyItem);
             if (economyItem.isSticker()) {
                 this.stickers.add(economyItem);
                 this.categories.add(ensure(economyItem.category));
             }
-            return economyItem;
-        });
+            this.itemsAsArray.push(economyItem);
+        }
     }
 
     getById(id: number): CS2EconomyItem {
@@ -148,36 +148,6 @@ export class CS2EconomyInstance {
 
     safeValidateSeed(seed?: number, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateSeed(seed, item));
-    }
-
-    validateStickers(stickers?: number[], wears?: number[], item?: CS2EconomyItem): boolean {
-        if (stickers === undefined) {
-            assert(wears === undefined, "Stickers array is undefined.");
-            return true;
-        }
-        assert(stickers.length === 4, "Stickers array must contain exactly 4 elements.");
-        assert(wears === undefined || wears.length === 4, "Stickers wear array must contain exactly 4 elements.");
-        assert(item === undefined || item.hasStickers(), "The provided item does not have stickers.");
-        for (const [slot, stickerId] of stickers.entries()) {
-            if (stickerId === CS2_NONE) {
-                assert(wears === undefined || wears[slot] === CS2_NONE, "Sticker wear value is invalid.");
-                continue;
-            }
-            this.get(stickerId).expectSticker();
-            if (wears !== undefined) {
-                const wear = wears[slot];
-                assert(!Number.isNaN(wear), "Sticker wear value must be a valid number.");
-                assert(
-                    String(wear).length <= String(CS2_STICKER_WEAR_FACTOR).length,
-                    "Sticker wear value is too long."
-                );
-                assert(
-                    wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR,
-                    "Sticker wear value must be between CS_MIN_STICKER_WEAR and CS_MAX_STICKER_WEAR."
-                );
-            }
-        }
-        return true;
     }
 
     trimNametag(nametag?: string): string | undefined {
@@ -353,18 +323,17 @@ export class CS2EconomyItem
     wearMin: number | undefined;
 
     private _contents: number[] | undefined;
-    private _economyInstance: CS2EconomyInstance;
+    private _economy: CS2EconomyInstance;
     private _specials: number[] | undefined;
     private _teams: CS2ItemTeamValues | undefined;
 
     constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLocalization) {
-        this._economyInstance = economyInstance;
+        this._economy = economyInstance;
         Object.assign(this, item);
         Object.assign(this, language);
-        assert(this.id);
+        assert(typeof this.id === "number");
         assert(this.name);
         assert(this.rarity);
-        assert(this.type);
         assert(this.type);
     }
 
@@ -374,11 +343,11 @@ export class CS2EconomyItem
 
     get contents(): CS2EconomyItem[] {
         this.expectContainer();
-        return ensure(this._contents).map((id) => this._economyInstance.get(id));
+        return ensure(this._contents).map((id) => this._economy.get(id));
     }
 
     get parent(): CS2EconomyItem | undefined {
-        return this.baseId !== undefined ? this._economyInstance.get(this.baseId) : undefined;
+        return this.baseId !== undefined ? this._economy.get(this.baseId) : undefined;
     }
 
     get rawContents(): number[] | undefined {
@@ -395,7 +364,7 @@ export class CS2EconomyItem
 
     get specials(): CS2EconomyItem[] | undefined {
         this.expectContainer();
-        return this._specials?.map((id) => this._economyInstance.get(id));
+        return this._specials?.map((id) => this._economy.get(id));
     }
 
     set teams(value: CS2ItemTeamValues) {
@@ -558,7 +527,7 @@ export class CS2EconomyItem
         attributes: {
             containerId: number;
             seed: number | undefined;
-            stattrak: number | undefined;
+            statTrak: number | undefined;
             wear: number | undefined;
         };
         id: number;
@@ -589,7 +558,7 @@ export class CS2EconomyItem
             attributes: {
                 containerId: this.id,
                 seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
-                stattrak: hasStatTrak
+                statTrak: hasStatTrak
                     ? unlocked.hasStatTrak()
                         ? alwaysStatTrak || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
