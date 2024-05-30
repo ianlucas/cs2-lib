@@ -1189,6 +1189,7 @@ export class ItemGenerator {
 
     createStub(name: string, descToken: string) {
         const id = this.itemIdentifierManager.get(`stub_${name}`);
+        this.addTranslation(id, "name", "#Rarity_Default");
         this.addTranslation(id, "desc", descToken);
         this.addItem({
             id,
