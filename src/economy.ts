@@ -60,7 +60,7 @@ import { Interface, assert, compare, ensure, safe } from "./utils.js";
 
 type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2TeamValues };
 
-function filterItems(predicate: CS2EconomyItemPredicate) {
+function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem) => boolean {
     return function filter(item: CS2EconomyItem) {
         return (
             compare(predicate.type, item.type) &&
@@ -251,7 +251,7 @@ export class CS2EconomyInstance {
         return specialsImage ? `${baseUrl}/${id}_rare.png` : `${baseUrl}/default_rare_item.png`;
     }
 
-    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem) {
+    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
         containerItem = this.get(containerItem);
         containerItem.expectContainer();
         keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
@@ -265,14 +265,14 @@ export class CS2EconomyInstance {
         return true;
     }
 
-    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem) {
+    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
         return safe(() => this.validateContainerAndKey(containerItem, keyItem));
     }
 
     validateUnlockedItem(
         item: number | CS2EconomyItem,
         { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlock"]>
-    ) {
+    ): void {
         item = this.get(item).expectContainer();
         assert(
             item.rawContents?.includes(id) || item.rawSpecials?.includes(id),

@@ -18,7 +18,7 @@ export function compare<T, U>(var1: T, var2: U): boolean {
     return var1 === undefined || var1 === (typeof var1 === "boolean" ? var2 || false : var2);
 }
 
-export function float(literal: number, fractionDigits: number = 2) {
+export function float(literal: number, fractionDigits: number = 2): number {
     return parseFloat(literal.toFixed(fractionDigits));
 }
 
@@ -27,7 +27,7 @@ export function ensure<T>(value: T): NonNullable<T> {
     return value;
 }
 
-export function safe<T>(fn: () => T) {
+export function safe<T>(fn: () => T): false | T {
     try {
         return fn();
     } catch {

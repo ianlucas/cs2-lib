@@ -55,7 +55,7 @@ export const CS2_TRAIN_MAP: CS2Map = {
     name: "Train"
 };
 
-export const CS2_ACTIVE_MAP_POOL = [
+export const CS2_ACTIVE_MAP_POOL: CS2Map[] = [
     CS2_ANCIENT_MAP,
     CS2_ANUBIS_MAP,
     CS2_DUST2_MAP,
@@ -65,7 +65,7 @@ export const CS2_ACTIVE_MAP_POOL = [
     CS2_VERTIGO_MAP
 ];
 
-export const CS2_ALL_MAPS = [
+export const CS2_ALL_MAPS: CS2Map[] = [
     CS2_ANCIENT_MAP,
     CS2_ANUBIS_MAP,
     CS2_DUST2_MAP,

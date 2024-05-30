@@ -67,7 +67,7 @@ export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
 // prettier-ignore
 export const CS_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Patch, CS2ItemType.Weapon];
 
-export function getTimestamp() {
+export function getTimestamp(): number {
     return Math.ceil((Date.now() - CS2_INVENTORY_TIMESTAMP) / 1000);
 }
 
@@ -130,7 +130,11 @@ export class CS2Inventory {
         this.validateStickers(stickers, item);
     }
 
-    private toInventoryItem(uid: number, { storage, ...base }: CS2BaseInventoryItem, isStorageUnitItem = false) {
+    private toInventoryItem(
+        uid: number,
+        { storage, ...base }: CS2BaseInventoryItem,
+        isStorageUnitItem = false
+    ): CS2InventoryItem {
         assert(storage === undefined || this.economy.getById(base.id).isStorageUnit());
         assert(!isStorageUnitItem || storage === undefined);
         this.validateBaseInventoryItem(base);
@@ -432,7 +436,7 @@ export class CS2Inventory {
         return this;
     }
 
-    swapItemsStatTrak(statTrakSwapToolUid: number, fromUid: number, toUid: number) {
+    swapItemsStatTrak(statTrakSwapToolUid: number, fromUid: number, toUid: number): this {
         assert(fromUid !== toUid);
         this.get(statTrakSwapToolUid).props.expectStatTrakSwapTool();
         const fromItem = this.get(fromUid);

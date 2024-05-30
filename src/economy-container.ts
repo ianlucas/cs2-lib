@@ -69,11 +69,11 @@ export const CS2_RARITY_COLOR_DEFAULT = 0;
 export const CS2_BASE_ODD = 0.8;
 export const CS2_STATTRAK_ODD = 0.1;
 
-export function randomFloat(min: number, max: number) {
+export function randomFloat(min: number, max: number): number {
     return Math.random() * (max - min) + min;
 }
 
-export function randomInt(min: number, max: number) {
+export function randomInt(min: number, max: number): number {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
