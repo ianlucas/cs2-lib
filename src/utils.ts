@@ -47,3 +47,7 @@ export function assert(condition: any, message?: string): asserts condition {
 export function fail(message?: string): never {
     throw new Error(message);
 }
+
+export function isNotUndefined<T>(value: T): value is NonNullable<T> {
+    return value !== undefined;
+}
