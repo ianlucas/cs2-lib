@@ -16,7 +16,7 @@ import { CS2ItemType, CS2ItemTypeValues, CS2UnlockedItem } from "./economy-types
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.js";
 import { resolveInventoryData } from "./inventory-upgrader.js";
 import { CS2Team, CS2TeamValues } from "./teams.js";
-import { Interface, MapValue, assert, ensure, float, isNotUndefined } from "./utils.js";
+import { Interface, MapValue, assert, ensure, float } from "./utils.js";
 
 export interface CS2BaseInventoryItem {
     containerId?: number;
@@ -597,28 +597,30 @@ export class CS2InventoryItem
 
 export function mapAllStickers(
     stickers: CS2InventoryItem["stickers"]
-): ([number, MapValue<typeof stickers>] | undefined)[] {
-    const entries: ([number, MapValue<typeof stickers>] | undefined)[] = [];
+): [number, MapValue<typeof stickers> | undefined][] {
+    const entries: [number, MapValue<typeof stickers> | undefined][] = [];
     for (let slot = 0; slot < CS2_MAX_STICKERS; slot++) {
         const sticker = stickers?.get(slot);
-        entries.push(sticker !== undefined ? [slot, sticker] : undefined);
+        entries.push([slot, sticker]);
     }
     return entries;
 }
 
 export function mapStickers(stickers: CS2InventoryItem["stickers"]): [number, MapValue<typeof stickers>][] {
-    return mapAllStickers(stickers).filter(isNotUndefined);
+    return mapAllStickers(stickers).filter(
+        (value): value is [number, MapValue<typeof stickers>] => value[1] !== undefined
+    );
 }
 
-export function mapAllPatches(patches: CS2InventoryItem["patches"]): ([number, number] | undefined)[] {
-    const entries: ([number, number] | undefined)[] = [];
+export function mapAllPatches(patches: CS2InventoryItem["patches"]): [number, number | undefined][] {
+    const entries: [number, number | undefined][] = [];
     for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
         const patch = patches?.get(slot);
-        entries.push(patch !== undefined ? [slot, patch] : undefined);
+        entries.push([slot, patch]);
     }
     return entries;
 }
 
 export function mapPatches(patches: CS2InventoryItem["patches"]): [number, number][] {
-    return mapAllPatches(patches).filter(isNotUndefined);
+    return mapAllPatches(patches).filter((value): value is [number, number] => value[1] !== undefined);
 }
