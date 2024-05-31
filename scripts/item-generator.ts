@@ -19,12 +19,12 @@ import {
     CS2ItemTypeValues
 } from "../src/economy-types.js";
 import { CS2KeyValues } from "../src/keyvalues.js";
-import { assert, ensure, fail } from "../src/utils.js";
+import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { getItemsTsContents } from "./item-generator-template.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
-import { isNotUndefined, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
+import { readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");

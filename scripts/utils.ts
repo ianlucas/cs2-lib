@@ -59,10 +59,6 @@ export function push<T, U extends Record<string | number, U[]>>(obj: T, key: str
     obj[key].push(value);
 }
 
-export function isNotUndefined<T>(value: T): value is NonNullable<T> {
-    return value !== undefined;
-}
-
 export function shouldRun(url: string) {
     return basename(process.argv[1]) === basename(fileURLToPath(url));
 }

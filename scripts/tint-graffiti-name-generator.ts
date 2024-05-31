@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isNotUndefined } from "../src/utils.js";
 import { ItemGenerator } from "./item-generator.js";
-import { isNotUndefined, shouldRun, writeJson } from "./utils.js";
+import { shouldRun, writeJson } from "./utils.js";
 
 export class TintGraffitiNameGenerator {
     async run() {
