@@ -34,7 +34,6 @@ import {
     CS2RarityColorOrder,
     CS2RarityColorValues,
     CS2RaritySoundName,
-    CS2RaritySoundNameValues,
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
     CS2_RARITY_ORDER,
@@ -53,7 +52,8 @@ import {
     CS2ItemType,
     CS2ItemTypeValues,
     CS2ItemWear,
-    CS2ItemWearValues
+    CS2ItemWearValues,
+    CS2UnlockedItem
 } from "./economy-types.js";
 import { CS2TeamValues } from "./teams.js";
 import { Interface, assert, compare, ensure, safe } from "./utils.js";
@@ -267,7 +267,7 @@ export class CS2EconomyInstance {
 
     validateUnlockedItem(
         item: number | CS2EconomyItem,
-        { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlock"]>
+        { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlockContainer"]>
     ): void {
         item = this.get(item).expectContainer();
         assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
@@ -316,12 +316,14 @@ export class CS2EconomyItem
     wearMin: number | undefined;
 
     private _contents: number[] | undefined;
-    private _economy: CS2EconomyInstance;
     private _specials: number[] | undefined;
     private _teams: CS2ItemTeamValues | undefined;
 
-    constructor(economyInstance: CS2EconomyInstance, item: CS2Item, language: CS2ItemLocalization) {
-        this._economy = economyInstance;
+    constructor(
+        public economy: CS2EconomyInstance,
+        public item: CS2Item,
+        public language: CS2ItemLocalization
+    ) {
         Object.assign(this, item);
         Object.assign(this, language);
         assert(typeof this.id === "number");
@@ -336,11 +338,11 @@ export class CS2EconomyItem
 
     get contents(): CS2EconomyItem[] {
         this.expectContainer();
-        return ensure(this._contents).map((id) => this._economy.get(id));
+        return ensure(this._contents).map((id) => this.economy.get(id));
     }
 
     get parent(): CS2EconomyItem | undefined {
-        return this.baseId !== undefined ? this._economy.get(this.baseId) : undefined;
+        return this.baseId !== undefined ? this.economy.get(this.baseId) : undefined;
     }
 
     get rawContents(): number[] | undefined {
@@ -357,7 +359,7 @@ export class CS2EconomyItem
 
     get specials(): CS2EconomyItem[] | undefined {
         this.expectContainer();
-        return this._specials?.map((id) => this._economy.get(id));
+        return this._specials?.map((id) => this.economy.get(id));
     }
 
     set teams(value: CS2ItemTeamValues) {
@@ -534,17 +536,7 @@ export class CS2EconomyItem
         });
     }
 
-    unlock(): {
-        attributes: {
-            containerId: number;
-            seed: number | undefined;
-            statTrak: number | undefined;
-            wear: number | undefined;
-        };
-        id: number;
-        rarity: CS2RaritySoundNameValues;
-        special: boolean;
-    } {
+    unlockContainer(): CS2UnlockedItem {
         // @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
         const contents = this.groupContents();
         const keys = Object.keys(contents);

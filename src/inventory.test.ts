@@ -6,10 +6,10 @@
 import english from "../assets/localizations/items-english.json";
 import { CS2Economy } from "./economy";
 import { CS2_MAX_PATCHES, CS2_MAX_STATTRAK } from "./economy-constants";
-import { CS2InventoryInstance } from "./inventory-instance";
+import { CS2Inventory } from "./inventory";
 import { CS2_ITEMS } from "./items";
 import { CS2Team } from "./teams";
-import { float } from "./utils";
+import { ensure, float } from "./utils";
 
 const AK47_ID = 4;
 const ALLU_COLOGNE_2015_ID = 2268;
@@ -45,15 +45,11 @@ const BLOODHOUND_ID = 8569;
 
 CS2Economy.use({ items: CS2_ITEMS, language: english });
 
-function size<T extends {}>(obj: T): number {
-    return Object.keys(obj).length;
-}
-
-describe("CS2InventoryInstance methods", () => {
-    let inventory: CS2InventoryInstance;
+describe("CS2Inventory methods", () => {
+    let inventory: CS2Inventory;
 
     beforeEach(() => {
-        inventory = new CS2InventoryInstance({
+        inventory = new CS2Inventory({
             maxItems: 16,
             storageUnitMaxItems: 3
         });
@@ -98,7 +94,6 @@ describe("CS2InventoryInstance methods", () => {
         };
         inventory.add({ ...item });
         const result = inventory.get(0);
-        expect(result.props).toBe(CS2Economy.getById(AWP_DRAGON_LORE_ID));
         expect(result.equipped).toBe(undefined);
         expect(result.equippedCT).toBe(undefined);
         expect(result.equippedT).toBe(undefined);
@@ -106,11 +101,10 @@ describe("CS2InventoryInstance methods", () => {
         expect(result.nameTag).toBe(item.nameTag);
         expect(result.seed).toBe(item.seed);
         expect(result.statTrak).toBe(item.statTrak);
-        expect(result.stickers).toEqual(item.stickers);
+        expect(Object.fromEntries(ensure(result.stickers))).toEqual(item.stickers);
         expect(result.uid).toBe(0);
         expect(result.updatedAt).not.toBe(item.updatedAt);
         expect(result.wear).toBe(item.wear);
-        expect(size(result)).toBe(12);
     });
 
     test("addWithNametag should add items with nametags to the inventory", () => {
@@ -119,7 +113,7 @@ describe("CS2InventoryInstance methods", () => {
         inventory.addWithNametag(0, ...args); // uid:0
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
-        expect(result.props).toBe(CS2Economy.getById(AK47_ID));
+        expect(result.id).toBe(AK47_ID);
         expect(result.equipped).toBe(undefined);
         expect(result.equippedCT).toBe(undefined);
         expect(result.equippedT).toBe(undefined);
@@ -127,7 +121,6 @@ describe("CS2InventoryInstance methods", () => {
         expect(result.nameTag).toBe(args[1]);
         expect(result.uid).toBe(0);
         expect(result.updatedAt).not.toBe(undefined);
-        expect(size(result)).toBe(8);
     });
 
     test("addWithSticker should add items with stickers to the inventory", () => {
@@ -136,15 +129,14 @@ describe("CS2InventoryInstance methods", () => {
         inventory.addWithSticker(0, ...args); // uid:0
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
-        expect(result.props).toBe(CS2Economy.getById(AK47_ID));
+        expect(result.id).toBe(AK47_ID);
         expect(result.equipped).toBe(undefined);
         expect(result.equippedCT).toBe(undefined);
         expect(result.equippedT).toBe(undefined);
         expect(result.id).toBe(args[0]);
-        expect(result.stickers).toEqual({ 2: { id: FALLEN_COLOGNE_2015_ID } });
+        expect(Object.fromEntries(ensure(result.stickers))).toEqual({ 2: { id: FALLEN_COLOGNE_2015_ID } });
         expect(result.uid).toBe(0);
         expect(result.updatedAt).not.toBe(undefined);
-        expect(size(result)).toBe(8);
     });
 
     test("edit should edit the item with the given id", () => {
@@ -177,7 +169,7 @@ describe("CS2InventoryInstance methods", () => {
         expect(result.nameTag).toBe(editedItem.nameTag);
         expect(result.seed).toBe(editedItem.seed);
         expect(result.statTrak).toBe(editedItem.statTrak);
-        expect(result.stickers).toEqual(editedItem.stickers);
+        expect(Object.fromEntries(ensure(result.stickers))).toEqual(editedItem.stickers);
         expect(result.wear).toBe(editedItem.wear);
     });
 
@@ -257,13 +249,13 @@ describe("CS2InventoryInstance methods", () => {
         inventory.add({ id: ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID }); // uid:0
         inventory.add({ id: KILOWATT_CASE_ID }); // uid:1
         inventory.add({ id: KILOWATT_CASE_KEY_ID }); // uid:2
-        const unlocked1 = CS2Economy.getById(ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID).unlock();
+        const unlocked1 = CS2Economy.getById(ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID).unlockContainer();
         expect(() => inventory.unlockContainer(unlocked1, 0, 2)).toThrow();
         inventory.unlockContainer(unlocked1, 0); // uid:0
         expect(inventory.size()).toBe(3);
         const result1 = inventory.get(0);
         expect(result1.containerId).toBe(unlocked1.attributes.containerId);
-        expect(result1.props).toBe(CS2Economy.getById(unlocked1.id));
+        expect(result1.id).toBe(unlocked1.id);
         expect(result1.equipped).toBe(undefined);
         expect(result1.equippedCT).toBe(undefined);
         expect(result1.equippedT).toBe(undefined);
@@ -273,13 +265,12 @@ describe("CS2InventoryInstance methods", () => {
         expect(result1.uid).toBe(0);
         expect(result1.updatedAt).not.toBe(undefined);
         expect(result1.wear).toEqual(unlocked1.attributes.wear);
-        expect(size(result1)).toBe(11);
-        const unlocked2 = CS2Economy.getById(KILOWATT_CASE_ID).unlock();
+        const unlocked2 = CS2Economy.getById(KILOWATT_CASE_ID).unlockContainer();
         inventory.unlockContainer(unlocked2, 1, 2); // uid:1
         expect(inventory.size()).toBe(2);
         const result2 = inventory.get(1);
         expect(result2.containerId).toBe(unlocked2.attributes.containerId);
-        expect(result2.props).toBe(CS2Economy.getById(unlocked2.id));
+        expect(result2.id).toBe(unlocked2.id);
         expect(result2.equipped).toBe(undefined);
         expect(result2.equippedCT).toBe(undefined);
         expect(result2.equippedT).toBe(undefined);
@@ -289,7 +280,6 @@ describe("CS2InventoryInstance methods", () => {
         expect(result2.uid).toBe(1);
         expect(result2.updatedAt).not.toBe(undefined);
         expect(result2.wear).toEqual(unlocked2.attributes.wear);
-        expect(size(result2)).toBe(11);
     });
 
     test("renameItem should rename the item with the given id", () => {
@@ -366,7 +356,7 @@ describe("CS2InventoryInstance methods", () => {
             expect(() => inventory.applyItemSticker(4, stickerIndex + 1, stickerIndex)).toThrow();
             expect(inventory.size()).toBe(6 - (stickerIndex + 1));
             expect(inventory.get(4).stickers).not.toBe(undefined);
-            expect(inventory.get(4).stickers![stickerIndex].id).toBe(expectedId);
+            expect(inventory.get(4).stickers?.get(stickerIndex)?.id).toBe(expectedId);
         }
         inventory.add({ id: O00_THIEVES_2020_RMR_FOIL_ID }); // uid: 0
         expect(() => inventory.applyItemSticker(4, 0, 5)).toThrow();
@@ -386,16 +376,16 @@ describe("CS2InventoryInstance methods", () => {
         expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
         expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
         inventory.scrapeItemSticker(0, 0);
-        expect(inventory.get(0).stickers![0].wear).toBe(0.1);
+        expect(inventory.get(0).stickers?.get(0)?.wear).toBe(0.1);
         for (let scrape = 1; scrape < 10; scrape++) {
             inventory.scrapeItemSticker(0, 0);
-            expect(inventory.get(0).stickers![0].wear).toBe(float(0.1 + 0.1 * scrape));
+            expect(inventory.get(0).stickers?.get(0)?.wear).toBe(float(0.1 + 0.1 * scrape));
         }
         inventory.scrapeItemSticker(0, 0);
-        expect(inventory.get(0).stickers![0]).toBe(undefined);
+        expect(inventory.get(0).stickers?.get(0)).toBe(undefined);
         for (let scrape = 0; scrape < 10; scrape++) {
             inventory.scrapeItemSticker(0, 1);
-            expect(inventory.get(0).stickers![1].wear).toBe(float(0.1 + 0.1 * scrape));
+            expect(inventory.get(0).stickers?.get(1)?.wear).toBe(float(0.1 + 0.1 * scrape));
         }
         inventory.scrapeItemSticker(0, 1);
         expect(inventory.get(0).stickers).toBe(undefined);
@@ -530,14 +520,14 @@ describe("CS2InventoryInstance methods", () => {
         for (let uid = 1; uid < 1 + 5; uid++) {
             const index = uid - 1;
             inventory.applyItemPatch(0, uid, index);
-            expect(inventory.get(0).patches?.[index]).toBe(BLOODHOUND_ID);
+            expect(inventory.get(0).patches?.get(index)).toBe(BLOODHOUND_ID);
         }
         expect(() => inventory.removeItemPatch(0, -1)).toThrow();
         expect(() => inventory.removeItemPatch(0, CS2_MAX_PATCHES)).toThrow();
         for (let uid = 1; uid < 1 + 5; uid++) {
             const index = uid - 1;
             inventory.removeItemPatch(0, index);
-            expect(inventory.get(0).patches?.[index]).toBe(undefined);
+            expect(inventory.get(0).patches?.get(index)).toBe(undefined);
         }
         expect(inventory.get(0).patches).toBe(undefined);
         const patches = {
@@ -569,6 +559,6 @@ describe("CS2InventoryInstance methods", () => {
             id: BLOODY_DARRYL_THE_STRAPPED_ID,
             patches
         });
-        expect(inventory.get(1).patches).toEqual(patches);
+        expect(Object.fromEntries(ensure(inventory.get(1).patches))).toEqual(patches);
     });
 });
