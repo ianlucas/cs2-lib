@@ -91,7 +91,7 @@ export interface CS2ItemLocalization {
     tournamentDesc?: string | undefined;
 }
 
-export type CS2ItemLocalizationMap = Record<number, CS2ItemLocalization | undefined>;
+export type CS2ItemLocalizationMap = Record<string, CS2ItemLocalization | undefined>;
 export type CS2ItemLocalizationByLanguage = Record<string, CS2ItemLocalizationMap>;
 
 export interface CS2UnlockedItem {
