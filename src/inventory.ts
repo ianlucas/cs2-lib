@@ -597,34 +597,32 @@ export class CS2InventoryItem
             this.assign(source);
         }
     }
-}
 
-export function mapAllStickers(
-    stickers: CS2InventoryItem["stickers"]
-): [number, MapValue<typeof stickers> | undefined][] {
-    const entries: [number, MapValue<typeof stickers> | undefined][] = [];
-    for (let slot = 0; slot < CS2_MAX_STICKERS; slot++) {
-        const sticker = stickers?.get(slot);
-        entries.push([slot, sticker]);
+    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]> | undefined][] {
+        const entries: [number, MapValue<CS2InventoryItem["stickers"]> | undefined][] = [];
+        for (let slot = 0; slot < CS2_MAX_STICKERS; slot++) {
+            const sticker = this.stickers?.get(slot);
+            entries.push([slot, sticker]);
+        }
+        return entries;
     }
-    return entries;
-}
 
-export function mapStickers(stickers: CS2InventoryItem["stickers"]): [number, MapValue<typeof stickers>][] {
-    return mapAllStickers(stickers).filter(
-        (value): value is [number, MapValue<typeof stickers>] => value[1] !== undefined
-    );
-}
-
-export function mapAllPatches(patches: CS2InventoryItem["patches"]): [number, number | undefined][] {
-    const entries: [number, number | undefined][] = [];
-    for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
-        const patch = patches?.get(slot);
-        entries.push([slot, patch]);
+    someStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
+        return this.allStickers().filter(
+            (value): value is [number, MapValue<CS2InventoryItem["stickers"]>] => value[1] !== undefined
+        );
     }
-    return entries;
-}
 
-export function mapPatches(patches: CS2InventoryItem["patches"]): [number, number][] {
-    return mapAllPatches(patches).filter((value): value is [number, number] => value[1] !== undefined);
+    allPatches(): [number, number | undefined][] {
+        const entries: [number, number | undefined][] = [];
+        for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
+            const patch = this.patches?.get(slot);
+            entries.push([slot, patch]);
+        }
+        return entries;
+    }
+
+    somePatches(): [number, number][] {
+        return this.allPatches().filter((value): value is [number, number] => value[1] !== undefined);
+    }
 }
