@@ -16,7 +16,7 @@ import { CS2ItemType, CS2ItemTypeValues, CS2UnlockedItem } from "./economy-types
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.js";
 import { resolveInventoryData } from "./inventory-upgrader.js";
 import { CS2Team, CS2TeamValues } from "./teams.js";
-import { Interface, assert, ensure, float } from "./utils.js";
+import { Interface, MapValue, assert, ensure, float } from "./utils.js";
 
 export interface CS2BaseInventoryItem {
     containerId?: number;
@@ -555,7 +555,7 @@ export class CS2InventoryItem
     updatedAt: number | undefined;
     wear: number | undefined;
 
-    private assign({ patches, stickers, storage }: Partial<CS2BaseInventoryItem>) {
+    private assign({ patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
         if (patches !== undefined) {
             this.patches = new Map(Object.entries(patches).map(([key, item]) => [parseInt(key, 10), item]));
         }
@@ -587,10 +587,38 @@ export class CS2InventoryItem
         this.assign(baseInventoryItem);
     }
 
-    edit(...sources: Partial<CS2BaseInventoryItem>[]) {
+    edit(...sources: Partial<CS2BaseInventoryItem>[]): void {
         for (const source of sources) {
             Object.assign(this, source);
             this.assign(source);
         }
     }
+}
+
+export function mapStickers(stickers: CS2InventoryItem["stickers"]): [number, MapValue<typeof stickers>][] {
+    if (stickers === undefined) {
+        return [];
+    }
+    const entries: [number, MapValue<typeof stickers>][] = [];
+    for (let slot = 0; slot < CS2_MAX_STICKERS; slot++) {
+        const sticker = stickers.get(slot);
+        if (sticker !== undefined) {
+            entries.push([slot, sticker]);
+        }
+    }
+    return entries;
+}
+
+export function mapPatches(patches: CS2InventoryItem["patches"]): [number, number][] {
+    if (patches === undefined) {
+        return [];
+    }
+    const entries: [number, number][] = [];
+    for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
+        const patch = patches.get(slot);
+        if (patch !== undefined) {
+            entries.push([slot, patch]);
+        }
+    }
+    return entries;
 }
