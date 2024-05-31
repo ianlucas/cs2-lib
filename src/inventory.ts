@@ -85,7 +85,7 @@ export class CS2Inventory {
         return resolveInventoryData(stringValue);
     }
 
-    constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec>) {
+    constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec> = {}) {
         this.economy = economy ?? CS2Economy;
         this.items = data !== undefined ? this.toInventoryItems(data.items) : new Map();
         this.options = {
@@ -509,6 +509,10 @@ export class CS2Inventory {
 
     getAll(): CS2InventoryItem[] {
         return Array.from(this.items.values());
+    }
+
+    getAllAsBase(): CS2BaseInventoryItem[] {
+        return Object.values(this.toBaseInventoryItems(this.items));
     }
 
     setAll(items: Map<number, CS2InventoryItem>): this {
