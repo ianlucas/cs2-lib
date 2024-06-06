@@ -159,40 +159,8 @@ export class CS2Inventory {
         );
     }
 
-    private toBaseInventoryItem({
-        containerId,
-        equipped,
-        equippedCT,
-        equippedT,
-        id,
-        nameTag,
-        patches,
-        seed,
-        statTrak,
-        stickers,
-        storage,
-        updatedAt,
-        wear
-    }: CS2InventoryItem): CS2BaseInventoryItem {
-        return {
-            containerId,
-            equipped,
-            equippedCT,
-            equippedT,
-            id,
-            nameTag,
-            patches: patches !== undefined ? Object.fromEntries(patches) : undefined,
-            seed,
-            statTrak,
-            stickers: stickers !== undefined ? Object.fromEntries(stickers) : undefined,
-            storage: storage !== undefined ? this.toBaseInventoryItems(storage) : undefined,
-            updatedAt,
-            wear
-        };
-    }
-
     private toBaseInventoryItems(items: Map<number, CS2InventoryItem>): Record<number, CS2BaseInventoryItem> {
-        return Object.fromEntries(Array.from(items).map(([key, value]) => [key, this.toBaseInventoryItem(value)]));
+        return Object.fromEntries(Array.from(items).map(([key, value]) => [key, value.asBase()]));
     }
 
     stringify(): string {
@@ -624,5 +592,26 @@ export class CS2InventoryItem
 
     somePatches(): [number, number][] {
         return this.allPatches().filter((value): value is [number, number] => value[1] !== undefined);
+    }
+
+    asBase(): CS2BaseInventoryItem {
+        return {
+            containerId: this.containerId,
+            equipped: this.equipped,
+            equippedCT: this.equippedCT,
+            equippedT: this.equippedT,
+            id: this.id,
+            nameTag: this.nameTag,
+            patches: this.patches !== undefined ? Object.fromEntries(this.patches) : undefined,
+            seed: this.seed,
+            statTrak: this.statTrak,
+            stickers: this.stickers !== undefined ? Object.fromEntries(this.stickers) : undefined,
+            storage:
+                this.storage !== undefined
+                    ? Object.fromEntries(Array.from(this.storage).map(([key, value]) => [key, value.asBase()]))
+                    : undefined,
+            updatedAt: this.updatedAt,
+            wear: this.wear
+        } satisfies Interface<CS2BaseInventoryItem>;
     }
 }
