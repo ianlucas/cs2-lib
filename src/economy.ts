@@ -85,9 +85,6 @@ export class CS2EconomyInstance {
         this.stickers.clear();
         this.itemsAsArray = [];
         for (const item of items) {
-            if (item.type === CS2ItemType.Stub) {
-                continue;
-            }
             const economyItem = new CS2EconomyItem(this, item, ensure(language[item.id]));
             this.items.set(item.id, economyItem);
             if (economyItem.isSticker()) {
@@ -377,6 +374,10 @@ export class CS2EconomyItem
             default:
                 return undefined;
         }
+    }
+
+    isStub(): boolean {
+        return this.type === CS2ItemType.Stub;
     }
 
     isC4(): boolean {

@@ -177,6 +177,8 @@ export class CS2Inventory {
     add(item: CS2BaseInventoryItem): this {
         assert(!this.isFull());
         const uid = getNextUid(this.items);
+        const economyItem = this.economy.getById(item.id);
+        assert(!economyItem.isStub());
         this.items.set(
             uid,
             new CS2InventoryItem(
@@ -188,7 +190,7 @@ export class CS2Inventory {
                     equippedT: undefined,
                     updatedAt: getTimestamp()
                 }),
-                this.economy.getById(item.id)
+                economyItem
             )
         );
         return this;
