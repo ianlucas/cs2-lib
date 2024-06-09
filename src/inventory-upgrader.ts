@@ -22,6 +22,13 @@ const upgrades: Record<
                     case "caseid":
                         key = "containerId";
                         break;
+                    case "equipped":
+                    case "equippedCT":
+                    case "equippedT":
+                        if (v0.type === "patch") {
+                            value = undefined;
+                        }
+                        break;
                     case "nametag":
                         key = "nameTag";
                         break;
