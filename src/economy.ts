@@ -324,9 +324,13 @@ export class CS2EconomyItem
         Object.assign(this, item);
         Object.assign(this, language);
         assert(typeof this.id === "number");
+        assert(typeof this.id === "number");
         assert(this.name);
-        assert(this.rarity);
         assert(this.type);
+        if (item.type !== CS2ItemType.Stub) {
+            // @todo: add a rarity to stubs.
+            assert(this.rarity);
+        }
     }
 
     set contents(value: number[] | undefined) {
