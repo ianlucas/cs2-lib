@@ -40,7 +40,6 @@ const upgrades: Record<
                             value !== undefined
                                 ? Object.fromEntries(
                                       value
-                                          .filter((stickerId: number) => stickerId !== 0)
                                           .map((stickerId: number, slot: number) => [
                                               slot,
                                               {
@@ -48,6 +47,7 @@ const upgrades: Record<
                                                   wear: v0.stickerswear?.[slot] || undefined
                                               }
                                           ])
+                                          .filter(([, { id }]: any) => id !== 0)
                                   )
                                 : undefined;
                         break;
