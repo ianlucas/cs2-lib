@@ -327,10 +327,7 @@ export class CS2EconomyItem
         assert(typeof this.id === "number");
         assert(this.name);
         assert(this.type);
-        if (item.type !== CS2ItemType.Stub) {
-            // @todo: add a rarity to stubs.
-            assert(this.rarity);
-        }
+        assert(item.type === CS2ItemType.Stub || this.rarity);
     }
 
     set contents(value: number[] | undefined) {
