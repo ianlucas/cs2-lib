@@ -81,8 +81,8 @@ export class CS2Inventory {
     private items: Map<number, CS2InventoryItem>;
     readonly options: Readonly<CS2InventoryOptions>;
 
-    static parse(stringValue: string | undefined | null): CS2InventoryData | undefined {
-        return resolveInventoryData(stringValue);
+    static parse(stringValue: string | undefined | null, economy?: CS2EconomyInstance): CS2InventoryData | undefined {
+        return resolveInventoryData(stringValue, economy);
     }
 
     constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec> = {}) {
