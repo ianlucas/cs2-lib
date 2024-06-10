@@ -3,18 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { CS2Economy, CS2EconomyInstance } from "./economy.js";
 import { CS2InventoryData, CS2_INVENTORY_VERSION } from "./inventory.js";
 
 const upgrades: Record<
     number,
-    (data: any) => {
+    (
+        data: any,
+        economy: CS2EconomyInstance
+    ) => {
         items: {
             [k: string]: any;
         };
         version: number;
     }
 > = {
-    1: (data: any) => {
+    1: (data: any, economy: CS2EconomyInstance) => {
         function walkV0(v0: any) {
             const v1: any = {};
             for (let [key, value] of Object.entries<any>(v0)) {
@@ -25,7 +29,7 @@ const upgrades: Record<
                     case "equipped":
                     case "equippedCT":
                     case "equippedT":
-                        if (v0.type === "patch") {
+                        if (economy.get(v0.id).isPatch()) {
                             value = undefined;
                         }
                         break;
@@ -76,7 +80,10 @@ const upgrades: Record<
     }
 };
 
-export function resolveInventoryData(stringValue: string | null | undefined): CS2InventoryData | undefined {
+export function resolveInventoryData(
+    stringValue: string | null | undefined,
+    economy = CS2Economy
+): CS2InventoryData | undefined {
     try {
         if (!stringValue) {
             return undefined;
@@ -85,7 +92,7 @@ export function resolveInventoryData(stringValue: string | null | undefined): CS
         const currentVersion = value.version ?? 0;
         for (let i = currentVersion + 1; i <= CS2_INVENTORY_VERSION; i++) {
             if (upgrades[i]) {
-                value = upgrades[i](value);
+                value = upgrades[i](value, economy);
             }
         }
         return value;
