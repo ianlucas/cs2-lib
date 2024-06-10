@@ -60,7 +60,7 @@ export interface CS2InventorySpec extends CS2InventoryOptions {
 export const CS2_INVENTORY_VERSION = 1;
 export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
 // prettier-ignore
-export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Patch, CS2ItemType.Weapon];
+export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Weapon];
 
 export function getTimestamp(): number {
     return Math.ceil((Date.now() - CS2_INVENTORY_TIMESTAMP) / 1000);
