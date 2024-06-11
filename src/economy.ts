@@ -5,9 +5,11 @@
 
 import {
     CS2_CONTAINER_ITEMS,
+    CS2_CONTRACT_TOOL_DEF,
     CS2_DISPLAY_ITEMS,
     CS2_EQUIPMENT_ITEMS,
     CS2_GRAPHIC_ART_ITEMS,
+    CS2_MACHINEGUN_MODELS,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
     CS2_MAX_MINIMAL_WEAR_WEAR,
@@ -25,6 +27,7 @@ import {
     CS2_NAMETAG_TOOL_DEF,
     CS2_RIFLE_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
+    CS2_SNIPER_RIFLE_MODELS,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEF,
     CS2_STICKERABLE_ITEMS,
@@ -391,15 +394,39 @@ export class CS2EconomyItem
         return this.category === "secondary";
     }
 
-    isMidTier(): boolean {
-        return CS2_MIDTIER_CATEGORIES.includes(ensure(this.category));
+    isSMG(): boolean {
+        return this.category === "smg";
     }
 
     isRifle(): boolean {
+        return this.category === "rifle";
+    }
+
+    isSniperRifle(): boolean {
+        return CS2_SNIPER_RIFLE_MODELS.includes(ensure(this.model));
+    }
+
+    isMachinegun(): boolean {
+        return CS2_MACHINEGUN_MODELS.includes(ensure(this.model));
+    }
+
+    isHeavy(): boolean {
+        return this.category === "heavy";
+    }
+
+    isEquipment(): boolean {
+        return this.category === "equipment";
+    }
+
+    isInMidTiers(): boolean {
+        return CS2_MIDTIER_CATEGORIES.includes(ensure(this.category));
+    }
+
+    isInRifles(): boolean {
         return CS2_RIFLE_CATEGORIES.includes(ensure(this.category));
     }
 
-    isMisc(): boolean {
+    isInMisc(): boolean {
         return CS2_MISC_CATEGORIES.includes(ensure(this.category));
     }
 
@@ -456,15 +483,19 @@ export class CS2EconomyItem
     }
 
     isStorageUnit(): boolean {
-        return this.type === CS2ItemType.Tool && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
+        return this.isTool() && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
     }
 
     isNameTag(): boolean {
-        return this.type === CS2ItemType.Tool && this.def === CS2_NAMETAG_TOOL_DEF;
+        return this.isTool() && this.def === CS2_NAMETAG_TOOL_DEF;
     }
 
     isStatTrakSwapTool(): boolean {
-        return this.type === CS2ItemType.Tool && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
+        return this.isTool() && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
+    }
+
+    isContract(): boolean {
+        return this.isTool() && this.def === CS2_CONTRACT_TOOL_DEF;
     }
 
     expectAgent(): this {

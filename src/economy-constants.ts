@@ -35,6 +35,7 @@ export const CS2_WEAR_FACTOR = 0.000001;
 
 export const CS2_NAMETAG_RE = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
 
+export const CS2_CONTRACT_TOOL_DEF = 62;
 export const CS2_NAMETAG_TOOL_DEF = 1200;
 export const CS2_STATTRAK_SWAP_TOOL_DEF = 1324;
 export const CS2_STORAGE_UNIT_TOOL_DEF = 1201;
@@ -52,6 +53,9 @@ export const CS2_DISPLAY_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Collectible, 
 export const CS2_MIDTIER_CATEGORIES = ["heavy", "smg"];
 export const CS2_RIFLE_CATEGORIES = ["rifle"];
 export const CS2_MISC_CATEGORIES = ["c4", "equipment"];
+
+export const CS2_SNIPER_RIFLE_MODELS = ["awp", "g3sg1", "scar20", "ssg08"];
+export const CS2_MACHINEGUN_MODELS = ["m249", "negev"];
 
 export const CS2_TEAMS_BOTH: CS2TeamValues[] = [CS2Team.T, CS2Team.CT];
 export const CS2_TEAMS_CT: CS2TeamValues[] = [CS2Team.CT];
