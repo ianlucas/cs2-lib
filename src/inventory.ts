@@ -603,7 +603,7 @@ export class CS2InventoryItem
     }
 
     getStickerWear(slot: number): number {
-        return this.stickers?.get(slot)?.wear ?? 0;
+        return this.stickers?.get(slot)?.wear ?? CS2_MIN_STICKER_WEAR;
     }
 
     asBase(): CS2BaseInventoryItem {
