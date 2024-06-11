@@ -559,6 +559,10 @@ export class CS2EconomyItem
         return CS2_DISPLAY_ITEMS.includes(this.type);
     }
 
+    isHoldable(): boolean {
+        return CS2_WEARABLE_ITEMS.includes(this.type);
+    }
+
     groupContents(): Record<string, CS2EconomyItem[]> {
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
