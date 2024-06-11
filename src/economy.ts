@@ -156,44 +156,44 @@ export class CS2EconomyInstance {
         return safe(() => this.validateSeed(seed, item));
     }
 
-    trimNametag(nametag?: string): string | undefined {
-        const trimmed = nametag?.trim();
+    trimNametag(nameTag?: string): string | undefined {
+        const trimmed = nameTag?.trim();
         return trimmed === "" ? undefined : trimmed;
     }
 
-    validateNametag(nametag?: string, item?: CS2EconomyItem): boolean {
-        if (nametag !== undefined) {
+    validateNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        if (nameTag !== undefined) {
             assert(item === undefined || item.hasNametag());
-            assert(nametag[0] !== " " && CS2_NAMETAG_RE.test(nametag));
+            assert(nameTag[0] !== " " && CS2_NAMETAG_RE.test(nameTag));
         }
         return true;
     }
 
-    safeValidateNametag(nametag?: string, item?: CS2EconomyItem): boolean {
-        return safe(() => this.validateNametag(nametag, item));
+    safeValidateNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateNametag(nameTag, item));
     }
 
-    requireNametag(nametag?: string, item?: CS2EconomyItem): boolean {
-        assert(nametag === undefined || nametag.trim().length > 0);
-        return this.validateNametag(nametag, item);
+    requireNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        assert(nameTag === undefined || nameTag.trim().length > 0);
+        return this.validateNametag(nameTag, item);
     }
 
-    safeRequireNametag(nametag?: string, item?: CS2EconomyItem): boolean {
-        return safe(() => this.requireNametag(nametag, item));
+    safeRequireNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        return safe(() => this.requireNametag(nameTag, item));
     }
 
-    validateStatTrak(stattrak?: number, item?: CS2EconomyItem): boolean {
-        if (stattrak === undefined) {
+    validateStatTrak(statTrak?: number, item?: CS2EconomyItem): boolean {
+        if (statTrak === undefined) {
             return true;
         }
         assert(item === undefined || item.hasStatTrak());
-        assert(Number.isInteger(stattrak));
-        assert(stattrak >= CS2_MIN_STATTRAK && stattrak <= CS2_MAX_STATTRAK);
+        assert(Number.isInteger(statTrak));
+        assert(statTrak >= CS2_MIN_STATTRAK && statTrak <= CS2_MAX_STATTRAK);
         return true;
     }
 
-    safeValidateStatTrak(stattrak?: number, item?: CS2EconomyItem): boolean {
-        return safe(() => this.validateStatTrak(stattrak, item));
+    safeValidateStatTrak(statTrak?: number, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateStatTrak(statTrak, item));
     }
 
     getWearFromValue(value: number): CS2ItemWearValues {
