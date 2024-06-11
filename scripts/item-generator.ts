@@ -414,6 +414,7 @@ export class ItemGenerator {
             this.addItem({
                 base,
                 baseId,
+                def: 1314,
                 free: base,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
@@ -458,6 +459,7 @@ export class ItemGenerator {
             }
             this.addItem({
                 baseId,
+                def: 1209,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/stickers/${sticker_material}`),
                 index: Number(index),
@@ -523,6 +525,7 @@ export class ItemGenerator {
             }
             this.addItem({
                 baseId,
+                def: 1348,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/stickers/${sticker_material}`),
                 index: Number(index),
@@ -557,6 +560,7 @@ export class ItemGenerator {
             }
             this.addItem({
                 baseId,
+                def: 4609,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/patches/${patch_material}`),
                 index: Number(index),
