@@ -10,6 +10,7 @@ import {
     CS2_MAX_STICKER_WEAR,
     CS2_MAX_WEAR,
     CS2_MIN_STICKER_WEAR,
+    CS2_MIN_WEAR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.js";
 import { CS2ItemType, CS2ItemTypeValues, CS2UnlockedItem } from "./economy-types.js";
@@ -216,12 +217,12 @@ export class CS2Inventory {
         return this;
     }
 
-    addWithSticker(stickerUid: number, id: number, stickerIndex: number): this {
+    addWithSticker(stickerUid: number, id: number, slot: number): this {
         const sticker = this.get(stickerUid).expectSticker();
         this.items.delete(stickerUid);
         this.add({
             id,
-            stickers: { [stickerIndex]: { id: sticker.id } }
+            stickers: { [slot]: { id: sticker.id } }
         });
         return this;
     }
@@ -377,28 +378,28 @@ export class CS2Inventory {
         return this;
     }
 
-    applyItemSticker(targetUid: number, stickerUid: number, stickerIndex: number): this {
-        assert(stickerIndex >= 0 && stickerIndex <= CS2_MAX_STICKERS - 1);
+    applyItemSticker(targetUid: number, stickerUid: number, slot: number): this {
+        assert(slot >= 0 && slot <= CS2_MAX_STICKERS - 1);
         const target = this.get(targetUid);
         const sticker = this.get(stickerUid);
         assert(target.hasStickers());
         sticker.expectSticker();
         target.stickers ??= new Map();
-        assert(target.stickers.get(stickerIndex) === undefined);
-        target.stickers.set(stickerIndex, { id: sticker.id });
+        assert(target.stickers.get(slot) === undefined);
+        target.stickers.set(slot, { id: sticker.id });
         target.updatedAt = getTimestamp();
         this.items.delete(stickerUid);
         return this;
     }
 
-    scrapeItemSticker(targetUid: number, stickerIndex: number): this {
+    scrapeItemSticker(targetUid: number, slot: number): this {
         const target = this.get(targetUid);
         assert(target.stickers !== undefined);
-        const sticker = ensure(target.stickers.get(stickerIndex));
+        const sticker = ensure(target.stickers.get(slot));
         const wear = sticker.wear ?? 0;
         const nextWear = float(wear + CS2_STICKER_WEAR_FACTOR);
         if (nextWear > CS2_MAX_WEAR) {
-            target.stickers.delete(stickerIndex);
+            target.stickers.delete(slot);
             if (target.stickers.size === 0) {
                 target.stickers = undefined;
             }
@@ -528,19 +529,19 @@ export class CS2InventoryItem
 
     private assign({ patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
         if (patches !== undefined) {
-            this.patches = new Map(Object.entries(patches).map(([key, item]) => [parseInt(key, 10), item]));
+            this.patches = new Map(Object.entries(patches).map(([key, value]) => [parseInt(key, 10), value]));
         }
         if (stickers !== undefined) {
-            this.stickers = new Map(Object.entries(stickers).map(([key, item]) => [parseInt(key, 10), item]));
+            this.stickers = new Map(Object.entries(stickers).map(([key, value]) => [parseInt(key, 10), value]));
         }
         if (storage !== undefined) {
             assert(this.isStorageUnit());
             this.storage = new Map(
-                Object.entries(storage).map(([key, item]) => {
-                    const storedEconomyItem = this.economy.getById(item.id);
-                    assert(item.storage === undefined);
+                Object.entries(storage).map(([key, value]) => {
+                    const storedEconomyItem = this.economy.getById(value.id);
+                    assert(value.storage === undefined);
                     const uid = parseInt(key, 10);
-                    return [uid, new CS2InventoryItem(this.inventory, uid, item, storedEconomyItem)];
+                    return [uid, new CS2InventoryItem(this.inventory, uid, value, storedEconomyItem)];
                 })
             );
         }
@@ -595,6 +596,14 @@ export class CS2InventoryItem
 
     getStickersCount(): number {
         return this.stickers?.size ?? 0;
+    }
+
+    getWear(): number {
+        return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
+    }
+
+    getStickerWear(slot: number): number {
+        return this.stickers?.get(slot)?.wear ?? 0;
     }
 
     asBase(): CS2BaseInventoryItem {

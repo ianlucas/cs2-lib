@@ -594,6 +594,14 @@ export class CS2EconomyItem
         return CS2_WEARABLE_ITEMS.includes(this.type);
     }
 
+    getMinimumWear(): number {
+        return this.wearMin ?? CS2_MIN_WEAR;
+    }
+
+    getMaximumWear(): number {
+        return this.wearMax ?? CS2_MAX_WEAR;
+    }
+
     groupContents(): Record<string, CS2EconomyItem[]> {
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
