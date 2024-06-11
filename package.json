@@ -13,6 +13,7 @@
         "test": "jest",
         "upgrade": "npx npm-check-updates@latest --target minor -u",
         "container-scraper": "tsx scripts/container-scraper.ts",
+        "item-generator-diff": "tsx scripts/item-generator-diff.ts",
         "item-generator-report": "tsx scripts/item-generator-report.ts",
         "item-generator": "tsx scripts/item-generator.ts",
         "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts",
