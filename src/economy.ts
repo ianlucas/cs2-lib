@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    CS2_CONTAINER_OR_TOOL_ITEM,
+    CS2_CONTAINER_ITEMS,
+    CS2_DISPLAY_ITEMS,
+    CS2_EQUIPMENT_ITEMS,
+    CS2_GRAPHIC_ART_ITEMS,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
     CS2_MAX_MINIMAL_WEAR_WEAR,
@@ -12,12 +15,15 @@ import {
     CS2_MAX_STATTRAK,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
+    CS2_MIDTIER_CATEGORIES,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
     CS2_MIN_WEAR,
+    CS2_MISC_CATEGORIES,
     CS2_NAMETAGGABLE_ITEMS,
     CS2_NAMETAG_RE,
     CS2_NAMETAG_TOOL_DEF,
+    CS2_RIFLE_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEF,
@@ -377,28 +383,76 @@ export class CS2EconomyItem
         }
     }
 
-    isStub(): boolean {
-        return this.type === CS2ItemType.Stub;
-    }
-
     isC4(): boolean {
         return this.category === "c4";
+    }
+
+    isPistol(): boolean {
+        return this.category === "secondary";
+    }
+
+    isMidTier(): boolean {
+        return CS2_MIDTIER_CATEGORIES.includes(ensure(this.category));
+    }
+
+    isRifle(): boolean {
+        return CS2_RIFLE_CATEGORIES.includes(ensure(this.category));
+    }
+
+    isMisc(): boolean {
+        return CS2_MISC_CATEGORIES.includes(ensure(this.category));
     }
 
     isAgent(): boolean {
         return this.type === CS2ItemType.Agent;
     }
 
-    isSticker(): boolean {
-        return this.type === CS2ItemType.Sticker;
+    isCollectible(): boolean {
+        return this.type === CS2ItemType.Collectible;
+    }
+
+    isContainer(): boolean {
+        return this.type === CS2ItemType.Container;
+    }
+
+    isContainerKey(): boolean {
+        return this.type === CS2ItemType.ContainerKey;
+    }
+
+    isGloves(): boolean {
+        return this.type === CS2ItemType.Gloves;
+    }
+
+    isGraffiti(): boolean {
+        return this.type === CS2ItemType.Graffiti;
+    }
+
+    isMelee(): boolean {
+        return this.type === CS2ItemType.Melee;
+    }
+
+    isMusicKit(): boolean {
+        return this.type === CS2ItemType.MusicKit;
     }
 
     isPatch(): boolean {
         return this.type === CS2ItemType.Patch;
     }
 
-    isGloves(): boolean {
-        return this.type === CS2ItemType.Gloves;
+    isSticker(): boolean {
+        return this.type === CS2ItemType.Sticker;
+    }
+
+    isStub(): boolean {
+        return this.type === CS2ItemType.Stub;
+    }
+
+    isTool(): boolean {
+        return this.type === CS2ItemType.Tool;
+    }
+
+    isWeapon(): boolean {
+        return this.type === CS2ItemType.Weapon;
     }
 
     isStorageUnit(): boolean {
@@ -411,22 +465,6 @@ export class CS2EconomyItem
 
     isStatTrakSwapTool(): boolean {
         return this.type === CS2ItemType.Tool && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
-    }
-
-    isContainer(): boolean {
-        return this.type === CS2ItemType.Container;
-    }
-
-    isContainerKey(): boolean {
-        return this.type === CS2ItemType.ContainerKey;
-    }
-
-    isContainerOrTool(): boolean {
-        return CS2_CONTAINER_OR_TOOL_ITEM.includes(this.type);
-    }
-
-    isTool(): boolean {
-        return this.type === CS2ItemType.Tool;
     }
 
     expectAgent(): this {
@@ -503,6 +541,22 @@ export class CS2EconomyItem
 
     isSouvenirCase(): boolean {
         return this.containerType === CS2ContainerType.SouvenirCase;
+    }
+
+    isInEquipments(): boolean {
+        return CS2_EQUIPMENT_ITEMS.includes(this.type);
+    }
+
+    isInGraphicArts(): boolean {
+        return CS2_GRAPHIC_ART_ITEMS.includes(this.type);
+    }
+
+    isInContainers(): boolean {
+        return CS2_CONTAINER_ITEMS.includes(this.type);
+    }
+
+    isInDisplay(): boolean {
+        return CS2_DISPLAY_ITEMS.includes(this.type);
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

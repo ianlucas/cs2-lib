@@ -247,10 +247,7 @@ export class CS2Inventory {
                 otherItem.equippedCT = team === CS2Team.CT ? true : otherItem.equippedCT;
                 otherItem.equippedT = team === CS2Team.T ? true : otherItem.equippedT;
             } else {
-                if (
-                    otherItem.type === item.type &&
-                    (item.type !== CS2ItemType.Weapon || otherItem.model === item.model)
-                ) {
+                if (otherItem.type === item.type && (!item.isWeapon() || otherItem.model === item.model)) {
                     otherItem.equipped = team === undefined ? undefined : otherItem.equipped;
                     otherItem.equippedCT = team === CS2Team.CT ? undefined : otherItem.equippedCT;
                     otherItem.equippedT = team === CS2Team.T ? undefined : otherItem.equippedT;
@@ -453,7 +450,7 @@ export class CS2Inventory {
         const toItem = this.get(toUid);
         assert(fromItem.statTrak !== undefined && toItem.statTrak !== undefined);
         assert(fromItem.type === toItem.type);
-        assert(fromItem.type === CS2ItemType.MusicKit || fromItem.def === toItem.def);
+        assert(fromItem.isMusicKit() || fromItem.def === toItem.def);
         const fromStattrak = fromItem.statTrak;
         fromItem.statTrak = toItem.statTrak;
         fromItem.updatedAt = getTimestamp();

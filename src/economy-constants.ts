@@ -44,8 +44,14 @@ export const CS2_SEEDABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2I
 export const CS2_STATTRAKABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit];
 export const CS2_STICKERABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon];
 export const CS2_WEARABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
+export const CS2_EQUIPMENT_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2ItemType.Agent, CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.MusicKit];
+export const CS2_GRAPHIC_ART_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Patch, CS2ItemType.Sticker, CS2ItemType.Graffiti];
+export const CS2_CONTAINER_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Container, CS2ItemType.Tool];
+export const CS2_DISPLAY_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Collectible, CS2ItemType.MusicKit];
 
-export const CS2_CONTAINER_OR_TOOL_ITEM: CS2ItemTypeValues[] = [CS2ItemType.Container, CS2ItemType.Tool];
+export const CS2_MIDTIER_CATEGORIES = ["heavy", "smg"];
+export const CS2_RIFLE_CATEGORIES = ["rifle"];
+export const CS2_MISC_CATEGORIES = ["c4", "equipment"];
 
 export const CS2_TEAMS_BOTH: CS2TeamValues[] = [CS2Team.T, CS2Team.CT];
 export const CS2_TEAMS_CT: CS2TeamValues[] = [CS2Team.CT];
