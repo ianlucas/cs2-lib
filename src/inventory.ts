@@ -593,6 +593,10 @@ export class CS2InventoryItem
         return this.allPatches().filter((value): value is [number, number] => value[1] !== undefined);
     }
 
+    getStickersCount(): number {
+        return this.stickers?.size ?? 0;
+    }
+
     asBase(): CS2BaseInventoryItem {
         return {
             containerId: this.containerId,
