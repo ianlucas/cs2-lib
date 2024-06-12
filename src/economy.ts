@@ -403,11 +403,11 @@ export class CS2EconomyItem
     }
 
     isSniperRifle(): boolean {
-        return CS2_SNIPER_RIFLE_MODELS.includes(ensure(this.model));
+        return this.model !== undefined && CS2_SNIPER_RIFLE_MODELS.includes(this.model);
     }
 
     isMachinegun(): boolean {
-        return CS2_MACHINEGUN_MODELS.includes(ensure(this.model));
+        return this.model !== undefined && CS2_MACHINEGUN_MODELS.includes(this.model);
     }
 
     isHeavy(): boolean {
@@ -419,15 +419,15 @@ export class CS2EconomyItem
     }
 
     isInMidTiers(): boolean {
-        return CS2_MIDTIER_CATEGORIES.includes(ensure(this.category));
+        return this.category !== undefined && CS2_MIDTIER_CATEGORIES.includes(this.category);
     }
 
     isInRifles(): boolean {
-        return CS2_RIFLE_CATEGORIES.includes(ensure(this.category));
+        return this.category !== undefined && CS2_RIFLE_CATEGORIES.includes(this.category);
     }
 
     isInMisc(): boolean {
-        return CS2_MISC_CATEGORIES.includes(ensure(this.category));
+        return this.category !== undefined && CS2_MISC_CATEGORIES.includes(this.category);
     }
 
     isAgent(): boolean {
