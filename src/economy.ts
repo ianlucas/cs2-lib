@@ -349,7 +349,11 @@ export class CS2EconomyItem
     }
 
     get parent(): CS2EconomyItem | undefined {
-        return this.baseId !== undefined ? this.economy.get(this.baseId) : undefined;
+        return this.baseId !== undefined
+            ? this.economy.items.has(this.baseId)
+                ? this.economy.get(this.baseId)
+                : undefined
+            : undefined;
     }
 
     get rawContents(): number[] | undefined {

@@ -146,10 +146,12 @@ export class CS2Inventory {
 
     private toInventoryItems(items: Record<number, CS2BaseInventoryItem>): Map<number, CS2InventoryItem> {
         return new Map(
-            Object.entries(items).map(([key, value]) => {
-                const uid = parseInt(key, 10);
-                return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
-            })
+            Object.entries(items)
+                .filter(([, { id }]) => this.economy.items.has(id))
+                .map(([key, value]) => {
+                    const uid = parseInt(key, 10);
+                    return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
+                })
         );
     }
 
@@ -522,20 +524,30 @@ export class CS2InventoryItem
 
     private assign({ patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
         if (patches !== undefined) {
-            this.patches = new Map(Object.entries(patches).map(([key, value]) => [parseInt(key, 10), value]));
+            this.patches = new Map(
+                Object.entries(patches)
+                    .filter(([, patchId]) => this.economy.items.has(patchId))
+                    .map(([slot, patchId]) => [parseInt(slot, 10), patchId])
+            );
         }
         if (stickers !== undefined) {
-            this.stickers = new Map(Object.entries(stickers).map(([key, value]) => [parseInt(key, 10), value]));
+            this.stickers = new Map(
+                Object.entries(stickers)
+                    .filter(([, sticker]) => this.economy.items.has(sticker.id))
+                    .map(([slot, sticker]) => [parseInt(slot, 10), sticker])
+            );
         }
         if (storage !== undefined) {
             assert(this.isStorageUnit());
             this.storage = new Map(
-                Object.entries(storage).map(([key, value]) => {
-                    const storedEconomyItem = this.economy.getById(value.id);
-                    assert(value.storage === undefined);
-                    const uid = parseInt(key, 10);
-                    return [uid, new CS2InventoryItem(this.inventory, uid, value, storedEconomyItem)];
-                })
+                Object.entries(storage)
+                    .filter(([, { id }]) => this.economy.items.has(id))
+                    .map(([key, value]) => {
+                        const economyItem = this.economy.getById(value.id);
+                        assert(value.storage === undefined);
+                        const uid = parseInt(key, 10);
+                        return [uid, new CS2InventoryItem(this.inventory, uid, value, economyItem)];
+                    })
             );
         }
     }
