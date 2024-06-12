@@ -2,7 +2,7 @@
 
 > A TypeScript library for manipulating Counter-Strike 2 data
 
-This library contains items and data from Counter-Strike 2, including utility functions and classes for interacting them using TypeScript.
+This library contains items and data from Counter-Strike 2, including utility functions and classes for interacting with them using TypeScript.
 
 ## Install
 
