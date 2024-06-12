@@ -2,7 +2,7 @@
 
 > A TypeScript library for manipulating Counter-Strike 2 data
 
-This library contains items and data from Counter-Strike 2, including utility functions and classes for manipulating them using TypeScript.
+This library contains items and data from Counter-Strike 2, including utility functions and classes for interacting them using TypeScript.
 
 ## Install
 
@@ -12,18 +12,16 @@ npm install @ianlucas/cs2-lib
 
 ## Usage
 
-For any module that deals with economy items, you need to setup the available items (`CS_ITEMS` contains all items from the game):
-
 ```typescript
-import english from "@ianlucas/cslib/assets/translations/items-english.json";
-import { CS_Economy, CS_ITEMS } from "@ianlucas/cs2-lib";
+import { CS2Economy, CS2_ITEMS } from "@ianlucas/cs2-lib";
+import english from "@ianlucas/cslib/assets/localizations/items-english.json";
 
-CS_Economy.use({
-    items: CS_ITEMS,
-    translation: english
+CS2Economy.use({
+    items: CS2_ITEMS,
+    language: english
 });
 
-const item = CS_Economy.getById(307);
+const item = CS2Economy.getById(307);
 
 item.name;
 //=> "AWP | Dragon Lore"
