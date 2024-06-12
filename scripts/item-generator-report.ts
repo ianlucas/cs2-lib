@@ -36,7 +36,7 @@ const v4TypeToV5 = {
     collectible: CS2ItemType.Collectible,
     glove: CS2ItemType.Gloves,
     graffiti: CS2ItemType.Graffiti,
-    key: CS2ItemType.ContainerKey,
+    key: CS2ItemType.Key,
     melee: CS2ItemType.Melee,
     musickit: CS2ItemType.MusicKit,
     patch: CS2ItemType.Patch,

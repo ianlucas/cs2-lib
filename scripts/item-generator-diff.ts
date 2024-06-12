@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { stringify } from "javascript-stringify";
 import { CS2Item } from "../src/economy-types";
 import { CS2_ITEMS } from "../src/items";
 import { ensure } from "../src/utils";
@@ -16,6 +17,13 @@ async function fetchFromRepo<T = any>(path: string): Promise<T> {
 
 let report = "";
 let itemDiffs: string[] = [];
+
+const replacer: Parameters<typeof stringify>[1] = (value, _, stringify) => {
+    if (typeof value === "string") {
+        return '"' + value.replace(/"/g, '\\"') + '"';
+    }
+    return stringify(value);
+};
 
 function isDifferent(a: any, b: any) {
     if (Array.isArray(a) && Array.isArray(b)) {
@@ -36,42 +44,37 @@ function isDifferent(a: any, b: any) {
     return a !== b;
 }
 
-function jsToString(a: any) {
-    if (a === undefined) {
-        return "undefined";
-    }
-    return JSON.stringify(a, null, 2);
-}
-
-function getPropChanges(localItem: any, repoItem: any) {
-    let propchanges = "";
+function getPropChanges(title: string, localItem: any, repoItem: any) {
+    let changes = "";
     const addedProperties = Object.keys(localItem).filter((key) => !Object.keys(repoItem).includes(key));
     const repoProperties = Object.keys(repoItem);
+    const before = {};
+    const after = {};
     for (const property of addedProperties) {
-        propchanges += `### ${property}\n\n`;
-        propchanges += "Before:\n\n";
-        propchanges += "```javascript\n";
-        propchanges += "undefined";
-        propchanges += "\n```\n\n";
-        propchanges += "After:\n\n";
-        propchanges += "```javascript\n";
-        propchanges += jsToString(localItem[property]);
-        propchanges += "\n```\n";
+        after[property] = localItem[property];
     }
     for (const property of repoProperties) {
         if (isDifferent(repoItem[property], localItem[property])) {
-            propchanges += `### ${property}\n\n`;
-            propchanges += "Before:\n\n";
-            propchanges += "```javascript\n";
-            propchanges += jsToString(repoItem[property]);
-            propchanges += "```\n\n";
-            propchanges += "After:\n\n";
-            propchanges += "\n```javascript\n";
-            propchanges += jsToString(localItem[property]);
-            propchanges += "\n```\n";
+            before[property] = repoItem[property];
+            after[property] = localItem[property];
         }
     }
-    return propchanges;
+    if (Object.keys(before).length > 0 || Object.keys(after).length > 0) {
+        changes += `### ${title}\n\n`;
+        if (Object.keys(before).length > 0) {
+            changes += "#### Before\n\n";
+            changes += "```javascript\n";
+            changes += stringify(before, replacer, 2);
+            changes += "\n```\n";
+        }
+        if (Object.keys(after).length > 0) {
+            changes += "#### After\n\n";
+            changes += "```javascript\n";
+            changes += stringify(after, replacer, 2);
+            changes += "\n```\n";
+        }
+    }
+    return changes;
 }
 
 async function main() {
@@ -110,8 +113,8 @@ async function main() {
         const repoLocalization = ensure(repoEnglish[key]);
         const localLocalization = ensure(localEnglish[key]);
         const name = `${repoLocalization.name || localLocalization.name} (id: ${key})`;
-        let itemChanges = getPropChanges(localItem, repoItem);
-        let localizationChanges = getPropChanges(localLocalization, repoLocalization);
+        let itemChanges = getPropChanges("Item Changes", localItem, repoItem);
+        let localizationChanges = getPropChanges("Localization Changes", localLocalization, repoLocalization);
         if (itemChanges || localizationChanges) {
             itemDiffs.push(`## ${name}\n\n${itemChanges}\n${localizationChanges}`);
         }

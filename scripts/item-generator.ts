@@ -783,7 +783,7 @@ export class ItemGenerator {
                         image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
                         rarity: this.getRarityColorHex(["common"]),
                         teams: undefined,
-                        type: CS2ItemType.ContainerKey
+                        type: CS2ItemType.Key
                     });
                     return id;
                 });
