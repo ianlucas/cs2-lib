@@ -42,6 +42,7 @@ const BROKEN_FANG_GLOVES_ID = 56;
 const BROKEN_FANG_GLOVES_JADE_ID = 1707;
 const BLOODY_DARRYL_THE_STRAPPED_ID = 8657;
 const BLOODHOUND_ID = 8569;
+const CT_GLOVE_ID = 59;
 
 CS2Economy.use({ items: CS2_ITEMS, language: english });
 
@@ -64,7 +65,8 @@ describe("CS2Inventory methods", () => {
         expect(inventory.size()).toBe(1);
         expect(() => inventory.add({ id: BROKEN_FANG_GLOVES_ID })).toThrow();
         inventory.add({ id: BROKEN_FANG_GLOVES_JADE_ID });
-        expect(inventory.size()).toBe(2);
+        inventory.add({ id: CT_GLOVE_ID });
+        expect(inventory.size()).toBe(3);
     });
 
     test("add should throw an error if the inventory is full", () => {
