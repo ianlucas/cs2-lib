@@ -412,23 +412,23 @@ export class CS2Inventory {
         return this;
     }
 
-    applyItemPatch(targetUid: number, patchUid: number, patchIndex: number): this {
-        assert(patchIndex >= 0 && patchIndex <= CS2_MAX_PATCHES - 1);
+    applyItemPatch(targetUid: number, patchUid: number, slot: number): this {
+        assert(slot >= 0 && slot <= CS2_MAX_PATCHES - 1);
         const target = this.get(targetUid).expectAgent();
         const patch = this.get(patchUid).expectPatch();
         target.patches ??= new Map();
-        assert(target.patches.get(patchIndex) === undefined);
-        target.patches.set(patchIndex, patch.id);
+        assert(target.patches.get(slot) === undefined);
+        target.patches.set(slot, patch.id);
         target.updatedAt = getTimestamp();
         this.items.delete(patchUid);
         return this;
     }
 
-    removeItemPatch(targetUid: number, patchIndex: number): this {
+    removeItemPatch(targetUid: number, slot: number): this {
         const target = this.get(targetUid);
         assert(target.patches !== undefined);
-        assert(target.patches.get(patchIndex) !== undefined);
-        target.patches.delete(patchIndex);
+        assert(target.patches.get(slot) !== undefined);
+        target.patches.delete(slot);
         if (target.patches.size === 0) {
             target.patches = undefined;
         }
