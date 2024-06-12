@@ -95,12 +95,6 @@ export class CS2Inventory {
         };
     }
 
-    private validateEquippable(item: CS2EconomyItem): void {
-        if (item.isGloves()) {
-            assert(!item.base);
-        }
-    }
-
     private validateStickers(stickers?: CS2BaseInventoryItem["stickers"], item?: CS2EconomyItem): void {
         if (stickers === undefined) {
             return;
@@ -146,7 +140,6 @@ export class CS2Inventory {
         this.economy.validateSeed(seed, item);
         this.economy.validateNametag(nameTag, item);
         this.economy.validateStatTrak(statTrak, item);
-        this.validateEquippable(item);
         this.validatePatches(patches, item);
         this.validateStickers(stickers, item);
     }
