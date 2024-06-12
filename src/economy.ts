@@ -26,6 +26,7 @@ import {
     CS2_NAMETAG_RE,
     CS2_NAMETAG_TOOL_DEF,
     CS2_PAINTABLE_ITEMS,
+    CS2_PATCHABLE_ITEMS,
     CS2_RIFLE_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODELS,
@@ -552,6 +553,10 @@ export class CS2EconomyItem
 
     hasStickers(): boolean {
         return CS2_STICKERABLE_ITEMS.includes(this.type) && !this.isC4();
+    }
+
+    hasPatches(): boolean {
+        return CS2_PATCHABLE_ITEMS.includes(this.type);
     }
 
     hasNametag(): boolean {

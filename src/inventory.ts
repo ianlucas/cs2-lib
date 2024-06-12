@@ -593,6 +593,10 @@ export class CS2InventoryItem
         );
     }
 
+    getStickersCount(): number {
+        return this.stickers?.size ?? 0;
+    }
+
     allPatches(): [number, number | undefined][] {
         const entries: [number, number | undefined][] = [];
         for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
@@ -606,8 +610,8 @@ export class CS2InventoryItem
         return this.allPatches().filter((value): value is [number, number] => value[1] !== undefined);
     }
 
-    getStickersCount(): number {
-        return this.stickers?.size ?? 0;
+    getPatchesCount(): number {
+        return this.patches?.size ?? 0;
     }
 
     getWear(): number {

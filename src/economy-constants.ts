@@ -40,15 +40,16 @@ export const CS2_NAMETAG_TOOL_DEF = 1200;
 export const CS2_STATTRAK_SWAP_TOOL_DEF = 1324;
 export const CS2_STORAGE_UNIT_TOOL_DEF = 1201;
 
+export const CS2_CONTAINER_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Container, CS2ItemType.Tool];
+export const CS2_DISPLAY_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Collectible, CS2ItemType.MusicKit];
+export const CS2_EQUIPMENT_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2ItemType.Agent, CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.MusicKit];
+export const CS2_GRAPHIC_ART_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Patch, CS2ItemType.Sticker, CS2ItemType.Graffiti];
 export const CS2_NAMETAGGABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon];
+export const CS2_PAINTABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
+export const CS2_PATCHABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Agent];
 export const CS2_SEEDABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2ItemType.Melee, CS2ItemType.Gloves];
 export const CS2_STATTRAKABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit];
 export const CS2_STICKERABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon];
-export const CS2_PAINTABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
-export const CS2_EQUIPMENT_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Weapon, CS2ItemType.Agent, CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.MusicKit];
-export const CS2_GRAPHIC_ART_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Patch, CS2ItemType.Sticker, CS2ItemType.Graffiti];
-export const CS2_CONTAINER_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Container, CS2ItemType.Tool];
-export const CS2_DISPLAY_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Collectible, CS2ItemType.MusicKit];
 
 export const CS2_MIDTIER_CATEGORIES = ["heavy", "smg"];
 export const CS2_RIFLE_CATEGORIES = ["rifle"];
