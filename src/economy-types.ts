@@ -17,10 +17,10 @@ export type CS2ItemTeamValues = EnumValues<typeof CS2ItemTeam>;
 export const CS2ItemType = {
     Agent: "agent",
     Collectible: "collectible",
-    Container: "container",
-    ContainerKey: "containerkey",
-    Gloves: "gloves",
+    Container: "case",
+    Gloves: "glove",
     Graffiti: "graffiti",
+    Key: "key",
     Melee: "melee",
     MusicKit: "musickit",
     Patch: "patch",

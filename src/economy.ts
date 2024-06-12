@@ -258,7 +258,7 @@ export class CS2EconomyInstance {
         containerItem.expectContainer();
         keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
         if (keyItem !== undefined) {
-            keyItem.expectContainerKey();
+            keyItem.expectKey();
             assert(containerItem.keys !== undefined);
             assert(containerItem.keys.includes(keyItem.id));
         } else {
@@ -442,8 +442,8 @@ export class CS2EconomyItem
         return this.type === CS2ItemType.Container;
     }
 
-    isContainerKey(): boolean {
-        return this.type === CS2ItemType.ContainerKey;
+    isKey(): boolean {
+        return this.type === CS2ItemType.Key;
     }
 
     isGloves(): boolean {
@@ -533,8 +533,8 @@ export class CS2EconomyItem
         return this;
     }
 
-    expectContainerKey(): this {
-        assert(this.isContainerKey());
+    expectKey(): this {
+        assert(this.isKey());
         return this;
     }
 
