@@ -25,6 +25,7 @@ import {
     CS2_NAMETAGGABLE_ITEMS,
     CS2_NAMETAG_RE,
     CS2_NAMETAG_TOOL_DEF,
+    CS2_PAINTABLE_ITEMS,
     CS2_RIFLE_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODELS,
@@ -35,7 +36,6 @@ import {
     CS2_TEAMS_BOTH,
     CS2_TEAMS_CT,
     CS2_TEAMS_T,
-    CS2_WEARABLE_ITEMS,
     CS2_WEAR_FACTOR
 } from "./economy-constants.js";
 import {
@@ -543,7 +543,7 @@ export class CS2EconomyItem
     }
 
     hasWear(): boolean {
-        return CS2_WEARABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
     }
 
     hasSeed(): boolean {
@@ -594,8 +594,8 @@ export class CS2EconomyItem
         return CS2_DISPLAY_ITEMS.includes(this.type);
     }
 
-    isHoldable(): boolean {
-        return CS2_WEARABLE_ITEMS.includes(this.type);
+    isPaintable(): boolean {
+        return CS2_PAINTABLE_ITEMS.includes(this.type);
     }
 
     getMinimumWear(): number {
