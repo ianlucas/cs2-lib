@@ -104,6 +104,10 @@ export class CS2Veto {
         return this.getAvailableMaps().map((map) => map.mapname);
     }
 
+    getCurrentAction(): CS2VetoActionValues | undefined {
+        return this.actions[0];
+    }
+
     getCurrentTeam(): number {
         return (this.toggleTeam ? 1 : 0) + (this.actions.length % 2) * (this.toggleTeam ? -1 : 1);
     }

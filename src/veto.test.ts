@@ -29,15 +29,21 @@ test("bo2-a", () => {
     // @ts-expect-error
     veto.toggleTeam = false;
     expect(veto.getCurrentTeam()).toBe(1);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_vertigo")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_ancient")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_anubis")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_inferno")).toBe(true);
+    expect(veto.getCurrentAction()).toBe(undefined);
     expect(veto.choose("de_dust2")).toBe(false);
     expect(veto.choose("de_mirage")).toBe(false);
     expect(veto.getMaps()).toStrictEqual(["de_dust2", "de_mirage"]);
@@ -65,16 +71,22 @@ test("bo2-b", () => {
 test("bo3", () => {
     const veto = new CS2Veto("bo3", CS2_ACTIVE_MAP_POOL);
     expect(veto.getCurrentTeam()).toBe(0);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_vertigo")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Pick);
     expect(veto.choose("de_ancient")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Pick);
     expect(veto.choose("de_anubis")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_inferno")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
+    expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_dust2")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
     expect(veto.getMaps()).toStrictEqual(["de_ancient", "de_anubis", "de_mirage"]);
