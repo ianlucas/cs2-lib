@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { randomBoolean } from "./economy-container.js";
 import { CS2Map } from "./maps.js";
 import { EnumValues, assert, ensure } from "./utils.js";
 
@@ -16,6 +17,7 @@ export type CS2VetoActionValues = EnumValues<typeof CS2VetoAction>;
 
 export const CS2VetoType = {
     BO1: "bo1",
+    BO2: "bo2",
     BO3: "bo3",
     BO5: "bo5",
     Custom: "custom"
@@ -33,6 +35,7 @@ export class CS2Veto {
     private actions: CS2VetoActionValues[];
     private maps: CS2VetoMap[];
     private pickedMaps: string[] = [];
+    private toggleTeam = false;
 
     constructor(type: CS2VetoTypeValues, maps: CS2Map[], actions?: CS2VetoActionValues[]) {
         assert(type !== "custom" || actions !== undefined);
@@ -46,6 +49,16 @@ export class CS2Veto {
             case CS2VetoType.BO1:
                 this.actions = [
                     CS2VetoAction.Ban,
+                    CS2VetoAction.Ban,
+                    CS2VetoAction.Ban,
+                    CS2VetoAction.Ban,
+                    CS2VetoAction.Ban,
+                    CS2VetoAction.Ban
+                ];
+                break;
+            case CS2VetoType.BO2:
+                this.toggleTeam = randomBoolean();
+                this.actions = [
                     CS2VetoAction.Ban,
                     CS2VetoAction.Ban,
                     CS2VetoAction.Ban,
@@ -92,7 +105,7 @@ export class CS2Veto {
     }
 
     getCurrentTeam(): number {
-        return this.actions.length % 2;
+        return (this.toggleTeam ? 1 : 0) + (this.actions.length % 2) * (this.toggleTeam ? -1 : 1);
     }
 
     choose(mapname?: string): boolean {
