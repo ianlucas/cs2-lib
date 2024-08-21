@@ -6,4 +6,4 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-export const CS2_CSGO_PATH = process.env.CS2_CSGO_PATH as string;
+export const CS2_CSGO_PATH = process.env.CS2_CSGO_PATH ?? `${process.cwd()}/scripts/workdir/decompiled`;
