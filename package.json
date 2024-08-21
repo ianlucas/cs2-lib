@@ -12,15 +12,19 @@
         "prepack": "([ -d dist ] && rm -rf dist); tsc",
         "test": "jest",
         "upgrade": "npx npm-check-updates@latest --target minor -u",
+        "assets-downloader": "tsx scripts/assets-downloader.ts",
         "container-scraper": "tsx scripts/container-scraper.ts",
         "item-generator-diff": "tsx scripts/item-generator-diff.ts",
         "item-generator-report": "tsx scripts/item-generator-report.ts",
         "item-generator": "tsx scripts/item-generator.ts",
         "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts",
         "tint-graffiti-image-scraper": "tsx scripts/tint-graffiti-image-scraper.ts",
-        "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts"
+        "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts",
+        "update-items": "npm run assets-downloader && npm run item-generator"
     },
     "devDependencies": {
+        "@ianlucas/depot-downloader": "^0.0.4",
+        "@ianlucas/vrf-decompiler": "^0.0.3",
         "@types/jest": "^29.5.12",
         "@types/node": "^18.19.34",
         "@types/node-fetch": "^2.6.11",
