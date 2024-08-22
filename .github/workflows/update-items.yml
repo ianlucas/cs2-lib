@@ -33,4 +33,5 @@ jobs:
                   fi
             - name: Create pull request
               if: ${{ steps.check-for-changes.outputs.changes == 'true' }}
-              run: gh pr create --fill --base main --head $BRANCH_NAME
+              run: |
+                  gh pr create --base main --head $BRANCH_NAME --title 'feat: $BRANCH_NAME' --body 'Updates for $BRANCH_NAME'
