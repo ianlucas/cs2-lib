@@ -6,26 +6,20 @@ on:
 jobs:
     build:
         runs-on: ubuntu-latest
-
         strategy:
             matrix:
                 node-version: [18.x]
-
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
-
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
-
             - name: Install dependencies
               run: npm install
-
             - name: Update items
               run: npm run update-items
-
             - name: Check for changes
               run: |
                   git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -37,7 +31,6 @@ jobs:
                     git commit -m "feat: $BRANCH_NAME"
                     git push origin $BRANCH_NAME
                   fi
-
             - name: Create pull request
               if: ${{ steps.check-for-changes.outputs.changes == 'true' }}
               run: gh pr create --fill --base main --head $BRANCH_NAME
