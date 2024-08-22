@@ -159,17 +159,20 @@ async function extractFiles() {
             });
         }
         await rm(gamePath, { recursive: true });
+        return true;
     } catch {
         console.error("Failed to extract files");
     }
+    return false;
 }
 
 export class AssetsDownloader {
     async run() {
         if (await checkPakDir()) {
             if (await downloadVpkFiles()) {
-                await extractFiles();
-                console.log("Assets downloaded successfully");
+                if (await extractFiles()) {
+                    console.log("Assets downloaded successfully");
+                }
             }
         } else {
             console.warn("Assets are up to date");
