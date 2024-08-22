@@ -995,7 +995,7 @@ export class ItemGenerator {
         // use it to resolve a CDN url, but this method no longer works. For new
         // items this is going to return undefined and is meant to be
         // self-hosted.
-        const cs2ImagePath = resolve(IMAGES_PATH, path + "_png.png");
+        const cs2ImagePath = resolve(IMAGES_PATH, `${path}_png.png`.toLowerCase());
         const destPath = resolve(process.cwd(), `assets/images/${id}.png`);
         copyFileSync(cs2ImagePath, destPath);
         return undefined;
@@ -1007,7 +1007,10 @@ export class ItemGenerator {
 
     private getSkinImage(id: number, className: string | undefined, paintClassName: string | undefined) {
         const paths = PAINT_IMAGE_SUFFIXES.map((suffix) => [
-            resolve(IMAGES_PATH, `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`),
+            resolve(
+                IMAGES_PATH,
+                `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase()
+            ),
             resolve(process.cwd(), `assets/images/${id}_${suffix}.png`)
         ]);
         for (const [src, dest] of paths) {
