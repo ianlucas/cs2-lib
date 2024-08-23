@@ -35,7 +35,7 @@ jobs:
               run: npm run prepack
 
             - name: Clean up
-              run: rm -rf assets scripts src
+              run: rm -rf assets scripts
 
             - name: Generate documentation
               run: npm run docs
