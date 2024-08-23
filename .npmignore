@@ -1,6 +1,7 @@
 .env
 .env.example
 .git
+.github
 .gitignore
 .prettierignore
 .prettierrc
