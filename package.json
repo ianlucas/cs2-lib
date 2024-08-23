@@ -8,6 +8,7 @@
     "type": "module",
     "main": "dist/index.js",
     "scripts": {
+        "docs": "typedoc --out docs src/index.ts",
         "format": "prettier . --write",
         "prepack": "([ -d dist ] && rm -rf dist); tsc",
         "test": "jest",
@@ -38,6 +39,7 @@
         "string-strip-html": "^13.4.8",
         "ts-jest": "^29.2.4",
         "tsx": "^4.17.0",
+        "typedoc": "^0.26.6",
         "typescript": "^5.5.4"
     }
 }
