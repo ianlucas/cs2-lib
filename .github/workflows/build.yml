@@ -1,4 +1,4 @@
-name: Build
+name: build
 
 on:
     push:
@@ -11,36 +11,27 @@ on:
 jobs:
     build:
         runs-on: ubuntu-latest
-
         strategy:
             matrix:
                 node-version: [18.x]
-
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
-
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
-
             - name: Install dependencies
               run: npm install
-
             - name: Run tests
               run: npm run test
-
             - name: Build application
               run: npm run prepack
-
-            - name: Clean up
+            - name: Clean up assets
               run: rm -rf assets scripts
-
             - name: Generate documentation
               run: npm run docs
-
-            - name: Deploy 🚀
+            - name: Deploy documentation
               uses: JamesIves/github-pages-deploy-action@v4
               with:
                   folder: docs
