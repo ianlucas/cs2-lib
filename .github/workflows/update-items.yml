@@ -1,4 +1,4 @@
-name: Update Items
+name: update-items
 
 on:
     workflow_dispatch:
