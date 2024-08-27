@@ -1,37 +1,42 @@
 name: update-items
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                node-version: [18.x]
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ matrix.node-version }}
-            - name: Install dependencies
-              run: npm install
-            - name: Update items
-              run: npm run update-items
-            - name: Check for changes
-              run: |
-                  git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git config --global user.name "github-actions[bot]"
-                  if [ -n "$(git status --porcelain)" ]; then
-                    BRANCH_NAME="manifest-$(cat scripts/2347770.manifest)"
-                    git checkout -b $BRANCH_NAME
-                    git add .
-                    git commit -m "feat: $BRANCH_NAME"
-                    git push origin $BRANCH_NAME
-                  fi
-            - name: Create pull request
-              if: ${{ steps.check-for-changes.outputs.changes == 'true' }}
-              run: |
-                  gh pr create --base main --head $BRANCH_NAME --title 'feat: $BRANCH_NAME' --body 'Updates for $BRANCH_NAME'
+  update-items:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Update Items
+        run: npm run update-items
+
+      - name: Check Changes
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          if [ -n "$(git status --porcelain)" ]; then
+            MANIFEST_ID="$(cat scripts/2347770.manifest)"
+            BRANCH_NAME="manifest-$MANIFEST_ID"
+            git checkout -b $BRANCH_NAME
+            git add .
+            git commit -m "feat: $BRANCH_NAME"
+            git push origin $BRANCH_NAME
+          fi
+
+      - name: Create PR
+        if: ${{ steps.check-for-changes.outputs.changes == 'true' }}
+        run: |
+          gh pr create --base main --head $BRANCH_NAME --title 'feat: $BRANCH_NAME' --body 'Updates for manifest (id: $MANIFEST_ID)'
