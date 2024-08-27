@@ -1,30 +1,41 @@
 name: publish
 
 on:
-    release:
-        types: [published]
+  release:
+    types: [published]
 
 jobs:
-    publish-npm:
-        runs-on: ubuntu-latest
-        permissions:
-            id-token: write
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22.x
-                  registry-url: "https://registry.npmjs.org"
-                  cache: "npm"
-            - run: npm ci
-            - run: npm version ${TAG_NAME} --git-tag-version=false
-              env:
-                  TAG_NAME: ${{ github.ref_name }}
-            - run: npm publish --provenance --access public --tag next
-              if: "github.event.release.prerelease"
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
-            - run: npm publish --provenance --access public
-              if: "!github.event.release.prerelease"
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Version
+        run: npm version ${TAG_NAME} --git-tag-version=false
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+
+      - name: Publish Pre-release
+        run: npm publish --provenance --access public --tag next
+        if: "github.event.release.prerelease"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
+
+      - name: Publish Release
+        run: npm publish --provenance --access public
+        if: "!github.event.release.prerelease"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}

@@ -1,5 +1,6 @@
 assets
 dist
 node_modules
+scripts/item-diffs/**/*.md
 src/economy-constants.ts
 src/items.ts
