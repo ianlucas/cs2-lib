@@ -37,7 +37,7 @@
         "prettier": "3.3.3",
         "string-strip-html": "^13.4.8",
         "ts-jest": "^29.2.5",
-        "tsx": "^4.18.0",
+        "tsx": "^4.19.0",
         "typedoc": "^0.26.6",
         "typescript": "^5.5.4"
     }
