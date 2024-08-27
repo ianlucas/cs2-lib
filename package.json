@@ -26,7 +26,7 @@
         "@ianlucas/depot-downloader": "^0.0.4",
         "@ianlucas/vrf-decompiler": "^0.0.3",
         "@types/jest": "^29.5.12",
-        "@types/node": "^18.19.45",
+        "@types/node": "^18.19.46",
         "@types/node-fetch": "^2.6.11",
         "cheerio": "^1.0.0",
         "dotenv": "^16.4.5",
@@ -36,8 +36,8 @@
         "node-fetch": "^2.7.0",
         "prettier": "3.3.3",
         "string-strip-html": "^13.4.8",
-        "ts-jest": "^29.2.4",
-        "tsx": "^4.17.0",
+        "ts-jest": "^29.2.5",
+        "tsx": "^4.18.0",
         "typedoc": "^0.26.6",
         "typescript": "^5.5.4"
     }
