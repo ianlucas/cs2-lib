@@ -5,11 +5,11 @@
 .gitignore
 .prettierignore
 .prettierrc
-assets/data
-assets/images
-assets/sounds
+/assets/data
+/assets/images
+/assets/sounds
+/scripts
+/src
 jest.config.js
 README.md
-scripts
-src
 tsconfig.json
