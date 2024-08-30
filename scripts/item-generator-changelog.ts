@@ -126,8 +126,8 @@ async function main() {
     }
 
     if (report.trim() !== "") {
-        const timestamp = new Date().toISOString().replace(/:/g, "-").replace("T", "-").split(".")[0];
-        write(`scripts/item-diffs/${timestamp}.md`, report);
+        const timestamp = new Date().toISOString().replace(/:/g, "").replace(/-/g, "").split(".")[0];
+        write(`scripts/.changelogs/${timestamp}.md`, report);
     }
 }
 

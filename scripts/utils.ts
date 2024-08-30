@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ChildProcessWithoutNullStreams } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { access } from "fs/promises";
 import { decode as htmlEntitiesDecode } from "html-entities";
 import { basename, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -61,4 +63,28 @@ export function push<T, U extends Record<string | number, U[]>>(obj: T, key: str
 
 export function shouldRun(url: string) {
     return basename(process.argv[1]) === basename(fileURLToPath(url));
+}
+
+export async function exists(path: string) {
+    try {
+        await access(path);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export function readProcess(ps: ChildProcessWithoutNullStreams) {
+    return new Promise<string>((resolve, reject) => {
+        let data = "";
+        ps.stdout.on("data", (chunk) => (data += chunk));
+        ps.stderr.on("data", (chunk) => (data += chunk));
+        ps.on("close", (code) => {
+            if (code === 0) {
+                resolve(data);
+            } else {
+                reject(data);
+            }
+        });
+    });
 }

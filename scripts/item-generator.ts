@@ -22,7 +22,7 @@ import { CS2KeyValues } from "../src/keyvalues.js";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
-import { getItemsTsContents } from "./item-generator-template.js";
+import { useItemsTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
 import { readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
@@ -837,7 +837,7 @@ export class ItemGenerator {
         writeJson(ITEMS_GAME_JSON_PATH, this.gameItems);
         warning(`Generated '${ITEMS_GAME_JSON_PATH}'.`);
 
-        write(ITEMS_TS_PATH, getItemsTsContents(items));
+        write(ITEMS_TS_PATH, useItemsTemplate(items));
         warning(`Generated '${ITEMS_TS_PATH}'.`);
         warning("Script completed.");
     }
