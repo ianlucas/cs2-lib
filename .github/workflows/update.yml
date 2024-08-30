@@ -1,10 +1,10 @@
-name: update-items
+name: update
 
 on:
   workflow_dispatch:
 
 jobs:
-  update-items:
+  update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,23 +20,24 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Update Items
-        run: npm run update-items
+      - name: Update
+        run: npm run update
 
-      - name: Check Changes
+      - name: Commit
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           if [ -n "$(git status --porcelain)" ]; then
+            CS2_VERSION="$(awk -F'=' '/^ClientVersion/ {print $2}' scripts/workdir/game/csgo/steam.inf)"
             MANIFEST_ID="$(cat scripts/2347770.manifest)"
-            BRANCH_NAME="manifest-$MANIFEST_ID"
+            BRANCH_NAME="cs2-v$CS2_VERSION"
             git checkout -b $BRANCH_NAME
             git add .
             git commit -m "feat: $BRANCH_NAME"
             git push origin $BRANCH_NAME
           fi
 
-      - name: Create PR
+      - name: Pull Request
         if: ${{ steps.check-for-changes.outputs.changes == 'true' }}
         run: |
-          gh pr create --base main --head $BRANCH_NAME --title 'feat: $BRANCH_NAME' --body 'Updates for manifest (id: $MANIFEST_ID)'
+          gh pr create --base main --head $BRANCH_NAME --title 'feat: update items (CS2 v$CS2_VERSION)' --body 'Manifest: $MANIFEST_ID'
