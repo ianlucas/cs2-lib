@@ -176,6 +176,7 @@ export async function main() {
         }
     } else {
         warn("CS2 files are up to date");
+        process.exit(1);
     }
 }
 
