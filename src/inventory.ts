@@ -167,10 +167,7 @@ export class CS2Inventory {
     }
 
     stringify(): string {
-        return JSON.stringify({
-            items: this.toBaseInventoryItems(this.items),
-            version: CS2_INVENTORY_VERSION
-        });
+        return JSON.stringify(this.getData());
     }
 
     isFull(): boolean {
@@ -488,6 +485,13 @@ export class CS2Inventory {
     setAll(items: Map<number, CS2InventoryItem>): this {
         this.items = items;
         return this;
+    }
+
+    getData(): CS2InventoryData {
+        return {
+            items: this.toBaseInventoryItems(this.items),
+            version: CS2_INVENTORY_VERSION
+        };
     }
 
     size(): number {
