@@ -6,7 +6,7 @@
 import { depotDownloader } from "@ianlucas/depot-downloader";
 import { vrfDecompiler } from "@ianlucas/vrf-decompiler";
 import { warn } from "console";
-import { mkdir, readFile, rm, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { assert } from "../src/utils";
 import { exists, log, readProcess, shouldRun, warning } from "./utils";
@@ -159,7 +159,6 @@ async function extractCsgoPackageFiles() {
                 })
             );
         }
-        await rm(gamePath, { recursive: true });
         return true;
     } catch {
         console.error("Failed to extract files");
