@@ -35,7 +35,7 @@ async function getLatestCsgoManifest() {
         );
         const matches = output.match(/Manifest\s(\d+)/);
         if (matches !== null) {
-            return parseInt(matches[1]);
+            return BigInt(matches[1]);
         }
     } catch (error) {
         console.error(error);
@@ -105,7 +105,7 @@ async function checkCsgoPackageDirectory() {
     if (!(await exists(workdirPath))) {
         await mkdir(workdirPath, { recursive: true });
     }
-    const manifest = (await exists(csgoManifestPath)) ? parseInt(await readFile(csgoManifestPath, "utf-8")) : 0;
+    const manifest = (await exists(csgoManifestPath)) ? BigInt(await readFile(csgoManifestPath, "utf-8")) : 0;
     const latestManifest = await getLatestCsgoManifest();
     if (latestManifest === undefined) {
         warning(`Failed to get latest manifest for depot ${DEPOT_ID}`);
