@@ -41,4 +41,4 @@ jobs:
       - name: Pull Request
         if: env.changes == 'true'
         run: |
-          gh pr create --base main --head $BRANCH_NAME --title "feat: update items (CS2 v$CS2_VERSION)" --body "Manifest: $MANIFEST_ID" --fill
+          gh pr create --base main --head $BRANCH_NAME --title 'feat: update items (CS2 v$CS2_VERSION)' --body 'Manifest: $MANIFEST_ID' --fill
