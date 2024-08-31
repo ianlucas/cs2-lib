@@ -67,7 +67,7 @@ async function downloadCsgoDirectoryFromDepot() {
 
 async function getCsgoPackageFilesToDownload() {
     assert(await exists(csgoDirectoryPath));
-    const vpksToDownload = new Set<string>();
+    const vpksToDownload = new Set<string>(["game/csgo/steam.inf"]);
     log("Getting list of package files to download...");
     (
         await readProcess(
