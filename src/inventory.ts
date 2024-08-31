@@ -494,10 +494,11 @@ export class CS2Inventory {
         return this.items.size;
     }
 
-    move(): CS2Inventory {
+    move(options: Partial<CS2InventorySpec> = {}): CS2Inventory {
         return new CS2Inventory({
             ...this.options,
-            economy: this.economy
+            economy: this.economy,
+            ...options
         }).setAll(this.items);
     }
 }
