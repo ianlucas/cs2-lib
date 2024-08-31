@@ -29,7 +29,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           if [ -n "$(git status --porcelain)" ]; then
             CS2_VERSION="$(awk -F'=' '/^ClientVersion/ {print $2}' scripts/workdir/game/csgo/steam.inf)"
-            MANIFEST_ID="$(cat scripts/2347770.manifest)"
+            MANIFEST_ID="$(cat scripts/cs2.manifest)"
             BRANCH_NAME="cs2-v$CS2_VERSION"
             git checkout -b $BRANCH_NAME
             git add .
