@@ -35,9 +35,10 @@ jobs:
             git add .
             git commit -m "feat: update items (CS2 v$CS2_VERSION)"
             git push origin $BRANCH_NAME
+            echo "changes=true" >> $GITHUB_ENV
           fi
 
       - name: Pull Request
-        if: ${{ steps.check-for-changes.outputs.changes == 'true' }}
+        if: env.changes == 'true'
         run: |
           gh pr create --base main --head $BRANCH_NAME --title "feat: update items (CS2 v$CS2_VERSION)" --body "Manifest: $MANIFEST_ID" --fill
