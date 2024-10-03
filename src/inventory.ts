@@ -26,11 +26,11 @@ export interface CS2BaseInventoryItem {
     equippedT?: boolean;
     id: number;
     nameTag?: string;
-    patches?: Record<number, number>;
+    patches?: Record<string, number>;
     seed?: number;
     statTrak?: number;
     stickers?: Record<
-        number,
+        string,
         {
             id: number;
             wear?: number;
@@ -132,6 +132,23 @@ export class CS2Inventory {
         }
     }
 
+    public removeInvalidItemReferences(item: CS2BaseInventoryItem): void {
+        if (item.patches !== undefined) {
+            for (const [slot, patchId] of Object.entries(item.patches)) {
+                if (!this.economy.items.has(patchId)) {
+                    delete item.patches[slot];
+                }
+            }
+        }
+        if (item.stickers !== undefined) {
+            for (const [slot, sticker] of Object.entries(item.stickers)) {
+                if (!this.economy.items.has(sticker.id)) {
+                    delete item.stickers[slot];
+                }
+            }
+        }
+    }
+
     public validateBaseInventoryItem({
         id,
         nameTag,
@@ -156,6 +173,7 @@ export class CS2Inventory {
             Object.entries(items)
                 .filter(([, { id }]) => this.economy.items.has(id))
                 .map(([key, value]) => {
+                    this.removeInvalidItemReferences(value);
                     const uid = parseInt(key, 10);
                     return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
                 })
@@ -555,6 +573,7 @@ export class CS2InventoryItem
                 Object.entries(storage)
                     .filter(([, { id }]) => this.economy.items.has(id))
                     .map(([key, value]) => {
+                        this.inventory.removeInvalidItemReferences(value);
                         const economyItem = this.economy.getById(value.id);
                         assert(value.storage === undefined);
                         const uid = parseInt(key, 10);

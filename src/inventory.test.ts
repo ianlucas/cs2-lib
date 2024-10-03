@@ -563,4 +563,30 @@ describe("CS2Inventory methods", () => {
         });
         expect(Object.fromEntries(ensure(inventory.get(1).patches))).toEqual(patches);
     });
+
+    test("removes invalid item references", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: 999999999
+                    },
+                    1: {
+                        id: 8657,
+                        patches: {
+                            0: 999999999,
+                            1: 8559,
+                            2: 8559
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(1).patches?.get(0)).toBe(undefined);
+        expect(inventory.get(1).patches?.get(1)).toBe(8559);
+        expect(inventory.get(1).patches?.get(2)).toBe(8559);
+    });
 });
