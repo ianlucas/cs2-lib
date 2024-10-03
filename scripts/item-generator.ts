@@ -1075,6 +1075,10 @@ export class ItemGenerator {
             categoryToken = `#CSGO_sticker_crate_key_${folder}`;
             category = this.findTranslation(categoryToken);
         }
+        if (category === undefined) {
+            categoryToken = undefined;
+            category = "Valve";
+        }
         return [ensure(category), categoryToken] as const;
     }
 
