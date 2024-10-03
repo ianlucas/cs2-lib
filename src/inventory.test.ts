@@ -576,7 +576,15 @@ describe("CS2Inventory methods", () => {
                         patches: {
                             0: 999999999,
                             1: 8559,
-                            2: 8559
+                            2: 8561
+                        }
+                    },
+                    2: {
+                        id: 66,
+                        stickers: {
+                            0: { id: 1943, wear: 0.1 },
+                            1: { id: 999999999 },
+                            2: { id: 1947, wear: 0.1 }
                         }
                     }
                 },
@@ -584,9 +592,12 @@ describe("CS2Inventory methods", () => {
             }
         });
 
-        expect(inventory.size()).toBe(1);
+        expect(inventory.size()).toBe(2);
         expect(inventory.get(1).patches?.get(0)).toBe(undefined);
         expect(inventory.get(1).patches?.get(1)).toBe(8559);
-        expect(inventory.get(1).patches?.get(2)).toBe(8559);
+        expect(inventory.get(1).patches?.get(2)).toBe(8561);
+        expect(inventory.get(2).stickers?.get(0)).toMatchObject({ id: 1943, wear: 0.1 });
+        expect(inventory.get(2).stickers?.get(1)).toBe(undefined);
+        expect(inventory.get(2).stickers?.get(2)).toMatchObject({ id: 1947, wear: 0.1 });
     });
 });
