@@ -24,7 +24,7 @@ import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { useItemsTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
-import { readJson, shouldRun, warning, write, writeJson } from "./utils.js";
+import { prependHash, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
@@ -220,9 +220,9 @@ export class ItemGenerator {
                 }
                 return {
                     className: name,
-                    descToken: description_string,
+                    descToken: prependHash(description_string),
                     index: Number(paintKitIndex),
-                    nameToken: description_tag,
+                    nameToken: prependHash(description_tag),
                     rarityColorHex: this.getRarityColorHex([name]),
                     wearMax: wear_remap_max !== undefined ? Number(wear_remap_max) : CS2_DEFAULT_MAX_WEAR,
                     wearMin: wear_remap_min !== undefined ? Number(wear_remap_min) : CS2_DEFAULT_MIN_WEAR
@@ -1048,6 +1048,10 @@ export class ItemGenerator {
         const [folder, subfolder] = sticker_material.split("/");
         if (folder === "alyx") {
             categoryToken = "#CSGO_crate_sticker_pack_hlalyx_capsule";
+            category = this.findTranslation(categoryToken);
+        }
+        if (subfolder == "elemental_craft") {
+            categoryToken = "#CSGO_crate_sticker_pack_stkr_craft_01_capsule";
             category = this.findTranslation(categoryToken);
         }
         if (UNCATEGORIZED_STICKERS.includes(folder)) {

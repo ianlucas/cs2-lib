@@ -88,3 +88,10 @@ export function readProcess(ps: ChildProcessWithoutNullStreams) {
         });
     });
 }
+
+export function prependHash<T extends string | undefined>(str: T) {
+    if (str === undefined || str.startsWith("#")) {
+        return str;
+    }
+    return `#${str}`;
+}
