@@ -22,6 +22,7 @@ import { CS2KeyValues } from "../src/keyvalues.js";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
+import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
 import { useItemsTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
 import { prependHash, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
@@ -789,7 +790,7 @@ export class ItemGenerator {
                 });
                 const containerName = this.requireTranslation(item_name);
                 const id = this.itemIdentifierManager.get(`case_${containerIndex}`);
-                const specials = this.containerScraper.getSpecials(containerName);
+                const specials = this.containerScraper.getSpecials(containerName) ?? HARDCODED_SPECIALS[id];
                 const containsMusicKit = containerName.includes("Music Kit");
                 const containsStatTrak = containerName.includes("StatTrak");
                 this.addTranslation(id, "name", "#CSGO_Type_WeaponCase", " | ", item_name);
