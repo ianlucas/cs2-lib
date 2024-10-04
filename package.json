@@ -11,8 +11,9 @@
         "format": "prettier . --write",
         "prepack": "([ -d dist ] && rm -rf dist); tsc",
         "test": "jest",
-        "upgrade": "npx npm-check-updates@latest --target minor -u",
+        "typecheck": "tsc --noEmit",
         "update": "npm run cs2 && npm run item-generator && npm run item-generator-changelog",
+        "upgrade": "npx npm-check-updates@latest --target minor -u",
         "container-scraper": "tsx scripts/container-scraper.ts",
         "cs2": "tsx scripts/cs2.ts",
         "item-generator-changelog": "tsx scripts/item-generator-changelog.ts",
@@ -23,9 +24,9 @@
     },
     "devDependencies": {
         "@ianlucas/depot-downloader": "^2.7.0",
-        "@ianlucas/vrf-decompiler": "^10.1.0",
-        "@types/jest": "^29.5.12",
-        "@types/node": "^18.19.46",
+        "@ianlucas/vrf-decompiler": "^10.2.0",
+        "@types/jest": "^29.5.13",
+        "@types/node": "^18.19.54",
         "@types/node-fetch": "^2.6.11",
         "cheerio": "^1.0.0",
         "dotenv": "^16.4.5",
@@ -36,8 +37,8 @@
         "prettier": "3.3.3",
         "string-strip-html": "^13.4.8",
         "ts-jest": "^29.2.5",
-        "tsx": "^4.19.0",
-        "typedoc": "^0.26.6",
-        "typescript": "^5.5.4"
+        "tsx": "^4.19.1",
+        "typedoc": "^0.26.7",
+        "typescript": "^5.6.2"
     }
 }
