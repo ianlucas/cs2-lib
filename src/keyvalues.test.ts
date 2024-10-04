@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { expect, test } from "vitest";
 import { CS2KeyValues } from "./keyvalues";
 
 test("key value pair", () => {

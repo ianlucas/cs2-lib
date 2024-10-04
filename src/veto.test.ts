@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { expect, test } from "vitest";
 import { CS2_ACTIVE_MAP_POOL } from "./maps";
 import { CS2Veto, CS2VetoAction } from "./veto";
 
