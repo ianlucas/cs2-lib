@@ -52,6 +52,7 @@ const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemTy
 const PAINT_IMAGE_SUFFIXES = ["light", "medium", "heavy"] as const;
 // prettier-ignore
 const UNCATEGORIZED_STICKERS = ["community_mix01", "community02", "danger_zone", "standard", "stickers2", "tournament_assets"];
+const REMOVE_KEYCHAIN_TOOL_INDEX = "65";
 
 export class ItemManager extends Map<number, any> {
     constructor() {
@@ -682,7 +683,7 @@ export class ItemGenerator {
             this.addTranslation(id, "desc", item_description);
             this.addItem({
                 def: Number(index),
-                free: baseitem === "1" ? true : undefined,
+                free: baseitem === "1" && index !== REMOVE_KEYCHAIN_TOOL_INDEX ? true : undefined,
                 id,
                 image: this.itemManager.get(id)?.image ?? this.getImage(id, image),
                 index: undefined,
