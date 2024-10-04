@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { describe, expect, test } from "vitest";
 import english from "../assets/localizations/items-english.json";
 import { CS2Economy, CS2EconomyItem } from "./economy";
 import { CS2RarityColor } from "./economy-container";

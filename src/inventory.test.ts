@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { beforeEach, describe, expect, test } from "vitest";
 import english from "../assets/localizations/items-english.json";
 import { CS2Economy } from "./economy";
 import { CS2_MAX_PATCHES, CS2_MAX_STATTRAK } from "./economy-constants";
