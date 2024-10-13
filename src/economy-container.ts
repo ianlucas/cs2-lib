@@ -62,7 +62,7 @@ export const CS2RarityColorOrder = {
     [CS2RarityColor.Mythical]: 4,
     [CS2RarityColor.Legendary]: 5,
     [CS2RarityColor.Ancient]: 6,
-    [CS2RarityColor.Immortal]: 7
+    [CS2RarityColor.Immortal]: 6.55
 } as const;
 
 export const CS2_RARITY_COLOR_DEFAULT = 0;
