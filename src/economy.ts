@@ -644,12 +644,14 @@ export class CS2EconomyItem
         });
     }
 
-    unlockContainer(): CS2UnlockedItem {
+    unlockContainer(options?: {
+        computeOdds?: (rarities: (typeof CS2_RARITY_ORDER)[number][]) => number[] | undefined;
+    }): CS2UnlockedItem {
         // @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
         const contents = this.groupContents();
         const keys = Object.keys(contents);
         const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
-        const odds = rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
+        const odds = options?.computeOdds?.(rarities) ?? rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
         const total = odds.reduce((acc, cur) => acc + cur, 0);
         const entries = rarities.map((rarity, index) => [rarity, odds[index] / total] as const);
         const roll = Math.random();
