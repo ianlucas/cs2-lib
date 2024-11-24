@@ -685,7 +685,7 @@ export class ItemGenerator {
                 def: Number(index),
                 free: baseitem === "1" && index !== REMOVE_KEYCHAIN_TOOL_INDEX ? true : undefined,
                 id,
-                image: this.itemManager.get(id)?.image ?? this.getImage(id, image),
+                image: this.getImage(id, image),
                 index: undefined,
                 rarity: this.getRarityColorHex(["common"]),
                 teams: undefined,
