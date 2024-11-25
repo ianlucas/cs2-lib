@@ -334,10 +334,9 @@ export class CS2EconomyItem
         Object.assign(this, item);
         Object.assign(this, language);
         assert(typeof this.id === "number");
-        assert(typeof this.id === "number");
         assert(this.name);
         assert(this.type);
-        assert(item.type === CS2ItemType.Stub || this.rarity);
+        assert(item.type === CS2ItemType.Stub || typeof this.rarity === "string");
     }
 
     set contents(value: number[] | undefined) {
