@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS2Economy, CS2EconomyInstance } from "./economy.js";
-import { CS2InventoryData, CS2_INVENTORY_VERSION } from "./inventory.js";
+import { type CS2InventoryData, CS2_INVENTORY_VERSION } from "./inventory.js";
 
 const upgrades: Record<
     number,
@@ -91,8 +91,9 @@ export function resolveInventoryData(
         let value = JSON.parse(stringValue);
         const currentVersion = value.version ?? 0;
         for (let i = currentVersion + 1; i <= CS2_INVENTORY_VERSION; i++) {
-            if (upgrades[i]) {
-                value = upgrades[i](value, economy);
+            const upgrade = upgrades[i];
+            if (upgrade !== undefined) {
+                value = upgrade(value, economy);
             }
         }
         return value;

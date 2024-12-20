@@ -13,11 +13,11 @@ import {
     CS2_MIN_WEAR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.js";
-import { CS2ItemType, CS2ItemTypeValues, CS2UnlockedItem } from "./economy-types.js";
+import { CS2ItemType, type CS2ItemTypeValues, type CS2UnlockedItem } from "./economy-types.js";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.js";
 import { resolveInventoryData } from "./inventory-upgrader.js";
-import { CS2Team, CS2TeamValues } from "./teams.js";
-import { Interface, MapValue, assert, ensure, float } from "./utils.js";
+import { CS2Team, type CS2TeamValues } from "./teams.js";
+import { type Interface, type MapValue, assert, ensure, float } from "./utils.js";
 
 export interface CS2BaseInventoryItem {
     containerId?: number;

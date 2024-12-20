@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EnumValues } from "./utils.js";
+import { type EnumValues } from "./utils.js";
 
 export const CS2Rarity = {
     Common: "common",
