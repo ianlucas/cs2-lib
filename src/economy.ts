@@ -42,7 +42,7 @@ import {
 import {
     CS2RarityColorName,
     CS2RarityColorOrder,
-    CS2RarityColorValues,
+    type CS2RarityColorValues,
     CS2RaritySoundName,
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
@@ -53,20 +53,20 @@ import {
 } from "./economy-container.js";
 import {
     CS2ContainerType,
-    CS2ContainerTypeValues,
-    CS2Item,
-    CS2ItemLocalization,
-    CS2ItemLocalizationMap,
+    type CS2ContainerTypeValues,
+    type CS2Item,
+    type CS2ItemLocalization,
+    type CS2ItemLocalizationMap,
     CS2ItemTeam,
-    CS2ItemTeamValues,
+    type CS2ItemTeamValues,
     CS2ItemType,
-    CS2ItemTypeValues,
+    type CS2ItemTypeValues,
     CS2ItemWear,
-    CS2ItemWearValues,
-    CS2UnlockedItem
+    type CS2ItemWearValues,
+    type CS2UnlockedItem
 } from "./economy-types.js";
-import { CS2TeamValues } from "./teams.js";
-import { Interface, assert, compare, ensure, safe } from "./utils.js";
+import { type CS2TeamValues } from "./teams.js";
+import { type Interface, assert, compare, ensure, safe } from "./utils.js";
 
 type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2TeamValues };
 
@@ -652,9 +652,9 @@ export class CS2EconomyItem
         const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
         const odds = options?.computeOdds?.(rarities) ?? rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
         const total = odds.reduce((acc, cur) => acc + cur, 0);
-        const entries = rarities.map((rarity, index) => [rarity, odds[index] / total] as const);
+        const entries = rarities.map((rarity, index) => [rarity, ensure(odds[index]) / total] as const);
         const roll = Math.random();
-        let [rollRarity] = entries[0];
+        let [rollRarity] = ensure(entries[0]);
         let acc = 0;
         for (const [rarity, odd] of entries) {
             acc += odd;
@@ -663,7 +663,8 @@ export class CS2EconomyItem
                 break;
             }
         }
-        const unlocked = contents[rollRarity][Math.floor(Math.random() * contents[rollRarity].length)];
+        const stack = ensure(contents[rollRarity]);
+        const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
         const hasStatTrak = this.statTrakless !== true;
         const alwaysStatTrak = this.statTrakOnly === true;
         return {

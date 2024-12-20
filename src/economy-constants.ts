@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2ItemType, CS2ItemTypeValues } from "./economy-types.js";
-import { CS2Team, CS2TeamValues } from "./teams.js";
+import { CS2ItemType, type CS2ItemTypeValues } from "./economy-types.js";
+import { CS2Team, type CS2TeamValues } from "./teams.js";
 
 export const CS2_MIN_STATTRAK = 0;
 export const CS2_MAX_STATTRAK = 999999;
