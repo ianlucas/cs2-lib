@@ -25,6 +25,7 @@
     "devDependencies": {
         "@ianlucas/depot-downloader": "^2.7.3",
         "@ianlucas/vrf-decompiler": "^10.2.0",
+        "@total-typescript/tsconfig": "^1.0.4",
         "@types/node": "^18.19.68",
         "@types/node-fetch": "^2.6.12",
         "cheerio": "^1.0.0",

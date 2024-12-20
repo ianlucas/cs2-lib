@@ -13,7 +13,7 @@ export class CS2KeyValues {
         let index = 0;
 
         function skipWhitespace(): void {
-            while (data[index] && data[index].match(/[\s\t\r\n]/)) {
+            while (data[index] && data[index]?.match(/[\s\t\r\n]/)) {
                 index += 1;
             }
             if (data[index] === "/" && data[index + 1] === "/") {
