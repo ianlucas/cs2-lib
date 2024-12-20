@@ -1,0 +1,135 @@
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/styles/mainmenu_store_fullscreen.vcss_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 276
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/styles/popups/popup_subscription_upsell.vcss_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 276
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/1080p/de_inferno_1_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/1080p/de_inferno_2_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/1080p/de_inferno_3_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/1080p/de_inferno_4_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/1080p/de_inferno_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/360p/de_inferno_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/720p/de_inferno_1_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/720p/de_inferno_2_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/720p/de_inferno_3_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/720p/de_inferno_4_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/images/map_icons/screenshots/720p/de_inferno_png.vtex_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: panorama/scripts/teamselectmenu.vts_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 195
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
+---------------
+Parent file: /home/runner/work/cs2-lib/cs2-lib/scripts/workdir/game/csgo/pak01_dir.vpk
+File: soundevents/game_sounds_weapons.vsndevts_c
+Exception: ValveResourceFormat.Utils.UnexpectedMagicException: Invalid KV3 signature for variable 'magic': 1263940357 (0x4B563305)
+   at ValveResourceFormat.ResourceTypes.BinaryKV3.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/ResourceTypes/BinaryKV3.cs:line 78
+   at ValveResourceFormat.Blocks.ResourceEditInfo2.Read(BinaryReader reader, Resource resource) in /_/ValveResourceFormat/Resource/Blocks/ResourceEditInfo2.cs:line 33
+   at ValveResourceFormat.Resource.Read(Stream input, Boolean verifyFileSize) in /_/ValveResourceFormat/Resource/Resource.cs:line 276
+   at Decompiler.Decompiler.ProcessVPKEntries(String parentPath, Package package, IFileLoader fileLoader, String type, Dictionary`2 manifestData) in /_/Decompiler/Decompiler.cs:line 1038
+
