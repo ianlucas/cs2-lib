@@ -9,7 +9,7 @@ export function useItemsTemplate(items: unknown) {
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2Item } from "./economy-types.js";
+import { type CS2Item } from "./economy-types.js";
 
 // @generated
 // @ts-ignore
