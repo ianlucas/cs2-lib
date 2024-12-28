@@ -37,6 +37,7 @@ const ITEMS_GAME_JSON_PATH = "assets/data/items-game.json";
 const ITEMS_JSON_PATH = "assets/data/items.json";
 const ITEMS_TS_PATH = "src/items.ts";
 const LOCALIZATIONS_JSON_PATH = "assets/localizations/items-%s.json";
+const PARSED_ITEMS_GAME_PATH = "assets/data/parsed-items-game.json";
 
 const FORMATTED_STRING_RE = /%s(\d+)/g;
 const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
@@ -716,14 +717,14 @@ export class ItemGenerator {
                 tool
             }
         ] of Object.entries(this.gameItems.items)) {
+            const hasSupplyCrateSeries =
+                attributes?.["set supply crate series"]?.attribute_class === "supply_crate_series";
             if (
                 item_name === undefined ||
                 image_inventory === undefined ||
-                !image_inventory.includes("econ/weapon_cases") ||
+                (!image_inventory.includes("econ/weapon_cases") && !hasSupplyCrateSeries) ||
                 tool?.type === "gift" ||
-                (prefab !== "weapon_case" &&
-                    attributes?.["set supply crate series"]?.attribute_class !== "supply_crate_series" &&
-                    loot_list_name === undefined)
+                (prefab !== "weapon_case" && !hasSupplyCrateSeries && loot_list_name === undefined)
             ) {
                 continue;
             }
@@ -754,11 +755,13 @@ export class ItemGenerator {
                 }
             }
             if (contents.length > 0) {
+                const thePrefab = this.tryGetPrefab(prefab);
                 // Asserts if the container requires a key.
                 assert(
                     associated_items !== undefined ||
                         prefab === "sticker_capsule" ||
                         prefab === "weapon_case_souvenirpkg" ||
+                        thePrefab?.prefab === "weapon_case_souvenirpkg" ||
                         tags?.StickerCapsule ||
                         name.includes("crate_signature") ||
                         name.includes("crate_pins") ||
@@ -835,6 +838,9 @@ export class ItemGenerator {
             writeJson(path, translations);
             warning(`Generated '${path}'.`);
         }
+
+        writeJson(PARSED_ITEMS_GAME_PATH, this.gameItems);
+        warning(`Generated '${PARSED_ITEMS_GAME_PATH}'`);
 
         writeJson(ITEMS_GAME_JSON_PATH, this.gameItems);
         warning(`Generated '${ITEMS_GAME_JSON_PATH}'.`);
@@ -942,6 +948,10 @@ export class ItemGenerator {
 
     private getPrefab(prefab?: string) {
         return ensure(this.gameItems.prefabs[ensure(prefab)]);
+    }
+
+    private tryGetPrefab(prefab?: string) {
+        return prefab !== undefined ? this.gameItems.prefabs[prefab] : undefined;
     }
 
     private getTeams(teams?: Record<string, string>) {
