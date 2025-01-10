@@ -13,6 +13,16 @@ export type CS2Language = {
 
 export type CS2GameItems = {
     items_game: {
+        keychain_definitions: {
+            [keychainIndex: string]: {
+                name: string;
+                loc_name: string;
+                loc_description: string;
+                item_rarity: string;
+                image_inventory: string;
+                pedestal_display_model: string;
+            }
+        };
         alternate_icons2: {
             weapon_icons: {
                 [weaponIconKey: string]: {

@@ -25,6 +25,13 @@ export interface CS2BaseInventoryItem {
     equippedCT?: boolean;
     equippedT?: boolean;
     id: number;
+    keychain?: {
+        id: number;
+        seed?: number;
+        x?: number;
+        y?: number;
+        Z?: number;
+    };
     nameTag?: string;
     patches?: Record<string, number>;
     seed?: number;
@@ -120,6 +127,14 @@ export class CS2Inventory {
         }
     }
 
+    private validateKeychain(keychain: CS2BaseInventoryItem["keychain"], item?: CS2EconomyItem): void {
+        if (keychain === undefined) {
+            return;
+        }
+        assert(item === undefined || item.hasKeychain());
+        this.economy.getById(keychain.id).expectKeychain();
+    }
+
     private validatePatches(patches?: CS2BaseInventoryItem["patches"], item?: CS2EconomyItem): void {
         if (patches === undefined) {
             return;
@@ -156,6 +171,7 @@ export class CS2Inventory {
         seed,
         statTrak,
         stickers,
+        keychain,
         wear
     }: CS2BaseInventoryItem): void {
         const item = this.economy.getById(id);
@@ -166,6 +182,7 @@ export class CS2Inventory {
         this.validateAddable(item);
         this.validatePatches(patches, item);
         this.validateStickers(stickers, item);
+        this.validateKeychain(keychain, item);
     }
 
     private toInventoryItems(items: Record<number, CS2BaseInventoryItem>): Map<number, CS2InventoryItem> {
@@ -451,6 +468,31 @@ export class CS2Inventory {
         return this;
     }
 
+    applyItemKeychain(targetUid: number, keychainUid: number, coords: {x: number; y: number; z: number}): this {
+        const target = this.get(targetUid);
+        const keychain = this.get(keychainUid);
+        assert(target.hasKeychain());
+        keychain.expectKeychain();
+        target.keychain = {
+            id: keychain.id,
+            seed: keychain.seed,
+            x: coords.x,
+            y: coords.y,
+            z: coords.z,
+        };
+        target.updatedAt = getTimestamp();
+        this.items.delete(keychainUid);
+        return this;
+    }
+
+    removeItemKeychain(targetUid: number): this {
+        const target = this.get(targetUid);
+        assert(target.keychain !== undefined);
+        target.keychain = undefined;
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
     incrementItemStatTrak(targetUid: number): this {
         const target = this.get(targetUid);
         assert(target.statTrak !== undefined);
@@ -527,12 +569,19 @@ export class CS2Inventory {
 
 export class CS2InventoryItem
     extends CS2EconomyItem
-    implements Interface<Omit<CS2BaseInventoryItem, "patches" | "stickers" | "storage">>
+    implements Interface<Omit<CS2BaseInventoryItem, "patches" | "stickers" | "storage" | "keychain">>
 {
     containerId: number | undefined;
     equipped: boolean | undefined;
     equippedCT: boolean | undefined;
     equippedT: boolean | undefined;
+    keychain: {
+        id: number;
+        seed?: number;
+        x?: number;
+        y?: number;
+        z?: number;
+    } | undefined
     nameTag: string | undefined;
     patches: Map<number, number> | undefined;
     seed: number | undefined;
@@ -653,6 +702,7 @@ export class CS2InventoryItem
             equippedCT: this.equippedCT,
             equippedT: this.equippedT,
             id: this.id,
+            keychain: this.keychain !== undefined ? this.keychain : undefined,
             nameTag: this.nameTag,
             patches: this.patches !== undefined ? Object.fromEntries(this.patches) : undefined,
             seed: this.seed,

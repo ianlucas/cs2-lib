@@ -14,6 +14,7 @@ import {
     CS2_MAX_FIELD_TESTED_WEAR,
     CS2_MAX_MINIMAL_WEAR_WEAR,
     CS2_MAX_SEED,
+    CS2_MAX_SEED_KEYCHAIN,
     CS2_MAX_STATTRAK,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
@@ -149,7 +150,11 @@ export class CS2EconomyInstance {
         assert(!Number.isNaN(seed));
         assert(item === undefined || item.hasSeed());
         assert(Number.isInteger(seed));
-        assert(seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED);
+        assert(
+            (!item?.isKeychain() && seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED)
+                ||
+            (item?.isKeychain() && seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED_KEYCHAIN)
+        );
         return true;
     }
 
@@ -450,6 +455,10 @@ export class CS2EconomyItem
         return this.type === CS2ItemType.Key;
     }
 
+    isKeychain(): boolean {
+        return this.type === CS2ItemType.Keychain;
+    }
+
     isGloves(): boolean {
         return this.type === CS2ItemType.Gloves;
     }
@@ -517,6 +526,11 @@ export class CS2EconomyItem
         return this;
     }
 
+    expectKeychain(): this {
+        assert(this.isKeychain());
+        return this;
+    }
+
     expectStorageUnit(): this {
         assert(this.isStorageUnit());
         return this;
@@ -556,6 +570,10 @@ export class CS2EconomyItem
 
     hasPatches(): boolean {
         return CS2_PATCHABLE_ITEMS.includes(this.type);
+    }
+
+    hasKeychain(): boolean {
+        return CS2_KEYCHAINABLE_ITEMS.includes(this.type) && !this.isC4();
     }
 
     hasNametag(): boolean {
