@@ -135,6 +135,7 @@ export class ItemGenerator {
         this.parseSkins();
         this.parseMusicKits();
         this.parseStickers();
+        this.parseKeychains();
         this.parseGraffiti();
         this.parsePatches();
         this.parseAgents();
@@ -468,6 +469,32 @@ export class ItemGenerator {
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Sticker
+            });
+        }
+    }
+
+    private parseKeychains() {
+        warning("Parsing keychains...");
+        const baseId = this.createStub("keychain", "#CSGO_Tool_Keychain_Desc");
+        for (const [index, { name, loc_name, loc_description, item_rarity, image_inventory }] of Object.entries(
+            this.gameItems.keychain_definitions
+        )) {
+            if (!this.hasTranslation(loc_name)) {
+                continue;
+            }
+            const id = this.itemIdentifierManager.get(`keychain_${index}`);
+            const itemKey = `[${name}]keychain`;
+            this.addContainerItem(itemKey, id);
+            this.addTranslation(id, "name", "#CSGO_Tool_Keychain", " | ", loc_name);
+            this.tryAddTranslation(id, "desc", loc_description);
+            this.addItem({
+                baseId,
+                def: 1355,
+                id,
+                image: this.itemManager.get(id)?.image ?? this.getImage(id, image_inventory),
+                index: Number(index),
+                rarity: this.getRarityColorHex([itemKey, item_rarity]),
+                type: CS2ItemType.Keychain
             });
         }
     }
