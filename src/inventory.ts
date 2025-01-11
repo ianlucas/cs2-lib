@@ -138,11 +138,11 @@ export class CS2Inventory {
         }
         const entries = Object.entries(keychains);
         assert(entries.length <= CS2_MAX_KEYCHAINS);
-        assert(item === undefined || item.hasStickers());
-        for (const [key, { id: stickerId, seed }] of entries) {
+        assert(item === undefined || item.hasKeychains());
+        for (const [key, { id: keychainId, seed }] of entries) {
             const slot = parseInt(key, 10);
             assert(slot >= 0 && slot <= CS2_MAX_KEYCHAINS - 1);
-            this.economy.getById(stickerId).expectKeychain();
+            this.economy.getById(keychainId).expectKeychain();
             if (seed !== undefined) {
                 assert(!Number.isNaN(seed));
                 assert(seed >= CS2_MIN_KEYCHAIN_SEED && seed <= CS2_MAX_KEYCHAIN_SEED);
