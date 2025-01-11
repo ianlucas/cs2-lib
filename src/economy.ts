@@ -9,6 +9,7 @@ import {
     CS2_DISPLAY_ITEMS,
     CS2_EQUIPMENT_ITEMS,
     CS2_GRAPHIC_ART_ITEMS,
+    CS2_KEYCHAINABLE_ITEMS,
     CS2_MACHINEGUN_MODELS,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
@@ -474,6 +475,10 @@ export class CS2EconomyItem
         return this.type === CS2ItemType.Sticker;
     }
 
+    isKeychain(): boolean {
+        return this.type === CS2ItemType.Keychain;
+    }
+
     isStub(): boolean {
         return this.type === CS2ItemType.Stub;
     }
@@ -517,6 +522,11 @@ export class CS2EconomyItem
         return this;
     }
 
+    expectKeychain(): this {
+        assert(this.isKeychain());
+        return this;
+    }
+
     expectStorageUnit(): this {
         assert(this.isStorageUnit());
         return this;
@@ -552,6 +562,10 @@ export class CS2EconomyItem
 
     hasStickers(): boolean {
         return CS2_STICKERABLE_ITEMS.includes(this.type) && !this.isC4();
+    }
+
+    hasKeychains(): boolean {
+        return CS2_KEYCHAINABLE_ITEMS.includes(this.type) && !this.isC4();
     }
 
     hasPatches(): boolean {

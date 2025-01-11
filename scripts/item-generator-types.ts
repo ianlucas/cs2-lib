@@ -89,6 +89,16 @@ export type CS2GameItems = {
                 vo_prefix?: string;
             };
         };
+        keychain_definitions: {
+            [keychainIndex: string]: {
+                name: string;
+                loc_name: string;
+                loc_description: string;
+                item_rarity: string;
+                image_inventory: string;
+                pedestal_display_model: string;
+            };
+        };
         music_definitions: {
             [musicIndex: string]: {
                 image_inventory: string;
