@@ -21,6 +21,7 @@ export const CS2ItemType = {
     Gloves: "glove",
     Graffiti: "graffiti",
     Key: "key",
+    Keychain: "keychain",
     Melee: "melee",
     MusicKit: "musickit",
     Patch: "patch",
