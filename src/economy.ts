@@ -13,12 +13,14 @@ import {
     CS2_MACHINEGUN_MODELS,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
+    CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_MINIMAL_WEAR_WEAR,
     CS2_MAX_SEED,
     CS2_MAX_STATTRAK,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
     CS2_MIDTIER_CATEGORIES,
+    CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
     CS2_MIN_WEAR,
@@ -150,7 +152,7 @@ export class CS2EconomyInstance {
         assert(!Number.isNaN(seed));
         assert(item === undefined || item.hasSeed());
         assert(Number.isInteger(seed));
-        assert(seed >= CS2_MIN_SEED && seed <= CS2_MAX_SEED);
+        assert(seed >= (item?.getMinimumSeed() ?? CS2_MIN_SEED) && seed <= (item?.getMaximumSeed() ?? CS2_MAX_SEED));
         return true;
     }
 
@@ -622,6 +624,14 @@ export class CS2EconomyItem
 
     getMaximumWear(): number {
         return this.wearMax ?? CS2_MAX_WEAR;
+    }
+
+    getMinimumSeed(): number {
+        return this.isKeychain() ? CS2_MIN_KEYCHAIN_SEED : CS2_MIN_SEED;
+    }
+
+    getMaximumSeed(): number {
+        return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {
