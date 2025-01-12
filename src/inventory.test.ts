@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import english from "../assets/localizations/items-english.json";
 import { CS2Economy } from "./economy";
-import { CS2_MAX_PATCHES, CS2_MAX_STATTRAK } from "./economy-constants";
+import { CS2_MAX_KEYCHAIN_SEED, CS2_MAX_PATCHES, CS2_MAX_STATTRAK, CS2_MIN_KEYCHAIN_SEED } from "./economy-constants";
 import { CS2Inventory } from "./inventory";
 import { CS2_ITEMS } from "./items";
 import { CS2Team } from "./teams";
@@ -44,6 +44,7 @@ const BROKEN_FANG_GLOVES_JADE_ID = 1707;
 const BLOODY_DARRYL_THE_STRAPPED_ID = 8657;
 const BLOODHOUND_ID = 8569;
 const CT_GLOVE_ID = 59;
+const LIL_AVA_ID = 13113;
 
 CS2Economy.use({ items: CS2_ITEMS, language: english });
 
@@ -600,5 +601,57 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(2).stickers?.get(0)).toMatchObject({ id: 1943, wear: 0.1 });
         expect(inventory.get(2).stickers?.get(1)).toBe(undefined);
         expect(inventory.get(2).stickers?.get(2)).toMatchObject({ id: 1947, wear: 0.1 });
+    });
+
+    test("add keychain", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: LIL_AVA_ID
+                    },
+                    1: {
+                        id: AWP_DRAGON_LORE_ID,
+                        keychains: {
+                            0: {
+                                id: LIL_AVA_ID,
+                                seed: 2000
+                            }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        expect(inventory.get(0).id).toBe(LIL_AVA_ID);
+        expect(inventory.get(1).keychains?.get(0)).toMatchObject({
+            id: LIL_AVA_ID,
+            seed: 2000
+        });
+        expect(() =>
+            inventory.add({
+                id: LIL_AVA_ID,
+                seed: CS2_MIN_KEYCHAIN_SEED - 1
+            })
+        ).toThrow();
+        expect(() =>
+            inventory.add({
+                id: LIL_AVA_ID,
+                seed: CS2_MAX_KEYCHAIN_SEED + 1
+            })
+        ).toThrow();
+        // Regression test
+        expect(() =>
+            inventory.add({
+                id: AWP_DRAGON_LORE_ID,
+                seed: CS2_MAX_KEYCHAIN_SEED / 2
+            })
+        ).toThrow();
+        inventory.add({
+            id: LIL_AVA_ID,
+            seed: CS2_MAX_KEYCHAIN_SEED / 2
+        });
+        expect(inventory.get(2).id).toBe(LIL_AVA_ID);
+        expect(inventory.get(2).seed).toBe(CS2_MAX_KEYCHAIN_SEED / 2);
     });
 });
