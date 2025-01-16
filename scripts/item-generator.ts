@@ -37,7 +37,6 @@ const ITEMS_GAME_JSON_PATH = "assets/data/items-game.json";
 const ITEMS_JSON_PATH = "assets/data/items.json";
 const ITEMS_TS_PATH = "src/items.ts";
 const LOCALIZATIONS_JSON_PATH = "assets/localizations/items-%s.json";
-const PARSED_ITEMS_GAME_PATH = "assets/data/parsed-items-game.json";
 
 const FORMATTED_STRING_RE = /%s(\d+)/g;
 const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
@@ -865,9 +864,6 @@ export class ItemGenerator {
             writeJson(path, translations);
             warning(`Generated '${path}'.`);
         }
-
-        writeJson(PARSED_ITEMS_GAME_PATH, this.gameItems);
-        warning(`Generated '${PARSED_ITEMS_GAME_PATH}'`);
 
         writeJson(ITEMS_GAME_JSON_PATH, this.gameItems);
         warning(`Generated '${ITEMS_GAME_JSON_PATH}'.`);
