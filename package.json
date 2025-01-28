@@ -26,7 +26,7 @@
         "@ianlucas/depot-downloader": "^2.7.3",
         "@ianlucas/vrf-decompiler": "^11.1.0",
         "@total-typescript/tsconfig": "^1.0.4",
-        "@types/node": "^22.10.5",
+        "@types/node": "^22.12.0",
         "cheerio": "^1.0.0",
         "dotenv": "^16.4.7",
         "html-entities": "^2.5.2",
@@ -36,6 +36,6 @@
         "tsx": "^4.19.2",
         "typedoc": "^0.27.6",
         "typescript": "^5.7.3",
-        "vitest": "^2.1.8"
+        "vitest": "^3.0.4"
     }
 }
