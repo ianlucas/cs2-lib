@@ -653,5 +653,22 @@ describe("CS2Inventory methods", () => {
         });
         expect(inventory.get(2).id).toBe(LIL_AVA_ID);
         expect(inventory.get(2).seed).toBe(CS2_MAX_KEYCHAIN_SEED / 2);
+        inventory.add({
+            id: AWP_DRAGON_LORE_ID,
+            keychains: {
+                0: {
+                    id: LIL_AVA_ID,
+                    seed: 2000,
+                    x: 0.2223,
+                    y: 0.2211
+                }
+            }
+        });
+        expect(inventory.get(3).keychains?.get(0)).toMatchObject({
+            id: LIL_AVA_ID,
+            seed: 2000,
+            x: 0.2223,
+            y: 0.2211
+        });
     });
 });
