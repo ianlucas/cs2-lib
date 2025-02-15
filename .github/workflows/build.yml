@@ -38,6 +38,7 @@ jobs:
         run: npm run docs
 
       - name: Deploy Docs
+        if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: docs
