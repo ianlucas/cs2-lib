@@ -130,7 +130,7 @@ export class CS2EconomyInstance {
         if (wear === undefined) {
             return true;
         }
-        assert(!Number.isNaN(wear));
+        assert(Number.isFinite(wear));
         assert(String(wear).length <= String(CS2_WEAR_FACTOR).length);
         assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR);
         if (item !== undefined) {
@@ -149,9 +149,9 @@ export class CS2EconomyInstance {
         if (seed === undefined) {
             return true;
         }
-        assert(!Number.isNaN(seed));
-        assert(item === undefined || item.hasSeed());
+        assert(Number.isFinite(seed));
         assert(Number.isInteger(seed));
+        assert(item === undefined || item.hasSeed());
         assert(seed >= (item?.getMinimumSeed() ?? CS2_MIN_SEED) && seed <= (item?.getMaximumSeed() ?? CS2_MAX_SEED));
         return true;
     }
