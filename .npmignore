@@ -7,6 +7,7 @@
 .prettierrc
 /assets/data
 /assets/images
+/assets/models
 /assets/sounds
 /scripts
 /src
