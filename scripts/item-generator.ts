@@ -16,12 +16,15 @@ import {
     CS2ItemLocalizationByLanguage,
     CS2ItemTeam,
     CS2ItemType,
-    CS2ItemTypeValues
+    CS2ItemTypeValues,
+    CS2StickerMarkup
 } from "../src/economy-types.js";
 import { CS2KeyValues } from "../src/keyvalues.js";
+import { CS2KeyValues3 } from "../src/keyvalues3.js";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
 import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
+import { ExternalCS2 } from "./external-cs2.js";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
 import { useItemsTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
@@ -37,6 +40,7 @@ const ITEMS_GAME_JSON_PATH = "assets/data/items-game.json";
 const ITEMS_JSON_PATH = "assets/data/items.json";
 const ITEMS_TS_PATH = "src/items.ts";
 const LOCALIZATIONS_JSON_PATH = "assets/localizations/items-%s.json";
+const STICKER_MARKUP_PATH = "assets/data/sticker-markup.json";
 
 const FORMATTED_STRING_RE = /%s(\d+)/g;
 const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
@@ -104,10 +108,13 @@ export class ItemGenerator {
     private defaultGraffitiManager = new DefaultGraffitiManager();
     private itemIdentifierManager = new ItemIdentifierManager();
     private itemManager = new ItemManager();
+    private cs2 = new ExternalCS2();
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
     private items = new Map<number, CS2ExtendedItem>();
+
+    private stickerMarkup: CS2StickerMarkup = {};
 
     private paintKits: {
         className: string;
@@ -128,7 +135,7 @@ export class ItemGenerator {
     async run() {
         await this.readCsgoLanguageFiles();
         await this.readItemsGameFile();
-        this.parseBaseWeapons();
+        await this.parseBaseWeapons();
         this.parseBaseMelees();
         this.parseBaseGloves();
         this.parseSkins();
@@ -247,7 +254,7 @@ export class ItemGenerator {
         );
     }
 
-    private parseBaseWeapons() {
+    private async parseBaseWeapons() {
         warning("Parsing base weapons...");
         for (const [itemDef, { baseitem, flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(
             this.gameItems.items
@@ -259,7 +266,7 @@ export class ItemGenerator {
             if (category === undefined || (category === "equipment" && !BASE_WEAPON_EQUIPMENT.includes(name))) {
                 continue;
             }
-            const { used_by_classes, item_name, item_description } = this.getPrefab(prefab);
+            const { used_by_classes, item_name, item_description, model_player } = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
             const id = this.itemIdentifierManager.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
@@ -280,6 +287,7 @@ export class ItemGenerator {
                 teams,
                 type: CS2ItemType.Weapon
             });
+            await this.findStickerMarkup(itemDef, model_player);
         }
     }
 
@@ -870,6 +878,12 @@ export class ItemGenerator {
 
         write(ITEMS_TS_PATH, useItemsTemplate(items));
         warning(`Generated '${ITEMS_TS_PATH}'.`);
+
+        if (Object.keys(this.stickerMarkup).length > 0) {
+            writeJson(STICKER_MARKUP_PATH, this.stickerMarkup);
+            warning(`Generated '${STICKER_MARKUP_PATH}'.`);
+        }
+
         warning("Script completed.");
     }
 
@@ -1220,6 +1234,47 @@ export class ItemGenerator {
             return true;
         }
         return undefined;
+    }
+
+    private async findStickerMarkup(itemDef?: string, modelPath?: string) {
+        try {
+            if (itemDef === undefined || modelPath === undefined || !this.cs2.active) {
+                return;
+            }
+            modelPath = modelPath.replace(".vmdl", ".vmdl_c");
+            const output = (
+                await this.cs2.decompile({
+                    vpkFilepath: modelPath,
+                    block: "DATA"
+                })
+            ).split(`--- Data for block "DATA" ---`)[1];
+            const data = CS2KeyValues3.parse<{
+                StickerMarkup: {
+                    Index: number;
+                    LegacyModel: boolean;
+                    Offset: number[];
+                    Rotation: number;
+                    Scale: number;
+                }[];
+            }>(
+                CS2KeyValues3.parse<{
+                    m_modelInfo: {
+                        m_keyValueText: string;
+                    };
+                }>(output).m_modelInfo.m_keyValueText
+            );
+            this.stickerMarkup[itemDef] = data.StickerMarkup.map(
+                ({ Index: slot, LegacyModel: legacy, Offset: offsets, Rotation: rotation, Scale: scale }) => ({
+                    slot,
+                    legacy,
+                    offsets,
+                    rotation,
+                    scale
+                })
+            );
+        } catch (error) {
+            console.log(`Unable to get sticker markup for ${modelPath}`);
+        }
     }
 
     getContainerType(name?: string, type?: CS2ItemTypeValues) {
