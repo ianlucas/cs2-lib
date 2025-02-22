@@ -420,7 +420,7 @@ export class ItemGenerator {
                 ),
                 texture:
                     (await this.getSkinTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
-                    (await exists(resolve(process.cwd(), `assets/textures/${id}.webp`))),
+                    ((await exists(resolve(process.cwd(), `assets/textures/${id}.webp`))) || undefined),
                 wearMax: paintKit.wearMax,
                 wearMin: paintKit.wearMin
             });
