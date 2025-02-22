@@ -16,7 +16,8 @@ import {
     CS2ItemLocalizationByLanguage,
     CS2ItemTeam,
     CS2ItemType,
-    CS2ItemTypeValues
+    CS2ItemTypeValues,
+    CS2StickerMarkup
 } from "../src/economy-types.js";
 import { CS2KeyValues } from "../src/keyvalues.js";
 import { CS2KeyValues3 } from "../src/keyvalues3.js";
@@ -113,10 +114,7 @@ export class ItemGenerator {
     private containerItems = new Map<string, number>();
     private items = new Map<number, CS2ExtendedItem>();
 
-    private stickerMarkup: Record<
-        string,
-        { slot: number; offsets: number[]; scale: number; rotation: number; legacy: boolean }[]
-    > = {};
+    private stickerMarkup: CS2StickerMarkup = {};
 
     private paintKits: {
         className: string;
