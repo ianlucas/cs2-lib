@@ -109,9 +109,11 @@ export type CS2GameItems = {
         };
         paint_kits: {
             [paintKitKey: string]: {
+                composite_material_path?: string;
                 description_string?: string;
                 description_tag?: string;
                 name?: string;
+                use_legacy_model?: string;
                 wear_remap_max?: string;
                 wear_remap_min?: string;
             };

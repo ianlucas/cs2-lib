@@ -9,6 +9,7 @@
 /assets/images
 /assets/models
 /assets/sounds
+/assets/textures
 /scripts
 /src
 jest.config.js
