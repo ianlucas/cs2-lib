@@ -127,6 +127,7 @@ export type CS2GameItems = {
                       item_description?: string;
                       item_name: string;
                       item_rarity: string;
+                      model_player?: string;
                       prefab: string;
                       used_by_classes: Record<string, string>;
                       visuals: {
