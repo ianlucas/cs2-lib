@@ -144,6 +144,10 @@ export class CS2KeyValues3 {
                 index += 9;
                 return `resource:${parseString()}`;
             }
+            if (data.slice(index).startsWith("resource_name:")) {
+                index += 14;
+                return `resource:${parseString()}`;
+            }
             if (isNumber(data[index])) {
                 return parseNumber();
             }

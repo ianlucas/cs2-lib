@@ -74,6 +74,7 @@ export interface CS2Item {
     statTrakless?: boolean | undefined;
     statTrakOnly?: boolean | undefined;
     teams?: CS2ItemTeamValues | undefined;
+    texture?: boolean;
     tint?: number | undefined;
     type: CS2ItemTypeValues;
     voFallback?: boolean | undefined;

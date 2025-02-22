@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { copyFileSync, existsSync, readFileSync } from "fs";
-import { readFile, readdir } from "fs/promises";
+import { readFile, readdir, unlink } from "fs/promises";
 import { resolve } from "path";
+import sharp from "sharp";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
@@ -28,12 +29,13 @@ import { ExternalCS2 } from "./external-cs2.js";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
 import { useItemsTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
-import { prependHash, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
+import { exists, prependHash, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
 const ITEMS_GAME_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
 const RESOURCE_PATH = resolve(CS2_CSGO_PATH, "resource");
+const DECOMPILED_PATH = resolve(process.cwd(), "scripts/workdir/decompiled");
 
 const ITEM_IDS_JSON_PATH = "assets/data/items-ids.json";
 const ITEMS_GAME_JSON_PATH = "assets/data/items-game.json";
@@ -118,8 +120,10 @@ export class ItemGenerator {
 
     private paintKits: {
         className: string;
+        compositeMaterialPath?: string;
         descToken?: string;
         index: number;
+        isLegacy: boolean;
         nameToken: string;
         rarityColorHex: string;
         wearMax: number;
@@ -138,7 +142,7 @@ export class ItemGenerator {
         await this.parseBaseWeapons();
         this.parseBaseMelees();
         this.parseBaseGloves();
-        this.parseSkins();
+        await this.parseSkins();
         this.parseMusicKits();
         this.parseStickers();
         this.parseKeychains();
@@ -223,21 +227,36 @@ export class ItemGenerator {
                 .flat()
         );
         this.paintKits = Object.entries(this.gameItems.paint_kits)
-            .map(([paintKitIndex, { description_tag, description_string, name, wear_remap_max, wear_remap_min }]) => {
-                assert(name);
-                if (name === "default" || description_tag === undefined) {
-                    return undefined;
+            .map(
+                ([
+                    paintKitIndex,
+                    {
+                        composite_material_path,
+                        description_string,
+                        description_tag,
+                        name,
+                        use_legacy_model,
+                        wear_remap_max,
+                        wear_remap_min
+                    }
+                ]) => {
+                    assert(name);
+                    if (name === "default" || description_tag === undefined) {
+                        return undefined;
+                    }
+                    return {
+                        className: name,
+                        compositeMaterialPath: composite_material_path,
+                        descToken: prependHash(description_string),
+                        index: Number(paintKitIndex),
+                        isLegacy: use_legacy_model === "1",
+                        nameToken: prependHash(description_tag),
+                        rarityColorHex: this.getRarityColorHex([name]),
+                        wearMax: wear_remap_max !== undefined ? Number(wear_remap_max) : CS2_DEFAULT_MAX_WEAR,
+                        wearMin: wear_remap_min !== undefined ? Number(wear_remap_min) : CS2_DEFAULT_MIN_WEAR
+                    };
                 }
-                return {
-                    className: name,
-                    descToken: prependHash(description_string),
-                    index: Number(paintKitIndex),
-                    nameToken: prependHash(description_tag),
-                    rarityColorHex: this.getRarityColorHex([name]),
-                    wearMax: wear_remap_max !== undefined ? Number(wear_remap_max) : CS2_DEFAULT_MAX_WEAR,
-                    wearMin: wear_remap_min !== undefined ? Number(wear_remap_min) : CS2_DEFAULT_MIN_WEAR
-                };
-            })
+            )
             .filter(isNotUndefined);
         this.graffitiTints = Object.values(this.gameItems.graffiti_tints).map(({ id }) => ({
             id: Number(id),
@@ -362,7 +381,7 @@ export class ItemGenerator {
         }
     }
 
-    private parseSkins() {
+    private async parseSkins() {
         warning("Parsing skins...");
         for (const { icon_path } of Object.values(this.gameItems.alternate_icons2.weapon_icons)) {
             if (!LIGHT_ICON_RE.test(icon_path)) {
@@ -380,7 +399,6 @@ export class ItemGenerator {
             }
             const itemKey = `[${paintKit.className}]${baseItem.className}`;
             const id = this.itemIdentifierManager.get(`paint_${baseItem.def}_${paintKit.index}`);
-            const legacy = this.itemManager.get(id)?.legacy;
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
             this.addTranslation(id, "desc", paintKit.descToken);
@@ -394,12 +412,15 @@ export class ItemGenerator {
                 id,
                 image: this.getSkinImage(id, baseItem.className, paintKit.className),
                 index: Number(paintKit.index),
-                legacy,
+                legacy: paintKit.isLegacy,
                 rarity: this.getRarityColorHex(
                     MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
                         ? [baseItem.rarity, paintKit.rarityColorHex]
                         : [itemKey, paintKit.rarityColorHex]
                 ),
+                texture:
+                    (await this.getSkinTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
+                    (await exists(resolve(process.cwd(), `assets/textures/${id}.webp`))),
                 wearMax: paintKit.wearMax,
                 wearMin: paintKit.wearMin
             });
@@ -1274,6 +1295,89 @@ export class ItemGenerator {
             );
         } catch (error) {
             console.log(`Unable to get sticker markup for ${modelPath}`);
+        }
+    }
+
+    private async getTexturePathFromCompositeMaterial(compositeMaterialPath?: string) {
+        try {
+            if (compositeMaterialPath === undefined) {
+                return undefined;
+            }
+            return ensure(
+                CS2KeyValues3.parse<{
+                    m_Points: {
+                        m_vecCompositeMaterialAssemblyProcedures: {
+                            m_vecCompositeInputContainers: {
+                                m_strAlias: string;
+                                m_vecLooseVariables: {
+                                    m_strName: string;
+                                    m_strTextureRuntimeResourcePath: string;
+                                }[];
+                            }[];
+                        }[];
+                    }[];
+                }>(
+                    (
+                        await this.cs2.decompile({
+                            vpkFilepath: compositeMaterialPath,
+                            block: "DATA"
+                        })
+                    ).split(`--- Data for block "DATA" ---`)[1]
+                )
+                    .m_Points[0].m_vecCompositeMaterialAssemblyProcedures[0].m_vecCompositeInputContainers.find(
+                        ({ m_strAlias }) => m_strAlias === "exposed_params"
+                    )
+                    ?.m_vecLooseVariables.find(({ m_strName }) => m_strName === "g_tPattern")
+                    ?.m_strTextureRuntimeResourcePath.split(":")[1]
+            );
+        } catch {
+            console.log(`Unable to get texture path from ${compositeMaterialPath}.`);
+            return undefined;
+        }
+    }
+
+    private async getTexturePathFromMaterial(materialPath: string) {
+        return ensure(
+            CS2KeyValues3.parse<{
+                m_textureParams: { m_name: string; m_pValue: string }[];
+            }>(
+                (
+                    await this.cs2.decompile({
+                        vpkFilepath: materialPath,
+                        block: "DATA"
+                    })
+                ).split(`--- Data for block "DATA" ---`)[1]
+            ).m_textureParams.find(({ m_name }) => m_name === "g_tPattern")
+        ).m_pValue.split(":")[1];
+    }
+
+    private async getSkinTexture(id: number, materialName: string, compositeMaterialPath?: string) {
+        try {
+            if (!this.cs2.active) {
+                return undefined;
+            }
+            const materialFilename = `${materialName}.vmat_c`;
+            const materialPath = `materials/models/weapons/customization/paints/vmats/${materialFilename}`;
+            const texturePath =
+                (await this.getTexturePathFromCompositeMaterial(compositeMaterialPath)) ??
+                (await this.getTexturePathFromMaterial(materialPath));
+            if (!texturePath.startsWith("materials/models/weapons/customization/paints/custom")) {
+                return undefined;
+            }
+            await this.cs2.decompile({
+                vpkFilepath: texturePath,
+                decompile: true,
+                output: DECOMPILED_PATH
+            });
+            const decompiledPath = resolve(DECOMPILED_PATH, texturePath.replace(".vtex", ".png"));
+            await sharp(await readFile(decompiledPath))
+                .resize(1024, 1024)
+                .toFile(resolve(process.cwd(), `assets/textures/${id}.webp`));
+            await unlink(decompiledPath);
+            return true;
+        } catch (error) {
+            console.log(`Unable to get skin texture for ${materialName} (id: ${id})`);
+            return undefined;
         }
     }
 

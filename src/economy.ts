@@ -316,6 +316,7 @@ export class CS2EconomyItem
     specialsImage: boolean | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
+    texture: boolean | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemTypeValues = null!;
