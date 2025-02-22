@@ -12,6 +12,18 @@ export class CS2KeyValues3 {
         data = data.replace(/\[[\$!][^\]]+\]/g, "").trim();
         let index = 0;
 
+        function printDebug() {
+            console.log(
+                `<<<${
+                    data.substring(Math.max(0, index - 64), index) +
+                    ">>>" +
+                    data[index] +
+                    "<<<" +
+                    data.substring(index + 1, Math.min(data.length, index + 63))
+                }>>>`
+            );
+        }
+
         function skipHeader(): void {
             if (data.startsWith("<!--")) {
                 const endIndex = data.indexOf("-->");
@@ -45,7 +57,7 @@ export class CS2KeyValues3 {
         function parseKey(): string {
             let value = "";
             while (data[index]) {
-                if (data[index]?.match(/[a-zA-Z_\d\.]/)) {
+                if (data[index]?.match(/["a-zA-Z_\d\.]/)) {
                     value += data[index];
                     index += 1;
                 } else {
@@ -56,9 +68,13 @@ export class CS2KeyValues3 {
                         if (value.length === 0) {
                             fail(`Empty key at ${index}`);
                         }
+                        if (value[0] === '"' && value[value.length - 1] === '"') {
+                            value = value.substring(1, value.length - 1);
+                        }
                         index += 1;
                         return value;
                     }
+                    printDebug();
                     fail(`Bad end of key at ${index}`);
                 }
             }
@@ -146,12 +162,7 @@ export class CS2KeyValues3 {
                 return "";
             }
 
-            console.log(
-                data.substring(Math.max(0, index - 64), index) +
-                    data[index] +
-                    data.substring(index + 1, Math.min(data.length, index + 63))
-            );
-            console.log("".padStart(64, " ") + "^");
+            printDebug();
             fail(`Unexpected character at index ${index}`);
         }
 

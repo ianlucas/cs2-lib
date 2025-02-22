@@ -95,6 +95,11 @@ export interface CS2ItemLocalization {
 export type CS2ItemLocalizationMap = Record<string, CS2ItemLocalization | undefined>;
 export type CS2ItemLocalizationByLanguage = Record<string, CS2ItemLocalizationMap>;
 
+export type CS2StickerMarkup = Record<
+    string,
+    { slot: number; offsets: number[]; scale: number; rotation: number; legacy: boolean }[]
+>;
+
 export interface CS2UnlockedItem {
     attributes: {
         containerId: number;
