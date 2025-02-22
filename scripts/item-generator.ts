@@ -412,7 +412,7 @@ export class ItemGenerator {
                 id,
                 image: this.getSkinImage(id, baseItem.className, paintKit.className),
                 index: Number(paintKit.index),
-                legacy: paintKit.isLegacy,
+                legacy: paintKit.isLegacy || undefined,
                 rarity: this.getRarityColorHex(
                     MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
                         ? [baseItem.rarity, paintKit.rarityColorHex]
