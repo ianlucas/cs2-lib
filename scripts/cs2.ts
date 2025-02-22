@@ -9,6 +9,7 @@ import { warn } from "console";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { assert } from "../src/utils";
+import { INPUT_FORCE } from "./env";
 import { exists, log, readProcess, shouldRun, warning } from "./utils";
 
 const cwd = process.cwd();
@@ -111,7 +112,7 @@ async function checkCsgoPackageDirectory() {
         warning(`Failed to get latest manifest for depot ${DEPOT_ID}`);
         return false;
     }
-    if (manifest === latestManifest) {
+    if (INPUT_FORCE !== "true" && manifest === latestManifest) {
         warning(`Depot ${DEPOT_ID} is up to date`);
         return false;
     }
