@@ -37,6 +37,8 @@ jobs:
 
       - name: Update
         run: npm run update
+        env:
+          INPUT_FORCE: ${{ inputs.force }}
 
       - name: Commit
         run: |
