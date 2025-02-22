@@ -2,6 +2,10 @@ name: update
 
 on:
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Force update?"
+        default: "false"
 
 jobs:
   update:
