@@ -98,7 +98,7 @@ export type CS2ItemLocalizationByLanguage = Record<string, CS2ItemLocalizationMa
 
 export type CS2StickerMarkup = Record<
     string,
-    { slot: number; offsets: number[]; scale: number; rotation: number; legacy: boolean }[]
+    { slot: number; offsets: number[]; scale: number; rotation: number; legacy: boolean }[] | undefined
 >;
 
 export interface CS2UnlockedItem {

@@ -12,6 +12,7 @@ export * from "./items.js";
 export * from "./keyvalues.js";
 export * from "./keyvalues3.js";
 export * from "./maps.js";
+export * from "./sticker-markup.js";
 export * from "./teams.js";
 export * from "./utils.js";
 export * from "./veto.js";
