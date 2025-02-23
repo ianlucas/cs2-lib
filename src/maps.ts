@@ -62,7 +62,7 @@ export const CS2_ACTIVE_MAP_POOL: CS2Map[] = [
     CS2_INFERNO_MAP,
     CS2_MIRAGE_MAP,
     CS2_NUKE_MAP,
-    CS2_VERTIGO_MAP
+    CS2_TRAIN_MAP
 ];
 
 export const CS2_ALL_MAPS: CS2Map[] = [

@@ -12,7 +12,7 @@ test("bo1", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_vertigo")).toBe(true);
+    expect(veto.choose("de_train")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_ancient")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -34,7 +34,7 @@ test("bo2-a", () => {
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
-    expect(veto.choose("de_vertigo")).toBe(true);
+    expect(veto.choose("de_train")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
     expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
     expect(veto.choose("de_ancient")).toBe(true);
@@ -57,7 +57,7 @@ test("bo2-b", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_vertigo")).toBe(true);
+    expect(veto.choose("de_train")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_ancient")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -76,7 +76,7 @@ test("bo3", () => {
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
     expect(veto.getCurrentAction()).toBe(CS2VetoAction.Ban);
-    expect(veto.choose("de_vertigo")).toBe(true);
+    expect(veto.choose("de_train")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.getCurrentAction()).toBe(CS2VetoAction.Pick);
     expect(veto.choose("de_ancient")).toBe(true);
@@ -98,7 +98,7 @@ test("bo5", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_vertigo")).toBe(true);
+    expect(veto.choose("de_train")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_ancient")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -123,7 +123,7 @@ test("custom", () => {
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_nuke")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
-    expect(veto.choose("de_vertigo")).toBe(true);
+    expect(veto.choose("de_train")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(0);
     expect(veto.choose("de_ancient")).toBe(true);
     expect(veto.getCurrentTeam()).toBe(1);
@@ -133,7 +133,7 @@ test("custom", () => {
     expect(veto.getCurrentTeam()).toBe(1);
     expect(veto.choose("de_dust2")).toBe(true);
     expect(veto.choose("de_mirage")).toBe(false);
-    expect(veto.getMaps()).toStrictEqual(["de_nuke", "de_vertigo", "de_mirage"]);
+    expect(veto.getMaps()).toStrictEqual(["de_nuke", "de_train", "de_mirage"]);
 });
 
 test("random", () => {
