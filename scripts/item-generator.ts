@@ -27,7 +27,7 @@ import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { ExternalCS2 } from "./external-cs2.js";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
-import { useItemsTemplate } from "./item-generator-templates.js";
+import { useItemsTemplate, useStickerMarkupTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
 import { exists, prependHash, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
@@ -42,7 +42,8 @@ const ITEMS_GAME_JSON_PATH = "assets/data/items-game.json";
 const ITEMS_JSON_PATH = "assets/data/items.json";
 const ITEMS_TS_PATH = "src/items.ts";
 const LOCALIZATIONS_JSON_PATH = "assets/localizations/items-%s.json";
-const STICKER_MARKUP_PATH = "assets/data/sticker-markup.json";
+const STICKER_MARKUP_JSON_PATH = "assets/data/sticker-markup.json";
+const STICKER_MARKUP_TS_PATH = "src/sticker-markup.ts";
 
 const FORMATTED_STRING_RE = /%s(\d+)/g;
 const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
@@ -901,8 +902,11 @@ export class ItemGenerator {
         warning(`Generated '${ITEMS_TS_PATH}'.`);
 
         if (Object.keys(this.stickerMarkup).length > 0) {
-            writeJson(STICKER_MARKUP_PATH, this.stickerMarkup);
-            warning(`Generated '${STICKER_MARKUP_PATH}'.`);
+            writeJson(STICKER_MARKUP_JSON_PATH, this.stickerMarkup);
+            warning(`Generated '${STICKER_MARKUP_JSON_PATH}'.`);
+
+            write(STICKER_MARKUP_TS_PATH, useStickerMarkupTemplate(this.stickerMarkup));
+            warning(`Generated '${STICKER_MARKUP_TS_PATH}'.`);
         }
 
         warning("Script completed.");
