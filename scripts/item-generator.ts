@@ -1365,7 +1365,12 @@ export class ItemGenerator {
             const texturePath =
                 (await this.getTexturePathFromCompositeMaterial(compositeMaterialPath)) ??
                 (await this.getTexturePathFromMaterial(materialPath));
-            if (!texturePath.startsWith("materials/models/weapons/customization/paints/custom")) {
+            if (
+                !texturePath.startsWith("materials/models/weapons/customization/paints/custom") &&
+                !texturePath.startsWith("items/assets/paintkits") &&
+                !texturePath.startsWith("materials/models/weapons/customization/paints/gunsmith")
+            ) {
+                console.log(`Ignoring texture path ${texturePath}`);
                 return undefined;
             }
             await this.cs2.decompile({
