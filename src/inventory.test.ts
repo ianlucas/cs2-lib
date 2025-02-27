@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { beforeEach, describe, expect, test } from "vitest";
-import english from "../assets/localizations/items-english.json";
+import { english } from "./translations";
 import { CS2Economy } from "./economy";
 import { CS2_MAX_KEYCHAIN_SEED, CS2_MAX_PATCHES, CS2_MAX_STATTRAK, CS2_MIN_KEYCHAIN_SEED } from "./economy-constants";
 import { CS2Inventory } from "./inventory";

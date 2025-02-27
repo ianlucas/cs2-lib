@@ -58,10 +58,10 @@ import {
     CS2ContainerType,
     type CS2ContainerTypeValues,
     type CS2Item,
-    type CS2ItemLocalization,
-    type CS2ItemLocalizationMap,
     CS2ItemTeam,
     type CS2ItemTeamValues,
+    type CS2ItemTranslation,
+    type CS2ItemTranslationMap,
     CS2ItemType,
     type CS2ItemTypeValues,
     CS2ItemWear,
@@ -92,7 +92,7 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers = new Set<CS2EconomyItem>();
 
-    use({ items, language }: { items: CS2Item[]; language: CS2ItemLocalizationMap }) {
+    use({ items, language }: { items: CS2Item[]; language: CS2ItemTranslationMap }) {
         this.categories.clear();
         this.items.clear();
         this.stickers.clear();
@@ -288,7 +288,7 @@ export class CS2EconomyItem
     implements
         Interface<
             Omit<CS2Item, "contents" | "specials" | "teams"> &
-                CS2ItemLocalization & {
+                CS2ItemTranslation & {
                     contents: CS2EconomyItem[] | undefined;
                     teams: CS2TeamValues[] | undefined;
                 }
@@ -333,7 +333,7 @@ export class CS2EconomyItem
     constructor(
         public economy: CS2EconomyInstance,
         public item: CS2Item,
-        public language: CS2ItemLocalization
+        public language: CS2ItemTranslation
     ) {
         Object.assign(this, item);
         Object.assign(this, language);

@@ -13,9 +13,9 @@ import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-const
 import { CS2RarityColorValues } from "../src/economy-container.js";
 import {
     CS2ContainerType,
-    CS2ItemLocalization,
-    CS2ItemLocalizationByLanguage,
     CS2ItemTeam,
+    CS2ItemTranslation,
+    CS2ItemTranslationByLanguage,
     CS2ItemType,
     CS2ItemTypeValues,
     CS2StickerMarkup
@@ -27,7 +27,7 @@ import { ContainerScraper } from "./container-scraper.js";
 import { CS2_CSGO_PATH } from "./env.js";
 import { ExternalCS2 } from "./external-cs2.js";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
-import { useItemsTemplate, useStickerMarkupTemplate } from "./item-generator-templates.js";
+import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
 import { exists, prependHash, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
 
@@ -41,9 +41,10 @@ const ITEM_IDS_JSON_PATH = "assets/data/items-ids.json";
 const ITEMS_GAME_JSON_PATH = "assets/data/items-game.json";
 const ITEMS_JSON_PATH = "assets/data/items.json";
 const ITEMS_TS_PATH = "src/items.ts";
-const LOCALIZATIONS_JSON_PATH = "assets/localizations/items-%s.json";
 const STICKER_MARKUP_JSON_PATH = "assets/data/sticker-markup.json";
 const STICKER_MARKUP_TS_PATH = "src/sticker-markup.ts";
+const TRANSLATIONS_JSON_PATH = "assets/translations/%s.json";
+const TRANSLATIONS_TS_PATH = "src/translations/%s.ts";
 
 const FORMATTED_STRING_RE = /%s(\d+)/g;
 const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
@@ -99,8 +100,8 @@ export class DefaultGraffitiManager {
 export class ItemGenerator {
     gameItems: CS2GameItems["items_game"] = null!;
 
-    private csgoLocalizationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
-    private itemLocalizationByLanguage: CS2ItemLocalizationByLanguage = null!;
+    private csgoTranslationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
+    private itemTranslationByLanguage: CS2ItemTranslationByLanguage = null!;
     private itemNames = new Map<number, string>();
     private itemSetItemKey: Record<string, string | undefined> = null!;
     private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
@@ -157,8 +158,8 @@ export class ItemGenerator {
     }
 
     async readCsgoLanguageFiles(include?: string[]) {
-        this.itemLocalizationByLanguage = {};
-        this.csgoLocalizationByLanguage = Object.fromEntries(
+        this.itemTranslationByLanguage = {};
+        this.csgoTranslationByLanguage = Object.fromEntries(
             await Promise.all(
                 (await readdir(RESOURCE_PATH))
                     .map((file) => {
@@ -168,7 +169,7 @@ export class ItemGenerator {
                     .filter(isNotUndefined)
                     .filter(([_, language]) => include === undefined || include.includes(language))
                     .map(async ([file, language]) => {
-                        this.itemLocalizationByLanguage[language] = {};
+                        this.itemTranslationByLanguage[language] = {};
                         return [
                             language,
                             Object.entries(
@@ -184,9 +185,9 @@ export class ItemGenerator {
                     })
             )
         );
-        const { length } = Object.keys(this.csgoLocalizationByLanguage);
+        const { length } = Object.keys(this.csgoTranslationByLanguage);
         assert(length > 0);
-        assert(this.csgoLocalizationByLanguage.english !== undefined);
+        assert(this.csgoTranslationByLanguage.english !== undefined);
         warning(`Loaded ${length} languages.`);
     }
 
@@ -889,10 +890,14 @@ export class ItemGenerator {
         writeJson(ITEM_IDS_JSON_PATH, this.itemIdentifierManager.allIdentifiers);
         warning(`Generated '${ITEM_IDS_JSON_PATH}'.`);
 
-        for (const [language, translations] of Object.entries(this.itemLocalizationByLanguage)) {
-            const path = format(LOCALIZATIONS_JSON_PATH, language);
+        for (const [language, translations] of Object.entries(this.itemTranslationByLanguage)) {
+            const path = format(TRANSLATIONS_JSON_PATH, language);
             writeJson(path, translations);
             warning(`Generated '${path}'.`);
+
+            const tsPath = format(TRANSLATIONS_TS_PATH, language);
+            write(tsPath, useTranslationTemplate(language, translations));
+            warning(`Generated '${tsPath}'.`);
         }
 
         writeJson(ITEMS_GAME_JSON_PATH, this.gameItems);
@@ -945,7 +950,7 @@ export class ItemGenerator {
         if (token === undefined) {
             return undefined;
         }
-        const value = this.csgoLocalizationByLanguage[language][token.substring(1).toLowerCase()];
+        const value = this.csgoTranslationByLanguage[language][token.substring(1).toLowerCase()];
         return value !== undefined ? stripHtml(value).result : undefined;
     }
 
@@ -956,13 +961,13 @@ export class ItemGenerator {
     private hasTranslation(token?: string) {
         return (
             token !== undefined &&
-            this.csgoLocalizationByLanguage.english[token.substring(1).toLowerCase()] !== undefined
+            this.csgoTranslationByLanguage.english[token.substring(1).toLowerCase()] !== undefined
         );
     }
 
-    private addTranslation(id: number, property: keyof CS2ItemLocalization, ...tokens: (string | undefined)[]) {
-        for (const [language, items] of Object.entries(this.itemLocalizationByLanguage)) {
-            const itemLanguage = (items[id] ??= {} as CS2ItemLocalization);
+    private addTranslation(id: number, property: keyof CS2ItemTranslation, ...tokens: (string | undefined)[]) {
+        for (const [language, items] of Object.entries(this.itemTranslationByLanguage)) {
+            const itemLanguage = (items[id] ??= {} as CS2ItemTranslation);
             const string = tokens
                 .map((key) => {
                     assert(key !== undefined);
@@ -985,21 +990,16 @@ export class ItemGenerator {
         }
     }
 
-    private tryAddTranslation(id: number, property: keyof CS2ItemLocalization, ...tokens: (string | undefined)[]) {
+    private tryAddTranslation(id: number, property: keyof CS2ItemTranslation, ...tokens: (string | undefined)[]) {
         if (tokens.some((token) => token === undefined || (token.charAt(0) === "#" && !this.hasTranslation(token)))) {
             return undefined;
         }
         return this.addTranslation(id, property, ...tokens);
     }
 
-    private addFormattedTranslation(
-        id: number,
-        property: keyof CS2ItemLocalization,
-        key?: string,
-        ...values: string[]
-    ) {
-        for (const [language, items] of Object.entries(this.itemLocalizationByLanguage)) {
-            (items[id] ??= {} as CS2ItemLocalization)[property] = (
+    private addFormattedTranslation(id: number, property: keyof CS2ItemTranslation, key?: string, ...values: string[]) {
+        for (const [language, items] of Object.entries(this.itemTranslationByLanguage)) {
+            (items[id] ??= {} as CS2ItemTranslation)[property] = (
                 this.findTranslation(key, language) ?? this.requireTranslation(key, "english")
             ).replace(FORMATTED_STRING_RE, (_, index) => {
                 const key = values[parseInt(index, 10) - 1];
