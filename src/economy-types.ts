@@ -84,7 +84,7 @@ export interface CS2Item {
     wearMin?: number | undefined;
 }
 
-export interface CS2ItemLocalization {
+export interface CS2ItemTranslation {
     category?: string | undefined;
     collectionDesc?: string | undefined;
     collectionName?: string | undefined;
@@ -93,8 +93,8 @@ export interface CS2ItemLocalization {
     tournamentDesc?: string | undefined;
 }
 
-export type CS2ItemLocalizationMap = Record<string, CS2ItemLocalization | undefined>;
-export type CS2ItemLocalizationByLanguage = Record<string, CS2ItemLocalizationMap>;
+export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
+export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
 export type CS2StickerMarkup = Record<
     string,

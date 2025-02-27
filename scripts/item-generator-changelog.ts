@@ -82,8 +82,8 @@ async function main() {
         (await fetchFromRepo<CS2Item[]>("assets/data/items.json")).map((item) => [item.id, item])
     );
     const localItems = new Map(CS2_ITEMS.map((item) => [item.id, item]));
-    const repoEnglish = await fetchFromRepo("assets/localizations/items-english.json");
-    const localEnglish = readJson<any>("assets/localizations/items-english.json");
+    const repoEnglish = await fetchFromRepo("assets/translations/english.json");
+    const localEnglish = readJson<any>("assets/translations/english.json");
 
     const addedKeys = Array.from(localItems.keys()).filter((key) => !repoItems.has(key));
     const removedKeys = Array.from(repoItems.keys()).filter((key) => !localItems.has(key));
@@ -110,13 +110,13 @@ async function main() {
     for (const key of repoKeysWithoutRemovedKeys) {
         const repoItem = ensure(repoItems.get(key));
         const localItem = ensure(localItems.get(key));
-        const repoLocalization = ensure(repoEnglish[key]);
-        const localLocalization = ensure(localEnglish[key]);
-        const name = `${repoLocalization.name || localLocalization.name} (id: ${key})`;
+        const repoTranslation = ensure(repoEnglish[key]);
+        const localTranslation = ensure(localEnglish[key]);
+        const name = `${repoTranslation.name || localTranslation.name} (id: ${key})`;
         let itemChanges = getPropChanges("Item Changes", localItem, repoItem);
-        let localizationChanges = getPropChanges("Localization Changes", localLocalization, repoLocalization);
-        if (itemChanges || localizationChanges) {
-            itemDiffs.push(`## ${name}\n\n${itemChanges}\n${localizationChanges}`);
+        let translationChanges = getPropChanges("Translation Changes", localTranslation, repoTranslation);
+        if (itemChanges || translationChanges) {
+            itemDiffs.push(`## ${name}\n\n${itemChanges}\n${translationChanges}`);
         }
     }
 

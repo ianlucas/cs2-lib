@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from "vitest";
-import english from "../assets/localizations/items-english.json";
+import { english } from "../src/translations";
 import { CS2Economy, CS2EconomyItem } from "./economy";
 import { CS2RarityColor } from "./economy-container";
 import { CS2Item } from "./economy-types";
