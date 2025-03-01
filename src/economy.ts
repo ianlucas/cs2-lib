@@ -87,12 +87,24 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
 }
 
 export class CS2EconomyInstance {
+    baseUrl = "https://cdn.statically.io/gh/ianlucas/cs2-lib/main/assets";
     categories = new Set<string>();
     items = new Map<number, CS2EconomyItem>();
     itemsAsArray: CS2EconomyItem[] = [];
     stickers = new Set<CS2EconomyItem>();
 
-    use({ items, language }: { items: CS2Item[]; language: CS2ItemTranslationMap }) {
+    use({
+        assetsBaseUrl,
+        items,
+        language
+    }: {
+        assetsBaseUrl?: string;
+        items: CS2Item[];
+        language: CS2ItemTranslationMap;
+    }) {
+        if (assetsBaseUrl !== undefined) {
+            this.baseUrl = assetsBaseUrl;
+        }
         this.categories.clear();
         this.items.clear();
         this.stickers.clear();
@@ -223,40 +235,6 @@ export class CS2EconomyInstance {
         return Array.from(this.stickers);
     }
 
-    resolveItemImage(baseUrl: string, item: number | CS2EconomyItem, wear?: number): string {
-        item = this.get(item);
-        const { id, image } = item;
-        if (item.hasWear() && wear !== undefined) {
-            switch (true) {
-                case wear < 1 / 3:
-                    return `${baseUrl}/${id}_light.png`;
-                case wear < 2 / 3:
-                    return `${baseUrl}/${id}_medium.png`;
-                default:
-                    return `${baseUrl}/${id}_heavy.png`;
-            }
-        }
-        if (image === undefined) {
-            return `${baseUrl}/${id}.png`;
-        }
-        if (image.charAt(0) === "/") {
-            return `${baseUrl}${image}`;
-        }
-        return image;
-    }
-
-    resolveCollectionImage(baseUrl: string, item: number | CS2EconomyItem): string {
-        const { collection } = this.get(item);
-        return `${baseUrl}/${ensure(collection)}.png`;
-    }
-
-    resolveContainerSpecialsImage(baseUrl: string, item: number | CS2EconomyItem): string {
-        item = this.get(item).expectContainer();
-        const { id, specialsImage, rawSpecials } = item;
-        assert(rawSpecials);
-        return specialsImage ? `${baseUrl}/${id}_rare.png` : `${baseUrl}/default_rare_item.png`;
-    }
-
     validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
         containerItem = this.get(containerItem);
         containerItem.expectContainer();
@@ -305,6 +283,7 @@ export class CS2EconomyItem
     def: number | undefined;
     desc: string | undefined;
     free: boolean | undefined;
+    glb: boolean | undefined;
     id: number = null!;
     image: string | undefined;
     index: number | undefined;
@@ -617,6 +596,39 @@ export class CS2EconomyItem
 
     isPaintable(): boolean {
         return CS2_PAINTABLE_ITEMS.includes(this.type);
+    }
+
+    getImage(): string {
+        if (this.image === undefined) {
+            return `${this.economy.baseUrl}/images/${this.id}.png`;
+        }
+        if (this.image.charAt(0) === "/") {
+            return `${this.economy.baseUrl}/images${this.image}`;
+        }
+        return this.image;
+    }
+
+    getCollectionImage(): string {
+        return `${this.economy.baseUrl}/images/${ensure(this.collection)}.png`;
+    }
+
+    getSpecialsImage(): string {
+        this.expectContainer();
+        assert(this.rawSpecials);
+        return this.specialsImage
+            ? `${this.economy.baseUrl}/images/${this.id}_rare.png`
+            : `${this.economy.baseUrl}/images/default_rare_item.png`;
+    }
+
+    getTextureImage(): string {
+        assert(this.texture);
+        return `${this.economy.baseUrl}/textures/${this.id}.webp`;
+    }
+
+    getModelBinary(): string {
+        const { glb, def } = this.parent ?? this;
+        assert(glb);
+        return `${this.economy.baseUrl}/models/${def}.glb`;
     }
 
     getMinimumWear(): number {
