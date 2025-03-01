@@ -62,6 +62,7 @@ export interface CS2Item {
     contents?: number[] | undefined;
     def?: number | undefined;
     free?: boolean | undefined;
+    glb?: boolean;
     id: number;
     image?: string | undefined;
     index?: number | undefined;
