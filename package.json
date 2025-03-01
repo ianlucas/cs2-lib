@@ -6,6 +6,10 @@
     "repository": "ianlucas/cs2-lib",
     "type": "module",
     "main": "dist/index.js",
+    "exports": {
+        ".": "./dist/index.js",
+        "./translations": "./dist/translations/index.js"
+    },
     "scripts": {
         "docs": "typedoc --out docs src/index.ts",
         "format": "prettier . --write",

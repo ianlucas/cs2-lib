@@ -14,7 +14,7 @@ npm install @ianlucas/cs2-lib
 
 ```typescript
 import { CS2Economy, CS2_ITEMS } from "@ianlucas/cs2-lib";
-import { english } from "@ianlucas/cs2-lib/dist/translations";
+import { english } from "@ianlucas/cs2-lib/translations";
 
 CS2Economy.use({
     items: CS2_ITEMS,
