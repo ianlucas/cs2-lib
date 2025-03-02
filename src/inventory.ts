@@ -721,19 +721,8 @@ export class CS2InventoryItem
         return this.keychains?.get(slot)?.seed ?? CS2_MIN_KEYCHAIN_SEED;
     }
 
-    override getImage(): string {
-        if (this.hasWear()) {
-            const wear = this.getWear();
-            switch (true) {
-                case wear < 1 / 3:
-                    return `${this.economy.baseUrl}/images/${this.id}_light.png`;
-                case wear < 2 / 3:
-                    return `${this.economy.baseUrl}/images/${this.id}_medium.png`;
-                default:
-                    return `${this.economy.baseUrl}/images/${this.id}_heavy.png`;
-            }
-        }
-        return super.getImage();
+    override getImage(wear?: number): string {
+        return super.getImage(wear ?? this.getWear());
     }
 
     asBase(): CS2BaseInventoryItem {
