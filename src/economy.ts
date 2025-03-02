@@ -598,7 +598,17 @@ export class CS2EconomyItem
         return CS2_PAINTABLE_ITEMS.includes(this.type);
     }
 
-    getImage(): string {
+    getImage(wear?: number): string {
+        if (this.hasWear() && wear !== undefined) {
+            switch (true) {
+                case wear < 1 / 3:
+                    return `${this.economy.baseUrl}/images/${this.id}_light.png`;
+                case wear < 2 / 3:
+                    return `${this.economy.baseUrl}/images/${this.id}_medium.png`;
+                default:
+                    return `${this.economy.baseUrl}/images/${this.id}_heavy.png`;
+            }
+        }
         if (this.image === undefined) {
             return `${this.economy.baseUrl}/images/${this.id}.png`;
         }
