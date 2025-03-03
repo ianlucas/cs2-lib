@@ -497,7 +497,7 @@ export class ItemGenerator {
                 baseId,
                 def: 1209,
                 id,
-                image: this.itemManager.get(id)?.image ?? this.getImage(id, `econ/stickers/${sticker_material}`),
+                image: this.getImage(id, `econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Sticker
