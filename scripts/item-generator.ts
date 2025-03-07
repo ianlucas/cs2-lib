@@ -1381,9 +1381,19 @@ export class ItemGenerator {
                 output: DECOMPILED_PATH
             });
             const decompiledPath = resolve(DECOMPILED_PATH, texturePath.replace(".vtex", ".png"));
-            await sharp(await readFile(decompiledPath))
+            const { data, info } = await sharp(decompiledPath)
+                .removeAlpha()
+                .png()
+                .raw()
+                .toBuffer({ resolveWithObject: true });
+
+            await sharp(data, {
+                raw: { width: info.width, height: info.height, channels: 3 }
+            })
                 .resize(1024, 1024)
+                .webp()
                 .toFile(resolve(process.cwd(), `assets/textures/${id}.webp`));
+
             await unlink(decompiledPath);
             return true;
         } catch (error) {
