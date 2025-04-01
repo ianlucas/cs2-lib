@@ -98,6 +98,7 @@ export class DefaultGraffitiManager {
 }
 
 export class ItemGenerator {
+    gameItemsAsText: string;
     gameItems: CS2GameItems["items_game"] = null!;
 
     private csgoTranslationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
@@ -192,7 +193,8 @@ export class ItemGenerator {
     }
 
     async readItemsGameFile() {
-        this.gameItems = CS2KeyValues.parse<CS2GameItems>(await readFile(ITEMS_GAME_PATH, "utf-8")).items_game;
+        this.gameItemsAsText = await readFile(ITEMS_GAME_PATH, "utf-8");
+        this.gameItems = CS2KeyValues.parse<CS2GameItems>(this.gameItemsAsText).items_game;
         this.raritiesColorHex = Object.fromEntries(
             Object.entries(this.gameItems.rarities).map(([rarityKey, { color }]) => {
                 return [rarityKey, ensure(this.gameItems.colors[ensure(color)]?.hex_color)] as const;
@@ -386,48 +388,43 @@ export class ItemGenerator {
 
     private async parseSkins() {
         warning("Parsing skins...");
-        for (const { icon_path } of Object.values(this.gameItems.alternate_icons2.weapon_icons)) {
-            if (!LIGHT_ICON_RE.test(icon_path)) {
-                continue;
+        for (const paintKit of this.paintKits) {
+            for (const baseItem of this.baseItems) {
+                if (!this.hasSkinImage(baseItem.className, paintKit.className)) {
+                    continue;
+                }
+                const itemKey = `[${paintKit.className}]${baseItem.className}`;
+                if (baseItem.type === CS2ItemType.Weapon && !this.gameItemsAsText.includes(itemKey)) {
+                    continue;
+                }
+                const id = this.itemIdentifierManager.get(`paint_${baseItem.def}_${paintKit.index}`);
+                this.addContainerItem(itemKey, id);
+                this.addTranslation(id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
+                this.addTranslation(id, "desc", paintKit.descToken);
+                this.addItem({
+                    ...baseItem,
+                    ...this.getSkinCollection(id, itemKey),
+                    altName: this.getSkinAltName(paintKit.className),
+                    base: undefined,
+                    baseId: baseItem.id,
+                    free: undefined,
+                    glb: undefined,
+                    id,
+                    image: this.getSkinImage(id, baseItem.className, paintKit.className),
+                    index: Number(paintKit.index),
+                    legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
+                    rarity: this.getRarityColorHex(
+                        MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
+                            ? [baseItem.rarity, paintKit.rarityColorHex]
+                            : [itemKey, paintKit.rarityColorHex]
+                    ),
+                    texture:
+                        (await this.getSkinTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
+                        ((await exists(resolve(process.cwd(), `assets/textures/${id}.webp`))) || undefined),
+                    wearMax: paintKit.wearMax,
+                    wearMin: paintKit.wearMin
+                });
             }
-            const paintKit = this.paintKits.find(({ className }) => icon_path.includes(`_${className}_light`));
-            if (paintKit === undefined) {
-                continue;
-            }
-            const baseItem = this.baseItems.find(({ className }) =>
-                icon_path.includes(`/${className}_${paintKit.className}`)
-            );
-            if (baseItem === undefined) {
-                continue;
-            }
-            const itemKey = `[${paintKit.className}]${baseItem.className}`;
-            const id = this.itemIdentifierManager.get(`paint_${baseItem.def}_${paintKit.index}`);
-            this.addContainerItem(itemKey, id);
-            this.addTranslation(id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
-            this.addTranslation(id, "desc", paintKit.descToken);
-            this.addItem({
-                ...baseItem,
-                ...this.getSkinCollection(id, itemKey),
-                altName: this.getSkinAltName(paintKit.className),
-                base: undefined,
-                baseId: baseItem.id,
-                free: undefined,
-                glb: undefined,
-                id,
-                image: this.getSkinImage(id, baseItem.className, paintKit.className),
-                index: Number(paintKit.index),
-                legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
-                rarity: this.getRarityColorHex(
-                    MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
-                        ? [baseItem.rarity, paintKit.rarityColorHex]
-                        : [itemKey, paintKit.rarityColorHex]
-                ),
-                texture:
-                    (await this.getSkinTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
-                    ((await exists(resolve(process.cwd(), `assets/textures/${id}.webp`))) || undefined),
-                wearMax: paintKit.wearMax,
-                wearMin: paintKit.wearMin
-            });
         }
     }
 
@@ -1093,6 +1090,12 @@ export class ItemGenerator {
             copyFileSync(src, dest);
         }
         return this.getImage(id, paths[0][0].replace("_png.png", ""));
+    }
+
+    private hasSkinImage(className?: string, paintClassName?: string) {
+        return existsSync(
+            resolve(IMAGES_PATH, `econ/default_generated/${className}_${paintClassName}_light_png.png`.toLowerCase())
+        );
     }
 
     private getSkinAltName(className: string) {
