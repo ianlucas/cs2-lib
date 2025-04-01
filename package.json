@@ -30,17 +30,17 @@
         "@ianlucas/depot-downloader": "^2.7.3",
         "@ianlucas/vrf-decompiler": "^11.1.0",
         "@total-typescript/tsconfig": "^1.0.4",
-        "@types/node": "^22.13.5",
+        "@types/node": "^22.13.14",
         "cheerio": "^1.0.0",
         "dotenv": "^16.4.7",
-        "html-entities": "^2.5.2",
+        "html-entities": "^2.6.0",
         "javascript-stringify": "^2.1.0",
-        "prettier": "3.5.2",
+        "prettier": "3.5.3",
         "sharp": "^0.33.5",
-        "string-strip-html": "^13.4.8",
+        "string-strip-html": "^13.4.12",
         "tsx": "^4.19.3",
-        "typedoc": "^0.27.9",
-        "typescript": "^5.7.3",
-        "vitest": "^3.0.7"
+        "typedoc": "^0.28.1",
+        "typescript": "^5.8.2",
+        "vitest": "^3.1.1"
     }
 }
