@@ -1093,7 +1093,9 @@ export class ItemGenerator {
     }
 
     private hasSkinImage(className?: string, paintClassName?: string) {
-        return existsSync(resolve(IMAGES_PATH, `econ/default_generated/${className}_${paintClassName}_light_png.png`));
+        return existsSync(
+            resolve(IMAGES_PATH, `econ/default_generated/${className}_${paintClassName}_light_png.png`.toLowerCase())
+        );
     }
 
     private getSkinAltName(className: string) {
