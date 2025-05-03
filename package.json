@@ -27,8 +27,8 @@
         "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts"
     },
     "devDependencies": {
-        "@ianlucas/depot-downloader": "^2.7.3",
-        "@ianlucas/vrf-decompiler": "^11.1.0",
+        "@ianlucas/depot-downloader": "^3.0.0",
+        "@ianlucas/vrf-decompiler": "^12.0.0",
         "@total-typescript/tsconfig": "^1.0.4",
         "@types/node": "^22.15.3",
         "cheerio": "^1.0.0",
