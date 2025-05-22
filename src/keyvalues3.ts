@@ -34,6 +34,16 @@ export class CS2KeyValues3 {
             }
         }
 
+        function peek(str: string) {
+            let i = index;
+            for (let j = 0; j < str.length; j++) {
+                if (data[i++] !== str[j]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         function isWhitespace(char?: string): boolean {
             return (char?.match(/[\s\t\r\n]/) ?? undefined) !== undefined;
         }
@@ -83,9 +93,10 @@ export class CS2KeyValues3 {
 
         function parseString(): string {
             if (data[index] === '"') {
-                index += 1;
+                let multiLine = peek(`"""`);
+                index += multiLine ? 3 : 1;
                 let value = "";
-                while (data[index] && data[index] !== '"') {
+                while (data[index] && multiLine ? !peek(`"""`) : data[index] !== '"') {
                     while (data[index] && data[index] === "\\") {
                         index += 1;
                         const char = data[index];

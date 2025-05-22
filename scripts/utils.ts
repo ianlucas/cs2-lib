@@ -4,19 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ChildProcessWithoutNullStreams } from "child_process";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { access } from "fs/promises";
+import { existsSync, readFileSync } from "fs";
+import { access, readFile, writeFile } from "fs/promises";
 import { decode as htmlEntitiesDecode } from "html-entities";
 import { basename, resolve } from "path";
 import { fileURLToPath } from "url";
+import { ensure } from "../src/utils";
 
 export const log = console.log;
 export const warning = console.warn;
 
-export function writeJson(path: string, contents: any) {
+export async function writeJson(path: string, contents: any) {
     const file = resolve(process.cwd(), path);
     const stringified = JSON.stringify(contents);
-    writeFileSync(file, stringified, "utf-8");
+    await writeFile(file, stringified, "utf-8");
 }
 
 export function readJson<T>(path: string, fallback?: T) {
@@ -27,14 +28,14 @@ export function readJson<T>(path: string, fallback?: T) {
     return JSON.parse(readFileSync(file, "utf-8")) as T;
 }
 
-export function write(path: string, contents: string) {
+export async function write(path: string, contents: string) {
     const file = resolve(process.cwd(), path);
-    writeFileSync(file, contents, "utf-8");
+    await writeFile(file, contents, "utf-8");
 }
 
-export function read(path: string) {
+export async function read(path: string) {
     const file = resolve(process.cwd(), path);
-    return readFileSync(file, "utf-8");
+    return await readFile(file, "utf-8");
 }
 
 export async function sleep(ms: number) {
@@ -49,16 +50,6 @@ export async function fetchText(url: string) {
 
 export function dedupe<T>(array: T[]) {
     return [...new Set(array)];
-}
-
-export function push<T, U extends Record<string | number, U[]>>(obj: T, key: string | number, value: any) {
-    if (!obj[key]) {
-        obj[key] = [];
-    }
-    if (obj[key].includes(value)) {
-        return;
-    }
-    obj[key].push(value);
 }
 
 export function shouldRun(url: string) {
@@ -94,4 +85,60 @@ export function prependHash<T extends string | undefined>(str: T) {
         return str;
     }
     return `#${str}`;
+}
+
+export class PromiseQueue {
+    private concurrency: number;
+    private queue: { promiseFn: () => Promise<void>; resolve: (value?: unknown) => void; reject: () => void }[];
+    private running: number;
+    private completedCount: number;
+    private idleResolvers: ((value?: unknown) => void)[];
+
+    constructor(concurrency: number) {
+        this.concurrency = concurrency;
+        this.queue = [];
+        this.running = 0;
+        this.completedCount = 0;
+        this.idleResolvers = [];
+    }
+
+    push(promiseFn: () => Promise<void>) {
+        return new Promise((resolve, reject) => {
+            this.queue.push({ promiseFn, resolve, reject });
+            this.next();
+        });
+    }
+
+    async waitForIdle() {
+        if (this.queue.length === 0 && this.running === 0) return;
+        return new Promise((resolve) => {
+            this.idleResolvers.push(resolve);
+        });
+    }
+
+    private next() {
+        while (this.running < this.concurrency && this.queue.length > 0) {
+            const { promiseFn, resolve, reject } = ensure(this.queue.shift());
+            this.running++;
+            promiseFn()
+                .then(resolve)
+                .catch(reject)
+                .finally(() => {
+                    this.running--;
+                    this.completedCount++;
+
+                    if (this.completedCount % this.concurrency === 0) {
+                        const remaining = this.queue.length + this.running;
+                        console.log(`${remaining} items left in queue...`);
+                    }
+
+                    this.next();
+                    if (this.queue.length === 0 && this.running === 0) {
+                        const resolvers = this.idleResolvers;
+                        this.idleResolvers = [];
+                        for (const r of resolvers) r();
+                    }
+                });
+        }
+    }
 }

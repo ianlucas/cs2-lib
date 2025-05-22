@@ -25,7 +25,7 @@ export class NonLegacyPaintScraper {
             }
         }
         console.log(`Scraped ${Object.keys(nonLegacyPaints).length} weapons, ${count} skins.`);
-        writeJson("assets/data/non-legacy-paints.json", nonLegacyPaints);
+        writeJson("scripts/data/non-legacy-paints.json", nonLegacyPaints);
     }
 }
 
