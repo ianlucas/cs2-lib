@@ -26,3 +26,15 @@ const item = CS2Economy.getById(307);
 item.name;
 //=> "AWP | Dragon Lore"
 ```
+
+## Download asset images
+
+By default the library uses my CDN at `cdn.cstrike.app` for image URLs. If you need to self-host your content, you can find and download the latest images at [update's workflow runs](https://github.com/ianlucas/cs2-lib/actions/workflows/update.yml). Open the latest successful run and it'll have the assets attached as an artifact.
+
+```typescript
+CS2Economy.use({
+    assetsBaseUrl: "https://your-website.com/assets",
+    items: CS2_ITEMS,
+    language: english
+});
+```
