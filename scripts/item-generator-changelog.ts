@@ -79,11 +79,11 @@ function getPropChanges(title: string, localItem: any, repoItem: any) {
 
 async function main() {
     const repoItems = new Map(
-        (await fetchFromRepo<CS2Item[]>("assets/data/items.json")).map((item) => [item.id, item])
+        (await fetchFromRepo<CS2Item[]>("scripts/data/items.json")).map((item) => [item.id, item])
     );
     const localItems = new Map(CS2_ITEMS.map((item) => [item.id, item]));
-    const repoEnglish = await fetchFromRepo("assets/translations/english.json");
-    const localEnglish = readJson<any>("assets/translations/english.json");
+    const repoEnglish = await fetchFromRepo("scripts/data/english.json");
+    const localEnglish = readJson<any>("scripts/data/english.json");
 
     const addedKeys = Array.from(localItems.keys()).filter((key) => !repoItems.has(key));
     const removedKeys = Array.from(repoItems.keys()).filter((key) => !localItems.has(key));
