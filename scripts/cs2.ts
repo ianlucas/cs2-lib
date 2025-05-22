@@ -8,7 +8,7 @@ import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { assert, ensure } from "../src/utils";
-import { CS2_CSGO_DIRECTORY_PATH, INPUT_FORCE } from "./env";
+import { CS2_CSGO_DIRECTORY_PATH, INPUT_FORCE, INPUT_TEXTURES } from "./env";
 import { exists, log, readProcess, shouldRun } from "./utils";
 
 export class CS2 {
@@ -71,7 +71,7 @@ export class CS2 {
                 vpkDir: true
             })
         );
-        const dirs = [...this.EXTRACT_DIRS, ...this.TEXTURE_DIRS];
+        const dirs = [...this.EXTRACT_DIRS, ...(INPUT_TEXTURES === "true" ? this.TEXTURE_DIRS : [])];
         for (const line of output.split("\n")) {
             if (dirs.some((dir) => line.startsWith(dir))) {
                 const meta = Object.fromEntries(
