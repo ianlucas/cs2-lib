@@ -75,5 +75,5 @@ jobs:
       - name: Upload zipped assets as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zipped-assets
+          name: assets
           path: assets.zip
