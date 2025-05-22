@@ -102,3 +102,12 @@ test("has seed", () => {
     expect(baseGloves.hasSeed()).toBe(false);
     expect(skinGloves.hasSeed()).toBe(true);
 });
+
+test("default cdn url", () => {
+    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    const dragonLore = CS2Economy.getById(307);
+    expect(dragonLore.getImage()).toBe("https://cdn.cstrike.app/images/307.webp");
+    expect(dragonLore.getImage(1 / 3 - 0.1)).toBe("https://cdn.cstrike.app/images/307_light.webp");
+    expect(dragonLore.getImage(2 / 3 - 0.1)).toBe("https://cdn.cstrike.app/images/307_medium.webp");
+    expect(dragonLore.getImage(3 / 3 - 0.1)).toBe("https://cdn.cstrike.app/images/307_heavy.webp");
+});
