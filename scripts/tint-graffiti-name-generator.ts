@@ -13,7 +13,7 @@ export class TintGraffitiNameGenerator {
         generator.readCsgoLanguageFiles(["english"]);
         generator.readItemsGameFile();
         writeJson(
-            "assets/data/tint-graffiti-names.json",
+            "scripts/data/tint-graffiti-names.json",
             Object.values(generator.gameItems.sticker_kits)
                 .map(({ item_name, sticker_material }) =>
                     !sticker_material?.includes("default/") &&

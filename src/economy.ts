@@ -87,7 +87,8 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
 }
 
 export class CS2EconomyInstance {
-    baseUrl = "https://cdn.statically.io/gh/ianlucas/cs2-lib/main/assets";
+    baseUrl = "https://cdn.cstrike.app";
+    defaultImageExtension = "webp";
     categories = new Set<string>();
     items = new Map<number, CS2EconomyItem>();
     itemsAsArray: CS2EconomyItem[] = [];
@@ -95,16 +96,17 @@ export class CS2EconomyInstance {
 
     use({
         assetsBaseUrl,
+        assetsDefaultImageExtension,
         items,
         language
     }: {
         assetsBaseUrl?: string;
+        assetsDefaultImageExtension?: string;
         items: CS2Item[];
         language: CS2ItemTranslationMap;
     }) {
-        if (assetsBaseUrl !== undefined) {
-            this.baseUrl = assetsBaseUrl;
-        }
+        this.baseUrl = assetsBaseUrl ?? this.baseUrl;
+        this.defaultImageExtension = assetsDefaultImageExtension ?? this.defaultImageExtension;
         this.categories.clear();
         this.items.clear();
         this.stickers.clear();
@@ -602,15 +604,15 @@ export class CS2EconomyItem
         if (this.hasWear() && wear !== undefined) {
             switch (true) {
                 case wear < 1 / 3:
-                    return `${this.economy.baseUrl}/images/${this.id}_light.png`;
+                    return `${this.economy.baseUrl}/images/${this.id}_light.${this.economy.defaultImageExtension}`;
                 case wear < 2 / 3:
-                    return `${this.economy.baseUrl}/images/${this.id}_medium.png`;
+                    return `${this.economy.baseUrl}/images/${this.id}_medium.${this.economy.defaultImageExtension}`;
                 default:
-                    return `${this.economy.baseUrl}/images/${this.id}_heavy.png`;
+                    return `${this.economy.baseUrl}/images/${this.id}_heavy.${this.economy.defaultImageExtension}`;
             }
         }
         if (this.image === undefined) {
-            return `${this.economy.baseUrl}/images/${this.id}.png`;
+            return `${this.economy.baseUrl}/images/${this.id}.${this.economy.defaultImageExtension}`;
         }
         if (this.image.charAt(0) === "/") {
             return `${this.economy.baseUrl}/images${this.image}`;
@@ -619,15 +621,15 @@ export class CS2EconomyItem
     }
 
     getCollectionImage(): string {
-        return `${this.economy.baseUrl}/images/${ensure(this.collection)}.png`;
+        return `${this.economy.baseUrl}/images/${ensure(this.collection)}.${this.economy.defaultImageExtension}`;
     }
 
     getSpecialsImage(): string {
         this.expectContainer();
         assert(this.rawSpecials);
         return this.specialsImage
-            ? `${this.economy.baseUrl}/images/${this.id}_rare.png`
-            : `${this.economy.baseUrl}/images/default_rare_item.png`;
+            ? `${this.economy.baseUrl}/images/${this.id}_rare.${this.economy.defaultImageExtension}`
+            : `${this.economy.baseUrl}/images/default_rare_item.${this.economy.defaultImageExtension}`;
     }
 
     getTextureImage(): string {

@@ -11,7 +11,7 @@ import { dedupe, fetchText, readJson, shouldRun, sleep, writeJson } from "./util
 
 const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 export class ContainerScraper {
-    private specialsData = readJson<Record<string, string[]>>("assets/data/container-specials.json", {});
+    private specialsData = readJson<Record<string, string[]>>("scripts/data/container-specials.json", {});
     private specials: Record<string, number[] | undefined> = {};
 
     async run() {
@@ -37,8 +37,8 @@ export class ContainerScraper {
                 await sleep(1000);
             }
         }
-        writeJson("assets/data/container-contents.json", containerContents);
-        writeJson("assets/data/container-specials.json", containerSpecials);
+        writeJson("scripts/data/container-contents.json", containerContents);
+        writeJson("scripts/data/container-specials.json", containerSpecials);
     }
 
     private getSpecialsUrl(containerUrl: string, contents: string) {

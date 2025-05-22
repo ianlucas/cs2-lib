@@ -4,183 +4,147 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { depotDownloader } from "@ianlucas/depot-downloader";
-import { vrfDecompiler } from "@ianlucas/vrf-decompiler";
-import { warn } from "console";
+import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
-import { assert } from "../src/utils";
+import { assert, ensure } from "../src/utils";
 import { CS2_CSGO_DIRECTORY_PATH, INPUT_FORCE } from "./env";
-import { exists, log, readProcess, shouldRun, warning } from "./utils";
+import { exists, log, readProcess, shouldRun } from "./utils";
 
-const cwd = process.cwd();
-const APP = 730;
-const DEPOT_ID = 2347770;
-const csgoDirectoryFilelistPath = join(cwd, `scripts/cs2.depot`);
-const csgoManifestPath = join(cwd, `scripts/cs2.manifest`);
-const workdirPath = join(cwd, "scripts/workdir");
-const gamePath = join(workdirPath, "game");
-const decompiledPath = join(workdirPath, "decompiled");
-const csgoPackageFilelistPath = join(workdirPath, "csgo_packages.depot");
-const csgoDirectoryPath = CS2_CSGO_DIRECTORY_PATH ?? join(workdirPath, "game/csgo/pak01_dir.vpk");
-const extractDirectories = ["panorama/", "resource/", "scripts/", "soundevents/"];
+export class CS2 {
+    public readonly isLocal = CS2_CSGO_DIRECTORY_PATH !== undefined;
+    private readonly APP_ID = 730;
+    private readonly DEPOT_ID = 2347770;
+    private readonly EXTRACT_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
+    private readonly TEXTURE_DIRS = [
+        "weapons/paints/",
+        "materials/models/weapons/customization/paints/vmats/",
+        "materials/models/weapons/customization/paints/custom/",
+        "materials/models/weapons/customization/paints/gunsmith/",
+        "items/assets/paintkits/"
+    ];
+    private readonly paths = {
+        cwd: process.cwd(),
+        workdir: join(process.cwd(), "scripts/workdir"),
+        decompiled: join(process.cwd(), "scripts/workdir/decompiled"),
+        manifest: join(process.cwd(), "scripts/cs2.manifest"),
+        depotFilelist: join(process.cwd(), "scripts/cs2.depot"),
+        packageFilelist: join(process.cwd(), "scripts/workdir/csgo_packages.depot"),
+        csgoDir: CS2_CSGO_DIRECTORY_PATH ?? join(process.cwd(), "scripts/workdir/game/csgo/pak01_dir.vpk")
+    };
 
-async function getLatestCsgoManifest() {
-    try {
+    private async getLatestManifest() {
         const output = await readProcess(
             depotDownloader({
-                app: APP,
-                depot: DEPOT_ID,
-                dir: workdirPath,
+                app: this.APP_ID,
+                depot: this.DEPOT_ID,
+                dir: this.paths.workdir,
                 manifestOnly: true
             })
-        );
-        const matches = output.match(/Manifest\s(\d+)/);
-        if (matches !== null) {
-            return BigInt(matches[1]);
-        }
-    } catch (error) {
-        console.error(error);
+        ).catch((e) => {
+            throw new Error(`Failed to fetch manifest: ${e}`);
+        });
+        const match = ensure(output.match(/Manifest\s(\d+)/), `No manifest found for depot ${this.DEPOT_ID}`);
+        return match[1];
     }
-    return undefined;
-}
 
-async function downloadCsgoDirectoryFromDepot() {
-    try {
-        log("Downloading game/csgo/pak01_dir.vpk...");
+    private async downloadCsgoDirectory() {
+        log("Downloading CSGO directory...");
         const output = await readProcess(
             depotDownloader({
-                app: APP,
-                depot: DEPOT_ID,
-                dir: workdirPath,
-                filelist: csgoDirectoryFilelistPath
+                app: this.APP_ID,
+                depot: this.DEPOT_ID,
+                dir: this.paths.workdir,
+                filelist: this.paths.depotFilelist
             })
         );
-        const matches = output.match(/100(\.|,)00% (.*)/);
-        if (matches !== null) {
-            return true;
-        }
-        return undefined;
-    } catch (error) {
-        console.error(error);
+        assert(/100[,.]00%/.test(output), "Failed to download CSGO directory");
     }
-    return undefined;
-}
 
-async function getCsgoPackageFilesToDownload() {
-    assert(await exists(csgoDirectoryPath));
-    const vpksToDownload = new Set<string>(["game/csgo/steam.inf"]);
-    log("Getting list of package files to download...");
-    (
-        await readProcess(
+    private async getPackageFiles() {
+        assert(await exists(this.paths.csgoDir), "CSGO directory missing");
+        log("Listing package files...");
+        const vpks = new Set<string>(["game/csgo/steam.inf"]);
+        const output = await readProcess(
             vrfDecompiler({
-                input: csgoDirectoryPath,
+                input: this.paths.csgoDir,
                 vpkDir: true
             })
-        )
-    )
-        .split("\n")
-        .forEach((line) => {
-            for (const dir of extractDirectories) {
-                if (line.startsWith(dir)) {
-                    const meta = Object.fromEntries(
-                        line
-                            .split(" ")
-                            .slice(1)
-                            .map((kv) => kv.split("="))
-                    ) as {
-                        crc: string;
-                        metadatasz: string;
-                        fnumber: string;
-                        ofs: string;
-                        sz: string;
-                    };
-                    vpksToDownload.add(`game/csgo/pak01_${meta.fnumber.padStart(3, "0")}.vpk`);
-                    return;
-                }
+        );
+        const dirs = [...this.EXTRACT_DIRS, ...this.TEXTURE_DIRS];
+        for (const line of output.split("\n")) {
+            if (dirs.some((dir) => line.startsWith(dir))) {
+                const meta = Object.fromEntries(
+                    line
+                        .split(" ")
+                        .slice(1)
+                        .map((kv) => kv.split("="))
+                ) as { fnumber: string };
+                vpks.add(`game/csgo/pak01_${meta.fnumber.padStart(3, "0")}.vpk`);
             }
-        });
-    return Array.from(vpksToDownload).join("\n");
-}
+        }
+        return [...vpks];
+    }
 
-async function checkCsgoPackageDirectory() {
-    if (!(await exists(workdirPath))) {
-        await mkdir(workdirPath, { recursive: true });
+    private async fetchManifest() {
+        await mkdir(this.paths.workdir, { recursive: true });
+        const current = (await exists(this.paths.manifest)) ? await readFile(this.paths.manifest, "utf-8") : "";
+        const latest = await this.getLatestManifest();
+        assert(INPUT_FORCE === "true" || current !== latest, `Depot ${this.DEPOT_ID} is up to date`);
+        await this.downloadCsgoDirectory();
+        await writeFile(this.paths.manifest, latest.toString(), "utf-8");
+        return true;
     }
-    const manifest = (await exists(csgoManifestPath)) ? BigInt(await readFile(csgoManifestPath, "utf-8")) : 0;
-    const latestManifest = await getLatestCsgoManifest();
-    if (latestManifest === undefined) {
-        warning(`Failed to get latest manifest for depot ${DEPOT_ID}`);
-        return false;
-    }
-    if (INPUT_FORCE !== "true" && manifest === latestManifest) {
-        warning(`Depot ${DEPOT_ID} is up to date`);
-        return false;
-    }
-    if (!(await downloadCsgoDirectoryFromDepot())) {
-        warning("Failed to download game/csgo/pak01_dir.vpk");
-        return;
-    }
-    await writeFile(csgoManifestPath, latestManifest.toString(), "utf-8");
-    return true;
-}
 
-async function downloadCsgoPackageFiles() {
-    try {
-        await writeFile(csgoPackageFilelistPath, await getCsgoPackageFilesToDownload(), "utf-8");
-        log("Downloading package files...");
+    private async downloadPackages() {
+        const files = await this.getPackageFiles();
+        await writeFile(this.paths.packageFilelist, files.join("\n"), "utf-8");
+        log("Downloading packages...");
         const output = await readProcess(
             depotDownloader({
-                app: APP,
-                depot: DEPOT_ID,
-                dir: workdirPath,
-                filelist: csgoPackageFilelistPath
+                app: this.APP_ID,
+                depot: this.DEPOT_ID,
+                dir: this.paths.workdir,
+                filelist: this.paths.packageFilelist
             })
         );
-        const matches = output.match(/100(\.|,)00% (.*)/);
-        if (matches !== null) {
-            return true;
-        }
-        return undefined;
-    } catch (error) {
-        console.error(error);
+        assert(/100[,.]00%/.test(output), "Unable to download packages.");
+        return true;
     }
-    return undefined;
-}
 
-async function extractCsgoPackageFiles() {
-    try {
+    private async extractFiles() {
         log("Extracting files...");
-        for (const directory of extractDirectories) {
+        for (const dir of this.EXTRACT_DIRS) {
             await readProcess(
                 vrfDecompiler({
-                    input: csgoDirectoryPath,
-                    output: decompiledPath,
+                    input: this.paths.csgoDir,
+                    output: this.paths.decompiled,
                     vpkDecompile: true,
-                    vpkFilepath: directory
+                    vpkFilepath: dir
                 })
             );
         }
         return true;
-    } catch {
-        console.error("Failed to extract files");
     }
-    return false;
-}
 
-export async function main() {
-    if (
-        CS2_CSGO_DIRECTORY_PATH !== undefined ||
-        ((await checkCsgoPackageDirectory()) && (await downloadCsgoPackageFiles()))
-    ) {
-        if (await extractCsgoPackageFiles()) {
-            log("Downloaded CS2 files successfully");
+    public async download() {
+        if ((await this.fetchManifest()) && (await this.downloadPackages()) && (await this.extractFiles())) {
+            log("CS2 files downloaded successfully");
+            return;
         }
-    } else {
-        warn("CS2 files are up to date");
-        process.exit(1);
+        throw new Error("CS2 files download or extraction failed");
+    }
+
+    async decompile(options: DecompilerArgs) {
+        return await readProcess(
+            vrfDecompiler({
+                input: this.paths.csgoDir,
+                ...options
+            })
+        );
     }
 }
 
 if (shouldRun(import.meta.url)) {
-    main().catch(console.error);
+    await new CS2().download();
 }

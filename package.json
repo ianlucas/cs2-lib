@@ -27,6 +27,7 @@
         "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts"
     },
     "devDependencies": {
+        "@bunny.net/storage-sdk": "^0.3.0",
         "@ianlucas/depot-downloader": "^3.0.0",
         "@ianlucas/vrf-decompiler": "^12.0.0",
         "@total-typescript/tsconfig": "^1.0.4",

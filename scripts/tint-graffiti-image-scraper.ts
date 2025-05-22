@@ -9,7 +9,7 @@ export class TintGraffitiImageScraper {
     async run() {
         const min = 1;
         const max = 5;
-        const graffiti = readJson<string[]>("assets/data/tint-graffiti-names.json");
+        const graffiti = readJson<string[]>("scripts/data/tint-graffiti-names.json");
         const anchorRE = /<a href="https:\/\/csgostash.com\/graffiti\/(\d+)\/([^"]+)">([^<]+)<\/a>/g;
         const imageRE = /src="([^"]+)" alt="([^"]+)"/g;
         const urls: string[] = [];
@@ -34,7 +34,7 @@ export class TintGraffitiImageScraper {
             }
         }
         console.log(`Scraped ${Object.keys(images).length} items.`);
-        writeJson("assets/data/tint-graffiti-images.json", images);
+        writeJson("scripts/data/tint-graffiti-images.json", images);
     }
 }
 

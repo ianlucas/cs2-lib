@@ -6,21 +6,22 @@ on:
       force:
         description: "Force update?"
         default: "false"
+      textures:
+        description: "Download textures?"
+        default: "false"
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize disk space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force
-          sudo docker builder prune -a
-          df -h
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +40,9 @@ jobs:
         run: npm run update
         env:
           INPUT_FORCE: ${{ inputs.force }}
+          INPUT_TEXTURES: ${{ inputs.textures }}
+          STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
 
       - name: Commit
         run: |
@@ -64,3 +68,12 @@ jobs:
           gh pr create --base main --head "${{ env.branch }}" --title "feat: update items (CS2 v${{ env.version }})" --body "Manifest: ${{ env.manifest }}" --fill
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Zip assets directory
+        run: zip -r assets.zip scripts/workdir/assets
+
+      - name: Upload zipped assets as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zipped-assets
+          path: assets.zip
