@@ -110,4 +110,7 @@ test("default cdn url", () => {
     expect(dragonLore.getImage(1 / 3 - 0.1)).toBe("https://cdn.cstrike.app/images/307_light.webp");
     expect(dragonLore.getImage(2 / 3 - 0.1)).toBe("https://cdn.cstrike.app/images/307_medium.webp");
     expect(dragonLore.getImage(3 / 3 - 0.1)).toBe("https://cdn.cstrike.app/images/307_heavy.webp");
+
+    const baseGloves = CS2Economy.getById(56);
+    expect(baseGloves.getImage()).toBe("https://cdn.cstrike.app/images/studded_brokenfang_gloves.webp");
 });

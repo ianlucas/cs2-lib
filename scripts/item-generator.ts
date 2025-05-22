@@ -420,7 +420,7 @@ export class ItemGenerator {
                 descToken: item_description,
                 free: baseitem === "1" ? true : undefined,
                 id,
-                image: image_inventory !== undefined ? await this.getImage(id, image_inventory) : `/${name}.png`,
+                image: image_inventory !== undefined ? await this.getImage(id, image_inventory) : `/${name}.webp`,
                 index: baseitem === "1" ? undefined : 0,
                 model: name,
                 nameToken: item_name,
