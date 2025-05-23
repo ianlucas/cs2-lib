@@ -31,7 +31,17 @@ import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from 
 import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
-import { exists, prependHash, PromiseQueue, readJson, shouldRun, warning, write, writeJson } from "./utils.js";
+import {
+    exists,
+    getFileSHA256,
+    prependHash,
+    PromiseQueue,
+    readJson,
+    shouldRun,
+    warning,
+    write,
+    writeJson
+} from "./utils.js";
 
 const CWD_PATH = process.cwd();
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
@@ -128,6 +138,7 @@ export class ItemGenerator {
     private ignoredTexturePaths: string[] = [];
     private erroedMaterials: string[] = [];
     private cdn = {
+        checksums: {} as Record<string, string>,
         models: [] as string[],
         textures: [] as number[]
     };
@@ -190,14 +201,20 @@ export class ItemGenerator {
                 await copyFile(path, resolve(assetsImagesPath, image));
             }
         }
-        this.cdn = {
-            textures: (await BunnyStorageSDK.file.list(this.sz, "/textures")).map(({ objectName }) =>
-                ensure(Number(objectName.split(".")[0]))
-            ),
-            models: (await BunnyStorageSDK.file.list(this.sz, "/models")).map(({ objectName }) =>
-                ensure(objectName.split(".")[0])
-            )
-        };
+        await this.mapStorageFiles("/images", () => undefined);
+        this.cdn.textures = await this.mapStorageFiles("/textures", ({ objectName }) => {
+            return Number(objectName.split(".")[0]);
+        });
+        this.cdn.models = await this.mapStorageFiles("/models", ({ objectName }) => {
+            return objectName.split(".")[0];
+        });
+    }
+
+    async mapStorageFiles<T>(path: string, callbackfn: (value: BunnyStorageSDK.StorageFile) => T): Promise<T[]> {
+        return (await BunnyStorageSDK.file.list(this.sz, path)).map((file) => {
+            this.cdn.checksums[`${path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`] = file.checksum ?? "";
+            return callbackfn(file);
+        });
     }
 
     async readCsgoLanguageFiles(include?: string[]) {
@@ -554,6 +571,10 @@ export class ItemGenerator {
             this.gameItems.keychain_definitions
         )) {
             if (!this.hasTranslation(loc_name)) {
+                continue;
+            }
+            if (!(await this.hasImage(image_inventory))) {
+                console.log(`Unable to find inventory image for ${image_inventory} (index: ${index})`);
                 continue;
             }
             const id = this.itemIdentifierManager.get(`keychain_${index}`);
@@ -928,14 +949,17 @@ export class ItemGenerator {
         for (const directory of directories) {
             const assetsPath = resolve(ASSETS_PATH, directory);
             for (const file of await readdir(assetsPath)) {
-                queue.push(async () => {
-                    const assetPath = resolve(assetsPath, file);
-                    await BunnyStorageSDK.file.upload(
-                        this.sz,
-                        `/${directory}/${file}`,
-                        Readable.toWeb(createReadStream(assetPath))
-                    );
-                });
+                const assetPath = resolve(assetsPath, file);
+                const cdnPath = `/${directory}/${file}`;
+                if (this.cdn.checksums[cdnPath] !== (await getFileSHA256(assetPath))) {
+                    queue.push(async () => {
+                        await BunnyStorageSDK.file.upload(
+                            this.sz,
+                            cdnPath,
+                            Readable.toWeb(createReadStream(assetPath))
+                        );
+                    });
+                }
             }
         }
         await queue.waitForIdle();
@@ -1133,6 +1157,10 @@ export class ItemGenerator {
         const cs2ImagePath = resolve(IMAGES_PATH, `${path}_png.png`.toLowerCase());
         await this.copyAndOptimizeImage(cs2ImagePath, `/images/${id}.webp`);
         return undefined;
+    }
+
+    private async hasImage(path: string) {
+        return await exists(resolve(IMAGES_PATH, `${path}_png.png`.toLowerCase()));
     }
 
     private async getBaseImage(id: number, className: string) {
@@ -1497,5 +1525,7 @@ export class ItemGenerator {
 }
 
 if (shouldRun(import.meta.url)) {
-    new ItemGenerator().run().catch((error) => console.error(error));
+    new ItemGenerator().run().catch((error) => {
+        throw error;
+    });
 }

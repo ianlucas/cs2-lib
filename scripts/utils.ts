@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ChildProcessWithoutNullStreams } from "child_process";
-import { existsSync, readFileSync } from "fs";
+import { createHash } from "crypto";
+import { createReadStream, existsSync, readFileSync } from "fs";
 import { access, readFile, writeFile } from "fs/promises";
 import { decode as htmlEntitiesDecode } from "html-entities";
 import { basename, resolve } from "path";
+import { pipeline } from "stream/promises";
 import { fileURLToPath } from "url";
 import { ensure } from "../src/utils";
 
@@ -141,4 +143,11 @@ export class PromiseQueue {
                 });
         }
     }
+}
+
+export async function getFileSHA256(filePath: string) {
+    const hash = createHash("sha256");
+    const stream = createReadStream(filePath);
+    await pipeline(stream, hash);
+    return hash.digest("hex").toUpperCase();
 }
