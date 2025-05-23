@@ -212,7 +212,7 @@ export class ItemGenerator {
 
     async mapStorageFiles<T>(path: string, callbackfn: (value: BunnyStorageSDK.StorageFile) => T): Promise<T[]> {
         return (await BunnyStorageSDK.file.list(this.sz, path)).map((file) => {
-            this.cdn.checksums[`${path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`] = file.checksum ?? "";
+            this.cdn.checksums[`${file.path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`] = file.checksum ?? "";
             return callbackfn(file);
         });
     }
