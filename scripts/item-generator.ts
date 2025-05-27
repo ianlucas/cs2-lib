@@ -25,9 +25,8 @@ import {
 import { CS2KeyValues } from "../src/keyvalues.js";
 import { CS2KeyValues3 } from "../src/keyvalues3.js";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
-import { ContainerScraper } from "./container-scraper.js";
 import { CS2 } from "./cs2.js";
-import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.js";
+import { CS2_CSGO_PATH, CWD_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.js";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.js";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.js";
@@ -43,7 +42,6 @@ import {
     writeJson
 } from "./utils.js";
 
-const CWD_PATH = process.cwd();
 const AGENTS_SOUNDEVENTS_PATH = resolve(CS2_CSGO_PATH, "soundevents/vo/agents");
 const IMAGES_PATH = resolve(CS2_CSGO_PATH, "panorama/images");
 const ITEMS_GAME_PATH = resolve(CS2_CSGO_PATH, "scripts/items/items_game.txt");
@@ -74,13 +72,13 @@ const PAINT_IMAGE_SUFFIXES = ["light", "medium", "heavy"] as const;
 const UNCATEGORIZED_STICKERS = ["community_mix01", "community02", "danger_zone", "standard", "stickers2", "tournament_assets"];
 const REMOVE_KEYCHAIN_TOOL_INDEX = "65";
 
-export class ItemManager extends Map<number, any> {
+export class ItemHelper extends Map<number, any> {
     constructor() {
         super(readJson<any[]>(ITEMS_JSON_PATH, []).map((item) => [item.id, item]));
     }
 }
 
-export class ItemIdentifierManager {
+export class ItemIdentifierHelper {
     allIdentifiers = readJson<string[]>(ITEM_IDS_JSON_PATH, []);
     uniqueIdentifiers: string[] = [];
 
@@ -96,6 +94,27 @@ export class ItemIdentifierManager {
     }
 }
 
+export class ContainerSpecialsHelper {
+    private specialsData = readJson<Record<string, string[]>>("scripts/data/container-specials.json", {});
+    private specials: Record<string, number[] | undefined> = {};
+
+    populate(items: (readonly [string, CS2ExtendedItem])[]) {
+        const lookup: Record<string, number> = {};
+        for (const [name, item] of items) {
+            if (MELEE_OR_GLOVES_TYPES.includes(item.type)) {
+                lookup[item.base ? `${name} | ★ (Vanilla)` : name] = item.id;
+            }
+        }
+        for (const [containerName, specials] of Object.entries(this.specialsData)) {
+            this.specials[containerName] = specials.map((name) => ensure(lookup[name]));
+        }
+    }
+
+    getSpecials(containerName: string) {
+        return this.specials[containerName];
+    }
+}
+
 export class ItemGenerator {
     gameItemsAsText: string;
     gameItems: CS2GameItems["items_game"] = null!;
@@ -108,9 +127,10 @@ export class ItemGenerator {
     private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
     private raritiesColorHex: Record<string, string | undefined> = null!;
 
-    private containerScraper = new ContainerScraper();
-    private itemIdentifierManager = new ItemIdentifierManager();
-    private itemManager = new ItemManager();
+    private containerSpecialsHelper = new ContainerSpecialsHelper();
+    private itemIdentifierHelper = new ItemIdentifierHelper();
+    private itemHelper = new ItemHelper();
+
     private cs2 = new CS2();
     private sz = BunnyStorageSDK.zone.connect_with_accesskey(
         BunnyStorageSDK.regions.StorageRegion.NewYork,
@@ -338,7 +358,7 @@ export class ItemGenerator {
             }
             const { used_by_classes, item_name, item_description, model_player } = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
-            const id = this.itemIdentifierManager.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
+            const id = this.itemIdentifierHelper.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -384,7 +404,7 @@ export class ItemGenerator {
             }
             const thePrefab = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
-            const id = this.itemIdentifierManager.get(`melee_${this.getTeamsString(used_by_classes)}_${itemDef}`);
+            const id = this.itemIdentifierHelper.get(`melee_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -415,7 +435,7 @@ export class ItemGenerator {
                 continue;
             }
             const teams = this.getTeams(used_by_classes);
-            const id = this.itemIdentifierManager.get(`glove_${this.getTeamsString(used_by_classes)}_${itemDef}`);
+            const id = this.itemIdentifierHelper.get(`glove_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -447,7 +467,7 @@ export class ItemGenerator {
                 if (baseItem.type === CS2ItemType.Weapon && !this.gameItemsAsText.includes(itemKey)) {
                     continue;
                 }
-                const id = this.itemIdentifierManager.get(`paint_${baseItem.def}_${paintKit.index}`);
+                const id = this.itemIdentifierHelper.get(`paint_${baseItem.def}_${paintKit.index}`);
                 this.addContainerItem(itemKey, id);
                 this.addTranslation(id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
                 this.addTranslation(id, "desc", paintKit.descToken);
@@ -489,7 +509,7 @@ export class ItemGenerator {
                 continue;
             }
             const itemKey = `[${name}]musickit`;
-            const id = this.itemIdentifierManager.get(`musickit_${index}`);
+            const id = this.itemIdentifierHelper.get(`musickit_${index}`);
             const base = FREE_MUSIC_KITS.includes(index) ? true : undefined;
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", "#CSGO_Type_MusicKit", " | ", loc_name);
@@ -526,7 +546,7 @@ export class ItemGenerator {
                 continue;
             }
             const [category, categoryToken] = this.getStickerCategory({ sticker_material, tournament_event_id });
-            const id = this.itemIdentifierManager.get(`sticker_${index}`);
+            const id = this.itemIdentifierHelper.get(`sticker_${index}`);
             const itemKey = `[${name}]sticker`;
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", "#CSGO_Tool_Sticker", " | ", item_name);
@@ -565,7 +585,7 @@ export class ItemGenerator {
                 console.log(`Unable to find inventory image for ${image_inventory} (index: ${index})`);
                 continue;
             }
-            const id = this.itemIdentifierManager.get(`keychain_${index}`);
+            const id = this.itemIdentifierHelper.get(`keychain_${index}`);
             const itemKey = `[${name}]keychain`;
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", "#CSGO_Tool_Keychain", " | ", loc_name);
@@ -601,7 +621,7 @@ export class ItemGenerator {
             const itemKey = `[${name}]spray`;
             if (sticker_material.startsWith("default")) {
                 for (const { hexColor, nameToken: tintNameToken, id: tintId } of this.graffitiTints) {
-                    const id = this.itemIdentifierManager.get(`spray_${index}_${tintId}`);
+                    const id = this.itemIdentifierHelper.get(`spray_${index}_${tintId}`);
                     this.addContainerItem(itemKey, id);
                     this.addTranslation(id, "name", "#CSGO_Type_Spray", " | ", item_name, " (", tintNameToken, ")");
                     this.addTranslation(id, "desc", description_string);
@@ -621,7 +641,7 @@ export class ItemGenerator {
                 }
                 continue;
             }
-            const id = this.itemIdentifierManager.get(`spray_${index}`);
+            const id = this.itemIdentifierHelper.get(`spray_${index}`);
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", "#CSGO_Type_Spray", " | ", item_name);
             this.addTranslation(id, "desc", description_string);
@@ -655,7 +675,7 @@ export class ItemGenerator {
             if (item_name.indexOf("#PatchKit") !== 0 && patch_material === undefined) {
                 continue;
             }
-            const id = this.itemIdentifierManager.get(`patch_${index}`);
+            const id = this.itemIdentifierHelper.get(`patch_${index}`);
             const itemKey = `[${name}]patch`;
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", "#CSGO_Tool_Patch", " | ", item_name);
@@ -706,7 +726,7 @@ export class ItemGenerator {
                 continue;
             }
             const teams = this.getTeams(used_by_classes);
-            const id = this.itemIdentifierManager.get(`agent_${this.getTeamsString(used_by_classes)}_${index}`);
+            const id = this.itemIdentifierHelper.get(`agent_${this.getTeamsString(used_by_classes)}_${index}`);
             const model = model_player.replace("characters/models/", "").replace(".vmdl", "");
             const voPrefix = this.getAgentVoPrefix(model_player, vo_prefix);
             this.addTranslation(id, "name", "#Type_CustomPlayer", " | ", item_name);
@@ -744,7 +764,7 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const id = this.itemIdentifierManager.get(`pin_${index}`);
+            const id = this.itemIdentifierHelper.get(`pin_${index}`);
             this.addContainerItem(name, id);
             this.addTranslation(id, "name", "#CSGO_Type_Collectible", " | ", item_name);
             this.tryAddTranslation(id, "desc", item_description ?? `${item_name}_Desc`);
@@ -783,7 +803,7 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const id = this.itemIdentifierManager.get(`tool_${index}`);
+            const id = this.itemIdentifierHelper.get(`tool_${index}`);
             const thePrefab = this.gameItems.prefabs[prefab];
             const image = ensure(image_inventory || thePrefab?.image_inventory);
             this.addContainerItem(name, id);
@@ -804,7 +824,7 @@ export class ItemGenerator {
 
     private async parseContainers() {
         warning("Parsing containers...");
-        this.containerScraper.populate(
+        this.containerSpecialsHelper.populate(
             Array.from(this.itemNames.entries()).map(([id, name]) => [name, ensure(this.items.get(id))])
         );
         const keyItems = new Map<string, number>();
@@ -885,7 +905,7 @@ export class ItemGenerator {
                         }
                         const { item_name, item_description, image_inventory } = this.gameItems.items[keyItemDef];
                         assert(image_inventory);
-                        const id = this.itemIdentifierManager.get(`key_${keyItemDef}`);
+                        const id = this.itemIdentifierHelper.get(`key_${keyItemDef}`);
                         const nameToken = item_name ?? "#CSGO_base_crate_key";
                         keyItems.set(keyItemDef, id);
                         this.addTranslation(id, "name", "#CSGO_Tool_WeaponCase_KeyTag", " | ", nameToken);
@@ -902,8 +922,8 @@ export class ItemGenerator {
                     })
                 );
                 const containerName = this.requireTranslation(item_name);
-                const id = this.itemIdentifierManager.get(`case_${containerIndex}`);
-                const specials = this.containerScraper.getSpecials(containerName) ?? HARDCODED_SPECIALS[id];
+                const id = this.itemIdentifierHelper.get(`case_${containerIndex}`);
+                const specials = this.containerSpecialsHelper.getSpecials(containerName) ?? HARDCODED_SPECIALS[id];
                 const containsMusicKit = containerName.includes("Music Kit");
                 const containsStatTrak = containerName.includes("StatTrak");
                 this.addTranslation(id, "name", "#CSGO_Type_WeaponCase", " | ", item_name);
@@ -917,7 +937,7 @@ export class ItemGenerator {
                     image: await this.getImage(id, image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
                     rarity: this.getRarityColorHex(["common"]),
-                    specials: this.itemManager.get(id)?.specials ?? specials,
+                    specials: this.itemHelper.get(id)?.specials ?? specials,
                     specialsImage: await this.getSpecialsImage(id, image_unusual_item),
                     statTrakless: containsMusicKit && !containsStatTrak ? true : undefined,
                     statTrakOnly: containsMusicKit && containsStatTrak ? true : undefined,
@@ -961,7 +981,7 @@ export class ItemGenerator {
         await writeJson(ITEMS_JSON_PATH, items);
         warning(`Generated '${ITEMS_JSON_PATH}'.`);
 
-        await writeJson(ITEM_IDS_JSON_PATH, this.itemIdentifierManager.allIdentifiers);
+        await writeJson(ITEM_IDS_JSON_PATH, this.itemIdentifierHelper.allIdentifiers);
         warning(`Generated '${ITEM_IDS_JSON_PATH}'.`);
 
         for (const [language, translations] of Object.entries(this.itemTranslationByLanguage)) {
@@ -1532,7 +1552,7 @@ export class ItemGenerator {
     }
 
     private createStub(name: string, descToken: string) {
-        const id = this.itemIdentifierManager.get(`stub_${name}`);
+        const id = this.itemIdentifierHelper.get(`stub_${name}`);
         this.addTranslation(id, "name", "#Rarity_Default");
         this.addTranslation(id, "desc", descToken);
         this.addItem({
