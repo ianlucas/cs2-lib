@@ -8,11 +8,11 @@ import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { assert, ensure } from "../src/utils";
-import { CS2_CSGO_DIRECTORY_PATH, INPUT_FORCE, INPUT_TEXTURES } from "./env";
+import { CS2_CSGO_PATH, CWD_PATH, INPUT_FORCE, INPUT_TEXTURES } from "./env";
 import { exists, log, readProcess, shouldRun } from "./utils";
 
 export class CS2 {
-    public readonly isLocal = CS2_CSGO_DIRECTORY_PATH !== undefined;
+    public readonly isLocal = !CS2_CSGO_PATH.includes("workdir");
     private readonly APP_ID = 730;
     private readonly DEPOT_ID = 2347770;
     private readonly EXTRACT_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
@@ -24,13 +24,12 @@ export class CS2 {
         "items/assets/paintkits/"
     ];
     private readonly paths = {
-        cwd: process.cwd(),
-        workdir: join(process.cwd(), "scripts/workdir"),
-        decompiled: join(process.cwd(), "scripts/workdir/decompiled"),
-        manifest: join(process.cwd(), "scripts/cs2.manifest"),
-        depotFilelist: join(process.cwd(), "scripts/cs2.depot"),
-        packageFilelist: join(process.cwd(), "scripts/workdir/csgo_packages.depot"),
-        csgoDir: CS2_CSGO_DIRECTORY_PATH ?? join(process.cwd(), "scripts/workdir/game/csgo/pak01_dir.vpk")
+        workdir: join(CWD_PATH, "scripts/workdir"),
+        decompiled: join(CWD_PATH, "scripts/workdir/decompiled"),
+        manifest: join(CWD_PATH, "scripts/cs2.manifest"),
+        depotFilelist: join(CWD_PATH, "scripts/cs2.depot"),
+        packageFilelist: join(CWD_PATH, "scripts/workdir/csgo_packages.depot"),
+        csgoDir: join(CS2_CSGO_PATH, "pak01_dir.vpk")
     };
 
     private async getLatestManifest() {
@@ -41,11 +40,8 @@ export class CS2 {
                 dir: this.paths.workdir,
                 manifestOnly: true
             })
-        ).catch((e) => {
-            throw new Error(`Failed to fetch manifest: ${e}`);
-        });
-        const match = ensure(output.match(/Manifest\s(\d+)/), `No manifest found for depot ${this.DEPOT_ID}`);
-        return match[1];
+        );
+        return ensure(output.match(/Manifest\s(\d+)/)?.[1], `No manifest found for depot ${this.DEPOT_ID}`);
     }
 
     private async downloadCsgoDirectory() {
@@ -62,7 +58,6 @@ export class CS2 {
     }
 
     private async getPackageFiles() {
-        assert(await exists(this.paths.csgoDir), "CSGO directory missing");
         log("Listing package files...");
         const vpks = new Set<string>(["game/csgo/steam.inf"]);
         const output = await readProcess(
@@ -87,11 +82,9 @@ export class CS2 {
     }
 
     private async fetchManifest() {
-        await mkdir(this.paths.workdir, { recursive: true });
         const current = (await exists(this.paths.manifest)) ? await readFile(this.paths.manifest, "utf-8") : "";
         const latest = await this.getLatestManifest();
         assert(INPUT_FORCE === "true" || current !== latest, `Depot ${this.DEPOT_ID} is up to date`);
-        await this.downloadCsgoDirectory();
         await writeFile(this.paths.manifest, latest.toString(), "utf-8");
         return true;
     }
@@ -108,7 +101,7 @@ export class CS2 {
                 filelist: this.paths.packageFilelist
             })
         );
-        assert(/100[,.]00%/.test(output), "Unable to download packages.");
+        assert(/100[,.]00%/.test(output), "Unable to download packages");
         return true;
     }
 
@@ -128,11 +121,12 @@ export class CS2 {
     }
 
     public async download() {
-        if ((await this.fetchManifest()) && (await this.downloadPackages()) && (await this.extractFiles())) {
-            log("CS2 files downloaded successfully");
-            return;
-        }
-        throw new Error("CS2 files download or extraction failed");
+        await mkdir(this.paths.workdir, { recursive: true });
+        await this.fetchManifest();
+        await this.downloadCsgoDirectory();
+        await this.downloadPackages();
+        await this.extractFiles();
+        log("CS2 files downloaded successfully");
     }
 
     async decompile(options: DecompilerArgs) {

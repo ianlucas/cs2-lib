@@ -18,11 +18,9 @@
         "typecheck": "tsc --noEmit",
         "update": "npm run cs2 && npm run item-generator && npm run item-generator-changelog",
         "upgrade": "npx npm-check-updates@latest --target minor -u",
-        "container-scraper": "tsx scripts/container-scraper.ts",
         "cs2": "tsx scripts/cs2.ts",
         "item-generator-changelog": "tsx scripts/item-generator-changelog.ts",
-        "item-generator": "tsx scripts/item-generator.ts",
-        "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts"
+        "item-generator": "tsx scripts/item-generator.ts"
     },
     "devDependencies": {
         "@bunny.net/storage-sdk": "^0.3.0",

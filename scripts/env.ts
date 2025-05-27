@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as dotenv from "dotenv";
+import { join } from "path";
 dotenv.config();
 
-export const CS2_CSGO_PATH = process.env.CS2_CSGO_PATH ?? `${process.cwd()}/scripts/workdir/decompiled`;
-export const { INPUT_FORCE, STORAGE_ZONE, STORAGE_ACCESS_KEY, CS2_CSGO_DIRECTORY_PATH, INPUT_TEXTURES } = process.env;
+export const CWD_PATH = process.cwd();
+export const CS2_CSGO_PATH = process.env.CS2_CSGO_PATH ?? join(CWD_PATH, "scripts/workdir/decompiled");
+export const { INPUT_FORCE, STORAGE_ZONE, STORAGE_ACCESS_KEY, INPUT_TEXTURES } = process.env;
