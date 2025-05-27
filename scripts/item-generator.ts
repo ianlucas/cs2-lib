@@ -96,19 +96,6 @@ export class ItemIdentifierManager {
     }
 }
 
-export class DefaultGraffitiManager {
-    private static names = readJson<string[]>("scripts/data/tint-graffiti-names.json");
-    private static images = readJson<Record<string, string | undefined>>("scripts/data/tint-graffiti-images.json");
-
-    includes(name: string) {
-        return DefaultGraffitiManager.names.includes(name);
-    }
-
-    getImage(name: string) {
-        return DefaultGraffitiManager.images[name];
-    }
-}
-
 export class ItemGenerator {
     gameItemsAsText: string;
     gameItems: CS2GameItems["items_game"] = null!;
@@ -122,7 +109,6 @@ export class ItemGenerator {
     private raritiesColorHex: Record<string, string | undefined> = null!;
 
     private containerScraper = new ContainerScraper();
-    private defaultGraffitiManager = new DefaultGraffitiManager();
     private itemIdentifierManager = new ItemIdentifierManager();
     private itemManager = new ItemManager();
     private cs2 = new CS2();
@@ -158,6 +144,7 @@ export class ItemGenerator {
     }[] = null!;
 
     private graffitiTints: {
+        hexColor: string;
         id: number;
         name: string;
         nameToken: string;
@@ -321,10 +308,11 @@ export class ItemGenerator {
                 }
             )
             .filter(isNotUndefined);
-        this.graffitiTints = Object.values(this.gameItems.graffiti_tints).map(({ id }) => ({
+        this.graffitiTints = Object.values(this.gameItems.graffiti_tints).map(({ id, hex_color }) => ({
             id: Number(id),
             name: this.requireTranslation(`#Attrib_SprayTintValue_${id}`),
-            nameToken: `#Attrib_SprayTintValue_${id}`
+            nameToken: `#Attrib_SprayTintValue_${id}`,
+            hexColor: hex_color
         }));
         this.itemSetItemKey = Object.fromEntries(
             Object.entries(this.gameItems.item_sets)
@@ -610,24 +598,21 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            const graffitiName = this.requireTranslation(item_name);
             const itemKey = `[${name}]spray`;
-            if (this.defaultGraffitiManager.includes(graffitiName)) {
-                for (const { name: tintName, nameToken: tintNameToken, id: tintId } of this.graffitiTints) {
+            if (sticker_material.startsWith("default")) {
+                for (const { hexColor, nameToken: tintNameToken, id: tintId } of this.graffitiTints) {
                     const id = this.itemIdentifierManager.get(`spray_${index}_${tintId}`);
-                    const graffitiNameWithTint = `${graffitiName} (${tintName})`;
-                    const image =
-                        this.itemManager.get(id)?.image ?? this.defaultGraffitiManager.getImage(graffitiNameWithTint);
-                    if (image === undefined) {
-                        continue;
-                    }
                     this.addContainerItem(itemKey, id);
                     this.addTranslation(id, "name", "#CSGO_Type_Spray", " | ", item_name, " (", tintNameToken, ")");
                     this.addTranslation(id, "desc", description_string);
                     this.addItem({
                         baseId,
                         id,
-                        image,
+                        image: await this.generateDefaultGraffitiImage(
+                            this.getImagePath(`econ/stickers/${sticker_material}`),
+                            hexColor,
+                            resolve(ASSETS_PATH, `images/${id}.webp`)
+                        ),
                         index: Number(index),
                         rarity: this.getRarityColorHex([item_rarity]),
                         tint: tintId,
@@ -1153,14 +1138,17 @@ export class ItemGenerator {
         await sharp(src).webp({ quality: 95 }).toFile(path);
     }
 
+    private getImagePath(path: string) {
+        return resolve(IMAGES_PATH, `${path}_png.png`.toLowerCase());
+    }
+
     private async getImage(id: number, path: string) {
-        const cs2ImagePath = resolve(IMAGES_PATH, `${path}_png.png`.toLowerCase());
-        await this.copyAndOptimizeImage(cs2ImagePath, `/images/${id}.webp`);
+        await this.copyAndOptimizeImage(this.getImagePath(path), `/images/${id}.webp`);
         return undefined;
     }
 
     private async hasImage(path: string) {
-        return await exists(resolve(IMAGES_PATH, `${path}_png.png`.toLowerCase()));
+        return await exists(this.getImagePath(path));
     }
 
     private async getBaseImage(id: number, className: string) {
@@ -1495,6 +1483,37 @@ export class ItemGenerator {
             }
             return undefined;
         }
+    }
+
+    private async generateDefaultGraffitiImage(inputPath: string, hexColor: string, destPath: string) {
+        const input = sharp(inputPath).ensureAlpha();
+        const { width, height } = await input.metadata();
+        assert(width && height);
+        const color = {
+            r: parseInt(hexColor.slice(1, 3), 16),
+            g: parseInt(hexColor.slice(3, 5), 16),
+            b: parseInt(hexColor.slice(5, 7), 16)
+        };
+        const grayscaleBuffer = await input.clone().removeAlpha().greyscale().raw().toBuffer();
+        const pixelCount = grayscaleBuffer.length;
+        const coloredPixels = Buffer.alloc(pixelCount * 3);
+        for (let i = 0; i < pixelCount; i++) {
+            const gray = grayscaleBuffer[i] / 255;
+            coloredPixels[i * 3 + 0] = Math.round(gray * color.r);
+            coloredPixels[i * 3 + 1] = Math.round(gray * color.g);
+            coloredPixels[i * 3 + 2] = Math.round(gray * color.b);
+        }
+        const coloredImage = sharp(coloredPixels, {
+            raw: {
+                width,
+                height,
+                channels: 3
+            }
+        }).png();
+        const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
+        const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
+        await sharp(coloredWithAlpha).webp().toFile(destPath);
+        return undefined;
     }
 
     private getContainerType(name?: string, type?: CS2ItemTypeValues) {
