@@ -1487,8 +1487,8 @@ export class ItemGenerator {
 
     private async generateDefaultGraffitiImage(inputPath: string, hexColor: string, destPath: string) {
         const input = sharp(inputPath).ensureAlpha();
-        const metadata = await input.metadata();
-        if (!metadata.width || !metadata.height) throw new Error("Invalid image");
+        const { width, height } = await input.metadata();
+        assert(width && height);
         const color = {
             r: parseInt(hexColor.slice(1, 3), 16),
             g: parseInt(hexColor.slice(3, 5), 16),
@@ -1505,14 +1505,14 @@ export class ItemGenerator {
         }
         const coloredImage = sharp(coloredPixels, {
             raw: {
-                width: metadata.width,
-                height: metadata.height,
+                width,
+                height,
                 channels: 3
             }
         }).png();
         const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
         const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
-        await sharp(coloredWithAlpha).png().webp().toFile(destPath);
+        await sharp(coloredWithAlpha).webp().toFile(destPath);
         return undefined;
     }
 
