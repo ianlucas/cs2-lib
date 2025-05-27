@@ -22,9 +22,7 @@
         "cs2": "tsx scripts/cs2.ts",
         "item-generator-changelog": "tsx scripts/item-generator-changelog.ts",
         "item-generator": "tsx scripts/item-generator.ts",
-        "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts",
-        "tint-graffiti-image-scraper": "tsx scripts/tint-graffiti-image-scraper.ts",
-        "tint-graffiti-name-generator": "tsx scripts/tint-graffiti-name-generator.ts"
+        "non-legacy-paint-scraper": "tsx scripts/non-legacy-paints-scraper.ts"
     },
     "devDependencies": {
         "@bunny.net/storage-sdk": "^0.3.0",
