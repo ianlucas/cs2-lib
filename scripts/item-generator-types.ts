@@ -160,6 +160,34 @@ export type CS2GameItems = {
     };
 };
 
+export type CompositeMaterialData = {
+    m_Points: {
+        m_vecCompositeMaterialAssemblyProcedures: {
+            m_vecCompositeInputContainers: {
+                m_strAlias: string;
+                m_vecLooseVariables: {
+                    m_strName: string;
+                    m_strTextureRuntimeResourcePath: string;
+                }[];
+            }[];
+        }[];
+    }[];
+};
+
+export type MaterialData = {
+    m_textureParams: { m_name: string; m_pValue: string }[];
+};
+
+export type StickerMarkupData = {
+    StickerMarkup: {
+        Index: number;
+        LegacyModel: boolean;
+        Offset: number[];
+        Rotation: number;
+        Scale: number;
+    }[];
+};
+
 export type CS2ExtendedItem = CS2Item & {
     className?: string;
     descToken?: string;
