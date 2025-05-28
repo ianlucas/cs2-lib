@@ -5,68 +5,72 @@
 
 import { depotDownloader } from "@ianlucas/depot-downloader";
 import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { assert, ensure } from "../src/utils";
 import { CS2_CSGO_PATH, CWD_PATH, INPUT_FORCE, INPUT_TEXTURES } from "./env";
-import { exists, log, readProcess, shouldRun } from "./utils";
+import { log, readFileOrDefault, readProcess, shouldRun } from "./utils";
+
+export const SCRIPTS_DIR = join(CWD_PATH, "scripts");
+export const WORKDIR_DIR = join(SCRIPTS_DIR, "workdir");
+export const DECOMPILED_DIR = join(WORKDIR_DIR, "decompiled");
+export const ASSETS_MANIFEST_PATH = join(SCRIPTS_DIR, "cs2.manifest");
+export const DEPOT_FILELIST_PATH = join(SCRIPTS_DIR, "cs2.depot");
+export const PAK_FILELIST_PATH = join(WORKDIR_DIR, "cs2_pak.depot");
+export const CSGO_PAK_DIR_PATH = join(CS2_CSGO_PATH, "pak01_dir.vpk");
+
+const DEPOT_SUCCESS_RE = /100[,.]00%/;
+const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
+
+const APP_ID = 730;
+const ASSETS_DEPOT_ID = 2347770;
+const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
+const EXTRACT_TEXTURE_DIRS = [
+    "weapons/paints/",
+    "materials/models/weapons/customization/paints/vmats/",
+    "materials/models/weapons/customization/paints/custom/",
+    "materials/models/weapons/customization/paints/gunsmith/",
+    "items/assets/paintkits/"
+];
 
 export class CS2 {
-    public readonly isLocal = !CS2_CSGO_PATH.includes("workdir");
-    private readonly APP_ID = 730;
-    private readonly DEPOT_ID = 2347770;
-    private readonly EXTRACT_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
-    private readonly TEXTURE_DIRS = [
-        "weapons/paints/",
-        "materials/models/weapons/customization/paints/vmats/",
-        "materials/models/weapons/customization/paints/custom/",
-        "materials/models/weapons/customization/paints/gunsmith/",
-        "items/assets/paintkits/"
-    ];
-    private readonly paths = {
-        workdir: join(CWD_PATH, "scripts/workdir"),
-        decompiled: join(CWD_PATH, "scripts/workdir/decompiled"),
-        manifest: join(CWD_PATH, "scripts/cs2.manifest"),
-        depotFilelist: join(CWD_PATH, "scripts/cs2.depot"),
-        packageFilelist: join(CWD_PATH, "scripts/workdir/csgo_packages.depot"),
-        csgoDir: join(CS2_CSGO_PATH, "pak01_dir.vpk")
-    };
+    public local = !CS2_CSGO_PATH.includes("workdir");
 
-    private async getLatestManifest() {
+    private async fetchLatestAssetsManifest() {
         const output = await readProcess(
             depotDownloader({
-                app: this.APP_ID,
-                depot: this.DEPOT_ID,
-                dir: this.paths.workdir,
+                app: APP_ID,
+                depot: ASSETS_DEPOT_ID,
+                dir: WORKDIR_DIR,
                 manifestOnly: true
             })
         );
-        return ensure(output.match(/Manifest\s(\d+)/)?.[1], `No manifest found for depot ${this.DEPOT_ID}`);
+        return ensure(output.match(DEPOT_MANIFEST_RE)?.[1]);
     }
 
-    private async downloadCsgoDirectory() {
-        log("Downloading CSGO directory...");
+    private async downloadCsgoPakDir() {
+        log("Downloading 'pak01_dir.vpk'...");
         const output = await readProcess(
             depotDownloader({
-                app: this.APP_ID,
-                depot: this.DEPOT_ID,
-                dir: this.paths.workdir,
-                filelist: this.paths.depotFilelist
+                app: APP_ID,
+                depot: ASSETS_DEPOT_ID,
+                dir: WORKDIR_DIR,
+                filelist: DEPOT_FILELIST_PATH
             })
         );
-        assert(/100[,.]00%/.test(output), "Failed to download CSGO directory");
+        assert(DEPOT_SUCCESS_RE.test(output));
     }
 
-    private async getPackageFiles() {
-        log("Listing package files...");
+    private async browseRequiredCsgoPakDirParts() {
+        log("Browsering required 'pak01_dir.vpk' parts...");
         const vpks = new Set<string>(["game/csgo/steam.inf"]);
         const output = await readProcess(
             vrfDecompiler({
-                input: this.paths.csgoDir,
+                input: CSGO_PAK_DIR_PATH,
                 vpkDir: true
             })
         );
-        const dirs = [...this.EXTRACT_DIRS, ...(INPUT_TEXTURES === "true" ? this.TEXTURE_DIRS : [])];
+        const dirs = [...EXTRACT_IMAGE_DIRS, ...(INPUT_TEXTURES === "true" ? EXTRACT_TEXTURE_DIRS : [])];
         for (const line of output.split("\n")) {
             if (dirs.some((dir) => line.startsWith(dir))) {
                 const meta = Object.fromEntries(
@@ -78,40 +82,37 @@ export class CS2 {
                 vpks.add(`game/csgo/pak01_${meta.fnumber.padStart(3, "0")}.vpk`);
             }
         }
-        return [...vpks];
+        await writeFile(PAK_FILELIST_PATH, [...vpks].join("\n"), "utf-8");
     }
 
-    private async fetchManifest() {
-        const current = (await exists(this.paths.manifest)) ? await readFile(this.paths.manifest, "utf-8") : "";
-        const latest = await this.getLatestManifest();
-        assert(INPUT_FORCE === "true" || current !== latest, `Depot ${this.DEPOT_ID} is up to date`);
-        await writeFile(this.paths.manifest, latest.toString(), "utf-8");
-        return true;
+    private async syncLatestAssetsManifest() {
+        const current = await readFileOrDefault(ASSETS_MANIFEST_PATH);
+        const latest = await this.fetchLatestAssetsManifest();
+        assert(INPUT_FORCE === "true" || current !== latest, `Depot ${ASSETS_DEPOT_ID} is already up to date.`);
+        await writeFile(ASSETS_MANIFEST_PATH, latest, "utf-8");
     }
 
-    private async downloadPackages() {
-        const files = await this.getPackageFiles();
-        await writeFile(this.paths.packageFilelist, files.join("\n"), "utf-8");
+    private async downloadCsgoPakDirParts() {
         log("Downloading packages...");
+        await this.browseRequiredCsgoPakDirParts();
         const output = await readProcess(
             depotDownloader({
-                app: this.APP_ID,
-                depot: this.DEPOT_ID,
-                dir: this.paths.workdir,
-                filelist: this.paths.packageFilelist
+                app: APP_ID,
+                depot: ASSETS_DEPOT_ID,
+                dir: WORKDIR_DIR,
+                filelist: PAK_FILELIST_PATH
             })
         );
-        assert(/100[,.]00%/.test(output), "Unable to download packages");
-        return true;
+        assert(DEPOT_SUCCESS_RE.test(output));
     }
 
-    private async extractFiles() {
-        log("Extracting files...");
-        for (const dir of this.EXTRACT_DIRS) {
+    private async extractAndDecompileFiles() {
+        log("Extracting and decompiling asset files...");
+        for (const dir of EXTRACT_IMAGE_DIRS) {
             await readProcess(
                 vrfDecompiler({
-                    input: this.paths.csgoDir,
-                    output: this.paths.decompiled,
+                    input: CSGO_PAK_DIR_PATH,
+                    output: DECOMPILED_DIR,
                     vpkDecompile: true,
                     vpkFilepath: dir
                 })
@@ -121,18 +122,18 @@ export class CS2 {
     }
 
     public async download() {
-        await mkdir(this.paths.workdir, { recursive: true });
-        await this.fetchManifest();
-        await this.downloadCsgoDirectory();
-        await this.downloadPackages();
-        await this.extractFiles();
-        log("CS2 files downloaded successfully");
+        await mkdir(WORKDIR_DIR, { recursive: true });
+        await this.syncLatestAssetsManifest();
+        await this.downloadCsgoPakDir();
+        await this.downloadCsgoPakDirParts();
+        await this.extractAndDecompileFiles();
+        log("Game files downloaded and decompiled successfully.");
     }
 
     async decompile(options: DecompilerArgs) {
         return await readProcess(
             vrfDecompiler({
-                input: this.paths.csgoDir,
+                input: CSGO_PAK_DIR_PATH,
                 ...options
             })
         );

@@ -6,7 +6,7 @@
 import { ChildProcessWithoutNullStreams } from "child_process";
 import { createHash } from "crypto";
 import { createReadStream, existsSync, readFileSync } from "fs";
-import { access, readFile, writeFile } from "fs/promises";
+import { access, readFile, rm, writeFile } from "fs/promises";
 import { decode as htmlEntitiesDecode } from "html-entities";
 import { basename, resolve } from "path";
 import { pipeline } from "stream/promises";
@@ -150,4 +150,25 @@ export async function getFileSHA256(filePath: string) {
     const stream = createReadStream(filePath);
     await pipeline(stream, hash);
     return hash.digest("hex").toUpperCase();
+}
+
+export async function readFileOrDefault(path: string, fallback = "") {
+    if (!(await exists(path))) {
+        return fallback;
+    }
+    return await readFile(path, "utf-8");
+}
+
+export async function rmIfExists(path: string) {
+    if (await exists(path)) {
+        await rm(path, { recursive: true });
+    }
+}
+
+const sent: string[] = [];
+export function logOnce(message: string) {
+    if (!sent.includes(message)) {
+        sent.push(message);
+        log(message);
+    }
 }
