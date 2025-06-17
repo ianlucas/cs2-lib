@@ -1,8 +1,15 @@
 {
-    "extends": "@total-typescript/tsconfig/tsc/dom/library",
-    "compilerOptions": {
-        "sourceMap": false,
-        "outDir": "dist"
-    },
-    "include": ["src/index.ts", "src/translations/*.ts"]
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "composite": true,
+    "allowImportingTsExtensions": true,
+    "isolatedDeclarations": true
+  },
+  "include": ["src"]
 }

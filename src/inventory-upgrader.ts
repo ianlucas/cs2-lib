@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2Economy, CS2EconomyInstance } from "./economy.js";
-import { type CS2InventoryData, CS2_INVENTORY_VERSION } from "./inventory.js";
+import { CS2Economy, CS2EconomyInstance } from "./economy.ts";
+import { type CS2InventoryData, CS2_INVENTORY_VERSION } from "./inventory.ts";
 
 const upgrades: Record<
     number,
@@ -81,8 +81,8 @@ const upgrades: Record<
 };
 
 export function resolveInventoryData(
-    stringValue: string | null | undefined,
-    economy = CS2Economy
+    stringValue?: string,
+    economy: CS2EconomyInstance = CS2Economy
 ): CS2InventoryData | undefined {
     try {
         if (!stringValue) {
