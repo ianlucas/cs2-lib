@@ -1,8 +1,8 @@
-import { defineConfig } from 'rolldown';
+import { defineConfig, type RolldownOptions } from 'rolldown';
 import { dts } from 'rolldown-plugin-dts';
 import del from 'rollup-plugin-delete'
 
-export default defineConfig({
+const options: RolldownOptions = {
     input: ['src/index.ts', 'src/translations/index.ts'],
     plugins: [
         del({ targets: ['dist'] }),
@@ -18,4 +18,6 @@ export default defineConfig({
         preserveModules: true,
         preserveModulesRoot: 'src'
     },
-});
+}
+
+export default defineConfig(options) as RolldownOptions;
