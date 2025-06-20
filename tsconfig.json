@@ -1,15 +1,13 @@
 {
+  "extends": "@total-typescript/tsconfig/tsc/dom/library",
   "compilerOptions": {
+    "sourceMap": false,
     "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true,
     "noEmit": true,
-    "composite": true,
     "allowImportingTsExtensions": true,
+    "allowJs": false,
     "isolatedDeclarations": true
-  },
-  "include": ["src"]
+  }
 }
