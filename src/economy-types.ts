@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { CS2RarityColorValues, CS2RaritySoundNameValues } from "./economy-container.js";
-import type { EnumValues } from "./utils.js";
+import type { CS2RarityColorValues, CS2RaritySoundNameValues } from "./economy-container.ts";
+import type { EnumValues } from "./utils.ts";
 
 export const CS2ItemTeam = {
     T: 0,

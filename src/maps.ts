@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ensure } from "./utils.js";
+import { ensure } from "./utils.ts";
 
 export interface CS2Map {
     mapname: string;

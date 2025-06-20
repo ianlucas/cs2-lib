@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { randomBoolean } from "./economy-container.js";
-import { type CS2Map } from "./maps.js";
-import { type EnumValues, assert, ensure } from "./utils.js";
+import { randomBoolean } from "./economy-container.ts";
+import { type CS2Map } from "./maps.ts";
+import { type EnumValues, assert, ensure } from "./utils.ts";
 
 export const CS2VetoAction = {
     Available: 0,

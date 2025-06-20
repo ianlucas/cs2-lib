@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { CS2ItemTranslationMap } from "../economy-types.js";
+import type { CS2ItemTranslationMap } from "../economy-types.ts";
 
 // @generated
 // @ts-ignore

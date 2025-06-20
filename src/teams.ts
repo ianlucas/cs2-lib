@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type EnumValues } from "./utils.js";
+import { type EnumValues } from "./utils.ts";
 
 export const CS2Team = {
     None: 0,
