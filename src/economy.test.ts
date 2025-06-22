@@ -16,7 +16,7 @@ describe("CS2Economy", () => {
             { id: 1, rarity: CS2RarityColor.Common, type: "weapon" },
             { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
             { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
-        ] as const;
+        ];
         CS2Economy.use({
             items,
             language: {
