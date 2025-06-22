@@ -31,8 +31,12 @@ export const CS2RarityColor = {
 
 export type CS2RarityColorValues = EnumValues<typeof CS2RarityColor>;
 
-export const CS2_RARITIES: ("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[] = Object.values(CS2Rarity);
-export const CS2_RARITY_ORDER: readonly [...("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[], "special"] = [...CS2_RARITIES, "special"] as const;
+export const CS2_RARITIES: ("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[] =
+    Object.values(CS2Rarity);
+export const CS2_RARITY_ORDER: readonly [
+    ...("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[],
+    "special"
+] = [...CS2_RARITIES, "special"] as const;
 
 export const CS2RarityColorName: {
     readonly "#ded6cc": "common";
