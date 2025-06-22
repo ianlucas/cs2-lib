@@ -1,13 +1,14 @@
 {
-  "extends": "@total-typescript/tsconfig/tsc/no-dom/library",
-  "compilerOptions": {
-    "sourceMap": false,
-    "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "allowJs": false,
-    "isolatedDeclarations": true
-  }
+    "extends": "@total-typescript/tsconfig/tsc/no-dom/library",
+    "compilerOptions": {
+        "sourceMap": false,
+        "target": "ESNext",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        "allowJs": false,
+        "isolatedDeclarations": true
+    },
+    "include": ["src"]
 }
