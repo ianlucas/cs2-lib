@@ -4,13 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { beforeEach, describe, expect, test } from "vitest";
-import { english } from "./translations";
-import { CS2Economy } from "./economy";
-import { CS2_MAX_KEYCHAIN_SEED, CS2_MAX_PATCHES, CS2_MAX_STATTRAK, CS2_MIN_KEYCHAIN_SEED } from "./economy-constants";
-import { CS2Inventory } from "./inventory";
-import { CS2_ITEMS } from "./items";
-import { CS2Team } from "./teams";
-import { ensure, float } from "./utils";
+import {
+    CS2_MAX_KEYCHAIN_SEED,
+    CS2_MAX_PATCHES,
+    CS2_MAX_STATTRAK,
+    CS2_MIN_KEYCHAIN_SEED
+} from "./economy-constants.js";
+import { CS2Economy } from "./economy.js";
+import { CS2Inventory } from "./inventory.js";
+import { CS2_ITEMS } from "./items.js";
+import { CS2Team } from "./teams.js";
+import { english } from "./translations/english.js";
+import { ensure, float } from "./utils.js";
 
 const AK47_ID = 4;
 const ALLU_COLOGNE_2015_ID = 2268;
@@ -327,10 +332,10 @@ describe("CS2Inventory methods", () => {
         inventory.depositToStorageUnit(0, [2, 3]);
         expect(inventory.size()).toBe(5);
         expect(inventory.getStorageUnitSize(0)).toBe(2);
-        expect(inventory.getStorageUnitItems(0)[0].uid).toBe(0);
-        expect(inventory.getStorageUnitItems(0)[0].statTrak).toBe(1);
-        expect(inventory.getStorageUnitItems(0)[1].uid).toBe(1);
-        expect(inventory.getStorageUnitItems(0)[1].statTrak).toBe(2);
+        expect(inventory.getStorageUnitItems(0)[0]?.uid).toBe(0);
+        expect(inventory.getStorageUnitItems(0)[0]?.statTrak).toBe(1);
+        expect(inventory.getStorageUnitItems(0)[1]?.uid).toBe(1);
+        expect(inventory.getStorageUnitItems(0)[1]?.statTrak).toBe(2);
         expect(inventory.isStorageUnitFull(0)).toBe(false);
         expect(() => inventory.depositToStorageUnit(0, [3, 4])).toThrow();
         inventory.depositToStorageUnit(0, [4]);
@@ -503,8 +508,8 @@ describe("CS2Inventory methods", () => {
         }
         inventory.retrieveFromStorageUnit(0, [1]);
         expect(inventory.getStorageUnitSize(0)).toBe(2);
-        expect(inventory.getStorageUnitItems(0)[0].uid).toBe(0);
-        expect(inventory.getStorageUnitItems(0)[1].uid).toBe(2);
+        expect(inventory.getStorageUnitItems(0)[0]?.uid).toBe(0);
+        expect(inventory.getStorageUnitItems(0)[1]?.uid).toBe(2);
         inventory.depositToStorageUnit(0, [1]);
         const storage = inventory.get(0).storage!;
         for (let uid = 0; uid < 3; uid++) {
