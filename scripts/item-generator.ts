@@ -40,6 +40,7 @@ import {
 } from "./item-generator-types.js";
 import {
     exists,
+    getFileSha1,
     getFileSHA256,
     log,
     logOnce,
@@ -136,6 +137,7 @@ export class ItemGenerator {
     private csgoTranslationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
     private itemTranslationByLanguage: CS2ItemTranslationByLanguage = null!;
     private itemNames = new Map<number, string>();
+    private itemSetImage: Record<string, string | undefined> = null!;
     private itemSetItemKey: Record<string, string | undefined> = null!;
     private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
     private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
@@ -200,7 +202,7 @@ export class ItemGenerator {
         await this.parseCollectibles();
         await this.parseTools();
         await this.parseContainers();
-        await this.uploadAssets();
+        // await this.uploadAssets();
         await this.end();
     }
 
@@ -345,13 +347,22 @@ export class ItemGenerator {
             nameToken: `#Attrib_SprayTintValue_${id}`,
             hexColor: hex_color
         }));
+        this.itemSetImage = {};
         this.itemSetItemKey = Object.fromEntries(
-            Object.entries(this.gameItems.item_sets)
-                .map(([itemSetKey, { items }]) => {
-                    this.getCollectionImage(itemSetKey);
-                    return Object.keys(items).map((itemKey) => [itemKey, itemSetKey] as const);
-                })
-                .flat()
+            await Promise.all(
+                Object.entries(this.gameItems.item_sets)
+                    .map(async ([itemSetKey, { items }]) => {
+                        return await Promise.all(
+                            Object.keys(items).map(async (itemKey) => {
+                                if (this.itemSetImage[itemSetKey] === undefined) {
+                                    this.itemSetImage[itemSetKey] = await this.getCollectionImage(itemSetKey);
+                                }
+                                return [itemKey, itemSetKey] as const;
+                            })
+                        );
+                    })
+                    .flat()
+            )
         );
     }
 
@@ -1160,10 +1171,13 @@ export class ItemGenerator {
     }
 
     private async copyAndOptimizeImage(src: string, dest: string) {
+        dest = dest.includes("{sha1}") ? dest.replace("{sha1}", await getFileSha1(src)) : dest;
         await sharp(src).webp({ quality: OUTPUT_IMAGE_QUALITY }).toFile(join(OUTPUT_DIR, dest));
+        return dest;
     }
 
     private async copyAndOptimizeTextureImage(src: string, dest: string) {
+        dest = dest.includes("{sha1}") ? dest.replace("{sha1}", await getFileSha1(src)) : dest;
         const { data, info } = await sharp(src).removeAlpha().png().raw().toBuffer({ resolveWithObject: true });
         await sharp(data, {
             raw: { width: info.width, height: info.height, channels: 3 }
@@ -1171,6 +1185,7 @@ export class ItemGenerator {
             .resize(1024, 1024)
             .webp()
             .toFile(join(OUTPUT_DIR, dest));
+        return dest;
     }
 
     private getImagePath(path: string) {
@@ -1197,24 +1212,24 @@ export class ItemGenerator {
     }
 
     private async getImage(id: number, path: string) {
-        await this.copyAndOptimizeImage(this.getImagePath(path), `/images/${id}.webp`);
-        return undefined;
+        return await this.copyAndOptimizeImage(this.getImagePath(path), `/images/{sha1}.webp`);
     }
 
     private async getPaintImage(id: number, className: string | undefined, paintClassName: string | undefined) {
         const paths = PAINT_IMAGE_SUFFIXES.map((suffix) => [
             this.getPaintImagePath(className, paintClassName, suffix),
-            `/images/${id}_${suffix}.webp`
+            `/images/{sha1}_${suffix}.webp`
         ]);
         for (const [src, dest] of paths) {
             await this.copyAndOptimizeImage(src, dest);
         }
-        await this.copyAndOptimizeImage(paths[0][0], `/images/${id}.webp`);
-        return undefined;
+        return await this.copyAndOptimizeImage(paths[0][0], `/images/{sha1}.webp`);
     }
 
     private async getDefaultGraffitiImage(id: number, sticker_material: string, hexColor: string) {
-        const input = sharp(this.getImagePath(`econ/stickers/${sticker_material}`)).ensureAlpha();
+        const src = this.getImagePath(`econ/stickers/${sticker_material}`);
+        const dest = `/images/${await getFileSha1(src)}.webp`;
+        const input = sharp(src).ensureAlpha();
         const { width, height } = await input.metadata();
         assert(width && height);
         const color = {
@@ -1240,9 +1255,19 @@ export class ItemGenerator {
         }).png();
         const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
         const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
-        await sharp(coloredWithAlpha)
-            .webp()
-            .toFile(join(OUTPUT_DIR, `images/${id}.webp`));
+        await sharp(coloredWithAlpha).webp().toFile(join(OUTPUT_DIR, dest));
+        return dest;
+    }
+
+    private async getSpecialsImage(id: number, path?: string) {
+        if (path === undefined) {
+            return undefined;
+        }
+        const src = this.getImagePath(path);
+        if (await exists(src)) {
+            await this.copyAndOptimizeImage(src, `/images/{sha1}_rare.webp`);
+            return true;
+        }
         return undefined;
     }
 
@@ -1360,7 +1385,7 @@ export class ItemGenerator {
 
     private async getCollectionImage(name: string) {
         const src = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
-        await this.copyAndOptimizeImage(src, `/images/${name}.webp`);
+        return await this.copyAndOptimizeImage(src, `/images/{sha1}.webp`);
     }
 
     private getCollection(itemId: number, collection?: string) {
@@ -1370,6 +1395,7 @@ export class ItemGenerator {
             assert(itemSet.name, `Collection name not found for '${collection}'.`);
             this.tryAddTranslation(itemId, "collectionName", itemSet.name);
             this.tryAddTranslation(itemId, "collectionDesc", itemSet.set_description);
+            collection = this.itemSetImage[collection];
         }
         return { collection };
     }
@@ -1401,18 +1427,6 @@ export class ItemGenerator {
             }
         }
         return items;
-    }
-
-    private async getSpecialsImage(id: number, path?: string) {
-        if (path === undefined) {
-            return undefined;
-        }
-        const src = this.getImagePath(path);
-        if (await exists(src)) {
-            await this.copyAndOptimizeImage(src, `/images/${id}_rare.webp`);
-            return true;
-        }
-        return undefined;
     }
 
     private async findStickerMarkup(itemDef?: string, modelPath?: string) {

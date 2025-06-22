@@ -152,6 +152,13 @@ export async function getFileSHA256(filePath: string) {
     return hash.digest("hex").toUpperCase();
 }
 
+export async function getFileSha1(filePath: string) {
+    const hash = createHash("sha1");
+    const stream = createReadStream(filePath);
+    await pipeline(stream, hash);
+    return hash.digest("hex").toUpperCase();
+}
+
 export async function readFileOrDefault(path: string, fallback = "") {
     if (!(await exists(path))) {
         return fallback;
