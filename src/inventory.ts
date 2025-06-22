@@ -16,12 +16,12 @@ import {
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
     CS2_STICKER_WEAR_FACTOR
-} from "./economy-constants.js";
-import { CS2ItemType, type CS2ItemTypeValues, type CS2UnlockedItem } from "./economy-types.js";
-import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.js";
-import { resolveInventoryData } from "./inventory-upgrader.js";
-import { CS2Team, type CS2TeamValues } from "./teams.js";
-import { type Interface, type MapValue, type RecordValue, assert, ensure, float } from "./utils.js";
+} from "./economy-constants.ts";
+import { CS2ItemType, type CS2ItemTypeValues, type CS2UnlockedItem } from "./economy-types.ts";
+import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
+import { resolveInventoryData } from "./inventory-upgrader.ts";
+import { CS2Team, type CS2TeamValues } from "./teams.ts";
+import { type Interface, type MapValue, type RecordValue, assert, ensure, float } from "./utils.ts";
 
 export interface CS2BaseInventoryItem {
     containerId?: number;
@@ -97,7 +97,7 @@ export class CS2Inventory {
     readonly options: Readonly<CS2InventoryOptions>;
 
     static parse(stringValue: string | undefined | null, economy?: CS2EconomyInstance): CS2InventoryData | undefined {
-        return resolveInventoryData(stringValue, economy);
+        return resolveInventoryData(stringValue ?? undefined, economy);
     }
 
     constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec> = {}) {

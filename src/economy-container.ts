@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type EnumValues } from "./utils.js";
+import { type EnumValues } from "./utils.ts";
 
 export const CS2Rarity = {
     Common: "common",
@@ -31,10 +31,19 @@ export const CS2RarityColor = {
 
 export type CS2RarityColorValues = EnumValues<typeof CS2RarityColor>;
 
-export const CS2_RARITIES = Object.values(CS2Rarity);
-export const CS2_RARITY_ORDER = [...CS2_RARITIES, "special"] as const;
+export const CS2_RARITIES: ("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[] = Object.values(CS2Rarity);
+export const CS2_RARITY_ORDER: readonly [...("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[], "special"] = [...CS2_RARITIES, "special"] as const;
 
-export const CS2RarityColorName = {
+export const CS2RarityColorName: {
+    readonly "#ded6cc": "common";
+    readonly "#b0c3d9": "common";
+    readonly "#5e98d9": "uncommon";
+    readonly "#4b69ff": "rare";
+    readonly "#8847ff": "mythical";
+    readonly "#d32ce6": "legendary";
+    readonly "#eb4b4b": "ancient";
+    readonly "#e4ae39": "immortal";
+} = {
     [CS2RarityColor.Default]: CS2Rarity.Common,
     [CS2RarityColor.Common]: CS2Rarity.Common,
     [CS2RarityColor.Uncommon]: CS2Rarity.Uncommon,
@@ -45,7 +54,16 @@ export const CS2RarityColorName = {
     [CS2RarityColor.Immortal]: CS2Rarity.Immortal
 } as const;
 
-export const CS2RaritySoundName = {
+export const CS2RaritySoundName: {
+    readonly "#ded6cc": "common";
+    readonly "#b0c3d9": "common";
+    readonly "#5e98d9": "uncommon";
+    readonly "#4b69ff": "rare";
+    readonly "#8847ff": "mythical";
+    readonly "#d32ce6": "legendary";
+    readonly "#eb4b4b": "ancient";
+    readonly "#e4ae39": "ancient";
+} = {
     [CS2RarityColor.Default]: CS2Rarity.Common,
     [CS2RarityColor.Common]: CS2Rarity.Common,
     [CS2RarityColor.Uncommon]: CS2Rarity.Uncommon,
@@ -58,7 +76,16 @@ export const CS2RaritySoundName = {
 
 export type CS2RaritySoundNameValues = EnumValues<typeof CS2RaritySoundName>;
 
-export const CS2RarityColorOrder = {
+export const CS2RarityColorOrder: {
+    readonly "#ded6cc": 1;
+    readonly "#b0c3d9": 1;
+    readonly "#5e98d9": 2;
+    readonly "#4b69ff": 3;
+    readonly "#8847ff": 4;
+    readonly "#d32ce6": 5;
+    readonly "#eb4b4b": 6;
+    readonly "#e4ae39": 7;
+} = {
     [CS2RarityColor.Default]: 1,
     [CS2RarityColor.Common]: 1,
     [CS2RarityColor.Uncommon]: 2,
