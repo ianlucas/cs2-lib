@@ -23,7 +23,7 @@
         "dist/translations"
     ],
     "scripts": {
-        "docs": "typedoc --out docs src/index.ts",
+        "docs": "typedoc",
         "format": "prettier . --write",
         "prepack": "rolldown -c rolldown.config.ts",
         "test": "vitest --run --testTimeout 120000",

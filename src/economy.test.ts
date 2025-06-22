@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from "vitest";
-import { english } from "../src/translations";
-import { CS2Economy, CS2EconomyItem } from "./economy";
-import { CS2RarityColor } from "./economy-container";
-import { CS2Item } from "./economy-types";
-import { CS2_ITEMS } from "./items";
+import { english } from "../src/translations/english.js";
+import { CS2RarityColor } from "./economy-container.js";
+import { type CS2Item } from "./economy-types.js";
+import { CS2Economy, CS2EconomyItem } from "./economy.js";
+import { CS2_ITEMS } from "./items.js";
 
 describe("CS2Economy", () => {
     test("use should add items to the economy", () => {
@@ -16,7 +16,7 @@ describe("CS2Economy", () => {
             { id: 1, rarity: CS2RarityColor.Common, type: "weapon" },
             { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
             { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
-        ];
+        ] as const;
         CS2Economy.use({
             items,
             language: {
@@ -26,9 +26,9 @@ describe("CS2Economy", () => {
             }
         });
         expect(CS2Economy.items.size).toBe(3);
-        expect(CS2Economy.items.get(1)).toEqual(new CS2EconomyItem(CS2Economy, items[0], { name: "Item 1" }));
-        expect(CS2Economy.items.get(2)).toEqual(new CS2EconomyItem(CS2Economy, items[1], { name: "Item 2" }));
-        expect(CS2Economy.items.get(3)).toEqual(new CS2EconomyItem(CS2Economy, items[2], { name: "Item 3" }));
+        expect(CS2Economy.items.get(1)).toEqual(new CS2EconomyItem(CS2Economy, items[0]!, { name: "Item 1" }));
+        expect(CS2Economy.items.get(2)).toEqual(new CS2EconomyItem(CS2Economy, items[1]!, { name: "Item 2" }));
+        expect(CS2Economy.items.get(3)).toEqual(new CS2EconomyItem(CS2Economy, items[2]!, { name: "Item 3" }));
     });
 
     test("getById should return the item with the given id", () => {
