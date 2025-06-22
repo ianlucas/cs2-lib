@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { fail } from "./utils.js";
+import { fail } from "./utils.ts";
 
 type CS2KeyValue3Value = null | string | boolean | number | CS2KeyValue3Value[] | { [key: string]: CS2KeyValue3Value };
 
