@@ -41,7 +41,7 @@ import {
     CS2_TEAMS_CT,
     CS2_TEAMS_T,
     CS2_WEAR_FACTOR
-} from "./economy-constants.js";
+} from "./economy-constants.ts";
 import {
     CS2RarityColorName,
     CS2RarityColorOrder,
@@ -53,7 +53,7 @@ import {
     CS2_STATTRAK_ODD,
     randomFloat,
     randomInt
-} from "./economy-container.js";
+} from "./economy-container.ts";
 import {
     CS2ContainerType,
     type CS2ContainerTypeValues,
@@ -67,9 +67,9 @@ import {
     CS2ItemWear,
     type CS2ItemWearValues,
     type CS2UnlockedItem
-} from "./economy-types.js";
-import { type CS2TeamValues } from "./teams.js";
-import { type Interface, assert, compare, ensure, safe } from "./utils.js";
+} from "./economy-types.ts";
+import { type CS2TeamValues } from "./teams.ts";
+import { type Interface, assert, compare, ensure, safe } from "./utils.ts";
 
 type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2TeamValues };
 
@@ -89,10 +89,10 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
 export class CS2EconomyInstance {
     baseUrl = "https://cdn.cstrike.app";
     defaultImageExtension = "webp";
-    categories = new Set<string>();
-    items = new Map<number, CS2EconomyItem>();
+    categories: Set<String> = new Set<string>();
+    items: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
     itemsAsArray: CS2EconomyItem[] = [];
-    stickers = new Set<CS2EconomyItem>();
+    stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
     use({
         assetsBaseUrl,
@@ -104,7 +104,7 @@ export class CS2EconomyInstance {
         assetsDefaultImageExtension?: string;
         items: CS2Item[];
         language: CS2ItemTranslationMap;
-    }) {
+    }): void {
         this.baseUrl = assetsBaseUrl ?? this.baseUrl;
         this.defaultImageExtension = assetsDefaultImageExtension ?? this.defaultImageExtension;
         this.categories.clear();
@@ -229,7 +229,7 @@ export class CS2EconomyInstance {
         }
     }
 
-    getStickerCategories(): string[] {
+    getStickerCategories(): String[] {
         return Array.from(this.categories).sort();
     }
 
@@ -742,4 +742,4 @@ export class CS2EconomyItem
     }
 }
 
-export const CS2Economy = new CS2EconomyInstance();
+export const CS2Economy: CS2EconomyInstance = new CS2EconomyInstance();
