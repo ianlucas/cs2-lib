@@ -81,7 +81,7 @@ jobs:
           path: cs2-lib-assets
 
       - name: Sync new assets to repo
-        run: rsync -av --delete scripts/workdir/output/ cs2-lib-assets/
+        run: rsync -av scripts/workdir/output/ cs2-lib-assets/
 
       - name: Commit and Push asset changes
         id: commit_assets
