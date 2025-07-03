@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { expect, test } from "vitest";
-import { CS2_ACTIVE_MAP_POOL } from "./maps.js";
-import { CS2Veto, CS2VetoAction } from "./veto.js";
+import { CS2_ACTIVE_MAP_POOL } from "./maps.ts";
+import { CS2Veto, CS2VetoAction } from "./veto.ts";
 
 test("bo1", () => {
     const veto = new CS2Veto("bo1", CS2_ACTIVE_MAP_POOL);

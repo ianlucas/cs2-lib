@@ -9,13 +9,13 @@ import {
     CS2_MAX_PATCHES,
     CS2_MAX_STATTRAK,
     CS2_MIN_KEYCHAIN_SEED
-} from "./economy-constants.js";
-import { CS2Economy } from "./economy.js";
-import { CS2Inventory } from "./inventory.js";
-import { CS2_ITEMS } from "./items.js";
-import { CS2Team } from "./teams.js";
-import { english } from "./translations/english.js";
-import { ensure, float } from "./utils.js";
+} from "./economy-constants.ts";
+import { CS2Economy } from "./economy.ts";
+import { CS2Inventory } from "./inventory.ts";
+import { CS2_ITEMS } from "./items.ts";
+import { CS2Team } from "./teams.ts";
+import { english } from "./translations/english.ts";
+import { ensure, float } from "./utils.ts";
 
 const AK47_ID = 4;
 const ALLU_COLOGNE_2015_ID = 2268;

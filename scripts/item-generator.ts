@@ -11,24 +11,25 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
-import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
-import { CS2RarityColorValues } from "../src/economy-container.js";
+import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.ts";
+import { CS2RarityColorValues } from "../src/economy-container.ts";
 import {
     CS2ContainerType,
+    CS2Item,
     CS2ItemTeam,
     CS2ItemTranslation,
     CS2ItemTranslationByLanguage,
     CS2ItemType,
     CS2ItemTypeValues,
     CS2StickerMarkup
-} from "../src/economy-types.js";
-import { CS2KeyValues } from "../src/keyvalues.js";
-import { CS2KeyValues3 } from "../src/keyvalues3.js";
-import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
-import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.js";
-import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.js";
-import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
-import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.js";
+} from "../src/economy-types.ts";
+import { CS2KeyValues } from "../src/keyvalues.ts";
+import { CS2KeyValues3 } from "../src/keyvalues3.ts";
+import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
+import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
+import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
+import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
 import {
     CompositeMaterialData,
     CS2ExportItem,
@@ -37,10 +38,11 @@ import {
     CS2Language,
     MaterialData,
     StickerMarkupData
-} from "./item-generator-types.js";
+} from "./item-generator-types.ts";
 import {
     exists,
-    getFileSHA256,
+    getFileSha256,
+    getFilesSha256,
     log,
     logOnce,
     prependHash,
@@ -51,14 +53,13 @@ import {
     warning,
     write,
     writeJson
-} from "./utils.js";
+} from "./utils.ts";
 
 const AGENTS_SOUNDEVENTS_PATH = join(CS2_CSGO_PATH, "soundevents/vo/agents");
 const GAME_IMAGES_DIR = join(CS2_CSGO_PATH, "panorama/images");
 const GAME_ITEMS_PATH = join(CS2_CSGO_PATH, "scripts/items/items_game.txt");
 const GAME_RESOURCE_DIR = join(CS2_CSGO_PATH, "resource");
 const OUTPUT_DIR = join(WORKDIR_DIR, "output");
-const ADDON_IMAGES_DIR = join(SCRIPTS_DIR, "images");
 
 const ITEM_IDS_JSON_PATH = "scripts/data/items-ids.json";
 const ITEMS_JSON_PATH = "scripts/data/items.json";
@@ -86,7 +87,7 @@ const REMOVE_KEYCHAIN_TOOL_INDEX = "65";
 const OUTPUT_IMAGE_QUALITY = 95;
 const DECOMPILER_DATA_SEPARATOR = `--- Data for block "DATA" ---`;
 
-export class ItemHelper extends Map<number, any> {
+export class ItemHelper extends Map<number, CS2Item> {
     constructor() {
         super(readJson<any[]>(ITEMS_JSON_PATH, []).map((item) => [item.id, item]));
     }
@@ -136,31 +137,22 @@ export class ItemGenerator {
     private csgoTranslationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
     private itemTranslationByLanguage: CS2ItemTranslationByLanguage = null!;
     private itemNames = new Map<number, string>();
+    private itemSetImage: Record<string, string | undefined> = null!;
     private itemSetItemKey: Record<string, string | undefined> = null!;
     private itemsRaritiesColorHex: typeof this.raritiesColorHex = null!;
     private paintKitsRaritiesColorHex: typeof this.raritiesColorHex = null!;
     private raritiesColorHex: Record<string, string | undefined> = null!;
+    private staticAssets: Record<string, string | undefined> = null!;
 
     private containerSpecialsHelper = new ContainerSpecialsHelper();
     private itemIdentityHelper = new ItemIdentityHelper();
     private itemHelper = new ItemHelper();
 
     private cs2 = new CS2();
-    private sz = BunnyStorageSDK.zone.connect_with_accesskey(
-        BunnyStorageSDK.regions.StorageRegion.NewYork,
-        ensure(STORAGE_ZONE),
-        ensure(STORAGE_ACCESS_KEY)
-    );
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
     private items = new Map<number, CS2ExtendedItem>();
-
-    private cdn = {
-        checksums: {} as Record<string, string>,
-        models: [] as string[],
-        textures: [] as number[]
-    };
 
     private stickerMarkup: CS2StickerMarkup = {};
 
@@ -206,33 +198,33 @@ export class ItemGenerator {
 
     async start() {
         await rmIfExists(OUTPUT_DIR);
-        const imagesDir = join(OUTPUT_DIR, "images");
-        const texturesDir = join(OUTPUT_DIR, "textures");
-        await mkdir(imagesDir, { recursive: true });
-        await mkdir(texturesDir, { recursive: true });
-        const filenames = await readdir(ADDON_IMAGES_DIR);
-        for (const filename of filenames) {
-            const path = join(ADDON_IMAGES_DIR, filename);
-            if (filename.endsWith(".png")) {
-                await this.copyAndOptimizeImage(path, `/images/${filename.replace(".png", ".webp")}`);
-            } else {
-                await copyFile(path, join(imagesDir, filename));
+        this.staticAssets = {};
+        const folders = ["images", "models", "textures"];
+        for (const folder of folders) {
+            const directory = join(SCRIPTS_DIR, folder);
+            const outputDirectory = join(OUTPUT_DIR, folder);
+            await mkdir(outputDirectory, { recursive: true });
+            if (folder === "textures") {
+                continue;
+            }
+            const filenames = await readdir(directory);
+            for (const filename of filenames) {
+                const path = join(directory, filename);
+                if (filename.endsWith(".png")) {
+                    const key = `/images/${filename}`;
+                    const value = await this.copyAndOptimizeImage(path, "/images/{sha256}.webp");
+                    this.staticAssets[key] = value;
+                } else if (filename.endsWith(".glb")) {
+                    const sha256 = await getFileSha256(path);
+                    const key = `/models/${filename}`;
+                    const value = `/models/${sha256}.glb`;
+                    await copyFile(path, join(OUTPUT_DIR, value));
+                    this.staticAssets[key] = value;
+                } else {
+                    await copyFile(path, join(outputDirectory, filename));
+                }
             }
         }
-        await this.mapStorageFiles("/images", () => undefined);
-        this.cdn.textures = await this.mapStorageFiles("/textures", ({ objectName }) => {
-            return Number(objectName.split(".")[0]);
-        });
-        this.cdn.models = await this.mapStorageFiles("/models", ({ objectName }) => {
-            return objectName.split(".")[0];
-        });
-    }
-
-    async mapStorageFiles<T>(path: string, callbackfn: (value: BunnyStorageSDK.StorageFile) => T): Promise<T[]> {
-        return (await BunnyStorageSDK.file.list(this.sz, path)).map((file) => {
-            this.cdn.checksums[`${file.path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`] = file.checksum ?? "";
-            return callbackfn(file);
-        });
     }
 
     async readCsgoLanguageFiles(include?: string[]) {
@@ -345,13 +337,22 @@ export class ItemGenerator {
             nameToken: `#Attrib_SprayTintValue_${id}`,
             hexColor: hex_color
         }));
+        this.itemSetImage = {};
         this.itemSetItemKey = Object.fromEntries(
-            Object.entries(this.gameItems.item_sets)
-                .map(([itemSetKey, { items }]) => {
-                    this.getCollectionImage(itemSetKey);
-                    return Object.keys(items).map((itemKey) => [itemKey, itemSetKey] as const);
-                })
-                .flat()
+            (
+                await Promise.all(
+                    Object.entries(this.gameItems.item_sets).map(async ([itemSetKey, { items }]) => {
+                        return await Promise.all(
+                            Object.keys(items).map(async (itemKey) => {
+                                if (this.itemSetImage[itemSetKey] === undefined) {
+                                    this.itemSetImage[itemSetKey] = await this.getCollectionImage(itemSetKey);
+                                }
+                                return [itemKey, itemSetKey] as const;
+                            })
+                        );
+                    })
+                )
+            ).flat()
         );
     }
 
@@ -379,7 +380,6 @@ export class ItemGenerator {
                 def: Number(itemDef),
                 descToken: item_description,
                 free: true,
-                glb: this.cdn.models.includes(itemDef) || undefined,
                 id,
                 image:
                     image_inventory !== undefined
@@ -387,6 +387,7 @@ export class ItemGenerator {
                         : await this.getBaseImage(id, name),
                 index: undefined,
                 model: name.replace("weapon_", ""),
+                modelBinary: this.staticAssets[`/models/${itemDef}.glb`],
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
                 teams,
@@ -456,7 +457,10 @@ export class ItemGenerator {
                 descToken: item_description,
                 free: baseitem === "1" ? true : undefined,
                 id,
-                image: image_inventory !== undefined ? await this.getImage(id, image_inventory) : `/${name}.webp`,
+                image:
+                    image_inventory !== undefined
+                        ? await this.getImage(id, image_inventory)
+                        : this.requireStaticAsset(`/images/${name}.png`),
                 index: baseitem === "1" ? undefined : 0,
                 model: name,
                 nameToken: item_name,
@@ -489,19 +493,19 @@ export class ItemGenerator {
                     base: undefined,
                     baseId: baseItem.id,
                     free: undefined,
-                    glb: undefined,
                     id,
                     image: await this.getPaintImage(id, baseItem.className, paintKit.className),
                     index: Number(paintKit.index),
                     legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
+                    modelBinary: undefined,
                     rarity: this.getRarityColorHex(
                         MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
                             ? [baseItem.rarity, paintKit.rarityColorHex]
                             : [itemKey, paintKit.rarityColorHex]
                     ),
-                    texture:
+                    textureImage:
                         (await this.getPaintTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
-                        (this.cdn.textures.includes(id) || undefined),
+                        this.itemHelper.get(id)?.textureImage,
                     wearMax: paintKit.wearMax,
                     wearMin: paintKit.wearMin
                 });
@@ -944,7 +948,7 @@ export class ItemGenerator {
                     image: await this.getImage(id, image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
                     rarity: this.getRarityColorHex(["common"]),
-                    specials: this.itemHelper.get(id)?.specials ?? specials,
+                    specials: specials ?? this.itemHelper.get(id)?.specials,
                     specialsImage: await this.getSpecialsImage(id, image_unusual_item),
                     statTrakless: containsMusicKit && !containsStatTrak ? true : undefined,
                     statTrakOnly: containsMusicKit && containsStatTrak ? true : undefined,
@@ -956,20 +960,25 @@ export class ItemGenerator {
     }
 
     private async uploadAssets() {
-        const directories = ["images", "textures"];
+        if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
+            return log("Skipping asset upload.");
+        }
+        const sz = BunnyStorageSDK.zone.connect_with_accesskey(
+            BunnyStorageSDK.regions.StorageRegion.NewYork,
+            STORAGE_ZONE,
+            STORAGE_ACCESS_KEY
+        );
+        const folders = ["images", "textures", "models"];
         const queue = new PromiseQueue(40);
-        for (const directory of directories) {
-            const assetsPath = join(OUTPUT_DIR, directory);
-            for (const file of await readdir(assetsPath)) {
-                const assetPath = join(assetsPath, file);
-                const cdnPath = `/${directory}/${file}`;
-                if (this.cdn.checksums[cdnPath] !== (await getFileSHA256(assetPath))) {
+        for (const folder of folders) {
+            const fileChecksums = await this.fetchStorageFileChecksums(sz, `/${folder}`);
+            const assetsPath = join(OUTPUT_DIR, folder);
+            for (const filename of await readdir(assetsPath)) {
+                const assetPath = join(assetsPath, filename);
+                const cdnPath = `/${folder}/${filename}`;
+                if (fileChecksums[cdnPath] === undefined) {
                     queue.push(async () => {
-                        await BunnyStorageSDK.file.upload(
-                            this.sz,
-                            cdnPath,
-                            Readable.toWeb(createReadStream(assetPath))
-                        );
+                        await BunnyStorageSDK.file.upload(sz, cdnPath, Readable.toWeb(createReadStream(assetPath)));
                     });
                 }
             }
@@ -1011,6 +1020,17 @@ export class ItemGenerator {
         }
 
         warning("Script completed.");
+    }
+
+    private async fetchStorageFileChecksums(
+        sz: BunnyStorageSDK.StorageZone,
+        path: string
+    ): Promise<Record<string, string | undefined>> {
+        return Object.fromEntries(
+            (await BunnyStorageSDK.file.list(sz, path)).map((file) => {
+                return [`${file.path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`, file.checksum?.toLowerCase()];
+            })
+        );
     }
 
     private getRarityColorHex(keywords: (string | undefined)[], defaultsTo?: string) {
@@ -1159,18 +1179,20 @@ export class ItemGenerator {
         return category;
     }
 
+    private async getDestFilename(src: string, dest: string) {
+        return dest.includes("{sha256}") ? dest.replace("{sha256}", await getFileSha256(src)) : dest;
+    }
+
     private async copyAndOptimizeImage(src: string, dest: string) {
-        await sharp(src).webp({ quality: OUTPUT_IMAGE_QUALITY }).toFile(join(OUTPUT_DIR, dest));
+        const filename = await this.getDestFilename(src, dest);
+        await sharp(src).webp({ quality: OUTPUT_IMAGE_QUALITY }).toFile(join(OUTPUT_DIR, filename));
+        return filename;
     }
 
     private async copyAndOptimizeTextureImage(src: string, dest: string) {
-        const { data, info } = await sharp(src).removeAlpha().png().raw().toBuffer({ resolveWithObject: true });
-        await sharp(data, {
-            raw: { width: info.width, height: info.height, channels: 3 }
-        })
-            .resize(1024, 1024)
-            .webp()
-            .toFile(join(OUTPUT_DIR, dest));
+        const filename = await this.getDestFilename(src, dest);
+        await sharp(src).removeAlpha().resize(1024, 1024).webp().toFile(join(OUTPUT_DIR, filename));
+        return filename;
     }
 
     private getImagePath(path: string) {
@@ -1182,6 +1204,10 @@ export class ItemGenerator {
             GAME_IMAGES_DIR,
             `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase()
         );
+    }
+
+    private requireStaticAsset(path: string) {
+        return ensure(this.staticAssets[path], `Unable to find '${path}' static asset.`);
     }
 
     private async isImageValid(path: string) {
@@ -1197,24 +1223,26 @@ export class ItemGenerator {
     }
 
     private async getImage(id: number, path: string) {
-        await this.copyAndOptimizeImage(this.getImagePath(path), `/images/${id}.webp`);
-        return undefined;
+        return await this.copyAndOptimizeImage(this.getImagePath(path), `/images/{sha256}.webp`);
     }
 
     private async getPaintImage(id: number, className: string | undefined, paintClassName: string | undefined) {
         const paths = PAINT_IMAGE_SUFFIXES.map((suffix) => [
             this.getPaintImagePath(className, paintClassName, suffix),
-            `/images/${id}_${suffix}.webp`
+            suffix
         ]);
-        for (const [src, dest] of paths) {
-            await this.copyAndOptimizeImage(src, dest);
+        const sha256 = await getFilesSha256(paths.map((path) => path[0]));
+        const base = `/images/${sha256}`;
+        for (const [src, suffix] of paths) {
+            await this.copyAndOptimizeImage(src, `${base}_${suffix}.webp`);
         }
-        await this.copyAndOptimizeImage(paths[0][0], `/images/${id}.webp`);
-        return undefined;
+        return await this.copyAndOptimizeImage(paths[0][0], `${base}.webp`);
     }
 
     private async getDefaultGraffitiImage(id: number, sticker_material: string, hexColor: string) {
-        const input = sharp(this.getImagePath(`econ/stickers/${sticker_material}`)).ensureAlpha();
+        const src = this.getImagePath(`econ/stickers/${sticker_material}`);
+        const dest = `/images/${await getFileSha256(src)}.webp`;
+        const input = sharp(src).ensureAlpha();
         const { width, height } = await input.metadata();
         assert(width && height);
         const color = {
@@ -1240,10 +1268,19 @@ export class ItemGenerator {
         }).png();
         const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
         const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
-        await sharp(coloredWithAlpha)
-            .webp()
-            .toFile(join(OUTPUT_DIR, `images/${id}.webp`));
-        return undefined;
+        await sharp(coloredWithAlpha).webp().toFile(join(OUTPUT_DIR, dest));
+        return dest;
+    }
+
+    private async getSpecialsImage(id: number, path?: string) {
+        if (path === undefined) {
+            return this.requireStaticAsset("/images/default_rare_item.png");
+        }
+        const src = this.getImagePath(path);
+        if (await exists(src)) {
+            return await this.copyAndOptimizeImage(src, `/images/{sha256}_rare.webp`);
+        }
+        return this.requireStaticAsset("/images/default_rare_item.png");
     }
 
     private getPaintAltName(className: string) {
@@ -1360,18 +1397,20 @@ export class ItemGenerator {
 
     private async getCollectionImage(name: string) {
         const src = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
-        await this.copyAndOptimizeImage(src, `/images/${name}.webp`);
+        return await this.copyAndOptimizeImage(src, `/images/{sha256}.webp`);
     }
 
     private getCollection(itemId: number, collection?: string) {
+        let collectionImage: string | undefined = undefined;
         if (collection !== undefined) {
             const itemSet = this.gameItems.item_sets[collection];
             assert(itemSet, `Collection '${collection}' not found.`);
             assert(itemSet.name, `Collection name not found for '${collection}'.`);
             this.tryAddTranslation(itemId, "collectionName", itemSet.name);
             this.tryAddTranslation(itemId, "collectionDesc", itemSet.set_description);
+            collectionImage = this.itemSetImage[collection];
         }
-        return { collection };
+        return { collection, collectionImage };
     }
 
     private getPaintCollection(itemId: number, itemKey: string) {
@@ -1401,18 +1440,6 @@ export class ItemGenerator {
             }
         }
         return items;
-    }
-
-    private async getSpecialsImage(id: number, path?: string) {
-        if (path === undefined) {
-            return undefined;
-        }
-        const src = this.getImagePath(path);
-        if (await exists(src)) {
-            await this.copyAndOptimizeImage(src, `/images/${id}_rare.webp`);
-            return true;
-        }
-        return undefined;
     }
 
     private async findStickerMarkup(itemDef?: string, modelPath?: string) {
@@ -1509,11 +1536,10 @@ export class ItemGenerator {
                 decompile: true,
                 output: DECOMPILED_DIR
             });
-            await this.copyAndOptimizeTextureImage(
+            return await this.copyAndOptimizeTextureImage(
                 join(DECOMPILED_DIR, texturePath.replace(".vtex", ".png")),
-                `/textures/${id}.webp`
+                `/textures/{sha256}.webp`
             );
-            return true;
         } catch (error) {
             logOnce(`Unable to get paint texture for '${materialName}'`);
             return undefined;

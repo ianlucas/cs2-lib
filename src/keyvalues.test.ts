@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { expect, test } from "vitest";
-import { CS2KeyValues } from "./keyvalues.js";
+import { CS2KeyValues } from "./keyvalues.ts";
 
 test("key value pair", () => {
     expect(CS2KeyValues.parse(`"hello" "world!"`)).toStrictEqual({
