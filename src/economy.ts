@@ -225,7 +225,7 @@ export class CS2EconomyInstance {
         }
     }
 
-    getStickerCategories(): String[] {
+    getStickerCategories(): string[] {
         return Array.from(this.categories).sort();
     }
 
