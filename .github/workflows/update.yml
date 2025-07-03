@@ -85,7 +85,6 @@ jobs:
 
       - name: Commit and Push asset changes
         id: commit_assets
-        if: steps.commit_main.outputs.changes == 'true'
         working-directory: ./cs2-lib-assets
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
