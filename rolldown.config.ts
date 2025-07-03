@@ -4,7 +4,12 @@ import del from "rollup-plugin-delete";
 
 const options: RolldownOptions = {
     input: ["src/index.ts", "src/translations/index.ts"],
-    plugins: [del({ targets: ["dist"] }), dts()],
+    plugins: [
+        del({ targets: ["dist"] }),
+        dts({
+            isolatedDeclarations: false
+        })
+    ],
     treeshake: true,
     output: {
         dir: "dist",
