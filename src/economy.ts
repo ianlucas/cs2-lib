@@ -88,8 +88,8 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
 
 export class CS2EconomyInstance {
     baseUrl = "https://cdn.cstrike.app";
-    categories = new Set<string>();
-    items = new Map<number, CS2EconomyItem>();
+    categories: Set<string> = new Set<string>();
+    items: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
@@ -620,9 +620,8 @@ export class CS2EconomyItem
     getSpecialsImage(): string {
         this.expectContainer();
         assert(this.rawSpecials);
-        return this.specialsImage !== undefined
-            ? `${this.economy.baseUrl}${this.specialsImage}`
-            : `${this.economy.baseUrl}/images/default_rare_item.webp`;
+        assert(this.specialsImage);
+        return `${this.economy.baseUrl}${this.specialsImage}`;
     }
 
     getTextureImage(): string {
