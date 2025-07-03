@@ -17,7 +17,8 @@ export const DECOMPILED_DIR = join(WORKDIR_DIR, "decompiled");
 export const ASSETS_MANIFEST_PATH = join(SCRIPTS_DIR, "cs2.manifest");
 export const DEPOT_FILELIST_PATH = join(SCRIPTS_DIR, "cs2.depot");
 export const PAK_FILELIST_PATH = join(WORKDIR_DIR, "cs2_pak.depot");
-export const CSGO_PAK_DIR_PATH = join(CS2_CSGO_PATH, "pak01_dir.vpk");
+export const DEPOT_CSGO_PATH = join(WORKDIR_DIR, "game/csgo");
+export const CSGO_PAK_DIR_PATH = join(DEPOT_CSGO_PATH, "pak01_dir.vpk");
 
 const DEPOT_SUCCESS_RE = /100[,.]00%/;
 const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
@@ -62,7 +63,7 @@ export class CS2 {
     }
 
     private async browseRequiredCsgoPakDirParts() {
-        log("Browsering required 'pak01_dir.vpk' parts...");
+        log("Checking required 'pak01_dir.vpk' parts...");
         const vpks = new Set<string>(["game/csgo/steam.inf"]);
         const output = await readProcess(
             vrfDecompiler({
@@ -93,8 +94,8 @@ export class CS2 {
     }
 
     private async downloadCsgoPakDirParts() {
-        log("Downloading packages...");
         await this.browseRequiredCsgoPakDirParts();
+        log("Downloading packages...");
         const output = await readProcess(
             depotDownloader({
                 app: APP_ID,

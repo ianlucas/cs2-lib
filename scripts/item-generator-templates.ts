@@ -11,7 +11,7 @@ const banner = `/*--------------------------------------------------------------
 export function useItemsTemplate(items: unknown) {
     return `${banner}
 
-import type { CS2Item } from "./economy-types.js";
+import type { CS2Item } from "./economy-types.ts";
 
 // @generated
 // @ts-ignore
@@ -21,7 +21,7 @@ export const CS2_ITEMS: CS2Item[] = ${JSON.stringify(items)};`;
 export function useStickerMarkupTemplate(stickerMarkup: unknown) {
     return `${banner}
 
-import type { CS2StickerMarkup } from "./economy-types.js";
+import type { CS2StickerMarkup } from "./economy-types.ts";
 
 // @generated
 // @ts-ignore
@@ -31,7 +31,7 @@ export const CS2_STICKER_MARKUP: CS2StickerMarkup = ${JSON.stringify(stickerMark
 export function useTranslationTemplate(language: string, tokens: unknown) {
     return `${banner}
 
-import type { CS2ItemTranslationMap } from "../economy-types.js";
+import type { CS2ItemTranslationMap } from "../economy-types.ts";
 
 // @generated
 // @ts-ignore

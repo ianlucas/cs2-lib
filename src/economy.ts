@@ -88,25 +88,21 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
 
 export class CS2EconomyInstance {
     baseUrl = "https://cdn.cstrike.app";
-    defaultImageExtension = "webp";
-    categories: Set<String> = new Set<string>();
+    categories: Set<string> = new Set<string>();
     items: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
     use({
         assetsBaseUrl,
-        assetsDefaultImageExtension,
         items,
         language
     }: {
         assetsBaseUrl?: string;
-        assetsDefaultImageExtension?: string;
         items: CS2Item[];
         language: CS2ItemTranslationMap;
     }): void {
         this.baseUrl = assetsBaseUrl ?? this.baseUrl;
-        this.defaultImageExtension = assetsDefaultImageExtension ?? this.defaultImageExtension;
         this.categories.clear();
         this.items.clear();
         this.stickers.clear();
@@ -280,24 +276,25 @@ export class CS2EconomyItem
     category: string | undefined;
     collection: string | undefined;
     collectionDesc: string | undefined;
+    collectionImage: string | undefined;
     collectionName: string | undefined;
     containerType: CS2ContainerTypeValues | undefined;
     def: number | undefined;
     desc: string | undefined;
     free: boolean | undefined;
-    glb: boolean | undefined;
     id: number = null!;
     image: string | undefined;
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
     model: string | undefined;
+    modelBinary: string | undefined;
     name: string = null!;
     rarity: CS2RarityColorValues = null!;
-    specialsImage: boolean | undefined;
+    specialsImage: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
-    texture: boolean | undefined;
+    textureImage: string | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemTypeValues = null!;
@@ -601,46 +598,39 @@ export class CS2EconomyItem
     }
 
     getImage(wear?: number): string {
+        assert(this.image);
         if (this.hasWear() && wear !== undefined) {
+            const url = `${this.economy.baseUrl}${this.image}`;
             switch (true) {
                 case wear < 1 / 3:
-                    return `${this.economy.baseUrl}/images/${this.id}_light.${this.economy.defaultImageExtension}`;
+                    return url.replace(".webp", "_light.webp");
                 case wear < 2 / 3:
-                    return `${this.economy.baseUrl}/images/${this.id}_medium.${this.economy.defaultImageExtension}`;
+                    return url.replace(".webp", "_medium.webp");
                 default:
-                    return `${this.economy.baseUrl}/images/${this.id}_heavy.${this.economy.defaultImageExtension}`;
+                    return url.replace(".webp", "_heavy.webp");
             }
         }
-        if (this.image === undefined) {
-            return `${this.economy.baseUrl}/images/${this.id}.${this.economy.defaultImageExtension}`;
-        }
-        if (this.image.charAt(0) === "/") {
-            return `${this.economy.baseUrl}/images${this.image}`;
-        }
-        return this.image;
+        return `${this.economy.baseUrl}${this.image}`;
     }
 
     getCollectionImage(): string {
-        return `${this.economy.baseUrl}/images/${ensure(this.collection)}.${this.economy.defaultImageExtension}`;
+        return `${this.economy.baseUrl}${this.collectionImage}`;
     }
 
     getSpecialsImage(): string {
         this.expectContainer();
         assert(this.rawSpecials);
-        return this.specialsImage
-            ? `${this.economy.baseUrl}/images/${this.id}_rare.${this.economy.defaultImageExtension}`
-            : `${this.economy.baseUrl}/images/default_rare_item.${this.economy.defaultImageExtension}`;
+        assert(this.specialsImage);
+        return `${this.economy.baseUrl}${this.specialsImage}`;
     }
 
     getTextureImage(): string {
-        assert(this.texture);
-        return `${this.economy.baseUrl}/textures/${this.id}.webp`;
+        return `${this.economy.baseUrl}${ensure(this.textureImage)}`;
     }
 
     getModelBinary(): string {
-        const { glb, def } = this.parent ?? this;
-        assert(glb);
-        return `${this.economy.baseUrl}/models/${def}.glb`;
+        const { modelBinary } = this.parent ?? this;
+        return `${this.economy.baseUrl}${ensure(modelBinary)}`;
     }
 
     getMinimumWear(): number {

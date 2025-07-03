@@ -145,11 +145,20 @@ export class PromiseQueue {
     }
 }
 
-export async function getFileSHA256(filePath: string) {
+export async function getFileSha256(filePath: string) {
     const hash = createHash("sha256");
     const stream = createReadStream(filePath);
     await pipeline(stream, hash);
-    return hash.digest("hex").toUpperCase();
+    return hash.digest("hex").toLowerCase();
+}
+
+export async function getFilesSha256(filePaths: string[]) {
+    const hash = createHash("sha256");
+    for (const filePath of filePaths) {
+        const fileBuffer = await readFile(filePath);
+        hash.update(fileBuffer);
+    }
+    return hash.digest("hex");
 }
 
 export async function readFileOrDefault(path: string, fallback = "") {
