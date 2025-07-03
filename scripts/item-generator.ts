@@ -149,11 +149,6 @@ export class ItemGenerator {
     private itemHelper = new ItemHelper();
 
     private cs2 = new CS2();
-    private sz = BunnyStorageSDK.zone.connect_with_accesskey(
-        BunnyStorageSDK.regions.StorageRegion.NewYork,
-        ensure(STORAGE_ZONE),
-        ensure(STORAGE_ACCESS_KEY)
-    );
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
@@ -965,21 +960,25 @@ export class ItemGenerator {
     }
 
     private async uploadAssets() {
+        if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
+            return log("Skipping asset upload.");
+        }
+        const sz = BunnyStorageSDK.zone.connect_with_accesskey(
+            BunnyStorageSDK.regions.StorageRegion.NewYork,
+            STORAGE_ZONE,
+            STORAGE_ACCESS_KEY
+        );
         const folders = ["images", "textures", "models"];
         const queue = new PromiseQueue(40);
         for (const folder of folders) {
-            const fileChecksums = await this.fetchStorageFileChecksums(`/${folder}`);
+            const fileChecksums = await this.fetchStorageFileChecksums(sz, `/${folder}`);
             const assetsPath = join(OUTPUT_DIR, folder);
             for (const filename of await readdir(assetsPath)) {
                 const assetPath = join(assetsPath, filename);
                 const cdnPath = `/${folder}/${filename}`;
                 if (fileChecksums[cdnPath] === undefined) {
                     queue.push(async () => {
-                        await BunnyStorageSDK.file.upload(
-                            this.sz,
-                            cdnPath,
-                            Readable.toWeb(createReadStream(assetPath))
-                        );
+                        await BunnyStorageSDK.file.upload(sz, cdnPath, Readable.toWeb(createReadStream(assetPath)));
                     });
                 }
             }
@@ -1023,9 +1022,12 @@ export class ItemGenerator {
         warning("Script completed.");
     }
 
-    private async fetchStorageFileChecksums(path: string): Promise<Record<string, string | undefined>> {
+    private async fetchStorageFileChecksums(
+        sz: BunnyStorageSDK.StorageZone,
+        path: string
+    ): Promise<Record<string, string | undefined>> {
         return Object.fromEntries(
-            (await BunnyStorageSDK.file.list(this.sz, path)).map((file) => {
+            (await BunnyStorageSDK.file.list(sz, path)).map((file) => {
                 return [`${file.path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`, file.checksum?.toLowerCase()];
             })
         );
