@@ -45,6 +45,7 @@ jobs:
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
 
       - name: Commit
+        id: commit_main
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
@@ -59,21 +60,54 @@ jobs:
             echo "manifest=$MANIFEST_ID" >> $GITHUB_ENV
             echo "branch=$BRANCH_NAME" >> $GITHUB_ENV
             echo "version=$CS2_VERSION" >> $GITHUB_ENV
-            echo "changes=true" >> $GITHUB_ENV
+            echo "changes=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Pull Request
-        if: env.changes == 'true'
-        run: |
-          gh pr create --base main --head "${{ env.branch }}" --title "feat: update items (CS2 v${{ env.version }})" --body "Manifest: ${{ env.manifest }}" --fill
+        if: steps.commit_main.outputs.changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create --base main --head "${{ env.branch }}" --title "feat: update items (CS2 v${{ env.version }})" --body "Manifest: ${{ env.manifest }}" --fill
 
-      - name: Zip assets directory
-        run: zip -r assets.zip scripts/workdir/assets
+      - name: Clean up work directories
+        if: always()
+        run: rm -rf scripts/workdir/decompiled scripts/workdir/game
 
-      - name: Upload zipped assets as artifact
-        uses: actions/upload-artifact@v4
+      - name: Checkout assets repository
+        uses: actions/checkout@v4
         with:
-          name: assets
-          path: assets.zip
+          repository: ianlucas/cs2-lib-assets
+          path: cs2-lib-assets
+
+      - name: Sync new assets to repo
+        run: rsync -av --delete scripts/workdir/assets/ cs2-lib-assets/
+
+      - name: Commit and Push asset changes
+        id: commit_assets
+        if: steps.commit_main.outputs.changes == 'true'
+        working-directory: ./cs2-lib-assets
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          # If there are no changes, exit
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No asset changes detected."
+            echo "changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          BRANCH_NAME="cs2-v${{ env.version }}"
+          git checkout -b $BRANCH_NAME
+          git add .
+          git commit -m "feat: update assets (CS2 v${{ env.version }})"
+          git push origin $BRANCH_NAME
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "assets_branch=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Create Assets Pull Request
+        if: steps.commit_assets.outputs.changes == 'true'
+        working-directory: ./cs2-lib-assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create --base main --head "${{ env.assets_branch }}" --title "feat: update assets (CS2 v${{ env.version }})" --body "Automated asset update for CS2 v${{ env.version }}"
