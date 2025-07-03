@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { expect, test } from "vitest";
-import { CS2KeyValues3 } from "./keyvalues3.js";
+import { CS2KeyValues3 } from "./keyvalues3.ts";
 
 test("keyvalues3 basics", () => {
     expect(

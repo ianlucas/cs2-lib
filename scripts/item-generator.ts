@@ -11,8 +11,8 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { stripHtml } from "string-strip-html";
 import { format } from "util";
-import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.js";
-import { CS2RarityColorValues } from "../src/economy-container.js";
+import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../src/economy-constants.ts";
+import { CS2RarityColorValues } from "../src/economy-container.ts";
 import {
     CS2ContainerType,
     CS2Item,
@@ -22,14 +22,14 @@ import {
     CS2ItemType,
     CS2ItemTypeValues,
     CS2StickerMarkup
-} from "../src/economy-types.js";
-import { CS2KeyValues } from "../src/keyvalues.js";
-import { CS2KeyValues3 } from "../src/keyvalues3.js";
-import { assert, ensure, fail, isNotUndefined } from "../src/utils.js";
-import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.js";
-import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.js";
-import { HARDCODED_SPECIALS } from "./item-generator-specials.js";
-import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.js";
+} from "../src/economy-types.ts";
+import { CS2KeyValues } from "../src/keyvalues.ts";
+import { CS2KeyValues3 } from "../src/keyvalues3.ts";
+import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
+import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
+import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
+import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
 import {
     CompositeMaterialData,
     CS2ExportItem,
@@ -38,7 +38,7 @@ import {
     CS2Language,
     MaterialData,
     StickerMarkupData
-} from "./item-generator-types.js";
+} from "./item-generator-types.ts";
 import {
     exists,
     getFileSha256,
@@ -53,7 +53,7 @@ import {
     warning,
     write,
     writeJson
-} from "./utils.js";
+} from "./utils.ts";
 
 const AGENTS_SOUNDEVENTS_PATH = join(CS2_CSGO_PATH, "soundevents/vo/agents");
 const GAME_IMAGES_DIR = join(CS2_CSGO_PATH, "panorama/images");

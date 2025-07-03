@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { assert, describe, expect, test } from "vitest";
-import { english } from "../src/translations/english.js";
-import { CS2RarityColor } from "./economy-container.js";
-import { type CS2Item } from "./economy-types.js";
-import { CS2Economy, CS2EconomyItem } from "./economy.js";
-import { CS2_ITEMS } from "./items.js";
+import { english } from "../src/translations/english.ts";
+import { CS2RarityColor } from "./economy-container.ts";
+import { type CS2Item } from "./economy-types.ts";
+import { CS2Economy, CS2EconomyItem } from "./economy.ts";
+import { CS2_ITEMS } from "./items.ts";
 
 describe("CS2Economy", () => {
     test("use should add items to the economy", () => {
