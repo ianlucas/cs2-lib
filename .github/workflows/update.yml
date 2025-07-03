@@ -79,6 +79,7 @@ jobs:
         with:
           repository: ianlucas/cs2-lib-assets
           path: cs2-lib-assets
+          token: ${{ secrets.ASSETS_TOKEN }}
 
       - name: Sync new assets to repo
         run: rsync -av scripts/workdir/output/ cs2-lib-assets/
