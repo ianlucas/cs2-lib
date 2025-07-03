@@ -29,7 +29,7 @@ item.name;
 
 ## Download asset images
 
-By default the library uses my CDN at `cdn.cstrike.app` for image URLs. If you need to self-host your content, you can find and download the latest images at [update's workflow runs](https://github.com/ianlucas/cs2-lib/actions/workflows/update.yml). Open the latest successful run and it'll have the assets attached as an artifact.
+By default the library uses my CDN at `cdn.cstrike.app` for image URLs. If you need to self-host your content, you can find and download the latest images at [cs2-lib-assets repository](https://github.com/ianlucas/cs2-lib-assets). Make sure to point the assets base URL to your website:
 
 ```typescript
 CS2Economy.use({
