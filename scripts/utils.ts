@@ -152,6 +152,10 @@ export async function getFileSha256(filePath: string) {
     return hash.digest("hex").toLowerCase();
 }
 
+export async function getBufferSha256(buffer: Buffer) {
+    return createHash("sha256").update(buffer).digest("hex");
+}
+
 export async function getFilesSha256(filePaths: string[]) {
     const hash = createHash("sha256");
     for (const filePath of filePaths) {

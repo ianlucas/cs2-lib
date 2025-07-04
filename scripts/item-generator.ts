@@ -41,6 +41,7 @@ import {
 } from "./item-generator-types.ts";
 import {
     exists,
+    getBufferSha256,
     getFileSha256,
     getFilesSha256,
     log,
@@ -1241,7 +1242,7 @@ export class ItemGenerator {
 
     private async getDefaultGraffitiImage(id: number, sticker_material: string, hexColor: string) {
         const src = this.getImagePath(`econ/stickers/${sticker_material}`);
-        const dest = `/images/${await getFileSha256(src)}.webp`;
+
         const input = sharp(src).ensureAlpha();
         const { width, height } = await input.metadata();
         assert(width && height);
@@ -1268,6 +1269,7 @@ export class ItemGenerator {
         }).png();
         const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
         const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
+        const dest = `/images/${await getBufferSha256(coloredWithAlpha)}.webp`;
         await sharp(coloredWithAlpha).webp().toFile(join(OUTPUT_DIR, dest));
         return dest;
     }
