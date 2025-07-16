@@ -768,7 +768,7 @@ export class ItemGenerator {
             if (
                 image_inventory === undefined ||
                 item_name === undefined ||
-                !image_inventory.includes("/status_icons/") ||
+                (!image_inventory.includes("/status_icons/") && !image_inventory.includes("/premier_seasons/")) ||
                 tool?.use_string === "#ConsumeItem" ||
                 attributes?.["set supply crate series"]?.attribute_class === "supply_crate_series" ||
                 item_name.indexOf("#CSGO_TournamentPass") === 0 ||
