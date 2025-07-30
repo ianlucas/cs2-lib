@@ -26,7 +26,7 @@ export function float(literal: number, fractionDigits: number = 2): number {
     return parseFloat(literal.toFixed(fractionDigits));
 }
 
-export function ensure<T>(value: T, message?: string): NonNullable<T> {
+export function ensure<T>(value: T, message?: string): NonNullable<T> & {} {
     assert(value !== undefined && value !== null, message);
     return value;
 }
