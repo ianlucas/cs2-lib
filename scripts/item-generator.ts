@@ -17,6 +17,7 @@ import {
     CS2ContainerType,
     CS2Item,
     CS2ItemTeam,
+    CS2ItemTeamValues,
     CS2ItemTranslation,
     CS2ItemTranslationByLanguage,
     CS2ItemType,
@@ -122,7 +123,9 @@ export class ContainerSpecialsHelper {
             }
         }
         for (const [containerName, specials] of Object.entries(this.data)) {
-            this.specials[containerName] = specials.map((name) => ensure(lookup[name]));
+            this.specials[containerName] = specials.map((name) =>
+                ensure(lookup[name], `Failed to find ${name} in lookup.`)
+            );
         }
     }
 
@@ -444,11 +447,11 @@ export class ItemGenerator {
             itemDef,
             { item_name, baseitem, name, prefab, image_inventory, item_description, used_by_classes }
         ] of Object.entries(this.gameItems.items)) {
-            if (item_name === undefined || !prefab?.includes("hands") || used_by_classes === undefined) {
+            if (item_name === undefined || !prefab?.includes("hands")) {
                 continue;
             }
-            const teams = this.getTeams(used_by_classes);
-            const id = this.itemIdentityHelper.get(`glove_${this.getTeamsString(used_by_classes)}_${itemDef}`);
+            const teams = this.getTeams(used_by_classes, CS2ItemTeam.Both);
+            const id = this.itemIdentityHelper.get(`glove_${this.getTeamsString(used_by_classes, "3_2")}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -1133,8 +1136,11 @@ export class ItemGenerator {
         return prefab !== undefined ? this.gameItems.prefabs[prefab] : undefined;
     }
 
-    private getTeams(teams?: Record<string, string>) {
-        const keys = Object.keys(ensure(teams));
+    private getTeams(teams?: Record<string, string>, fallback?: CS2ItemTeamValues) {
+        if (teams === undefined) {
+            return ensure(fallback);
+        }
+        const keys = Object.keys(teams);
         const ct = keys.includes("counter-terrorists");
         const t = keys.includes("terrorists");
         switch (true) {
@@ -1149,21 +1155,23 @@ export class ItemGenerator {
         }
     }
 
-    private getTeamsString(teams?: Record<string, string>) {
+    private getTeamsString(teams?: Record<string, string>, fallback?: string) {
         // We changed the way we determine the team of an item, we use this
         // logic only for getting the item id.
-        return Object.keys(ensure(teams))
-            .map((team) => {
-                switch (team) {
-                    case "counter-terrorists":
-                        return 3;
-                    case "terrorists":
-                        return 2;
-                    default:
-                        return fail();
-                }
-            })
-            .join("_");
+        return teams === undefined
+            ? ensure(fallback)
+            : Object.keys(teams)
+                  .map((team) => {
+                      switch (team) {
+                          case "counter-terrorists":
+                              return 3;
+                          case "terrorists":
+                              return 2;
+                          default:
+                              return fail();
+                      }
+                  })
+                  .join("_");
     }
 
     private addItem(item: CS2ExtendedItem) {
