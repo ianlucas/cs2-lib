@@ -135,7 +135,7 @@ export class ContainerSpecialsHelper {
 }
 
 export class ItemGenerator {
-    gameItemsAsText: string;
+    gameItemsAsText: string = null!;
     gameItems: CS2GameItems["items_game"] = null!;
 
     private csgoTranslationByLanguage: Record<string, CS2Language["lang"]["Tokens"]> = null!;
@@ -177,7 +177,7 @@ export class ItemGenerator {
         id: number;
         name: string;
         nameToken: string;
-    }[];
+    }[] = null!;
 
     async run() {
         await this.start();
@@ -254,7 +254,7 @@ export class ItemGenerator {
                                 assert(tokens[key] === undefined);
                                 tokens[key] = value;
                                 return tokens;
-                            }, {})
+                            }, {} as any)
                         ];
                     })
             )
@@ -262,7 +262,7 @@ export class ItemGenerator {
         const { length } = Object.keys(this.csgoTranslationByLanguage);
         assert(length > 0);
         assert(this.csgoTranslationByLanguage.english !== undefined);
-        warning(`Loaded ${length} languages.`);
+        warning(`Loaded ${length} language(s).`);
     }
 
     async readItemsGameFile() {
@@ -601,7 +601,7 @@ export class ItemGenerator {
                 continue;
             }
             if (!(await this.isImageValid(image_inventory))) {
-                log(`Unable to find inventory image for ${image_inventory} (index: ${index})`);
+                log(`Inventory image not found for ${image_inventory} (index: ${index})`);
                 continue;
             }
             const id = this.itemIdentityHelper.get(`keychain_${index}`);
@@ -777,6 +777,10 @@ export class ItemGenerator {
                 item_name.indexOf("#CSGO_TournamentPass") === 0 ||
                 !attributes?.["pedestal display model"]
             ) {
+                continue;
+            }
+            if (!(await this.isImageValid(image_inventory))) {
+                log(`Inventory image not found for ${image_inventory} (index: ${index})`);
                 continue;
             }
             const id = this.itemIdentityHelper.get(`pin_${index}`);
@@ -965,7 +969,7 @@ export class ItemGenerator {
 
     private async uploadAssets() {
         if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
-            return log("Skipping asset upload.");
+            return log("Asset upload skipped.");
         }
         const sz = BunnyStorageSDK.zone.connect_with_accesskey(
             BunnyStorageSDK.regions.StorageRegion.NewYork,
@@ -999,31 +1003,31 @@ export class ItemGenerator {
         }));
 
         await writeJson(ITEMS_JSON_PATH, items);
-        warning(`Generated '${ITEMS_JSON_PATH}'.`);
+        warning(`Successfully generated '${ITEMS_JSON_PATH}'.`);
 
         await writeJson(ITEM_IDS_JSON_PATH, this.itemIdentityHelper.allIdentifiers);
-        warning(`Generated '${ITEM_IDS_JSON_PATH}'.`);
+        warning(`Successfully generated '${ITEM_IDS_JSON_PATH}'.`);
 
         for (const [language, translations] of Object.entries(this.itemTranslationByLanguage)) {
             const tsPath = format(TRANSLATIONS_TS_PATH, language);
             await write(tsPath, useTranslationTemplate(language, translations));
-            warning(`Generated '${tsPath}'.`);
+            warning(`Successfully generated '${tsPath}'.`);
 
             if (language === "english") {
                 await writeJson(ENGLISH_JSON_PATH, translations);
-                warning(`Generated '${ENGLISH_JSON_PATH}'.`);
+                warning(`Successfully generated '${ENGLISH_JSON_PATH}'.`);
             }
         }
 
         await write(ITEMS_TS_PATH, useItemsTemplate(items));
-        warning(`Generated '${ITEMS_TS_PATH}'.`);
+        warning(`Successfully generated '${ITEMS_TS_PATH}'.`);
 
         if (Object.keys(this.stickerMarkup).length > 0) {
             await write(STICKER_MARKUP_TS_PATH, useStickerMarkupTemplate(this.stickerMarkup));
-            warning(`Generated '${STICKER_MARKUP_TS_PATH}'.`);
+            warning(`Successfully generated '${STICKER_MARKUP_TS_PATH}'.`);
         }
 
-        warning("Script completed.");
+        warning("Script completed successfully.");
     }
 
     private async fetchStorageFileChecksums(
@@ -1480,7 +1484,7 @@ export class ItemGenerator {
                 })
             );
         } catch (error) {
-            log(`Unable to get sticker markup for ${modelPath}`);
+            log(`Failed to retrieve sticker markup for ${modelPath}`);
         }
     }
 
@@ -1505,7 +1509,7 @@ export class ItemGenerator {
                     ?.m_strTextureRuntimeResourcePath.split(":")[1]
             );
         } catch {
-            log(`Unable to get a texture path from ${compositeMaterialPath}.`);
+            log(`Failed to retrieve texture path from ${compositeMaterialPath}.`);
             return undefined;
         }
     }
@@ -1551,7 +1555,7 @@ export class ItemGenerator {
                 `/textures/{sha256}.webp`
             );
         } catch (error) {
-            logOnce(`Unable to get paint texture for '${materialName}'`);
+            logOnce(`Failed to retrieve paint texture for '${materialName}'`);
             return undefined;
         }
     }

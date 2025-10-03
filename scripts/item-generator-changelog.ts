@@ -48,8 +48,8 @@ function getPropChanges(title: string, localItem: any, repoItem: any) {
     let changes = "";
     const addedProperties = Object.keys(localItem).filter((key) => !Object.keys(repoItem).includes(key));
     const repoProperties = Object.keys(repoItem);
-    const before = {};
-    const after = {};
+    const before: any = {};
+    const after: any = {};
     for (const property of addedProperties) {
         after[property] = localItem[property];
     }
