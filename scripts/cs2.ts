@@ -128,7 +128,7 @@ export class CS2 {
         await this.downloadCsgoPakDir();
         await this.downloadCsgoPakDirParts();
         await this.extractAndDecompileFiles();
-        log("Game files downloaded and decompiled successfully.");
+        log("Game files successfully downloaded and decompiled.");
     }
 
     async decompile(options: DecompilerArgs) {
