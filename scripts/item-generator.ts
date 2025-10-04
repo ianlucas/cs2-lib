@@ -1070,35 +1070,48 @@ export class ItemGenerator {
         return ensure(colorHex) as CS2RarityColorValues;
     }
 
+    private resolveToken(token?: string) {
+        return (token?.charAt(0) === "#" ? token.substring(1) : token)?.toLowerCase();
+    }
+
+    private isTranslationKey(token?: string) {
+        if (token === undefined || token.length === 0) {
+            return false;
+        }
+        const resolved = this.resolveToken(token);
+        return resolved !== undefined && this.csgoTranslationByLanguage.english[resolved] !== undefined;
+    }
+
     private findTranslation(token?: string, language = "english") {
+        token = this.resolveToken(token);
         if (token === undefined) {
             return undefined;
         }
-        const value = this.csgoTranslationByLanguage[language][token.substring(1).toLowerCase()];
+        const value = this.csgoTranslationByLanguage[language][token];
         return value !== undefined ? stripHtml(value).result : undefined;
     }
 
     private requireTranslation(token?: string, language = "english") {
-        return ensure(this.findTranslation(token, language));
+        return ensure(
+            this.findTranslation(token, language),
+            `Failed to find translation for '${token}' (${language}).`
+        );
     }
 
     private hasTranslation(token?: string) {
-        return (
-            token !== undefined &&
-            this.csgoTranslationByLanguage.english[token.substring(1).toLowerCase()] !== undefined
-        );
+        token = this.resolveToken(token);
+        return token !== undefined && this.csgoTranslationByLanguage.english[token] !== undefined;
     }
 
     private addTranslation(id: number, property: keyof CS2ItemTranslation, ...tokens: (string | undefined)[]) {
         for (const [language, items] of Object.entries(this.itemTranslationByLanguage)) {
             const itemLanguage = (items[id] ??= {} as CS2ItemTranslation);
             const string = tokens
-                .map((key) => {
-                    assert(key !== undefined);
-                    if (key.at(0) !== "#") {
-                        return key;
-                    }
-                    return this.findTranslation(key, language) ?? this.requireTranslation(key);
+                .map((token) => {
+                    assert(token !== undefined);
+                    return this.isTranslationKey(token)
+                        ? (this.findTranslation(token, language) ?? this.requireTranslation(token))
+                        : token;
                 })
                 .join("")
                 .trim();
@@ -1114,11 +1127,11 @@ export class ItemGenerator {
         }
     }
 
-    private tryAddTranslation(id: number, property: keyof CS2ItemTranslation, ...tokens: (string | undefined)[]) {
-        if (tokens.some((token) => token === undefined || (token.charAt(0) === "#" && !this.hasTranslation(token)))) {
+    private tryAddTranslation(id: number, property: keyof CS2ItemTranslation, token: string | undefined) {
+        if (!this.isTranslationKey(token)) {
             return undefined;
         }
-        return this.addTranslation(id, property, ...tokens);
+        return this.addTranslation(id, property, token);
     }
 
     private addFormattedTranslation(id: number, property: keyof CS2ItemTranslation, key?: string, ...values: string[]) {
