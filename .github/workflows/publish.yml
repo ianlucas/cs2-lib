@@ -5,7 +5,11 @@ on:
     types: [published]
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
   publish:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -18,7 +22,6 @@ jobs:
         with:
           node-version: 22.x
           registry-url: "https://registry.npmjs.org"
-          cache: "npm"
 
       - name: Install
         run: npm ci
