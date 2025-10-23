@@ -39,6 +39,6 @@ jobs:
 
       - name: Publish Release
         run: npm publish --provenance --access public
-        if: !github.event.release.prerelease
+        if: ${{ !github.event.release.prerelease }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
