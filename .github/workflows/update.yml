@@ -100,7 +100,7 @@ jobs:
 
       - name: Sync assets to repository
         if: steps.commit_main.outputs.has_changes == 'true'
-        run: rsync -av --delete scripts/workdir/output/ cs2-lib-assets/
+        run: rsync -av scripts/workdir/output/ cs2-lib-assets/
 
       - name: Commit and push asset changes
         if: steps.commit_main.outputs.has_changes == 'true'
