@@ -35,10 +35,10 @@ jobs:
         run: |
           if [ "${{ steps.update_type.outputs.target }}" == "major" ]; then
             # Monday: major updates excluding @types/node
-            npx npm-check-updates@latest --target major --reject @types/node -u
+            npx npm-check-updates@latest --target latest --reject @types/node -u
           else
             # Other days: minor updates
-            npx npm-check-updates@latest --target minor -u
+            npx npm-check-updates@latest --target minor --reject rolldown -u
           fi
 
           if [ -z "$(git status --porcelain)" ]; then
