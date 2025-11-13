@@ -46,7 +46,7 @@
         "javascript-stringify": "^2.1.0",
         "prettier": "3.6.2",
         "rolldown": "^1.0.0-beta.47",
-        "rolldown-plugin-dts": "^0.17.6",
+        "rolldown-plugin-dts": "^0.17.7",
         "rollup-plugin-delete": "^3.0.1",
         "sharp": "^0.34.5",
         "string-strip-html": "^13.5.0",
