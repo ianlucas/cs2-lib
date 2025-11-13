@@ -874,6 +874,10 @@ export class ItemGenerator {
             ) {
                 continue;
             }
+            if (!(await this.isImageValid(image_inventory))) {
+                log(`Inventory image not found for ${image_inventory} (index: ${containerIndex})`);
+                continue;
+            }
             const revolvingLootListKey = attributes?.["set supply crate series"]?.value;
             assert(revolvingLootListKey !== undefined || loot_list_name !== undefined);
             const clientLootListKey =
