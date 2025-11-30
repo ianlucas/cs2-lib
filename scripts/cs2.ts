@@ -6,6 +6,7 @@
 import { depotDownloader } from "@ianlucas/depot-downloader";
 import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
 import { mkdir, writeFile } from "fs/promises";
+import { availableParallelism } from "os";
 import { join } from "path";
 import { assert, ensure } from "../src/utils";
 import { CS2_CSGO_PATH, CWD_PATH, INPUT_FORCE, INPUT_TEXTURES } from "./env";
@@ -108,14 +109,16 @@ export class CS2 {
     }
 
     private async extractAndDecompileFiles() {
-        log("Extracting and decompiling asset files...");
+        const threads = availableParallelism();
+        log(`Extracting and decompiling asset files (${threads} threads)...`);
         for (const dir of EXTRACT_IMAGE_DIRS) {
             await readProcess(
                 vrfDecompiler({
                     input: CSGO_PAK_DIR_PATH,
                     output: DECOMPILED_DIR,
                     vpkDecompile: true,
-                    vpkFilepath: dir
+                    vpkFilepath: dir,
+                    threads
                 })
             );
         }
@@ -135,6 +138,7 @@ export class CS2 {
         return await readProcess(
             vrfDecompiler({
                 input: CSGO_PAK_DIR_PATH,
+                threads: availableParallelism(),
                 ...options
             })
         );

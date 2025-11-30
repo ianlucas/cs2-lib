@@ -28,6 +28,7 @@ export const CS2ItemType = {
     Sticker: "sticker",
     Stub: "stub",
     Tool: "tool",
+    Utility: "utility",
     Weapon: "weapon"
 } as const;
 
