@@ -186,6 +186,7 @@ export class ItemGenerator {
         await this.parseBaseWeapons();
         await this.parseBaseMelees();
         await this.parseBaseGloves();
+        await this.parseUtilities();
         await this.parsePaintKits();
         await this.parseMusicKits();
         await this.parseStickers();
@@ -471,6 +472,40 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([baseitem === "1" ? "default" : "ancient"]),
                 teams,
                 type: CS2ItemType.Gloves
+            });
+        }
+    }
+
+    private async parseUtilities() {
+        warning("Parsing utilities...");
+        for (const [itemDef, { flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(
+            this.gameItems.items
+        )) {
+            if (!flexible_loadout_slot?.startsWith("grenade")) {
+                continue;
+            }
+            const { item_name, item_description } = this.getPrefab(prefab);
+            const id = this.itemIdentityHelper.get(`utility_${itemDef}`);
+            console.log(item_name, item_description);
+            this.addTranslation(id, "name", item_name);
+            this.addTranslation(id, "desc", item_description);
+            this.addItem({
+                base: true,
+                className: name,
+                def: Number(itemDef),
+                descToken: item_description,
+                free: true,
+                id,
+                image:
+                    image_inventory !== undefined
+                        ? await this.getImage(id, image_inventory)
+                        : await this.getBaseImage(id, name),
+                index: undefined,
+                model: name.replace("weapon_", ""),
+                nameToken: item_name,
+                rarity: this.getRarityColorHex(["default"]),
+                teams: CS2ItemTeam.Both,
+                type: CS2ItemType.Utility
             });
         }
     }
