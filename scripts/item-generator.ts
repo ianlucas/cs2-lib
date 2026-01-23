@@ -486,7 +486,6 @@ export class ItemGenerator {
             }
             const { item_name, item_description } = this.getPrefab(prefab);
             const id = this.itemIdentityHelper.get(`utility_${itemDef}`);
-            console.log(item_name, item_description);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -1463,6 +1462,10 @@ export class ItemGenerator {
 
     private async getCollectionImage(name: string) {
         const src = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
+        if (!(await exists(src))) {
+            log(`Image not found for collection ${name}`);
+            return undefined;
+        }
         return await this.copyAndOptimizeImage(src, `/images/{sha256}.webp`);
     }
 

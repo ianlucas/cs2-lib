@@ -5,7 +5,9 @@
 
 import * as dotenv from "dotenv";
 import { join } from "path";
-dotenv.config();
+dotenv.config({
+    quiet: true
+});
 
 export const CWD_PATH = process.cwd();
 export const CS2_CSGO_PATH = process.env.CS2_CSGO_PATH ?? join(CWD_PATH, "scripts/workdir/decompiled");
