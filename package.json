@@ -40,7 +40,7 @@
         "@ianlucas/vrf-decompiler": "^16.0.0",
         "@total-typescript/tsconfig": "^1.0.4",
         "@types/node": "^22.19.7",
-        "cheerio": "^1.1.2",
+        "cheerio": "^1.2.0",
         "dotenv": "^17.2.3",
         "html-entities": "^2.6.0",
         "javascript-stringify": "^2.1.0",
