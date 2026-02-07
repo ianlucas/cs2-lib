@@ -1,4 +1,4 @@
-name: update
+name: Update
 
 on:
   workflow_dispatch:
@@ -24,12 +24,12 @@ jobs:
           remove-docker-images: "true"
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install
@@ -67,7 +67,7 @@ jobs:
           MANIFEST_ID="$(cat scripts/cs2.manifest)"
           git checkout -b "${{ steps.version.outputs.branch }}"
           git add .
-          git commit -m "feat: update items (CS2 v${{ steps.version.outputs.number }})"
+          git commit -m "Update items (CS2 v${{ steps.version.outputs.number }})"
           git push origin "${{ steps.version.outputs.branch }}"
 
           echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -82,7 +82,7 @@ jobs:
           gh pr create \
             --base main \
             --head "${{ steps.version.outputs.branch }}" \
-            --title "feat: update items (CS2 v${{ steps.version.outputs.number }})" \
+            --title "Update items (CS2 v${{ steps.version.outputs.number }})" \
             --body "Manifest: ${{ steps.commit_main.outputs.manifest }}" \
             --fill
 
@@ -115,7 +115,7 @@ jobs:
 
           git checkout -b "${{ steps.version.outputs.branch }}"
           git add .
-          git commit -m "feat: update assets (CS2 v${{ steps.version.outputs.number }})"
+          git commit -m "Update assets (CS2 v${{ steps.version.outputs.number }})"
           git push origin "${{ steps.version.outputs.branch }}"
 
           echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -130,5 +130,5 @@ jobs:
           gh pr create \
             --base main \
             --head "${{ steps.version.outputs.branch }}" \
-            --title "feat: update assets (CS2 v${{ steps.version.outputs.number }})" \
+            --title "Update assets (CS2 v${{ steps.version.outputs.number }})" \
             --body "Automated asset update for CS2 v${{ steps.version.outputs.number }}"
