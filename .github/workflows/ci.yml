@@ -67,7 +67,7 @@ jobs:
       - name: Generate Changelog
         if: inputs.version
         run: |
-          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"* %s (%h)" > CHANGELOG.md
+          git log --reverse $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"* %s (%h)" > CHANGELOG.md
         continue-on-error: true
 
       - name: Create Release
