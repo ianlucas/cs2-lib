@@ -3,10 +3,23 @@
     "description": "A TypeScript library for manipulating Counter-Strike 2 data",
     "license": "MIT",
     "author": "Ian Lucas",
-    "repository": "ianlucas/cs2-lib",
+    "keywords": [
+        "cs2",
+        "counter-strike",
+        "counter-strike-2",
+        "csgo",
+        "cs-go"
+    ],
+    "homepage": "https://github.com/ianlucas/cs2-lib#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ianlucas/cs2-lib.git"
+    },
+    "bugs": {
+        "url": "https://github.com/ianlucas/cs2-lib/issues"
+    },
     "type": "module",
     "main": "./dist/index.mjs",
-    "module": "./dist/index.mjs",
     "types": "./dist/index.d.mts",
     "exports": {
         ".": {
@@ -18,9 +31,9 @@
             "import": "./dist/translations/index.mjs"
         }
     },
+    "sideEffects": false,
     "files": [
-        "dist",
-        "dist/translations"
+        "dist"
     ],
     "scripts": {
         "docs": "typedoc",
@@ -54,5 +67,8 @@
         "typedoc": "^0.28.16",
         "typescript": "^5.9.3",
         "vitest": "^4.0.18"
+    },
+    "engines": {
+        "node": ">=20"
     }
 }
