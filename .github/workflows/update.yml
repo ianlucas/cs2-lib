@@ -5,10 +5,12 @@ on:
     inputs:
       force:
         description: "Force update?"
-        default: "false"
+        type: boolean
+        default: false
       textures:
         description: "Download textures?"
-        default: "false"
+        type: boolean
+        default: false
 
 jobs:
   update:
