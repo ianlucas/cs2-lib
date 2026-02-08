@@ -41,7 +41,7 @@
         "prepack": "rolldown -c rolldown.config.ts",
         "test": "vitest --run --testTimeout 120000",
         "typecheck": "tsc --noEmit",
-        "update": "npm run cs2 && npm run item-generator && npm run item-generator-changelog",
+        "update": "npm run item-generator && npm run item-generator-changelog",
         "upgrade": "npx npm-check-updates@latest --target minor -u",
         "cs2": "tsx scripts/cs2.ts",
         "item-generator-changelog": "tsx scripts/item-generator-changelog.ts",
