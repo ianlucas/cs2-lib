@@ -1,6 +1,7 @@
 name: Dependencies
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
 
@@ -76,19 +77,22 @@ jobs:
 
       - name: Commit and push changes
         if: steps.upgrade.outputs.has_changes == 'true'
+        env:
+          TITLE: ${{ steps.upgrade.outputs.title }}
         run: |
           git checkout -b update-dependencies
           git add .
-          git commit -m "${{ steps.upgrade.outputs.title }}"
+          git commit -m "$TITLE"
           git push origin update-dependencies
 
       - name: Create pull request
         if: steps.upgrade.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.LIB_TOKEN }}
+          TITLE: ${{ steps.upgrade.outputs.title }}
         run: |
           gh pr create \
             --base main \
             --head update-dependencies \
-            --title "${{ steps.upgrade.outputs.title }}" \
+            --title "$TITLE" \
             --body "Dependencies ${{ steps.update_type.outputs.description }} upgrade"
