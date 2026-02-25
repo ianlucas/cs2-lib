@@ -112,6 +112,16 @@ export class CS2Veto {
         return (this.toggleTeam ? 1 : 0) + (this.actions.length % 2) * (this.toggleTeam ? -1 : 1);
     }
 
+    getRandomAvailableMapname(): string | undefined {
+        const available = this.getAvailableMapnames();
+        if (!available.length) {
+            return undefined;
+        }
+        const index = Math.floor(Math.random() * available.length);
+        const mapname = available[index];
+        return mapname;
+    }
+
     choose(mapname?: string): boolean {
         if (this.actions.length === 0) {
             return false;
@@ -145,12 +155,10 @@ export class CS2Veto {
     }
 
     random(): boolean {
-        const available = this.getAvailableMapnames();
-        if (!available.length) {
+        var mapname = this.getRandomAvailableMapname();
+        if (mapname === undefined) {
             return false;
         }
-        const index = Math.floor(Math.random() * available.length);
-        const mapname = ensure(available[index]);
         return this.choose(mapname);
     }
 
