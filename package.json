@@ -52,7 +52,7 @@
         "@ianlucas/depot-downloader": "^3.4.0",
         "@ianlucas/vrf-decompiler": "^18.0.0",
         "@total-typescript/tsconfig": "^1.0.4",
-        "@types/node": "^22.19.13",
+        "@types/node": "^22.19.14",
         "cheerio": "^1.2.0",
         "dotenv": "^17.3.1",
         "html-entities": "^2.6.0",
