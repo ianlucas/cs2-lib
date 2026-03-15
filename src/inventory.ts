@@ -13,6 +13,7 @@ import {
     CS2_MAX_STICKER_WEAR,
     CS2_MAX_WEAR,
     CS2_MIN_KEYCHAIN_SEED,
+    CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
     CS2_STICKER_WEAR_FACTOR
@@ -47,6 +48,7 @@ export interface CS2BaseInventoryItem {
         {
             id: number;
             rotation?: number;
+            schema?: number;
             wear?: number;
             x?: number;
             y?: number;
@@ -123,9 +125,9 @@ export class CS2Inventory {
         assert(entries.length <= CS2_MAX_STICKERS);
         assert(item === undefined || item.hasStickers());
         // @todo: validate x and y offsets, for now apps must implement it on their own.
-        for (const [key, { id: stickerId, wear, rotation, x, y }] of entries) {
+        for (const [key, { id: stickerId, wear, rotation, x, y, schema }] of entries) {
             const slot = parseInt(key, 10);
-            assert(slot >= 0 && slot <= CS2_MAX_STICKERS - 1);
+            assert(slot >= 0 && slot < CS2_MAX_STICKERS);
             this.economy.getById(stickerId).expectSticker();
             if (wear !== undefined) {
                 assert(Number.isFinite(wear));
@@ -133,15 +135,18 @@ export class CS2Inventory {
                 assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
             }
             if (rotation !== undefined) {
-                assert(Number.isFinite(rotation));
                 assert(Number.isInteger(rotation));
-                assert(String(rotation).length <= String(CS2_MAX_STICKER_ROTATION).length);
+                assert(rotation >= CS2_MIN_STICKER_ROTATION && rotation <= CS2_MAX_STICKER_ROTATION);
             }
             if (x !== undefined) {
                 assert(Number.isFinite(x));
             }
             if (y !== undefined) {
                 assert(Number.isFinite(y));
+            }
+            if (schema !== undefined) {
+                assert(Number.isInteger(schema));
+                assert(schema >= 0 && schema < CS2_MAX_STICKERS);
             }
         }
     }
