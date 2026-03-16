@@ -37,6 +37,7 @@ export interface CS2BaseInventoryItem {
             seed?: number;
             x?: number;
             y?: number;
+            z?: number;
         }
     >;
     nameTag?: string;
@@ -159,7 +160,7 @@ export class CS2Inventory {
         assert(entries.length <= CS2_MAX_KEYCHAINS);
         assert(item === undefined || item.hasKeychains());
         // @todo: validate x and y offsets, for now apps must implement it on their own.
-        for (const [key, { id: keychainId, seed, x, y }] of entries) {
+        for (const [key, { id: keychainId, seed, x, y, z }] of entries) {
             const slot = parseInt(key, 10);
             assert(slot >= 0 && slot <= CS2_MAX_KEYCHAINS - 1);
             this.economy.getById(keychainId).expectKeychain();
@@ -172,6 +173,9 @@ export class CS2Inventory {
                 assert(Number.isFinite(x));
             }
             if (y !== undefined) {
+                assert(Number.isFinite(y));
+            }
+            if (z !== undefined) {
                 assert(Number.isFinite(y));
             }
         }
