@@ -96,7 +96,7 @@ export class CS2KeyValues3 {
                 let multiLine = peek(`"""`);
                 index += multiLine ? 3 : 1;
                 let value = "";
-                while (data[index] && multiLine ? !peek(`"""`) : data[index] !== '"') {
+                while (data[index] && (multiLine ? !peek(`"""`) : data[index] !== '"')) {
                     while (data[index] && data[index] === "\\") {
                         index += 1;
                         const char = data[index];
@@ -107,7 +107,7 @@ export class CS2KeyValues3 {
                         }
                         index += 1;
                     }
-                    if (data[index] !== '"') {
+                    if (data[index] !== '"' || multiLine) {
                         value += data[index];
                         index += 1;
                     }
@@ -115,7 +115,7 @@ export class CS2KeyValues3 {
                 if (data[index] !== '"') {
                     fail("Bad end of string");
                 }
-                index += 1;
+                index += multiLine ? 3 : 1;
                 return value;
             }
             return "";

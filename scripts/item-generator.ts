@@ -38,7 +38,7 @@ import {
     CS2GameItems,
     CS2Language,
     MaterialData,
-    StickerMarkupData
+    ModelData
 } from "./item-generator-types.ts";
 import {
     exists,
@@ -376,6 +376,7 @@ export class ItemGenerator {
             const { used_by_classes, item_name, item_description, model_player } = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
             const id = this.itemIdentityHelper.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
+            const stickerMarkup = await this.findStickerMarkup(itemDef, model_player);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -391,14 +392,15 @@ export class ItemGenerator {
                         ? await this.getImage(id, image_inventory)
                         : await this.getBaseImage(id, name),
                 index: undefined,
+                legacyStickerSlots: stickerMarkup?.filter((m) => m.legacy).length,
                 model: name.replace("weapon_", ""),
                 modelBinary: this.staticAssets[`/models/${itemDef}.glb`],
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
+                stickerSlots: stickerMarkup?.filter((m) => !m.legacy).length,
                 teams,
                 type: CS2ItemType.Weapon
             });
-            await this.findStickerMarkup(itemDef, model_player);
         }
     }
 
@@ -535,12 +537,14 @@ export class ItemGenerator {
                     image: await this.getPaintImage(id, baseItem.className, paintKit.className),
                     index: Number(paintKit.index),
                     legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
+                    legacyStickerSlots: undefined,
                     modelBinary: undefined,
                     rarity: this.getRarityColorHex(
                         MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
                             ? [baseItem.rarity, paintKit.rarityColorHex]
                             : [itemKey, paintKit.rarityColorHex]
                     ),
+                    stickerSlots: undefined,
                     textureImage:
                         (await this.getPaintTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
                         this.itemHelper.get(id)?.textureImage,
@@ -1512,35 +1516,31 @@ export class ItemGenerator {
     }
 
     private async findStickerMarkup(itemDef?: string, modelPath?: string) {
-        try {
-            if (!this.cs2.local || itemDef === undefined || modelPath === undefined) {
-                return;
-            }
-            const output = (
-                await this.cs2.decompile({
-                    vpkFilepath: modelPath.replace(".vmdl", ".vmdl_c"),
-                    block: "DATA"
-                })
-            ).split(DECOMPILER_DATA_SEPARATOR)[1];
-            const data = CS2KeyValues3.parse<StickerMarkupData>(
-                CS2KeyValues3.parse<{
-                    m_modelInfo: {
-                        m_keyValueText: string;
-                    };
-                }>(output).m_modelInfo.m_keyValueText
-            );
-            this.stickerMarkup[itemDef] = data.StickerMarkup.map(
-                ({ Index: slot, LegacyModel: legacy, Offset: offsets, Rotation: rotation, Scale: scale }) => ({
-                    slot,
-                    legacy,
-                    offsets,
-                    rotation,
-                    scale
-                })
-            );
-        } catch (error) {
-            log(`Failed to retrieve sticker markup for ${modelPath}`);
-        }
+        assert(itemDef !== undefined && modelPath !== undefined, `Failed to read ${modelPath} for sticker markup.`);
+        const output = (
+            await this.cs2.decompile({
+                vpkFilepath: modelPath.replace(".vmdl", ".vmdl_c"),
+                block: "DATA"
+            })
+        ).split(DECOMPILER_DATA_SEPARATOR)[1];
+        const data = CS2KeyValues3.parse<ModelData>(
+            CS2KeyValues3.parse<{
+                m_modelInfo: {
+                    m_keyValueText: string;
+                };
+            }>(output).m_modelInfo.m_keyValueText
+        );
+        const stickerMarkup = data.StickerMarkup?.map(
+            ({ Index: slot, LegacyModel: legacy, Offset: offsets, Rotation: rotation, Scale: scale }) => ({
+                slot,
+                legacy,
+                offsets,
+                rotation,
+                scale
+            })
+        );
+        this.stickerMarkup[itemDef] = stickerMarkup;
+        return stickerMarkup;
     }
 
     private async getTexturePathFromCompositeMaterial(compositeMaterialPath?: string) {

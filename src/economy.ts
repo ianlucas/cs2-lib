@@ -17,6 +17,7 @@ import {
     CS2_MAX_MINIMAL_WEAR_WEAR,
     CS2_MAX_SEED,
     CS2_MAX_STATTRAK,
+    CS2_MAX_STICKERS,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
     CS2_MIDTIER_CATEGORIES,
@@ -260,16 +261,13 @@ export class CS2EconomyInstance {
     }
 }
 
-export class CS2EconomyItem
-    implements
-        Interface<
-            Omit<CS2Item, "contents" | "specials" | "teams"> &
-                CS2ItemTranslation & {
-                    contents: CS2EconomyItem[] | undefined;
-                    teams: CS2TeamValues[] | undefined;
-                }
-        >
-{
+export class CS2EconomyItem implements Interface<
+    Omit<CS2Item, "contents" | "specials" | "teams"> &
+        CS2ItemTranslation & {
+            contents: CS2EconomyItem[] | undefined;
+            teams: CS2TeamValues[] | undefined;
+        }
+> {
     altName: string | undefined;
     base: boolean | undefined;
     baseId: number | undefined;
@@ -287,6 +285,7 @@ export class CS2EconomyItem
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
+    legacyStickerSlots: number | undefined;
     model: string | undefined;
     modelBinary: string | undefined;
     name: string = null!;
@@ -294,6 +293,7 @@ export class CS2EconomyItem
     specialsImage: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
+    stickerSlots: number | undefined;
     textureImage: string | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
@@ -647,6 +647,10 @@ export class CS2EconomyItem
 
     getMaximumSeed(): number {
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
+    }
+
+    getStickerSlotCount(): number {
+        return this.parent?.[this.legacy ? "legacyStickerSlots" : "stickerSlots"] ?? CS2_MAX_STICKERS;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {
