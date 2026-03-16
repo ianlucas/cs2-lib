@@ -76,6 +76,8 @@ export interface CS2Item {
     specialsImage?: string | undefined;
     statTrakless?: boolean | undefined;
     statTrakOnly?: boolean | undefined;
+    legacyStickerSlots?: number | undefined;
+    stickerSlots?: number | undefined;
     teams?: CS2ItemTeamValues | undefined;
     textureImage?: string | undefined;
     tint?: number | undefined;

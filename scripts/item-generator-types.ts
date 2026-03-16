@@ -178,8 +178,8 @@ export type MaterialData = {
     m_textureParams: { m_name: string; m_pValue: string }[];
 };
 
-export type StickerMarkupData = {
-    StickerMarkup: {
+export type ModelData = {
+    StickerMarkup?: {
         Index: number;
         LegacyModel: boolean;
         Offset: number[];

@@ -26,6 +26,7 @@ const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
 
 const APP_ID = 730;
 const ASSETS_DEPOT_ID = 2347770;
+const EXTRACT_DEFAULT_DIRS = ["weapons/models/"];
 const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
 const EXTRACT_TEXTURE_DIRS = [
     "weapons/paints/",
@@ -72,7 +73,11 @@ export class CS2 {
                 vpkDir: true
             })
         );
-        const dirs = [...EXTRACT_IMAGE_DIRS, ...(INPUT_TEXTURES === "true" ? EXTRACT_TEXTURE_DIRS : [])];
+        const dirs = [
+            ...EXTRACT_DEFAULT_DIRS,
+            ...EXTRACT_IMAGE_DIRS,
+            ...(INPUT_TEXTURES === "true" ? EXTRACT_TEXTURE_DIRS : [])
+        ];
         for (const line of output.split("\n")) {
             if (dirs.some((dir) => line.startsWith(dir))) {
                 const meta = Object.fromEntries(
