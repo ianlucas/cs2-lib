@@ -665,7 +665,8 @@ describe("CS2Inventory methods", () => {
                     id: LIL_AVA_ID,
                     seed: 2000,
                     x: 0.2223,
-                    y: 0.2211
+                    y: 0.2211,
+                    z: 0.2211
                 }
             }
         });
@@ -673,7 +674,8 @@ describe("CS2Inventory methods", () => {
             id: LIL_AVA_ID,
             seed: 2000,
             x: 0.2223,
-            y: 0.2211
+            y: 0.2211,
+            z: 0.2211
         });
     });
 });
