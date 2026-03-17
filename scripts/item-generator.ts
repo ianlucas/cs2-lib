@@ -391,7 +391,7 @@ export class ItemGenerator {
                 id,
                 image:
                     image_inventory !== undefined
-                        ? await this.getImage(id, image_inventory)
+                        ? await this.getImage(image_inventory)
                         : await this.getBaseImage(id, name),
                 index: undefined,
                 legacyStickerSlots: stickerMarkup?.filter((m) => m.legacy).length,
@@ -435,7 +435,7 @@ export class ItemGenerator {
                 descToken: item_description,
                 free: baseitem === "1" ? true : undefined,
                 id,
-                image: await this.getImage(id, image_inventory),
+                image: await this.getImage(image_inventory),
                 index: baseitem === "1" ? undefined : 0,
                 model: name.replace("weapon_", ""),
                 nameToken: item_name,
@@ -468,7 +468,7 @@ export class ItemGenerator {
                 id,
                 image:
                     image_inventory !== undefined
-                        ? await this.getImage(id, image_inventory)
+                        ? await this.getImage(image_inventory)
                         : this.requireStaticAsset(`/images/${name}.png`),
                 index: baseitem === "1" ? undefined : 0,
                 model: name,
@@ -501,7 +501,7 @@ export class ItemGenerator {
                 id,
                 image:
                     image_inventory !== undefined
-                        ? await this.getImage(id, image_inventory)
+                        ? await this.getImage(image_inventory)
                         : await this.getBaseImage(id, name),
                 index: undefined,
                 model: name.replace("weapon_", ""),
@@ -579,7 +579,7 @@ export class ItemGenerator {
                 def: 1314,
                 free: base,
                 id,
-                image: await this.getImage(id, image_inventory),
+                image: await this.getImage(image_inventory),
                 index: Number(index),
                 rarity: this.getRarityColorHex(["rare"]),
                 type: CS2ItemType.MusicKit
@@ -609,7 +609,7 @@ export class ItemGenerator {
                 baseId: this.keychainBaseId,
                 def: 1355,
                 id,
-                image: await this.getImage(id, image_inventory),
+                image: await this.getImage(image_inventory),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Keychain
@@ -654,7 +654,7 @@ export class ItemGenerator {
                 baseId,
                 def: 1209,
                 id,
-                image: await this.getImage(id, `econ/stickers/${sticker_material}`),
+                image: await this.getImage(`econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity,
                 type: CS2ItemType.Sticker
@@ -672,7 +672,7 @@ export class ItemGenerator {
                 baseId: this.keychainBaseId,
                 def: 1355,
                 id: keychainId,
-                image: await this.getImage(id, keychainImage),
+                image: await this.getImage(keychainImage),
                 index: 37,
                 stickerId: Number(index),
                 rarity,
@@ -732,7 +732,7 @@ export class ItemGenerator {
                 baseId,
                 def: 1348,
                 id,
-                image: await this.getImage(id, `econ/stickers/${sticker_material}`),
+                image: await this.getImage(`econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Graffiti
@@ -767,7 +767,7 @@ export class ItemGenerator {
                 baseId,
                 def: 4609,
                 id,
-                image: await this.getImage(id, `econ/patches/${patch_material}`),
+                image: await this.getImage(`econ/patches/${patch_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Patch
@@ -809,7 +809,7 @@ export class ItemGenerator {
             this.addItem({
                 def: Number(index),
                 id,
-                image: await this.getImage(id, image_inventory),
+                image: await this.getImage(image_inventory),
                 index: undefined,
                 model,
                 rarity: this.getRarityColorHex([name, item_rarity]),
@@ -859,7 +859,7 @@ export class ItemGenerator {
                 altName: name,
                 def: Number(index),
                 id,
-                image: await this.getImage(id, image_inventory),
+                image: await this.getImage(image_inventory),
                 index: undefined,
                 rarity: this.getRarityColorHex([item_rarity, "ancient"]),
                 teams: undefined,
@@ -892,7 +892,7 @@ export class ItemGenerator {
                 def: Number(index),
                 free: baseitem === "1" && index !== REMOVE_KEYCHAIN_TOOL_INDEX ? true : undefined,
                 id,
-                image: await this.getImage(id, image),
+                image: await this.getImage(image),
                 index: undefined,
                 rarity: this.getRarityColorHex(["common"]),
                 teams: undefined,
@@ -996,7 +996,7 @@ export class ItemGenerator {
                         this.addItem({
                             def: Number(keyItemDef),
                             id,
-                            image: await this.getImage(id, image_inventory),
+                            image: await this.getImage(image_inventory),
                             rarity: this.getRarityColorHex(["common"]),
                             teams: undefined,
                             type: CS2ItemType.Key
@@ -1017,7 +1017,7 @@ export class ItemGenerator {
                     contents,
                     def: Number(containerIndex),
                     id,
-                    image: await this.getImage(id, image_inventory),
+                    image: await this.getImage(image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
                     rarity: this.getRarityColorHex(["common"]),
                     specials: specials ?? this.itemHelper.get(id)?.specials,
@@ -1309,10 +1309,10 @@ export class ItemGenerator {
     }
 
     private async getBaseImage(id: number, className: string) {
-        return await this.getImage(id, `econ/weapons/base_weapons/${className}`);
+        return await this.getImage(`econ/weapons/base_weapons/${className}`);
     }
 
-    private async getImage(id: number, path: string) {
+    private async getImage(path: string) {
         return await this.copyAndOptimizeImage(this.getImagePath(path), `/images/{sha256}.webp`);
     }
 
