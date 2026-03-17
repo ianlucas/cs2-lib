@@ -179,6 +179,8 @@ export class ItemGenerator {
         nameToken: string;
     }[] = null!;
 
+    private keychainBaseId: number = null!;
+
     async run() {
         await this.start();
         await this.readCsgoLanguageFiles();
@@ -189,8 +191,8 @@ export class ItemGenerator {
         await this.parseUtilities();
         await this.parsePaintKits();
         await this.parseMusicKits();
-        await this.parseStickers();
         await this.parseKeychains();
+        await this.parseStickers();
         await this.parseGraffiti();
         await this.parsePatches();
         await this.parseAgents();
@@ -585,6 +587,36 @@ export class ItemGenerator {
         }
     }
 
+    private async parseKeychains() {
+        warning("Parsing keychains...");
+        this.keychainBaseId = this.createStub("keychain", "#CSGO_Tool_Keychain_Desc");
+        for (const [index, { name, loc_name, loc_description, item_rarity, image_inventory }] of Object.entries(
+            this.gameItems.keychain_definitions
+        )) {
+            if (!this.hasTranslation(loc_name)) {
+                continue;
+            }
+            if (!(await this.isImageValid(image_inventory))) {
+                log(`Inventory image not found for ${image_inventory} (index: ${index})`);
+                continue;
+            }
+            const id = this.itemIdentityHelper.get(`keychain_${index}`);
+            const itemKey = `[${name}]keychain`;
+            this.addContainerItem(itemKey, id);
+            this.addTranslation(id, "name", "#CSGO_Tool_Keychain", " | ", loc_name);
+            this.tryAddTranslation(id, "desc", loc_description);
+            this.addItem({
+                baseId: this.keychainBaseId,
+                def: 1355,
+                id,
+                image: await this.getImage(id, image_inventory),
+                index: Number(index),
+                rarity: this.getRarityColorHex([itemKey, item_rarity]),
+                type: CS2ItemType.Keychain
+            });
+        }
+    }
+
     private async parseStickers() {
         warning("Parsing stickers...");
         const baseId = this.createStub("sticker", "#CSGO_Tool_Sticker_Desc");
@@ -605,6 +637,7 @@ export class ItemGenerator {
             const [category, categoryToken] = this.getStickerCategory({ sticker_material, tournament_event_id });
             const id = this.itemIdentityHelper.get(`sticker_${index}`);
             const itemKey = `[${name}]sticker`;
+            const rarity = this.getRarityColorHex([itemKey, item_rarity]);
             this.addContainerItem(itemKey, id);
             this.addTranslation(id, "name", "#CSGO_Tool_Sticker", " | ", item_name);
             this.addTranslation(id, "category", categoryToken !== undefined ? categoryToken : category);
@@ -623,37 +656,26 @@ export class ItemGenerator {
                 id,
                 image: await this.getImage(id, `econ/stickers/${sticker_material}`),
                 index: Number(index),
-                rarity: this.getRarityColorHex([itemKey, item_rarity]),
+                rarity,
                 type: CS2ItemType.Sticker
             });
-        }
-    }
-
-    private async parseKeychains() {
-        warning("Parsing keychains...");
-        const baseId = this.createStub("keychain", "#CSGO_Tool_Keychain_Desc");
-        for (const [index, { name, loc_name, loc_description, item_rarity, image_inventory }] of Object.entries(
-            this.gameItems.keychain_definitions
-        )) {
-            if (!this.hasTranslation(loc_name)) {
+            // Sticker Slab
+            const keychainImage = `econ/stickers/${sticker_material}_1355_37`;
+            if (!(await this.isImageValid(keychainImage))) {
+                log(`Failed to find image for sticker slab at ${keychainImage} (index: ${index})`);
                 continue;
             }
-            if (!(await this.isImageValid(image_inventory))) {
-                log(`Inventory image not found for ${image_inventory} (index: ${index})`);
-                continue;
-            }
-            const id = this.itemIdentityHelper.get(`keychain_${index}`);
-            const itemKey = `[${name}]keychain`;
-            this.addContainerItem(itemKey, id);
-            this.addTranslation(id, "name", "#CSGO_Tool_Keychain", " | ", loc_name);
-            this.tryAddTranslation(id, "desc", loc_description);
+            const keychainId = this.itemIdentityHelper.get(`keychain_37_${index}`);
+            this.addTranslation(keychainId, "name", "#keychain_kc_sticker_display_case", " | ", item_name);
+            this.tryAddTranslation(keychainId, "desc", "#keychain_kc_sticker_display_case_desc");
             this.addItem({
-                baseId,
+                baseId: this.keychainBaseId,
                 def: 1355,
-                id,
-                image: await this.getImage(id, image_inventory),
-                index: Number(index),
-                rarity: this.getRarityColorHex([itemKey, item_rarity]),
+                id: keychainId,
+                image: await this.getImage(id, keychainImage),
+                index: 37,
+                stickerId: Number(index),
+                rarity,
                 type: CS2ItemType.Keychain
             });
         }
