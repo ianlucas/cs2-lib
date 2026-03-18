@@ -293,6 +293,7 @@ export class CS2EconomyItem implements Interface<
     specialsImage: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
+    stickerId: number | undefined;
     stickerSlots: number | undefined;
     textureImage: string | undefined;
     tint: number | undefined;
