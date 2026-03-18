@@ -294,6 +294,7 @@ export class CS2EconomyItem implements Interface<
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
+    stickerIndex: number | undefined;
     stickerSlots: number | undefined;
     textureImage: string | undefined;
     tint: number | undefined;
@@ -371,6 +372,10 @@ export class CS2EconomyItem implements Interface<
             default:
                 return undefined;
         }
+    }
+
+    get wrappedSticker(): CS2EconomyItem | undefined {
+        return this.stickerId !== undefined ? this.economy.get(this.stickerId) : undefined;
     }
 
     isC4(): boolean {

@@ -674,8 +674,9 @@ export class ItemGenerator {
                 id: keychainId,
                 image: await this.getImage(keychainImage),
                 index: 37,
-                stickerId: Number(index),
                 rarity,
+                stickerId: id,
+                stickerIndex: Number(index),
                 type: CS2ItemType.Keychain
             });
         }
