@@ -10,5 +10,6 @@
         "allowJs": false,
         "isolatedDeclarations": true
     },
-    "include": ["src"]
+    "include": ["src"],
+    "exclude": ["src/items.ts", "src/translations"]
 }
