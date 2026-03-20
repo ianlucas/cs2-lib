@@ -607,6 +607,7 @@ export class ItemGenerator {
             this.tryAddTranslation(id, "desc", loc_description);
             this.addItem({
                 baseId: this.keychainBaseId,
+                free: index === "37" ? true : undefined,
                 def: 1355,
                 id,
                 image: await this.getImage(image_inventory),
