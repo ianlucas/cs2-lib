@@ -678,4 +678,18 @@ describe("CS2Inventory methods", () => {
             z: 0.2211
         });
     });
+
+    test("keychain z offset regression", () => {
+        const keychainWithCoords = (coords: { x?: number; y?: number; z?: number }) => () =>
+            inventory.add({
+                id: AWP_DRAGON_LORE_ID,
+                keychains: { 0: { id: LIL_AVA_ID, ...coords } }
+            });
+        expect(keychainWithCoords({ x: 22.078 })).not.toThrow();
+        expect(keychainWithCoords({ y: 22.078 })).not.toThrow();
+        expect(keychainWithCoords({ z: 22.078 })).not.toThrow();
+        expect(keychainWithCoords({ x: NaN })).toThrow();
+        expect(keychainWithCoords({ y: NaN })).toThrow();
+        expect(keychainWithCoords({ z: NaN })).toThrow();
+    });
 });
