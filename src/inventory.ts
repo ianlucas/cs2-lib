@@ -176,7 +176,7 @@ export class CS2Inventory {
                 assert(Number.isFinite(y));
             }
             if (z !== undefined) {
-                assert(Number.isFinite(y));
+                assert(Number.isFinite(z));
             }
         }
     }
