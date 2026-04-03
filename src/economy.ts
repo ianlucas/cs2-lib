@@ -294,7 +294,6 @@ export class CS2EconomyItem implements Interface<
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
-    stickerIndex: number | undefined;
     stickerSlots: number | undefined;
     textureImage: string | undefined;
     tint: number | undefined;

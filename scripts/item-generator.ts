@@ -677,7 +677,6 @@ export class ItemGenerator {
                 index: 37,
                 rarity,
                 stickerId: id,
-                stickerIndex: Number(index),
                 type: CS2ItemType.Keychain
             });
         }
@@ -1626,7 +1625,7 @@ export class ItemGenerator {
             }
             await this.cs2.decompile({
                 vpkFilepath: texturePath,
-                decompile: true,
+                vpkDecompile: true,
                 output: DECOMPILED_DIR
             });
             return await this.copyAndOptimizeTextureImage(
