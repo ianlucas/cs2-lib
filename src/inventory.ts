@@ -147,7 +147,7 @@ export class CS2Inventory {
             }
             if (schema !== undefined) {
                 assert(Number.isInteger(schema));
-                assert(schema >= 0 && schema < (item?.getStickerSlotCount() ?? CS2_MAX_STICKERS));
+                assert(schema >= 0 && schema < (item?.getMaximumStickers() ?? CS2_MAX_STICKERS));
             }
         }
     }

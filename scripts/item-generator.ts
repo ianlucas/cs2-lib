@@ -25,28 +25,18 @@ import {
     CS2StickerMarkup
 } from "../src/economy-types.ts";
 import { CS2KeyValues } from "../src/keyvalues.ts";
-import { CS2KeyValues3 } from "../src/keyvalues3.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
-import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
-import { CS2_CSGO_PATH, INPUT_TEXTURES, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { CS2, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
+import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
-import {
-    CompositeMaterialData,
-    CS2ExportItem,
-    CS2ExtendedItem,
-    CS2GameItems,
-    CS2Language,
-    MaterialData,
-    ModelData
-} from "./item-generator-types.ts";
+import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.ts";
 import {
     exists,
     getBufferSha256,
     getFileSha256,
     getFilesSha256,
     log,
-    logOnce,
     prependHash,
     PromiseQueue,
     readJson,
@@ -211,7 +201,7 @@ export class ItemGenerator {
             const directory = join(SCRIPTS_DIR, folder);
             const outputDirectory = join(OUTPUT_DIR, folder);
             await mkdir(outputDirectory, { recursive: true });
-            if (folder === "textures") {
+            if (folder !== "images") {
                 continue;
             }
             const filenames = await readdir(directory);
@@ -220,12 +210,6 @@ export class ItemGenerator {
                 if (filename.endsWith(".png")) {
                     const key = `/images/${filename}`;
                     const value = await this.copyAndOptimizeImage(path, "/images/{sha256}.webp");
-                    this.staticAssets[key] = value;
-                } else if (filename.endsWith(".glb")) {
-                    const sha256 = await getFileSha256(path);
-                    const key = `/models/${filename}`;
-                    const value = `/models/${sha256}.glb`;
-                    await copyFile(path, join(OUTPUT_DIR, value));
                     this.staticAssets[key] = value;
                 } else {
                     await copyFile(path, join(outputDirectory, filename));
@@ -378,7 +362,6 @@ export class ItemGenerator {
             const { used_by_classes, item_name, item_description, model_player } = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
             const id = this.itemIdentityHelper.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
-            const stickerMarkup = await this.findStickerMarkup(itemDef, model_player);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -394,12 +377,15 @@ export class ItemGenerator {
                         ? await this.getImage(image_inventory)
                         : await this.getBaseImage(id, name),
                 index: undefined,
-                legacyStickerSlots: stickerMarkup?.filter((m) => m.legacy).length,
                 model: name.replace("weapon_", ""),
-                modelBinary: this.staticAssets[`/models/${itemDef}.glb`],
+                // Read DATA -> Get DATA to JSON + .vmat references (update GLB with the CDN paths)
+                modelData: ensure(null, "Missing implementation."),
+                // GLB CDN path
+                modelPlayer: ensure(null, "Missing implementation."),
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
-                stickerSlots: stickerMarkup?.filter((m) => !m.legacy).length,
+                stickerMax: ensure(null, "Missing implementation"),
+                stickerMaxForLegacy: ensure(null, "Missing implementation"),
                 teams,
                 type: CS2ItemType.Weapon
             });
@@ -539,17 +525,14 @@ export class ItemGenerator {
                     image: await this.getPaintImage(id, baseItem.className, paintKit.className),
                     index: Number(paintKit.index),
                     legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
-                    legacyStickerSlots: undefined,
-                    modelBinary: undefined,
+                    stickerMaxForLegacy: undefined,
+                    modelPlayer: undefined,
                     rarity: this.getRarityColorHex(
                         MELEE_OR_GLOVES_TYPES.includes(baseItem.type)
                             ? [baseItem.rarity, paintKit.rarityColorHex]
                             : [itemKey, paintKit.rarityColorHex]
                     ),
-                    stickerSlots: undefined,
-                    textureImage:
-                        (await this.getPaintTexture(id, paintKit.className, paintKit.compositeMaterialPath)) ??
-                        this.itemHelper.get(id)?.textureImage,
+                    stickerMax: undefined,
                     wearMax: paintKit.wearMax,
                     wearMin: paintKit.wearMin
                 });
@@ -1536,106 +1519,6 @@ export class ItemGenerator {
             }
         }
         return items;
-    }
-
-    private async findStickerMarkup(itemDef?: string, modelPath?: string) {
-        assert(itemDef !== undefined && modelPath !== undefined, `Failed to read ${modelPath} for sticker markup.`);
-        const output = (
-            await this.cs2.decompile({
-                vpkFilepath: modelPath.replace(".vmdl", ".vmdl_c"),
-                block: "DATA"
-            })
-        ).split(DECOMPILER_DATA_SEPARATOR)[1];
-        const data = CS2KeyValues3.parse<ModelData>(
-            CS2KeyValues3.parse<{
-                m_modelInfo: {
-                    m_keyValueText: string;
-                };
-            }>(output).m_modelInfo.m_keyValueText
-        );
-        const stickerMarkup = data.StickerMarkup?.map(
-            ({ Index: slot, LegacyModel: legacy, Offset: offsets, Rotation: rotation, Scale: scale }) => ({
-                slot,
-                legacy,
-                offsets,
-                rotation,
-                scale
-            })
-        );
-        this.stickerMarkup[itemDef] = stickerMarkup;
-        return stickerMarkup;
-    }
-
-    private async getTexturePathFromCompositeMaterial(compositeMaterialPath?: string) {
-        try {
-            if (compositeMaterialPath === undefined) {
-                return undefined;
-            }
-            return ensure(
-                CS2KeyValues3.parse<CompositeMaterialData>(
-                    (
-                        await this.cs2.decompile({
-                            vpkFilepath: compositeMaterialPath,
-                            block: "DATA"
-                        })
-                    ).split(DECOMPILER_DATA_SEPARATOR)[1]
-                )
-                    .m_Points[0].m_vecCompositeMaterialAssemblyProcedures[0].m_vecCompositeInputContainers.find(
-                        ({ m_strAlias }) => m_strAlias === "exposed_params"
-                    )
-                    ?.m_vecLooseVariables.find(({ m_strName }) => m_strName === "g_tPattern")
-                    ?.m_strTextureRuntimeResourcePath.split(":")[1]
-            );
-        } catch {
-            log(`Failed to retrieve texture path from ${compositeMaterialPath}.`);
-            return undefined;
-        }
-    }
-
-    private async getTexturePathFromMaterial(materialPath: string) {
-        return ensure(
-            CS2KeyValues3.parse<MaterialData>(
-                (
-                    await this.cs2.decompile({
-                        vpkFilepath: materialPath,
-                        block: "DATA"
-                    })
-                ).split(DECOMPILER_DATA_SEPARATOR)[1]
-            ).m_textureParams.find(({ m_name }) => m_name === "g_tPattern")
-        ).m_pValue.split(":")[1];
-    }
-
-    private async getPaintTexture(id: number, materialName: string, compositeMaterialPath?: string) {
-        try {
-            if (INPUT_TEXTURES !== "true") {
-                return undefined;
-            }
-            const materialFilename = `${materialName}.vmat_c`;
-            const materialPath = `materials/models/weapons/customization/paints/vmats/${materialFilename}`;
-            const texturePath =
-                (await this.getTexturePathFromCompositeMaterial(compositeMaterialPath)) ??
-                (await this.getTexturePathFromMaterial(materialPath));
-            if (
-                !texturePath.startsWith("items/assets/paintkits") &&
-                !texturePath.startsWith("materials/models/weapons/customization/paints/custom") &&
-                !texturePath.startsWith("materials/models/weapons/customization/paints/gunsmith")
-            ) {
-                logOnce(`Ignoring texture path '${texturePath}'`);
-                return undefined;
-            }
-            await this.cs2.decompile({
-                vpkFilepath: texturePath,
-                vpkDecompile: true,
-                output: DECOMPILED_DIR
-            });
-            return await this.copyAndOptimizeTextureImage(
-                join(DECOMPILED_DIR, texturePath.replace(".vtex", ".png")),
-                `/textures/{sha256}.webp`
-            );
-        } catch (error) {
-            logOnce(`Failed to retrieve paint texture for '${materialName}'`);
-            return undefined;
-        }
     }
 
     private getContainerType(name?: string, type?: CS2ItemTypeValues) {
