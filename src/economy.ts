@@ -276,6 +276,7 @@ export class CS2EconomyItem implements Interface<
     collectionDesc: string | undefined;
     collectionImage: string | undefined;
     collectionName: string | undefined;
+    compositeMaterial: string | undefined;
     containerType: CS2ContainerTypeValues | undefined;
     def: number | undefined;
     desc: string | undefined;
@@ -285,17 +286,17 @@ export class CS2EconomyItem implements Interface<
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
-    legacyStickerSlots: number | undefined;
     model: string | undefined;
-    modelBinary: string | undefined;
+    modelData: string | undefined;
+    modelPlayer: string | undefined;
     name: string = null!;
     rarity: CS2RarityColorValues = null!;
     specialsImage: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
-    stickerSlots: number | undefined;
-    textureImage: string | undefined;
+    stickerMax: number | undefined;
+    stickerMaxForLegacy: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemTypeValues = null!;
@@ -629,13 +630,13 @@ export class CS2EconomyItem implements Interface<
         return `${this.economy.baseUrl}${this.specialsImage}`;
     }
 
-    getTextureImage(): string {
-        return `${this.economy.baseUrl}${ensure(this.textureImage)}`;
+    getCompositeMaterial(): string {
+        return `${this.economy.baseUrl}${ensure(this.compositeMaterial)}`;
     }
 
-    getModelBinary(): string {
-        const { modelBinary } = this.parent ?? this;
-        return `${this.economy.baseUrl}${ensure(modelBinary)}`;
+    getModelPlayer(): string {
+        const { modelPlayer } = this.parent ?? this;
+        return `${this.economy.baseUrl}${ensure(modelPlayer)}`;
     }
 
     getMinimumWear(): number {
@@ -654,8 +655,8 @@ export class CS2EconomyItem implements Interface<
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
-    getStickerSlotCount(): number {
-        return this.parent?.[this.legacy ? "legacyStickerSlots" : "stickerSlots"] ?? CS2_MAX_STICKERS;
+    getMaximumStickers(): number {
+        return this.parent?.[this.legacy ? "stickerMaxForLegacy" : "stickerMax"] ?? CS2_MAX_STICKERS;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

@@ -9,7 +9,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { availableParallelism } from "os";
 import { join } from "path";
 import { assert, ensure } from "../src/utils";
-import { CS2_CSGO_PATH, CWD_PATH, INPUT_FORCE, INPUT_TEXTURES } from "./env";
+import { CS2_CSGO_PATH, CWD_PATH, INPUT_FORCE } from "./env";
 import { log, readFileOrDefault, readProcess, shouldRun } from "./utils";
 
 export const SCRIPTS_DIR = join(CWD_PATH, "scripts");
@@ -26,16 +26,7 @@ const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
 
 const APP_ID = 730;
 const ASSETS_DEPOT_ID = 2347770;
-const EXTRACT_DEFAULT_DIRS = ["weapons/models/"];
 const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
-const EXTRACT_TEXTURE_DIRS = [
-    "weapons/paints/",
-    "materials/models/weapons/customization/paints/vmats/",
-    "materials/models/weapons/customization/paints/custom/",
-    "materials/models/weapons/customization/paints/gunsmith/",
-    "items/assets/paintkits/"
-];
-
 export class CS2 {
     public local = !CS2_CSGO_PATH.includes("workdir");
 
@@ -73,11 +64,7 @@ export class CS2 {
                 vpkDir: true
             })
         );
-        const dirs = [
-            ...EXTRACT_DEFAULT_DIRS,
-            ...EXTRACT_IMAGE_DIRS,
-            ...(INPUT_TEXTURES === "true" ? EXTRACT_TEXTURE_DIRS : [])
-        ];
+        const dirs = EXTRACT_IMAGE_DIRS;
         for (const line of output.split("\n")) {
             if (dirs.some((dir) => line.startsWith(dir))) {
                 const meta = Object.fromEntries(
