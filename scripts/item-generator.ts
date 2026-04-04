@@ -29,8 +29,8 @@ import { CS2KeyValues } from "../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
 import { CS2, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
 import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { ContainerHelper } from "./item-generator-container.ts";
 import { FallbackImageHelper } from "./item-generator-fallback.ts";
-import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.ts";
 import {
@@ -58,7 +58,6 @@ const ITEMS_TS_PATH = "src/items.ts";
 const STICKER_MARKUP_TS_PATH = "src/sticker-markup.ts";
 const TRANSLATIONS_TS_PATH = "src/translations/%s.ts";
 const ENGLISH_JSON_PATH = "scripts/data/english.json";
-const CONTAINER_SPECIALS_JSON_PATH = "scripts/data/container-specials.json";
 
 const FORMATTED_STRING_RE = /%s(\d+)/g;
 const LANGUAGE_FILE_RE = /csgo_([^\._]+)\.txt$/;
@@ -105,29 +104,6 @@ export class ItemIdentityHelper {
     }
 }
 
-export class ContainerSpecialsHelper {
-    private data = readJson<Record<string, string[]>>(CONTAINER_SPECIALS_JSON_PATH, {});
-    private specials: Record<string, number[] | undefined> = {};
-
-    populate(items: (readonly [string, CS2ExtendedItem])[]) {
-        const lookup: Record<string, number> = {};
-        for (const [name, item] of items) {
-            if (MELEE_OR_GLOVES_TYPES.includes(item.type)) {
-                lookup[item.base ? `${name} | ★ (Vanilla)` : name] = item.id;
-            }
-        }
-        for (const [containerName, specials] of Object.entries(this.data)) {
-            this.specials[containerName] = specials.map((name) =>
-                ensure(lookup[name], `Failed to find ${name} in lookup.`)
-            );
-        }
-    }
-
-    getSpecials(containerName: string) {
-        return this.specials[containerName];
-    }
-}
-
 export class ItemGenerator {
     gameItemsAsText: string = null!;
     gameItems: CS2GameItems["items_game"] = null!;
@@ -142,7 +118,6 @@ export class ItemGenerator {
     private raritiesColorHex: Record<string, string | undefined> = null!;
     private staticAssets: Record<string, string | undefined> = null!;
 
-    private containerSpecialsHelper = new ContainerSpecialsHelper();
     private itemIdentityHelper = new ItemIdentityHelper();
     private itemHelper = new ItemHelper();
     private fallbackImageHelper = new FallbackImageHelper();
@@ -598,6 +573,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex(["rare"]),
                 type: CS2ItemType.MusicKit
             });
+            this.itemNames.set(id, `music_kit-${index}`);
         }
     }
 
@@ -674,6 +650,7 @@ export class ItemGenerator {
                 rarity,
                 type: CS2ItemType.Sticker
             });
+            this.itemNames.set(id, `sticker-${index}`);
             // Sticker Slab
             const keychainInventoryImage = `econ/stickers/${sticker_material}_1355_37`;
             const keychainId = this.itemIdentityHelper.get(`keychain_37_${index}`);
@@ -708,7 +685,8 @@ export class ItemGenerator {
         ] of Object.entries(this.gameItems.sticker_kits)) {
             if (
                 !this.hasTranslation(item_name) ||
-                (!item_name?.includes("#SprayKit") &&
+                (name?.indexOf("spray_") !== 0 &&
+                    !item_name?.includes("#SprayKit") &&
                     item_name?.indexOf("spray_") !== 0 &&
                     !description_string?.includes("#SprayKit") &&
                     !sticker_material?.includes("_graffiti"))
@@ -731,6 +709,7 @@ export class ItemGenerator {
                         tint: tintId,
                         type: CS2ItemType.Graffiti
                     });
+                    this.itemNames.set(id, `graffiti-${index}`);
                 }
                 continue;
             }
@@ -755,6 +734,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Graffiti
             });
+            this.itemNames.set(id, `graffiti-${index}`);
         }
     }
 
@@ -790,6 +770,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Patch
             });
+            this.itemNames.set(id, `patch-${index}`);
         }
     }
 
@@ -873,6 +854,7 @@ export class ItemGenerator {
                 teams: undefined,
                 type: CS2ItemType.Collectible
             });
+            this.itemNames.set(id, `collectible-${index}`);
         }
     }
 
@@ -911,9 +893,7 @@ export class ItemGenerator {
 
     private async parseContainers() {
         warning("Parsing containers...");
-        this.containerSpecialsHelper.populate(
-            Array.from(this.itemNames.entries()).map(([id, name]) => [name, ensure(this.items.get(id))])
-        );
+        const containerHelper = new ContainerHelper(this.itemNames);
         const keyItems = new Map<string, number>();
         for (const [
             containerIndex,
@@ -968,7 +948,9 @@ export class ItemGenerator {
                     contents.push(id);
                 }
             }
-            // TODO Outsource missing items for a package.
+            const specials: number[] = [];
+            await containerHelper.populateContents(item_name, contents);
+            await containerHelper.populateSpecials(item_name, specials);
             if (contents.length > 0) {
                 const thePrefab = this.tryGetPrefab(prefab);
                 // Asserts if the container requires a key.
@@ -984,7 +966,8 @@ export class ItemGenerator {
                         name.includes("crate_patch") ||
                         name.includes("crate_sprays") ||
                         name.includes("selfopeningitem") ||
-                        prefab?.includes("selfopening")
+                        prefab?.includes("selfopening") ||
+                        item_name.includes("crate_xray")
                 );
                 const keys = await Promise.all(
                     Object.keys(associated_items ?? {}).map(async (keyItemDef) => {
@@ -1018,7 +1001,6 @@ export class ItemGenerator {
                     continue;
                 }
                 const containerName = this.requireTranslation(item_name);
-                const specials = this.containerSpecialsHelper.getSpecials(containerName) ?? HARDCODED_SPECIALS[id];
                 const containsMusicKit = containerName.includes("Music Kit");
                 const containsStatTrak = containerName.includes("StatTrak");
                 this.addTranslation(id, "name", "#CSGO_Type_WeaponCase", " | ", item_name);
@@ -1032,7 +1014,7 @@ export class ItemGenerator {
                     image,
                     keys: keys.length > 0 ? keys : undefined,
                     rarity: this.getRarityColorHex(["common"]),
-                    specials: specials ?? this.itemHelper.get(id)?.specials,
+                    specials: specials.length > 0 ? specials : this.itemHelper.get(id)?.specials,
                     specialsImage: this.getSpecialsImage(image_unusual_item),
                     statTrakless: containsMusicKit && !containsStatTrak ? true : undefined,
                     statTrakOnly: containsMusicKit && containsStatTrak ? true : undefined,
@@ -1348,11 +1330,8 @@ export class ItemGenerator {
             return this.staticAssets[staticKey];
         }
         const localPath = join(SCRIPTS_DIR, staticKey);
-        if (!(await exists(localPath))) {
-            if ((await this.fallbackImageHelper.find(source, imagePath)) === undefined) {
-                log(`Failed to find fallback image for ${imagePath}`);
-                return undefined;
-            }
+        if (!(await exists(localPath)) && (await this.fallbackImageHelper.find(source, imagePath)) === undefined) {
+            return undefined;
         }
         const filename = await this.copyAndOptimizeImage(localPath, "/images/{sha256}.webp");
         this.staticAssets[staticKey] = filename;
