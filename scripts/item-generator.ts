@@ -214,9 +214,15 @@ export class ItemGenerator {
     private buildExistingImageFilenames() {
         const filenames = new Set<string>();
         for (const item of this.itemHelper.values()) {
-            if (item.image) filenames.add(item.image);
-            if ((item as any).collectionImage) filenames.add((item as any).collectionImage);
-            if ((item as any).specialsImage) filenames.add((item as any).specialsImage);
+            if (item.image !== undefined) {
+                filenames.add(item.image);
+            }
+            if (item.collectionImage !== undefined) {
+                filenames.add(item.collectionImage);
+            }
+            if (item.specialsImage !== undefined) {
+                filenames.add(item.specialsImage);
+            }
         }
         return filenames;
     }
@@ -264,12 +270,17 @@ export class ItemGenerator {
                             Object.entries(
                                 CS2KeyValues.parse<CS2Language>(await readFile(join(GAME_RESOURCE_DIR, file), "utf-8"))
                                     .lang.Tokens
-                            ).reduce((tokens, [key, value]) => {
-                                key = key.toLowerCase();
-                                assert(tokens[key] === undefined);
-                                tokens[key] = value;
-                                return tokens;
-                            }, {} as any)
+                            ).reduce(
+                                (tokens, [key, value]) => {
+                                    key = key.toLowerCase();
+                                    assert(tokens[key] === undefined);
+                                    tokens[key] = value;
+                                    return tokens;
+                                },
+                                {} as {
+                                    [key: string]: string | undefined;
+                                }
+                            )
                         ];
                     })
             )
