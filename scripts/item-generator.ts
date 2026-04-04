@@ -34,12 +34,14 @@ import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } fr
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.ts";
 import {
     getFileSha256,
+    linearToSrgb,
     log,
     prependHash,
     PromiseQueue,
     readJson,
     rmIfExists,
     shouldRun,
+    srgbToLinear,
     warning,
     write,
     writeJson
@@ -1383,27 +1385,30 @@ export class ItemGenerator {
     }
 
     private async colorizeGraffitiImage(src: string, hexColor: string, dest: string) {
-        const input = sharp(src).ensureAlpha();
-        const { width, height } = await input.metadata();
-        assert(width && height);
-        const color = {
-            r: parseInt(hexColor.slice(1, 3), 16),
-            g: parseInt(hexColor.slice(3, 5), 16),
-            b: parseInt(hexColor.slice(5, 7), 16)
-        };
-        const grayscaleBuffer = await input.clone().removeAlpha().greyscale().raw().toBuffer();
-        const pixelCount = grayscaleBuffer.length;
-        const coloredPixels = Buffer.alloc(pixelCount * 3);
-        for (let i = 0; i < pixelCount; i++) {
-            const gray = grayscaleBuffer[i] / 255;
-            coloredPixels[i * 3 + 0] = Math.round(gray * color.r);
-            coloredPixels[i * 3 + 1] = Math.round(gray * color.g);
-            coloredPixels[i * 3 + 2] = Math.round(gray * color.b);
+        // Hex color bytes are passed directly as hex_byte/255 to the shader (g_ModulationColor),
+        // treated as linear - no sRGB-to-linear conversion applied by the game.
+        const colorR = parseInt(hexColor.slice(1, 3), 16) / 255;
+        const colorG = parseInt(hexColor.slice(3, 5), 16) / 255;
+        const colorB = parseInt(hexColor.slice(5, 7), 16) / 255;
+        const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+        const { width, height } = info;
+        const output = Buffer.alloc(width * height * 4);
+        for (let i = 0; i < width * height; i++) {
+            const o = i * 4;
+            // Texture is sRGB-encoded; GPU linearizes on sample before multiplying.
+            // Compute linear luminance (Rec. 709) from sRGB source channels.
+            const grayLinear =
+                0.2126 * srgbToLinear(data[o] / 255) +
+                0.7152 * srgbToLinear(data[o + 1] / 255) +
+                0.0722 * srgbToLinear(data[o + 2] / 255);
+            output[o] = Math.round(linearToSrgb(grayLinear * colorR) * 255);
+            output[o + 1] = Math.round(linearToSrgb(grayLinear * colorG) * 255);
+            output[o + 2] = Math.round(linearToSrgb(grayLinear * colorB) * 255);
+            output[o + 3] = data[o + 3];
         }
-        const coloredImage = sharp(coloredPixels, { raw: { width, height, channels: 3 } }).png();
-        const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
-        const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
-        await sharp(coloredWithAlpha).webp().toFile(join(OUTPUT_DIR, dest));
+        await sharp(output, { raw: { width, height, channels: 4 } })
+            .webp()
+            .toFile(join(OUTPUT_DIR, dest));
     }
 
     private getDefaultGraffitiImage(sticker_material: string, hexColor: string) {

@@ -152,19 +152,6 @@ export async function getFileSha256(filePath: string) {
     return hash.digest("hex").toLowerCase();
 }
 
-export async function getBufferSha256(buffer: Buffer) {
-    return createHash("sha256").update(buffer).digest("hex");
-}
-
-export async function getFilesSha256(filePaths: string[]) {
-    const hash = createHash("sha256");
-    for (const filePath of filePaths) {
-        const fileBuffer = await readFile(filePath);
-        hash.update(fileBuffer);
-    }
-    return hash.digest("hex");
-}
-
 export async function readFileOrDefault(path: string, fallback = "") {
     if (!(await exists(path))) {
         return fallback;
@@ -178,10 +165,10 @@ export async function rmIfExists(path: string) {
     }
 }
 
-const sent: string[] = [];
-export function logOnce(message: string) {
-    if (!sent.includes(message)) {
-        sent.push(message);
-        log(message);
-    }
+export function srgbToLinear(c: number): number {
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+export function linearToSrgb(c: number): number {
+    return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
 }
