@@ -26,7 +26,7 @@ const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
 
 const APP_ID = 730;
 const ASSETS_DEPOT_ID = 2347770;
-const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/", "soundevents/"];
+const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/"];
 export class CS2 {
     public local = !CS2_CSGO_PATH.includes("workdir");
 
