@@ -27,7 +27,7 @@ import {
 } from "../src/economy-types.ts";
 import { CS2KeyValues } from "../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
-import { CS2, SCRIPTS_DIR, VpkEntry, WORKDIR_DIR } from "./cs2.ts";
+import { CS2, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
 import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
 import { FallbackImageHelper } from "./item-generator-fallback.ts";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
@@ -150,8 +150,7 @@ export class ItemGenerator {
 
     private cs2 = new CS2();
 
-    private vpkIndex: Map<string, VpkEntry> = new Map();
-    private existingImageFilenames: Set<string> = new Set();
+    private existingImages: Set<string> = new Set();
     private neededVpkPaths: Set<string> = new Set();
     private imagesToProcess: Map<string, PendingImageTask> = new Map();
 
@@ -183,14 +182,7 @@ export class ItemGenerator {
     private keychainBaseId: number = null!;
 
     async run() {
-        if (this.cs2.local) {
-            await this.cs2.buildVpkIndex();
-        } else {
-            await this.cs2.syncLatestAssetsManifest();
-            await this.cs2.downloadTextData();
-        }
-        this.vpkIndex = this.cs2.vpkIndex;
-        this.existingImageFilenames = this.buildExistingImageFilenames();
+        await this.validate();
         await this.start();
         await this.readCsgoLanguageFiles();
         await this.readItemsGameFile();
@@ -208,28 +200,19 @@ export class ItemGenerator {
         await this.parseCollectibles();
         await this.parseTools();
         await this.parseContainers();
-        if (!this.cs2.local) {
-            await this.cs2.downloadAndDecompileImages(Array.from(this.neededVpkPaths));
-        }
+        await this.preProcessImages();
         await this.processImages();
         await this.uploadAssets();
         await this.end();
     }
 
-    private buildExistingImageFilenames() {
-        const filenames = new Set<string>();
-        for (const item of this.itemHelper.values()) {
-            if (item.image !== undefined) {
-                filenames.add(item.image);
-            }
-            if (item.collectionImage !== undefined) {
-                filenames.add(item.collectionImage);
-            }
-            if (item.specialsImage !== undefined) {
-                filenames.add(item.specialsImage);
-            }
+    async validate() {
+        if (this.cs2.local) {
+            await this.cs2.buildVpkIndex();
+        } else {
+            await this.cs2.syncLatestAssetsManifest();
+            await this.cs2.downloadTextData();
         }
-        return filenames;
     }
 
     async start() {
@@ -253,6 +236,17 @@ export class ItemGenerator {
                 } else {
                     await copyFile(path, join(outputDirectory, filename));
                 }
+            }
+        }
+        for (const item of this.itemHelper.values()) {
+            if (item.image !== undefined) {
+                this.existingImages.add(item.image);
+            }
+            if (item.collectionImage !== undefined) {
+                this.existingImages.add(item.collectionImage);
+            }
+            if (item.specialsImage !== undefined) {
+                this.existingImages.add(item.specialsImage);
             }
         }
     }
@@ -1108,6 +1102,12 @@ export class ItemGenerator {
         warning("Script completed successfully.");
     }
 
+    async preProcessImages() {
+        if (!this.cs2.local) {
+            await this.cs2.downloadAndDecompileImages(Array.from(this.neededVpkPaths));
+        }
+    }
+
     private async processImages() {
         if (this.imagesToProcess.size === 0) return;
         const threads = availableParallelism();
@@ -1377,11 +1377,11 @@ export class ItemGenerator {
     }
 
     private isImageValid(path: string) {
-        return this.vpkIndex.has(this.getVpkImagePath(path));
+        return this.cs2.vpkIndex.has(this.getVpkImagePath(path));
     }
 
     private isPaintImageValid(className?: string, paintClassName?: string) {
-        return this.vpkIndex.has(this.getVpkPaintImagePath(ensure(className), ensure(paintClassName), "light"));
+        return this.cs2.vpkIndex.has(this.getVpkPaintImagePath(ensure(className), ensure(paintClassName), "light"));
     }
 
     private getBaseImage(className: string) {
@@ -1390,9 +1390,9 @@ export class ItemGenerator {
 
     private getImage(path: string) {
         const vpkPath = this.getVpkImagePath(path);
-        const entry = ensure(this.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
+        const entry = ensure(this.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
         const filename = this.vpkCrcFilename(vpkPath, entry.crc);
-        if (!this.existingImageFilenames.has(filename)) {
+        if (!this.existingImages.has(filename)) {
             this.neededVpkPaths.add(vpkPath);
             this.imagesToProcess.set(vpkPath, { kind: "regular", localPath: this.getImagePath(path), filename });
         }
@@ -1403,10 +1403,10 @@ export class ItemGenerator {
         const cn = ensure(className);
         const pcn = ensure(paintClassName);
         const lightVpkPath = this.getVpkPaintImagePath(cn, pcn, "light");
-        const entry = ensure(this.vpkIndex.get(lightVpkPath), `VPK entry not found: ${lightVpkPath}`);
+        const entry = ensure(this.cs2.vpkIndex.get(lightVpkPath), `VPK entry not found: ${lightVpkPath}`);
         const baseName = `${cn}_${pcn}_${entry.crc}`;
         const baseFilename = `/images/${baseName}.webp`;
-        if (!this.existingImageFilenames.has(baseFilename)) {
+        if (!this.existingImages.has(baseFilename)) {
             const localPaths = PAINT_IMAGE_SUFFIXES.map(
                 (s) => [this.getPaintImagePath(cn, pcn, s), s] as [string, string]
             );
@@ -1447,11 +1447,11 @@ export class ItemGenerator {
 
     private getDefaultGraffitiImage(sticker_material: string, hexColor: string) {
         const vpkPath = this.getVpkImagePath(`econ/stickers/${sticker_material}`);
-        const entry = ensure(this.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
+        const entry = ensure(this.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
         const materialBase = ensure(sticker_material.split("/").pop());
         const colorNoHash = hexColor.replace("#", "");
         const filename = `/images/${materialBase}_${colorNoHash}_${entry.crc}.webp`;
-        if (!this.existingImageFilenames.has(filename)) {
+        if (!this.existingImages.has(filename)) {
             this.neededVpkPaths.add(vpkPath);
             this.imagesToProcess.set(`${vpkPath}:${hexColor}`, {
                 kind: "graffiti",
@@ -1468,12 +1468,12 @@ export class ItemGenerator {
             return this.requireStaticAsset("/images/default_rare_item.png");
         }
         const vpkPath = this.getVpkImagePath(path);
-        if (!this.vpkIndex.has(vpkPath)) {
+        if (!this.cs2.vpkIndex.has(vpkPath)) {
             return this.requireStaticAsset("/images/default_rare_item.png");
         }
-        const entry = ensure(this.vpkIndex.get(vpkPath));
+        const entry = ensure(this.cs2.vpkIndex.get(vpkPath));
         const filename = this.vpkCrcFilename(vpkPath, entry.crc, "rare");
-        if (!this.existingImageFilenames.has(filename)) {
+        if (!this.existingImages.has(filename)) {
             this.neededVpkPaths.add(vpkPath);
             this.imagesToProcess.set(`${vpkPath}:rare`, {
                 kind: "regular",
@@ -1556,13 +1556,13 @@ export class ItemGenerator {
         // dimensions 256x198, SVG should be centralized and scaled to fit the
         // full height of the final image.
         const vpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
-        if (!this.vpkIndex.has(vpkPath)) {
+        if (!this.cs2.vpkIndex.has(vpkPath)) {
             log(`Image not found for collection ${name}`);
             return undefined;
         }
-        const entry = ensure(this.vpkIndex.get(vpkPath));
+        const entry = ensure(this.cs2.vpkIndex.get(vpkPath));
         const filename = `/images/${name}_${entry.crc}.webp`;
-        if (!this.existingImageFilenames.has(filename)) {
+        if (!this.existingImages.has(filename)) {
             const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
             this.neededVpkPaths.add(vpkPath);
             this.imagesToProcess.set(vpkPath, { kind: "regular", localPath, filename });
