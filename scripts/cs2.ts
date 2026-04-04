@@ -181,7 +181,7 @@ export class CS2 {
         assert(DEPOT_SUCCESS_RE.test(dlOutput));
         const threads = availableParallelism();
         log(`Decompiling ${vpkPaths.length} images (${threads} threads)...`);
-        const batchSize = 2000;
+        const batchSize = 10000;
         for (let i = 0; i < vpkPaths.length; i += batchSize) {
             await readProcess(
                 vrfDecompiler({
