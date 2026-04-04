@@ -84,9 +84,6 @@ export interface CS2Item {
     teams?: CS2ItemTeamValues | undefined;
     tint?: number | undefined;
     type: CS2ItemTypeValues;
-    voFallback?: boolean | undefined;
-    voFemale?: boolean | undefined;
-    voPrefix?: string | undefined;
     wearMax?: number | undefined;
     wearMin?: number | undefined;
 }

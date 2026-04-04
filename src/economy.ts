@@ -300,9 +300,6 @@ export class CS2EconomyItem implements Interface<
     tint: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemTypeValues = null!;
-    voFallback: boolean | undefined;
-    voFemale: boolean | undefined;
-    voPrefix: string | undefined;
     wearMax: number | undefined;
     wearMin: number | undefined;
 

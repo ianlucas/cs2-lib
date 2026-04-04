@@ -47,7 +47,6 @@ import {
     writeJson
 } from "./utils.ts";
 
-const AGENTS_SOUNDEVENTS_PATH = join(CS2_CSGO_PATH, "soundevents/vo/agents");
 const GAME_IMAGES_DIR = join(CS2_CSGO_PATH, "panorama/images");
 const GAME_ITEMS_PATH = join(CS2_CSGO_PATH, "scripts/items/items_game.txt");
 const GAME_RESOURCE_DIR = join(CS2_CSGO_PATH, "resource");
@@ -75,9 +74,7 @@ const PAINT_IMAGE_SUFFIXES = ["light", "medium", "heavy"] as const;
 // prettier-ignore
 const UNCATEGORIZED_STICKERS = ["community_mix01", "community02", "danger_zone", "standard", "stickers2", "tournament_assets"];
 const REMOVE_KEYCHAIN_TOOL_INDEX = "65";
-
 const OUTPUT_IMAGE_QUALITY = 95;
-const DECOMPILER_DATA_SEPARATOR = `--- Data for block "DATA" ---`;
 
 export class ItemHelper extends Map<number, CS2Item> {
     constructor() {
@@ -691,7 +688,7 @@ export class ItemGenerator {
                     this.addItem({
                         baseId,
                         id,
-                        image: await this.getDefaultGraffitiImage(id, sticker_material, hexColor),
+                        image: await this.getDefaultGraffitiImage(sticker_material, hexColor),
                         index: Number(index),
                         rarity: this.getRarityColorHex([item_rarity]),
                         tint: tintId,
@@ -763,17 +760,7 @@ export class ItemGenerator {
         warning("Parsing agents...");
         for (const [
             index,
-            {
-                name,
-                item_name,
-                vo_prefix,
-                used_by_classes,
-                image_inventory,
-                model_player,
-                item_rarity,
-                prefab,
-                item_description
-            }
+            { name, item_name, used_by_classes, image_inventory, model_player, item_rarity, prefab, item_description }
         ] of Object.entries(this.gameItems.items)) {
             if (
                 item_name === undefined ||
@@ -787,7 +774,6 @@ export class ItemGenerator {
             const teams = this.getTeams(used_by_classes);
             const id = this.itemIdentityHelper.get(`agent_${this.getTeamsString(used_by_classes)}_${index}`);
             const model = model_player.replace("characters/models/", "").replace(".vmdl", "");
-            const voPrefix = this.getAgentVoPrefix(model_player, vo_prefix);
             this.addTranslation(id, "name", "#Type_CustomPlayer", " | ", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
@@ -798,10 +784,7 @@ export class ItemGenerator {
                 model,
                 rarity: this.getRarityColorHex([name, item_rarity]),
                 teams,
-                type: CS2ItemType.Agent,
-                voFallback: await this.getAgentVoFallback(voPrefix),
-                voFemale: this.getAgentVoFemale(voPrefix),
-                voPrefix
+                type: CS2ItemType.Agent
             });
         }
     }
@@ -1313,7 +1296,7 @@ export class ItemGenerator {
         return await this.copyAndOptimizeImage(paths[0][0], `${base}.webp`);
     }
 
-    private async getDefaultGraffitiImage(id: number, sticker_material: string, hexColor: string) {
+    private async getDefaultGraffitiImage(sticker_material: string, hexColor: string) {
         const src = this.getImagePath(`econ/stickers/${sticker_material}`);
 
         const input = sharp(src).ensureAlpha();
@@ -1423,51 +1406,6 @@ export class ItemGenerator {
             category = "Valve";
         }
         return [ensure(category), categoryToken] as const;
-    }
-
-    private getAgentVoPrefix(model: string, prefix?: string) {
-        switch (true) {
-            case prefix === "ctm_gsg9":
-                return "gsg9";
-            case prefix !== undefined:
-                return prefix;
-            case model.includes("tm_leet"):
-                return "leet";
-            case model.includes("ctm_st6"):
-                return "seal";
-            case model.includes("ctm_swat"):
-                return "swat";
-            case model.includes("tm_balkan"):
-                return "balkan";
-            case model.includes("tm_professional"):
-                return "professional";
-            case model.includes("tm_phoenix"):
-                return "phoenix";
-            case model.includes("ctm_fbi"):
-                return "fbihrt";
-            case model.includes("ctm_sas"):
-                return "sas";
-            default:
-                return fail();
-        }
-    }
-
-    private getAgentVoFemale(prefix: string) {
-        if (prefix.includes("_fem")) {
-            return true;
-        }
-        if (prefix === "fbihrt_epic") {
-            return true;
-        }
-        return undefined;
-    }
-
-    private async getAgentVoFallback(prefix: string) {
-        return (await readFile(join(AGENTS_SOUNDEVENTS_PATH, `game_sounds_${prefix}.vsndevts`), "utf-8")).includes(
-            "radiobot"
-        )
-            ? true
-            : undefined;
     }
 
     private async getCollectionImage(name: string) {
