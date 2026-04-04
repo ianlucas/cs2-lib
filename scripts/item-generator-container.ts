@@ -9,8 +9,8 @@ import { log, warning } from "./utils.ts";
 const CRATES_URL = "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/crates.json";
 
 interface CrateEntry {
-    contains: { name: string }[];
-    contains_rare: { name: string }[];
+    contains: { name: string; id: string }[];
+    contains_rare: { name: string; id: string }[];
     original: { item_name: string };
 }
 
@@ -20,6 +20,15 @@ export class ContainerHelper {
 
     constructor(itemNames: Map<number, string>) {
         this.nameToId = new Map(Array.from(itemNames.entries()).map(([id, name]) => [name, id]));
+    }
+
+    private resolveId({ id, name }: { id: string; name: string }): number | undefined {
+        return (
+            this.nameToId.get(id) ??
+            this.nameToId.get(id.replace("_st", "")) ??
+            this.nameToId.get(name) ??
+            this.nameToId.get(name.replace("★ ", ""))
+        );
     }
 
     private async fetchCrates(): Promise<CrateEntry[]> {
@@ -43,11 +52,11 @@ export class ContainerHelper {
             return;
         }
         const added: string[] = [];
-        for (const { name } of crate.contains) {
-            const id = ensure(this.nameToId.get(name), `ContainerHelper: failed to find "${name}" in parsed items.`);
+        for (const item of crate.contains) {
+            const id = ensure(this.resolveId(item), `ContainerHelper: failed to find "${item.name}" in parsed items.`);
             if (!contents.includes(id)) {
                 contents.push(id);
-                added.push(name);
+                added.push(item.name);
             }
         }
         if (added.length > 0) {
@@ -63,8 +72,8 @@ export class ContainerHelper {
             return;
         }
         let added = 0;
-        for (const { name } of crate.contains_rare) {
-            const id = ensure(this.nameToId.get(name), `ContainerHelper: failed to find "${name}" in parsed items.`);
+        for (const item of crate.contains_rare) {
+            const id = ensure(this.resolveId(item), `ContainerHelper: failed to find "${item.name}" in parsed items.`);
             if (!specials.includes(id)) {
                 specials.push(id);
                 added++;

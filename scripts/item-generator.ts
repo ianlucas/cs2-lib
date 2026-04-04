@@ -573,6 +573,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex(["rare"]),
                 type: CS2ItemType.MusicKit
             });
+            this.itemNames.set(id, `music_kit-${index}`);
         }
     }
 
@@ -649,6 +650,7 @@ export class ItemGenerator {
                 rarity,
                 type: CS2ItemType.Sticker
             });
+            this.itemNames.set(id, `sticker-${index}`);
             // Sticker Slab
             const keychainInventoryImage = `econ/stickers/${sticker_material}_1355_37`;
             const keychainId = this.itemIdentityHelper.get(`keychain_37_${index}`);
@@ -683,7 +685,8 @@ export class ItemGenerator {
         ] of Object.entries(this.gameItems.sticker_kits)) {
             if (
                 !this.hasTranslation(item_name) ||
-                (!item_name?.includes("#SprayKit") &&
+                (name?.indexOf("spray_") !== 0 &&
+                    !item_name?.includes("#SprayKit") &&
                     item_name?.indexOf("spray_") !== 0 &&
                     !description_string?.includes("#SprayKit") &&
                     !sticker_material?.includes("_graffiti"))
@@ -706,6 +709,7 @@ export class ItemGenerator {
                         tint: tintId,
                         type: CS2ItemType.Graffiti
                     });
+                    this.itemNames.set(id, `graffiti-${index}`);
                 }
                 continue;
             }
@@ -730,6 +734,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Graffiti
             });
+            this.itemNames.set(id, `graffiti-${index}`);
         }
     }
 
@@ -765,6 +770,7 @@ export class ItemGenerator {
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Patch
             });
+            this.itemNames.set(id, `patch-${index}`);
         }
     }
 
@@ -848,6 +854,7 @@ export class ItemGenerator {
                 teams: undefined,
                 type: CS2ItemType.Collectible
             });
+            this.itemNames.set(id, `collectible-${index}`);
         }
     }
 
@@ -959,7 +966,8 @@ export class ItemGenerator {
                         name.includes("crate_patch") ||
                         name.includes("crate_sprays") ||
                         name.includes("selfopeningitem") ||
-                        prefab?.includes("selfopening")
+                        prefab?.includes("selfopening") ||
+                        item_name.includes("crate_xray")
                 );
                 const keys = await Promise.all(
                     Object.keys(associated_items ?? {}).map(async (keyItemDef) => {

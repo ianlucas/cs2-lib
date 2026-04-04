@@ -128,12 +128,6 @@ export class PromiseQueue {
                 .finally(() => {
                     this.running--;
                     this.completedCount++;
-
-                    if (this.completedCount % this.concurrency === 0) {
-                        const remaining = this.queue.length + this.running;
-                        console.log(`${remaining} items left in queue...`);
-                    }
-
                     this.next();
                     if (this.queue.length === 0 && this.running === 0) {
                         const resolvers = this.idleResolvers;

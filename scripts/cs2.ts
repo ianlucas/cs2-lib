@@ -32,7 +32,7 @@ const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
 
 const APP_ID = 730;
 const ASSETS_DEPOT_ID = 2347770;
-const TEXT_DIRS = ["scripts/", "resource/"];
+const TEXT_DIRS = ["scripts/items/items_game.txt", "resource/csgo_"];
 const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/"];
 
 export class CS2 {
@@ -69,7 +69,6 @@ export class CS2 {
     }
 
     private async downloadCsgoPakDirParts(dirs: string[]) {
-        log("Checking required 'pak01_dir.vpk' parts...");
         if (this.vpkIndex.size === 0) {
             await this.buildVpkIndex();
         }
@@ -80,7 +79,7 @@ export class CS2 {
             }
         }
         await writeFile(PAK_FILELIST_PATH, [...vpks].join("\n"), "utf-8");
-        log("Downloading packages...");
+        log(`Downloading packages (${vpks.size} parts)...`);
         const output = await readProcess(
             depotDownloader({
                 app: APP_ID,
@@ -186,7 +185,6 @@ export class CS2 {
         assert(DEPOT_SUCCESS_RE.test(dlOutput));
         const threads = availableParallelism();
         log(`Decompiling ${vpkPaths.length} images (${threads} threads)...`);
-        console.log(vpkPaths);
         const MAX_ARG_BYTES = 100_000;
         let batch: string[] = [];
         let batchBytes = 0;
