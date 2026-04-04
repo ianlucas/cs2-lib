@@ -6,7 +6,8 @@
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
 import { createReadStream } from "fs";
 import { copyFile, mkdir, readdir, readFile } from "fs/promises";
-import { join } from "path";
+import { availableParallelism } from "os";
+import { basename, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
 import { stripHtml } from "string-strip-html";
@@ -26,16 +27,13 @@ import {
 } from "../src/economy-types.ts";
 import { CS2KeyValues } from "../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
-import { CS2, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
+import { CS2, SCRIPTS_DIR, VpkEntry, WORKDIR_DIR } from "./cs2.ts";
 import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.ts";
 import {
-    exists,
-    getBufferSha256,
     getFileSha256,
-    getFilesSha256,
     log,
     prependHash,
     PromiseQueue,
@@ -75,6 +73,12 @@ const PAINT_IMAGE_SUFFIXES = ["light", "medium", "heavy"] as const;
 const UNCATEGORIZED_STICKERS = ["community_mix01", "community02", "danger_zone", "standard", "stickers2", "tournament_assets"];
 const REMOVE_KEYCHAIN_TOOL_INDEX = "65";
 const OUTPUT_IMAGE_QUALITY = 95;
+const CDN_UPLOAD_CONCURRENCY = 40;
+
+type PendingImageTask =
+    | { kind: "regular"; localPath: string; filename: string }
+    | { kind: "paint"; localPaths: [string, string][]; baseName: string; baseFilename: string }
+    | { kind: "graffiti"; localPath: string; hexColor: string; filename: string };
 
 export class ItemHelper extends Map<number, CS2Item> {
     constructor() {
@@ -141,6 +145,11 @@ export class ItemGenerator {
 
     private cs2 = new CS2();
 
+    private vpkIndex: Map<string, VpkEntry> = new Map();
+    private existingImageFilenames: Set<string> = new Set();
+    private neededVpkPaths: Set<string> = new Set();
+    private imagesToProcess: Map<string, PendingImageTask> = new Map();
+
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
     private items = new Map<number, CS2ExtendedItem>();
@@ -169,6 +178,14 @@ export class ItemGenerator {
     private keychainBaseId: number = null!;
 
     async run() {
+        if (this.cs2.local) {
+            await this.cs2.buildVpkIndex();
+        } else {
+            await this.cs2.syncLatestAssetsManifest();
+            await this.cs2.downloadTextData();
+        }
+        this.vpkIndex = this.cs2.vpkIndex;
+        this.existingImageFilenames = this.buildExistingImageFilenames();
         await this.start();
         await this.readCsgoLanguageFiles();
         await this.readItemsGameFile();
@@ -186,8 +203,22 @@ export class ItemGenerator {
         await this.parseCollectibles();
         await this.parseTools();
         await this.parseContainers();
+        if (!this.cs2.local) {
+            await this.cs2.downloadAndDecompileImages(Array.from(this.neededVpkPaths));
+        }
+        await this.processImages();
         await this.uploadAssets();
         await this.end();
+    }
+
+    private buildExistingImageFilenames() {
+        const filenames = new Set<string>();
+        for (const item of this.itemHelper.values()) {
+            if (item.image) filenames.add(item.image);
+            if ((item as any).collectionImage) filenames.add((item as any).collectionImage);
+            if ((item as any).specialsImage) filenames.add((item as any).specialsImage);
+        }
+        return filenames;
     }
 
     async start() {
@@ -333,7 +364,7 @@ export class ItemGenerator {
                         return await Promise.all(
                             Object.keys(items).map(async (itemKey) => {
                                 if (this.itemSetImage[itemSetKey] === undefined) {
-                                    this.itemSetImage[itemSetKey] = await this.getCollectionImage(itemSetKey);
+                                    this.itemSetImage[itemSetKey] = this.getCollectionImage(itemSetKey);
                                 }
                                 return [itemKey, itemSetKey] as const;
                             })
@@ -369,10 +400,7 @@ export class ItemGenerator {
                 descToken: item_description,
                 free: true,
                 id,
-                image:
-                    image_inventory !== undefined
-                        ? await this.getImage(image_inventory)
-                        : await this.getBaseImage(id, name),
+                image: image_inventory !== undefined ? this.getImage(image_inventory) : this.getBaseImage(name),
                 index: undefined,
                 model: name.replace("weapon_", ""),
                 // Read DATA -> Get DATA to JSON + .vmat references (update GLB with the CDN paths)
@@ -418,7 +446,7 @@ export class ItemGenerator {
                 descToken: item_description,
                 free: baseitem === "1" ? true : undefined,
                 id,
-                image: await this.getImage(image_inventory),
+                image: this.getImage(image_inventory),
                 index: baseitem === "1" ? undefined : 0,
                 model: name.replace("weapon_", ""),
                 nameToken: item_name,
@@ -451,7 +479,7 @@ export class ItemGenerator {
                 id,
                 image:
                     image_inventory !== undefined
-                        ? await this.getImage(image_inventory)
+                        ? this.getImage(image_inventory)
                         : this.requireStaticAsset(`/images/${name}.png`),
                 index: baseitem === "1" ? undefined : 0,
                 model: name,
@@ -482,10 +510,7 @@ export class ItemGenerator {
                 descToken: item_description,
                 free: true,
                 id,
-                image:
-                    image_inventory !== undefined
-                        ? await this.getImage(image_inventory)
-                        : await this.getBaseImage(id, name),
+                image: image_inventory !== undefined ? this.getImage(image_inventory) : this.getBaseImage(name),
                 index: undefined,
                 model: name.replace("weapon_", ""),
                 nameToken: item_name,
@@ -500,7 +525,7 @@ export class ItemGenerator {
         warning("Parsing paint kits...");
         for (const paintKit of this.paintKits) {
             for (const baseItem of this.baseItems) {
-                if (!(await this.isPaintImageValid(baseItem.className, paintKit.className))) {
+                if (!this.isPaintImageValid(baseItem.className, paintKit.className)) {
                     continue;
                 }
                 const itemKey = `[${paintKit.className}]${baseItem.className}`;
@@ -519,7 +544,7 @@ export class ItemGenerator {
                     baseId: baseItem.id,
                     free: undefined,
                     id,
-                    image: await this.getPaintImage(id, baseItem.className, paintKit.className),
+                    image: this.getPaintImage(baseItem.className, paintKit.className),
                     index: Number(paintKit.index),
                     legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
                     stickerMaxForLegacy: undefined,
@@ -559,7 +584,7 @@ export class ItemGenerator {
                 def: 1314,
                 free: base,
                 id,
-                image: await this.getImage(image_inventory),
+                image: this.getImage(image_inventory),
                 index: Number(index),
                 rarity: this.getRarityColorHex(["rare"]),
                 type: CS2ItemType.MusicKit
@@ -576,7 +601,7 @@ export class ItemGenerator {
             if (!this.hasTranslation(loc_name)) {
                 continue;
             }
-            if (!(await this.isImageValid(image_inventory))) {
+            if (!this.isImageValid(image_inventory)) {
                 log(`Inventory image not found for ${image_inventory} (index: ${index})`);
                 continue;
             }
@@ -590,7 +615,7 @@ export class ItemGenerator {
                 free: index === "37" ? true : undefined,
                 def: 1355,
                 id,
-                image: await this.getImage(image_inventory),
+                image: this.getImage(image_inventory),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Keychain
@@ -635,14 +660,14 @@ export class ItemGenerator {
                 baseId,
                 def: 1209,
                 id,
-                image: await this.getImage(`econ/stickers/${sticker_material}`),
+                image: this.getImage(`econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity,
                 type: CS2ItemType.Sticker
             });
             // Sticker Slab
             const keychainImage = `econ/stickers/${sticker_material}_1355_37`;
-            if (!(await this.isImageValid(keychainImage))) {
+            if (!this.isImageValid(keychainImage)) {
                 log(`Failed to find image for sticker slab at ${keychainImage} (index: ${index})`);
                 continue;
             }
@@ -653,7 +678,7 @@ export class ItemGenerator {
                 baseId: this.keychainBaseId,
                 def: 1355,
                 id: keychainId,
-                image: await this.getImage(keychainImage),
+                image: this.getImage(keychainImage),
                 index: 37,
                 rarity,
                 stickerId: id,
@@ -688,7 +713,7 @@ export class ItemGenerator {
                     this.addItem({
                         baseId,
                         id,
-                        image: await this.getDefaultGraffitiImage(sticker_material, hexColor),
+                        image: this.getDefaultGraffitiImage(sticker_material, hexColor),
                         index: Number(index),
                         rarity: this.getRarityColorHex([item_rarity]),
                         tint: tintId,
@@ -713,7 +738,7 @@ export class ItemGenerator {
                 baseId,
                 def: 1348,
                 id,
-                image: await this.getImage(`econ/stickers/${sticker_material}`),
+                image: this.getImage(`econ/stickers/${sticker_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Graffiti
@@ -748,7 +773,7 @@ export class ItemGenerator {
                 baseId,
                 def: 4609,
                 id,
-                image: await this.getImage(`econ/patches/${patch_material}`),
+                image: this.getImage(`econ/patches/${patch_material}`),
                 index: Number(index),
                 rarity: this.getRarityColorHex([itemKey, item_rarity]),
                 type: CS2ItemType.Patch
@@ -779,7 +804,7 @@ export class ItemGenerator {
             this.addItem({
                 def: Number(index),
                 id,
-                image: await this.getImage(image_inventory),
+                image: this.getImage(image_inventory),
                 index: undefined,
                 model,
                 rarity: this.getRarityColorHex([name, item_rarity]),
@@ -806,7 +831,7 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            if (!(await this.isImageValid(image_inventory))) {
+            if (!this.isImageValid(image_inventory)) {
                 log(`Inventory image not found for ${image_inventory} (index: ${index})`);
                 continue;
             }
@@ -826,7 +851,7 @@ export class ItemGenerator {
                 altName: name,
                 def: Number(index),
                 id,
-                image: await this.getImage(image_inventory),
+                image: this.getImage(image_inventory),
                 index: undefined,
                 rarity: this.getRarityColorHex([item_rarity, "ancient"]),
                 teams: undefined,
@@ -859,7 +884,7 @@ export class ItemGenerator {
                 def: Number(index),
                 free: baseitem === "1" && index !== REMOVE_KEYCHAIN_TOOL_INDEX ? true : undefined,
                 id,
-                image: await this.getImage(image),
+                image: this.getImage(image),
                 index: undefined,
                 rarity: this.getRarityColorHex(["common"]),
                 teams: undefined,
@@ -901,7 +926,7 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            if (!(await this.isImageValid(image_inventory))) {
+            if (!this.isImageValid(image_inventory)) {
                 log(`Inventory image not found for ${image_inventory} (index: ${containerIndex})`);
                 continue;
             }
@@ -963,7 +988,7 @@ export class ItemGenerator {
                         this.addItem({
                             def: Number(keyItemDef),
                             id,
-                            image: await this.getImage(image_inventory),
+                            image: this.getImage(image_inventory),
                             rarity: this.getRarityColorHex(["common"]),
                             teams: undefined,
                             type: CS2ItemType.Key
@@ -984,11 +1009,11 @@ export class ItemGenerator {
                     contents,
                     def: Number(containerIndex),
                     id,
-                    image: await this.getImage(image_inventory),
+                    image: this.getImage(image_inventory),
                     keys: keys.length > 0 ? keys : undefined,
                     rarity: this.getRarityColorHex(["common"]),
                     specials: specials ?? this.itemHelper.get(id)?.specials,
-                    specialsImage: await this.getSpecialsImage(id, image_unusual_item),
+                    specialsImage: this.getSpecialsImage(image_unusual_item),
                     statTrakless: containsMusicKit && !containsStatTrak ? true : undefined,
                     statTrakOnly: containsMusicKit && containsStatTrak ? true : undefined,
                     teams: undefined,
@@ -1008,7 +1033,7 @@ export class ItemGenerator {
             STORAGE_ACCESS_KEY
         );
         const folders = ["images", "textures", "models"];
-        const queue = new PromiseQueue(40);
+        const queue = new PromiseQueue(CDN_UPLOAD_CONCURRENCY);
         for (const folder of folders) {
             const fileChecksums = await this.fetchStorageFileChecksums(sz, `/${folder}`);
             const assetsPath = join(OUTPUT_DIR, folder);
@@ -1059,6 +1084,36 @@ export class ItemGenerator {
         }
 
         warning("Script completed successfully.");
+    }
+
+    private async processImages() {
+        if (this.imagesToProcess.size === 0) return;
+        const threads = availableParallelism();
+        log(`Processing ${this.imagesToProcess.size} images (${threads} threads)...`);
+        const queue = new PromiseQueue(threads);
+        for (const task of this.imagesToProcess.values()) {
+            if (task.kind === "regular") {
+                queue.push(async () => {
+                    await sharp(task.localPath)
+                        .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                        .toFile(join(OUTPUT_DIR, task.filename));
+                });
+            } else if (task.kind === "paint") {
+                queue.push(async () => {
+                    for (const [src, suffix] of task.localPaths) {
+                        await sharp(src)
+                            .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                            .toFile(join(OUTPUT_DIR, `/images/${task.baseName}_${suffix}.webp`));
+                    }
+                    await sharp(task.localPaths[0][0])
+                        .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                        .toFile(join(OUTPUT_DIR, task.baseFilename));
+                });
+            } else if (task.kind === "graffiti") {
+                queue.push(() => this.colorizeGraffitiImage(task.localPath, task.hexColor, task.filename));
+            }
+        }
+        await queue.waitForIdle();
     }
 
     private async fetchStorageFileChecksums(
@@ -1246,12 +1301,6 @@ export class ItemGenerator {
         return filename;
     }
 
-    private async copyAndOptimizeTextureImage(src: string, dest: string) {
-        const filename = await this.getDestFilename(src, dest);
-        await sharp(src).removeAlpha().resize(1024, 1024).webp().toFile(join(OUTPUT_DIR, filename));
-        return filename;
-    }
-
     private getImagePath(path: string) {
         return join(GAME_IMAGES_DIR, `${path}_png.png`.toLowerCase());
     }
@@ -1267,38 +1316,62 @@ export class ItemGenerator {
         return ensure(this.staticAssets[path], `Unable to find '${path}' static asset.`);
     }
 
-    private async isImageValid(path: string) {
-        return await exists(this.getImagePath(path));
+    private getVpkImagePath(path: string) {
+        return `panorama/images/${path}_png.png`.toLowerCase();
     }
 
-    private async isPaintImageValid(className?: string, paintClassName?: string) {
-        return await exists(this.getPaintImagePath(className, paintClassName));
+    private getVpkPaintImagePath(className: string, paintClassName: string, suffix: string) {
+        return `panorama/images/econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase();
     }
 
-    private async getBaseImage(id: number, className: string) {
-        return await this.getImage(`econ/weapons/base_weapons/${className}`);
+    private vpkCrcFilename(vpkPath: string, crc: string, suffix?: string) {
+        const base = basename(vpkPath, ".png").replace(/_png$/, "");
+        return suffix ? `/images/${base}_${crc}_${suffix}.webp` : `/images/${base}_${crc}.webp`;
     }
 
-    private async getImage(path: string) {
-        return await this.copyAndOptimizeImage(this.getImagePath(path), `/images/{sha256}.webp`);
+    private isImageValid(path: string) {
+        return this.vpkIndex.has(this.getVpkImagePath(path));
     }
 
-    private async getPaintImage(id: number, className: string | undefined, paintClassName: string | undefined) {
-        const paths = PAINT_IMAGE_SUFFIXES.map((suffix) => [
-            this.getPaintImagePath(className, paintClassName, suffix),
-            suffix
-        ]);
-        const sha256 = await getFilesSha256(paths.map((path) => path[0]));
-        const base = `/images/${sha256}`;
-        for (const [src, suffix] of paths) {
-            await this.copyAndOptimizeImage(src, `${base}_${suffix}.webp`);
+    private isPaintImageValid(className?: string, paintClassName?: string) {
+        return this.vpkIndex.has(this.getVpkPaintImagePath(ensure(className), ensure(paintClassName), "light"));
+    }
+
+    private getBaseImage(className: string) {
+        return this.getImage(`econ/weapons/base_weapons/${className}`);
+    }
+
+    private getImage(path: string) {
+        const vpkPath = this.getVpkImagePath(path);
+        const entry = ensure(this.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
+        const filename = this.vpkCrcFilename(vpkPath, entry.crc);
+        if (!this.existingImageFilenames.has(filename)) {
+            this.neededVpkPaths.add(vpkPath);
+            this.imagesToProcess.set(vpkPath, { kind: "regular", localPath: this.getImagePath(path), filename });
         }
-        return await this.copyAndOptimizeImage(paths[0][0], `${base}.webp`);
+        return filename;
     }
 
-    private async getDefaultGraffitiImage(sticker_material: string, hexColor: string) {
-        const src = this.getImagePath(`econ/stickers/${sticker_material}`);
+    private getPaintImage(className: string | undefined, paintClassName: string | undefined) {
+        const cn = ensure(className);
+        const pcn = ensure(paintClassName);
+        const lightVpkPath = this.getVpkPaintImagePath(cn, pcn, "light");
+        const entry = ensure(this.vpkIndex.get(lightVpkPath), `VPK entry not found: ${lightVpkPath}`);
+        const baseName = `${cn}_${pcn}_${entry.crc}`;
+        const baseFilename = `/images/${baseName}.webp`;
+        if (!this.existingImageFilenames.has(baseFilename)) {
+            const localPaths = PAINT_IMAGE_SUFFIXES.map(
+                (s) => [this.getPaintImagePath(cn, pcn, s), s] as [string, string]
+            );
+            for (const s of PAINT_IMAGE_SUFFIXES) {
+                this.neededVpkPaths.add(this.getVpkPaintImagePath(cn, pcn, s));
+            }
+            this.imagesToProcess.set(lightVpkPath, { kind: "paint", localPaths, baseName, baseFilename });
+        }
+        return baseFilename;
+    }
 
+    private async colorizeGraffitiImage(src: string, hexColor: string, dest: string) {
         const input = sharp(src).ensureAlpha();
         const { width, height } = await input.metadata();
         assert(width && height);
@@ -1316,29 +1389,49 @@ export class ItemGenerator {
             coloredPixels[i * 3 + 1] = Math.round(gray * color.g);
             coloredPixels[i * 3 + 2] = Math.round(gray * color.b);
         }
-        const coloredImage = sharp(coloredPixels, {
-            raw: {
-                width,
-                height,
-                channels: 3
-            }
-        }).png();
+        const coloredImage = sharp(coloredPixels, { raw: { width, height, channels: 3 } }).png();
         const alphaBuffer = await input.clone().ensureAlpha().extractChannel("alpha").toBuffer();
         const coloredWithAlpha = await coloredImage.joinChannel(alphaBuffer).png().toBuffer();
-        const dest = `/images/${await getBufferSha256(coloredWithAlpha)}.webp`;
         await sharp(coloredWithAlpha).webp().toFile(join(OUTPUT_DIR, dest));
-        return dest;
     }
 
-    private async getSpecialsImage(id: number, path?: string) {
+    private getDefaultGraffitiImage(sticker_material: string, hexColor: string) {
+        const vpkPath = this.getVpkImagePath(`econ/stickers/${sticker_material}`);
+        const entry = ensure(this.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
+        const materialBase = ensure(sticker_material.split("/").pop());
+        const colorNoHash = hexColor.replace("#", "");
+        const filename = `/images/${materialBase}_${colorNoHash}_${entry.crc}.webp`;
+        if (!this.existingImageFilenames.has(filename)) {
+            this.neededVpkPaths.add(vpkPath);
+            this.imagesToProcess.set(`${vpkPath}:${hexColor}`, {
+                kind: "graffiti",
+                localPath: this.getImagePath(`econ/stickers/${sticker_material}`),
+                hexColor,
+                filename
+            });
+        }
+        return filename;
+    }
+
+    private getSpecialsImage(path?: string) {
         if (path === undefined) {
             return this.requireStaticAsset("/images/default_rare_item.png");
         }
-        const src = this.getImagePath(path);
-        if (await exists(src)) {
-            return await this.copyAndOptimizeImage(src, `/images/{sha256}_rare.webp`);
+        const vpkPath = this.getVpkImagePath(path);
+        if (!this.vpkIndex.has(vpkPath)) {
+            return this.requireStaticAsset("/images/default_rare_item.png");
         }
-        return this.requireStaticAsset("/images/default_rare_item.png");
+        const entry = ensure(this.vpkIndex.get(vpkPath));
+        const filename = this.vpkCrcFilename(vpkPath, entry.crc, "rare");
+        if (!this.existingImageFilenames.has(filename)) {
+            this.neededVpkPaths.add(vpkPath);
+            this.imagesToProcess.set(`${vpkPath}:rare`, {
+                kind: "regular",
+                localPath: this.getImagePath(path),
+                filename
+            });
+        }
+        return filename;
     }
 
     private getPaintAltName(className: string) {
@@ -1408,13 +1501,20 @@ export class ItemGenerator {
         return [ensure(category), categoryToken] as const;
     }
 
-    private async getCollectionImage(name: string) {
-        const src = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
-        if (!(await exists(src))) {
+    private getCollectionImage(name: string) {
+        const vpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
+        if (!this.vpkIndex.has(vpkPath)) {
             log(`Image not found for collection ${name}`);
             return undefined;
         }
-        return await this.copyAndOptimizeImage(src, `/images/{sha256}.webp`);
+        const entry = ensure(this.vpkIndex.get(vpkPath));
+        const filename = `/images/${name}_${entry.crc}.webp`;
+        if (!this.existingImageFilenames.has(filename)) {
+            const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
+            this.neededVpkPaths.add(vpkPath);
+            this.imagesToProcess.set(vpkPath, { kind: "regular", localPath, filename });
+        }
+        return filename;
     }
 
     private getCollection(itemId: number, collection?: string) {
