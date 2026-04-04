@@ -37,18 +37,18 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Download CS2 data
-        run: npm run cs2
+      - name: Configure Git
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Update
+        run: npm run update
         env:
           INPUT_FORCE: ${{ inputs.force }}
           INPUT_TEXTURES: ${{ inputs.textures }}
           STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
 
       - name: Extract CS2 version
         id: version
@@ -66,14 +66,6 @@ jobs:
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Update
-        run: npm run update
-        env:
-          INPUT_FORCE: ${{ inputs.force }}
-          INPUT_TEXTURES: ${{ inputs.textures }}
-          STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
-          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
 
       - name: Commit and push changes
         if: steps.check_branch.outputs.exists != 'true'
