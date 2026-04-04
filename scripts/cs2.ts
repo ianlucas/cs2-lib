@@ -128,7 +128,8 @@ export class CS2 {
                 if (eqIdx !== -1) meta[kv.slice(0, eqIdx)] = kv.slice(eqIdx + 1);
             }
             if (meta.crc && meta.fnumber) {
-                this.vpkIndex.set(path, {
+                const normalizedPath = path.endsWith(".vtex_c") ? path.slice(0, -7) + ".png" : path;
+                this.vpkIndex.set(normalizedPath, {
                     crc: meta.crc.replace("0x", ""),
                     fnumber: meta.fnumber
                 });
@@ -181,18 +182,32 @@ export class CS2 {
         assert(DEPOT_SUCCESS_RE.test(dlOutput));
         const threads = availableParallelism();
         log(`Decompiling ${vpkPaths.length} images (${threads} threads)...`);
-        const batchSize = 10000;
-        for (let i = 0; i < vpkPaths.length; i += batchSize) {
+        console.log(vpkPaths);
+        const MAX_ARG_BYTES = 100_000;
+        let batch: string[] = [];
+        let batchBytes = 0;
+        const flush = async () => {
+            if (batch.length === 0) return;
             await readProcess(
                 vrfDecompiler({
                     input: this.pakDirPath,
                     output: DECOMPILED_DIR,
                     vpkDecompile: true,
-                    vpkFilepath: vpkPaths.slice(i, i + batchSize).join(","),
+                    vpkFilepath: batch.join(","),
                     threads
                 })
             );
+            batch = [];
+            batchBytes = 0;
+        };
+        for (const p of vpkPaths) {
+            const original = p.endsWith(".png") ? p.slice(0, -4) + ".vtex_c" : p;
+            const len = Buffer.byteLength(original) + 1;
+            if (batchBytes + len > MAX_ARG_BYTES) await flush();
+            batch.push(original);
+            batchBytes += len;
         }
+        await flush();
     }
 
     public async download() {
