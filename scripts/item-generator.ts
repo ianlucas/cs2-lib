@@ -29,10 +29,12 @@ import { CS2KeyValues } from "../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
 import { CS2, SCRIPTS_DIR, VpkEntry, WORKDIR_DIR } from "./cs2.ts";
 import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { FallbackImageHelper } from "./item-generator-fallback.ts";
 import { HARDCODED_SPECIALS } from "./item-generator-specials.ts";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./item-generator-types.ts";
 import {
+    exists,
     getFileSha256,
     linearToSrgb,
     log,
@@ -144,6 +146,7 @@ export class ItemGenerator {
     private containerSpecialsHelper = new ContainerSpecialsHelper();
     private itemIdentityHelper = new ItemIdentityHelper();
     private itemHelper = new ItemHelper();
+    private fallbackImageHelper = new FallbackImageHelper();
 
     private cs2 = new CS2();
 
@@ -400,7 +403,7 @@ export class ItemGenerator {
             if (category === undefined || (category === "equipment" && !BASE_WEAPON_EQUIPMENT.includes(name))) {
                 continue;
             }
-            const { used_by_classes, item_name, item_description, model_player } = this.getPrefab(prefab);
+            const { used_by_classes, item_name, item_description } = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
             const id = this.itemIdentityHelper.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
@@ -679,19 +682,22 @@ export class ItemGenerator {
                 type: CS2ItemType.Sticker
             });
             // Sticker Slab
-            const keychainImage = `econ/stickers/${sticker_material}_1355_37`;
-            if (!this.isImageValid(keychainImage)) {
-                log(`Failed to find image for sticker slab at ${keychainImage} (index: ${index})`);
+            const keychainInventoryImage = `econ/stickers/${sticker_material}_1355_37`;
+            const keychainId = this.itemIdentityHelper.get(`keychain_37_${index}`);
+            const keychainImage = this.isImageValid(keychainInventoryImage)
+                ? this.getImage(keychainInventoryImage)
+                : await this.tryGetFallbackImage("keychain", keychainInventoryImage, keychainId);
+            if (keychainImage === undefined) {
+                log(`Failed to find image for sticker slab at ${keychainInventoryImage} (index: ${index})`);
                 continue;
             }
-            const keychainId = this.itemIdentityHelper.get(`keychain_37_${index}`);
             this.addTranslation(keychainId, "name", "#keychain_kc_sticker_display_case", " | ", item_name);
             this.tryAddTranslation(keychainId, "desc", "#keychain_kc_sticker_display_case_desc");
             this.addItem({
                 baseId: this.keychainBaseId,
                 def: 1355,
                 id: keychainId,
-                image: this.getImage(keychainImage),
+                image: keychainImage,
                 index: 37,
                 rarity,
                 stickerId: id,
@@ -844,11 +850,14 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            if (!this.isImageValid(image_inventory)) {
+            const id = this.itemIdentityHelper.get(`pin_${index}`);
+            const image = this.isImageValid(image_inventory)
+                ? this.getImage(image_inventory)
+                : await this.tryGetFallbackImage("collectible", image_inventory, id);
+            if (image === undefined) {
                 log(`Inventory image not found for ${image_inventory} (index: ${index})`);
                 continue;
             }
-            const id = this.itemIdentityHelper.get(`pin_${index}`);
             this.addContainerItem(name, id);
             this.addTranslation(id, "name", "#CSGO_Type_Collectible", " | ", item_name);
             this.tryAddTranslation(id, "desc", item_description ?? `${item_name}_Desc`);
@@ -864,7 +873,7 @@ export class ItemGenerator {
                 altName: name,
                 def: Number(index),
                 id,
-                image: this.getImage(image_inventory),
+                image,
                 index: undefined,
                 rarity: this.getRarityColorHex([item_rarity, "ancient"]),
                 teams: undefined,
@@ -1314,6 +1323,31 @@ export class ItemGenerator {
         return filename;
     }
 
+    private async tryGetFallbackImage(
+        source: Parameters<FallbackImageHelper["find"]>[0],
+        imagePath: string,
+        existingId: number
+    ): Promise<string | undefined> {
+        const existing = this.itemHelper.get(existingId)?.image;
+        if (existing !== undefined) {
+            return existing;
+        }
+        const staticKey = `/images/${basename(imagePath)}.png`;
+        if (this.staticAssets[staticKey] !== undefined) {
+            return this.staticAssets[staticKey];
+        }
+        const localPath = join(SCRIPTS_DIR, staticKey);
+        if (!(await exists(localPath))) {
+            if ((await this.fallbackImageHelper.find(source, imagePath)) === undefined) {
+                log(`Failed to find fallback image for ${imagePath}`);
+                return undefined;
+            }
+        }
+        const filename = await this.copyAndOptimizeImage(localPath, "/images/{sha256}.webp");
+        this.staticAssets[staticKey] = filename;
+        return filename;
+    }
+
     private getImagePath(path: string) {
         return join(GAME_IMAGES_DIR, `${path}_png.png`.toLowerCase());
     }
@@ -1518,6 +1552,9 @@ export class ItemGenerator {
     }
 
     private getCollectionImage(name: string) {
+        // TODO Collection image may be SVG. We need to convert them to PNG with
+        // dimensions 256x198, SVG should be centralized and scaled to fit the
+        // full height of the final image.
         const vpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
         if (!this.vpkIndex.has(vpkPath)) {
             log(`Image not found for collection ${name}`);
