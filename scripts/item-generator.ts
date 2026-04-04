@@ -1330,11 +1330,8 @@ export class ItemGenerator {
             return this.staticAssets[staticKey];
         }
         const localPath = join(SCRIPTS_DIR, staticKey);
-        if (!(await exists(localPath))) {
-            if ((await this.fallbackImageHelper.find(source, imagePath)) === undefined) {
-                log(`Failed to find fallback image for ${imagePath}`);
-                return undefined;
-            }
+        if (!(await exists(localPath)) && (await this.fallbackImageHelper.find(source, imagePath)) === undefined) {
+            return undefined;
         }
         const filename = await this.copyAndOptimizeImage(localPath, "/images/{sha256}.webp");
         this.staticAssets[staticKey] = filename;

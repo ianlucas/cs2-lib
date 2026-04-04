@@ -51,16 +51,16 @@ export class ContainerHelper {
             warning(`ContainerHelper: container not found in source for ${itemName}`);
             return;
         }
-        const added: string[] = [];
+        let added = 0;
         for (const item of crate.contains) {
             const id = ensure(this.resolveId(item), `ContainerHelper: failed to find "${item.name}" in parsed items.`);
             if (!contents.includes(id)) {
                 contents.push(id);
-                added.push(item.name);
+                added++;
             }
         }
-        if (added.length > 0) {
-            log(`ContainerHelper: added ${added.length} missing item(s) to ${itemName}: ${added.join(", ")}`);
+        if (added > 0) {
+            log(`ContainerHelper: added ${added} missing item(s) to ${itemName}`);
         }
     }
 
@@ -68,7 +68,6 @@ export class ContainerHelper {
         const crates = await this.fetchCrates();
         const crate = this.findCrate(itemName, crates);
         if (crate === undefined) {
-            warning(`ContainerHelper: container not found in source for ${itemName}`);
             return;
         }
         let added = 0;
