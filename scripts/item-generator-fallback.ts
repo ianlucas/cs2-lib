@@ -10,9 +10,9 @@ import { SCRIPTS_DIR } from "./cs2.ts";
 
 const sources = {
     // { image: string; original: { image_inventory: string; } }
-    keychain: "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/sticker_slabs.json",
-    // { image: string; original: { image_inventory: string; } }
-    collectible: "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/collectibles.json"
+    collectible: "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/collectibles.json",
+    container: "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/crates.json",
+    keychain: "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/sticker_slabs.json"
 };
 
 type SourceKey = keyof typeof sources;
@@ -45,6 +45,9 @@ export class FallbackImageHelper {
         const filename = `${basename(imagePath)}.png`;
         const localPath = join(SCRIPTS_DIR, "images", filename);
         const response = await fetch(entry.image);
+        if (response.status === 404) {
+            return undefined;
+        }
         assert(response.ok, `FallbackImageSource: failed to download ${entry.image}`);
         const buffer = Buffer.from(await response.arrayBuffer());
         await writeFile(localPath, buffer);

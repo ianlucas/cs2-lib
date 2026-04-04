@@ -36,14 +36,12 @@ import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./ite
 import {
     exists,
     getFileSha256,
-    linearToSrgb,
     log,
     prependHash,
     PromiseQueue,
     readJson,
     rmIfExists,
     shouldRun,
-    srgbToLinear,
     warning,
     write,
     writeJson
@@ -414,13 +412,13 @@ export class ItemGenerator {
                 index: undefined,
                 model: name.replace("weapon_", ""),
                 // Read DATA -> Get DATA to JSON + .vmat references (update GLB with the CDN paths)
-                modelData: ensure(null, "Missing implementation."),
+                modelData: undefined /** TODO */,
                 // GLB CDN path
-                modelPlayer: ensure(null, "Missing implementation."),
+                modelPlayer: undefined /** TODO */,
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
-                stickerMax: ensure(null, "Missing implementation"),
-                stickerMaxForLegacy: ensure(null, "Missing implementation"),
+                stickerMax: undefined /** TODO */,
+                stickerMaxForLegacy: undefined /** TODO */,
                 teams,
                 type: CS2ItemType.Weapon
             });
@@ -548,7 +546,7 @@ export class ItemGenerator {
                 this.addTranslation(id, "desc", paintKit.descToken);
                 this.addItem({
                     ...baseItem,
-                    ...this.getPaintCollection(id, itemKey),
+                    ...this.getItemCollection(id, itemKey),
                     altName: this.getPaintAltName(paintKit.className),
                     base: undefined,
                     baseId: baseItem.id,
@@ -815,6 +813,7 @@ export class ItemGenerator {
             this.addTranslation(id, "name", "#Type_CustomPlayer", " | ", item_name);
             this.addTranslation(id, "desc", item_description);
             this.addItem({
+                ...this.getItemCollection(id, name),
                 def: Number(index),
                 id,
                 image: this.getImage(image_inventory),
@@ -942,10 +941,6 @@ export class ItemGenerator {
             ) {
                 continue;
             }
-            if (!this.isImageValid(image_inventory)) {
-                log(`Inventory image not found for ${image_inventory} (index: ${containerIndex})`);
-                continue;
-            }
             const revolvingLootListKey = attributes?.["set supply crate series"]?.value;
             assert(revolvingLootListKey !== undefined || loot_list_name !== undefined);
             const clientLootListKey =
@@ -972,6 +967,7 @@ export class ItemGenerator {
                     contents.push(id);
                 }
             }
+            // TODO Outsource missing items for a package.
             if (contents.length > 0) {
                 const thePrefab = this.tryGetPrefab(prefab);
                 // Asserts if the container requires a key.
@@ -1012,8 +1008,15 @@ export class ItemGenerator {
                         return id;
                     })
                 );
-                const containerName = this.requireTranslation(item_name);
                 const id = this.itemIdentityHelper.get(`case_${containerIndex}`);
+                const image = this.isImageValid(image_inventory)
+                    ? this.getImage(image_inventory)
+                    : await this.tryGetFallbackImage("container", image_inventory, id);
+                if (image === undefined) {
+                    log(`Inventory image not found for ${image_inventory} (index: ${containerIndex})`);
+                    continue;
+                }
+                const containerName = this.requireTranslation(item_name);
                 const specials = this.containerSpecialsHelper.getSpecials(containerName) ?? HARDCODED_SPECIALS[id];
                 const containsMusicKit = containerName.includes("Music Kit");
                 const containsStatTrak = containerName.includes("StatTrak");
@@ -1025,7 +1028,7 @@ export class ItemGenerator {
                     contents,
                     def: Number(containerIndex),
                     id,
-                    image: this.getImage(image_inventory),
+                    image,
                     keys: keys.length > 0 ? keys : undefined,
                     rarity: this.getRarityColorHex(["common"]),
                     specials: specials ?? this.itemHelper.get(id)?.specials,
@@ -1429,15 +1432,12 @@ export class ItemGenerator {
         const output = Buffer.alloc(width * height * 4);
         for (let i = 0; i < width * height; i++) {
             const o = i * 4;
-            // Texture is sRGB-encoded; GPU linearizes on sample before multiplying.
-            // Compute linear luminance (Rec. 709) from sRGB source channels.
-            const grayLinear =
-                0.2126 * srgbToLinear(data[o] / 255) +
-                0.7152 * srgbToLinear(data[o + 1] / 255) +
-                0.0722 * srgbToLinear(data[o + 2] / 255);
-            output[o] = Math.round(linearToSrgb(grayLinear * colorR) * 255);
-            output[o + 1] = Math.round(linearToSrgb(grayLinear * colorG) * 255);
-            output[o + 2] = Math.round(linearToSrgb(grayLinear * colorB) * 255);
+            // Simple display-space multiply: treat texture and color as being in the same
+            // space and multiply directly (matches game behavior for spray tint).
+            const gray = 0.2126 * (data[o] / 255) + 0.7152 * (data[o + 1] / 255) + 0.0722 * (data[o + 2] / 255);
+            output[o] = Math.round(gray * colorR * 255);
+            output[o + 1] = Math.round(gray * colorG * 255);
+            output[o + 2] = Math.round(gray * colorB * 255);
             output[o + 3] = data[o + 3];
         }
         await sharp(output, { raw: { width, height, channels: 4 } })
@@ -1583,7 +1583,7 @@ export class ItemGenerator {
         return { collection, collectionImage };
     }
 
-    private getPaintCollection(itemId: number, itemKey: string) {
+    private getItemCollection(itemId: number, itemKey: string) {
         return this.getCollection(itemId, this.itemSetItemKey[itemKey]);
     }
 
