@@ -80,7 +80,8 @@ const CDN_UPLOAD_CONCURRENCY = 40;
 type PendingImageTask =
     | { kind: "regular"; localPath: string; filename: string }
     | { kind: "paint"; localPaths: [string, string][]; baseName: string; baseFilename: string }
-    | { kind: "graffiti"; localPath: string; hexColor: string; filename: string };
+    | { kind: "graffiti"; localPath: string; hexColor: string; filename: string }
+    | { kind: "svg"; localPath: string; filename: string };
 
 export class ItemHelper extends Map<number, CS2Item> {
     constructor() {
@@ -1136,6 +1137,13 @@ export class ItemGenerator {
                 });
             } else if (task.kind === "graffiti") {
                 queue.push(() => this.colorizeGraffitiImage(task.localPath, task.hexColor, task.filename));
+            } else if (task.kind === "svg") {
+                queue.push(async () => {
+                    await sharp(task.localPath)
+                        .resize(256, 198, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+                        .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                        .toFile(join(OUTPUT_DIR, task.filename));
+                });
             }
         }
         await queue.waitForIdle();
@@ -1552,10 +1560,10 @@ export class ItemGenerator {
     }
 
     private getCollectionImage(name: string) {
-        // TODO Collection image may be SVG. We need to convert them to PNG with
-        // dimensions 256x198, SVG should be centralized and scaled to fit the
-        // full height of the final image.
-        const vpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
+        const pngVpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
+        const svgVpkPath = `panorama/images/econ/set_icons/${name}.svg`;
+        const isSvg = !this.cs2.vpkIndex.has(pngVpkPath) && this.cs2.vpkIndex.has(svgVpkPath);
+        const vpkPath = isSvg ? svgVpkPath : pngVpkPath;
         if (!this.cs2.vpkIndex.has(vpkPath)) {
             log(`Image not found for collection ${name}`);
             return undefined;
@@ -1563,9 +1571,12 @@ export class ItemGenerator {
         const entry = ensure(this.cs2.vpkIndex.get(vpkPath));
         const filename = `/images/${name}_${entry.crc}.webp`;
         if (!this.existingImages.has(filename)) {
-            const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}_png.png`);
+            const ext = isSvg ? ".svg" : "_png.png";
+            const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}${ext}`);
             this.neededVpkPaths.add(vpkPath);
-            this.imagesToProcess.set(vpkPath, { kind: "regular", localPath, filename });
+            this.imagesToProcess.set(vpkPath, isSvg
+                ? { kind: "svg", localPath, filename }
+                : { kind: "regular", localPath, filename });
         }
         return filename;
     }

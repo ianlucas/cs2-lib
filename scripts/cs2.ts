@@ -128,7 +128,11 @@ export class CS2 {
                 if (eqIdx !== -1) meta[kv.slice(0, eqIdx)] = kv.slice(eqIdx + 1);
             }
             if (meta.crc && meta.fnumber) {
-                const normalizedPath = path.endsWith(".vtex_c") ? path.slice(0, -7) + ".png" : path;
+                const normalizedPath = path.endsWith(".vtex_c")
+                    ? path.slice(0, -7) + ".png"
+                    : path.endsWith(".vsvg_c")
+                    ? path.slice(0, -8) + ".svg"
+                    : path;
                 this.vpkIndex.set(normalizedPath, {
                     crc: meta.crc.replace("0x", ""),
                     fnumber: meta.fnumber
@@ -201,7 +205,11 @@ export class CS2 {
             batchBytes = 0;
         };
         for (const p of vpkPaths) {
-            const original = p.endsWith(".png") ? p.slice(0, -4) + ".vtex_c" : p;
+            const original = p.endsWith(".png")
+                ? p.slice(0, -4) + ".vtex_c"
+                : p.endsWith(".svg")
+                ? p.slice(0, -4) + ".vsvg_c"
+                : p;
             const len = Buffer.byteLength(original) + 1;
             if (batchBytes + len > MAX_ARG_BYTES) await flush();
             batch.push(original);
