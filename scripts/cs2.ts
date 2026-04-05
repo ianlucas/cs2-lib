@@ -245,10 +245,13 @@ export class CS2 {
         }
 
         const flush = async () => {
-            if (batchEntries.length === 0) return;
+            if (batchEntries.length === 0) {
+                return;
+            }
             const stdout = await this.decompile({
-                vpkFilepath: batchEntries.map((e) => e.vpkPath).join(","),
-                block: "DATA"
+                block: "DATA",
+                threads: 1,
+                vpkFilepath: batchEntries.map((e) => e.vpkPath).join(",")
             });
             // Split stdout into per-file chunks by "[N/M] path" boundaries
             const chunks = stdout.split(/(?=\[\d+\/\d+\])/);
