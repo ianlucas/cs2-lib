@@ -1132,9 +1132,8 @@ export class ItemGenerator {
             await writeFile(join(OUTPUT_DIR, "models", filename), JSON.stringify(data), "utf-8");
             const stickerMarkup = data?.m_modelInfo?.m_keyValueText?.StickerMarkup;
             if (Array.isArray(stickerMarkup)) {
-                const stickerMax = stickerMarkup.filter((s: any) => s.Mesh === "body_hd").length || undefined;
-                const stickerMaxForLegacy =
-                    stickerMarkup.filter((s: any) => s.Mesh === "body_legacy").length || undefined;
+                const stickerMax = stickerMarkup.filter((s: { Mesh: string }) => s.Mesh === "body_hd").length;
+                const stickerMaxForLegacy = stickerMarkup.length - stickerMax;
                 const modelDataPath = `/models/${filename}`;
                 for (const item of this.items.values()) {
                     if (item.modelData === modelDataPath) {
