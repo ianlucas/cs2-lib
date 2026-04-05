@@ -393,8 +393,8 @@ export class ItemGenerator {
                 modelPlayer: modelInfo?.modelPlayer ?? this.itemHelper.get(id)?.modelPlayer,
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
-                stickerMax: undefined /** TODO */,
-                stickerMaxForLegacy: undefined /** TODO */,
+                stickerMax: this.itemHelper.get(id)?.stickerMax,
+                stickerMaxForLegacy: this.itemHelper.get(id)?.stickerMaxForLegacy,
                 teams,
                 type: CS2ItemType.Weapon
             });
@@ -1130,6 +1130,19 @@ export class ItemGenerator {
                 this.materialsToProcess.add(material);
             }
             await writeFile(join(OUTPUT_DIR, "models", filename), JSON.stringify(data), "utf-8");
+            const stickerMarkup = data?.m_modelInfo?.m_keyValueText?.StickerMarkup;
+            if (Array.isArray(stickerMarkup)) {
+                const stickerMax = stickerMarkup.filter((s: any) => s.Mesh === "body_hd").length || undefined;
+                const stickerMaxForLegacy =
+                    stickerMarkup.filter((s: any) => s.Mesh === "body_legacy").length || undefined;
+                const modelDataPath = `/models/${filename}`;
+                for (const item of this.items.values()) {
+                    if (item.modelData === modelDataPath) {
+                        item.stickerMax = stickerMax;
+                        item.stickerMaxForLegacy = stickerMaxForLegacy;
+                    }
+                }
+            }
         }
     }
 
