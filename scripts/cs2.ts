@@ -136,7 +136,9 @@ export class CS2 {
         if (!this.local) {
             log("Downloading script objects...");
             await this.downloadCsgoPakDir();
-            await this.buildVpkIndex();
+        }
+        await this.buildVpkIndex();
+        if (!this.local) {
             await this.downloadCsgoPakDirParts(TEXT_DIRS);
         }
         const threads = availableParallelism();
