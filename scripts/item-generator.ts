@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
+import { NodeIO } from "@gltf-transform/core";
 import { createReadStream } from "fs";
-import { copyFile, mkdir, readdir, readFile, rename } from "fs/promises";
+import { copyFile, mkdir, readdir, readFile, rename, writeFile } from "fs/promises";
 import { availableParallelism } from "os";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
@@ -1113,15 +1114,39 @@ export class ItemGenerator {
         await this.cs2.decompileModels(Array.from(this.modelsToProcess.keys()));
     }
 
+    private async patchGlbTextures(glbPath: string, renames: Map<string, string>) {
+        const io = new NodeIO();
+        const document = await io.read(glbPath);
+        for (const texture of document.getRoot().listTextures()) {
+            const uri = texture.getURI();
+            if (uri !== null && renames.has(uri)) {
+                texture.setURI(renames.get(uri)!);
+                texture.setImage(null);
+            }
+        }
+        await writeFile(glbPath, await io.writeBinary(document));
+    }
+
     private async processModels() {
         for (const [vpkPath, { targetFilename }] of this.modelsToProcess) {
             const modelDir = join(DECOMPILED_DIR, dirname(vpkPath));
             const base = basename(vpkPath, ".vmdl_c");
-            for (const file of await readdir(modelDir)) {
-                if (file.endsWith(".png") || file.endsWith(".exr")) {
-                    await rename(join(modelDir, file), join(OUTPUT_DIR, "textures", file));
-                }
-            }
+            const renames = new Map<string, string>();
+            await Promise.all(
+                (await readdir(modelDir)).map(async (file) => {
+                    if (file.endsWith(".png")) {
+                        const webpFile = file.replace(/\.png$/, ".webp");
+                        await sharp(join(modelDir, file))
+                            .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                            .toFile(join(OUTPUT_DIR, "textures", webpFile));
+                        renames.set(file, `/textures/${webpFile}`);
+                    } else if (file.endsWith(".exr")) {
+                        await rename(join(modelDir, file), join(OUTPUT_DIR, "textures", file));
+                        renames.set(file, `/textures/${file}`);
+                    }
+                })
+            );
+            await this.patchGlbTextures(join(modelDir, `${base}.glb`), renames);
             await rename(join(modelDir, `${base}.glb`), join(OUTPUT_DIR, targetFilename));
         }
     }
