@@ -174,7 +174,7 @@ export class CS2 {
         await this.decompilePaths(vpkPaths);
     }
 
-    private async decompilePaths(vpkPaths: string[]) {
+    private async decompilePaths(vpkPaths: string[], extraArgs?: Partial<DecompilerArgs>) {
         const threads = availableParallelism();
         log(`Decompiling ${vpkPaths.length} objects (${threads} threads)...`);
         const MAX_ARG_BYTES = 100_000;
@@ -188,7 +188,8 @@ export class CS2 {
                     output: DECOMPILED_DIR,
                     vpkDecompile: true,
                     vpkFilepath: batch.join(","),
-                    threads
+                    threads,
+                    ...extraArgs
                 })
             );
             batch = [];
@@ -203,6 +204,13 @@ export class CS2 {
             batchBytes += len;
         }
         await flush();
+    }
+
+    public async decompileModels(vpkPaths: string[]) {
+        await this.decompilePaths(vpkPaths, {
+            gltfExportFormat: "glb",
+            gltfExportMaterials: true
+        });
     }
 
     async decompile(options: DecompilerArgs) {
