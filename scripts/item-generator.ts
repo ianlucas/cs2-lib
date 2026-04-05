@@ -184,12 +184,8 @@ export class ItemGenerator {
     }
 
     async validate() {
-        if (this.cs2.local) {
-            await this.cs2.buildVpkIndex();
-        } else {
-            await this.cs2.syncLatestAssetsManifest();
-            await this.cs2.downloadTextData();
-        }
+        await this.cs2.syncLatestAssetsManifest();
+        await this.cs2.downloadAndDecompileScripts();
     }
 
     async start() {
@@ -1106,9 +1102,7 @@ export class ItemGenerator {
     }
 
     async preProcessImages() {
-        if (!this.cs2.local) {
-            await this.cs2.downloadAndDecompile(Array.from(this.neededVpkPaths));
-        }
+        await this.cs2.downloadAndDecompile(Array.from(this.neededVpkPaths));
     }
 
     private async preProcessModels() {

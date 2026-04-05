@@ -38,7 +38,6 @@ const DEPOT_MANIFEST_RE = /Manifest\s(\d+)/;
 const APP_ID = 730;
 const ASSETS_DEPOT_ID = 2347770;
 const TEXT_DIRS = ["scripts/items/items_game.txt", "resource/csgo_"];
-const EXTRACT_IMAGE_DIRS = ["panorama/", "resource/", "scripts/"];
 
 export class CS2 {
     public local = !CS2_CSGO_PATH.includes("workdir");
@@ -97,6 +96,9 @@ export class CS2 {
     }
 
     public async syncLatestAssetsManifest() {
+        if (this.local) {
+            return;
+        }
         const current = await readFileOrDefault(ASSETS_MANIFEST_PATH);
         const latest = await this.fetchLatestAssetsManifest();
         assert(INPUT_FORCE === "true" || current !== latest, `Depot ${ASSETS_DEPOT_ID} is already up to date.`);
@@ -129,48 +131,51 @@ export class CS2 {
         return this.vpkIndex;
     }
 
-    public async downloadTextData() {
+    public async downloadAndDecompileScripts() {
         await mkdir(WORKDIR_DIR, { recursive: true });
-        await this.downloadCsgoPakDir();
-        await this.buildVpkIndex();
-        await this.downloadCsgoPakDirParts(TEXT_DIRS);
-        const threads = availableParallelism();
-        log(`Decompiling text objects (${threads} threads)...`);
-        for (const dir of TEXT_DIRS) {
-            await readProcess(
-                vrfDecompiler({
-                    input: this.pakDirPath,
-                    output: DECOMPILED_DIR,
-                    vpkDecompile: true,
-                    vpkFilepath: dir,
-                    threads
-                })
-            );
+        if (!this.local) {
+            log("Downloading script objects...");
+            await this.downloadCsgoPakDir();
+            await this.buildVpkIndex();
+            await this.downloadCsgoPakDirParts(TEXT_DIRS);
         }
+        const threads = availableParallelism();
+        log(`Decompiling script objects (${threads} threads)...`);
+        await readProcess(
+            vrfDecompiler({
+                input: this.pakDirPath,
+                output: DECOMPILED_DIR,
+                vpkDecompile: true,
+                vpkFilepath: TEXT_DIRS.join(","),
+                threads
+            })
+        );
     }
 
     public async downloadAndDecompile(vpkPaths: string[]) {
-        if (vpkPaths.length === 0) {
-            return log("No objects to download.");
-        }
-        const vpks = new Set<string>();
-        for (const vpkPath of vpkPaths) {
-            const entry = this.vpkIndex.get(vpkPath);
-            if (entry) {
-                vpks.add(`game/csgo/pak01_${entry.fnumber.padStart(3, "0")}.vpk`);
+        if (!this.local) {
+            if (vpkPaths.length === 0) {
+                return log("No objects to download.");
             }
+            const vpks = new Set<string>();
+            for (const vpkPath of vpkPaths) {
+                const entry = this.vpkIndex.get(vpkPath);
+                if (entry) {
+                    vpks.add(`game/csgo/pak01_${entry.fnumber.padStart(3, "0")}.vpk`);
+                }
+            }
+            await writeFile(TEMP_PAK_FILELIST_PATH, [...vpks].join("\n"), "utf-8");
+            log(`Downloading ${vpks.size} package(s)...`);
+            const dlOutput = await readProcess(
+                depotDownloader({
+                    app: APP_ID,
+                    depot: ASSETS_DEPOT_ID,
+                    dir: WORKDIR_DIR,
+                    filelist: TEMP_PAK_FILELIST_PATH
+                })
+            );
+            assert(DEPOT_SUCCESS_RE.test(dlOutput));
         }
-        await writeFile(TEMP_PAK_FILELIST_PATH, [...vpks].join("\n"), "utf-8");
-        log(`Downloading ${vpks.size} package(s)...`);
-        const dlOutput = await readProcess(
-            depotDownloader({
-                app: APP_ID,
-                depot: ASSETS_DEPOT_ID,
-                dir: WORKDIR_DIR,
-                filelist: TEMP_PAK_FILELIST_PATH
-            })
-        );
-        assert(DEPOT_SUCCESS_RE.test(dlOutput));
         await this.decompilePaths(vpkPaths);
     }
 
