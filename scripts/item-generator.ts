@@ -28,7 +28,7 @@ import {
 import { CS2KeyValues } from "../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
 import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
-import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
 import { ContainerHelper } from "./item-generator-container.ts";
 import { FallbackImageHelper } from "./item-generator-fallback.ts";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
@@ -47,9 +47,9 @@ import {
     writeJson
 } from "./utils.ts";
 
-const GAME_IMAGES_DIR = join(CS2_CSGO_PATH, "panorama/images");
-const GAME_ITEMS_PATH = join(CS2_CSGO_PATH, "scripts/items/items_game.txt");
-const GAME_RESOURCE_DIR = join(CS2_CSGO_PATH, "resource");
+const GAME_IMAGES_DIR = join(DECOMPILED_DIR, "panorama/images");
+const GAME_ITEMS_PATH = join(DECOMPILED_DIR, "scripts/items/items_game.txt");
+const GAME_RESOURCE_DIR = join(DECOMPILED_DIR, "resource");
 const OUTPUT_DIR = join(WORKDIR_DIR, "output");
 
 const ITEM_IDS_JSON_PATH = "scripts/data/items-ids.json";
@@ -257,7 +257,8 @@ export class ItemGenerator {
                     })
             )
         );
-        assert(Object.keys(this.csgoTranslationByLanguage).length > 0);
+        const { length } = Object.keys(this.csgoTranslationByLanguage);
+        assert(length > 0);
         assert(this.csgoTranslationByLanguage.english !== undefined);
         warning(`Loaded ${length} language(s).`);
     }
