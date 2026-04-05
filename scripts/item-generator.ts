@@ -258,8 +258,7 @@ export class ItemGenerator {
                     })
             )
         );
-        const { length } = Object.keys(this.csgoTranslationByLanguage);
-        assert(length > 0);
+        assert(Object.keys(this.csgoTranslationByLanguage).length > 0);
         assert(this.csgoTranslationByLanguage.english !== undefined);
         warning(`Loaded ${length} language(s).`);
     }
@@ -1090,7 +1089,7 @@ export class ItemGenerator {
 
     async preProcessImages() {
         if (!this.cs2.local) {
-            await this.cs2.downloadAndDecompileImages(Array.from(this.neededVpkPaths));
+            await this.cs2.downloadAndDecompile(Array.from(this.neededVpkPaths));
         }
     }
 

@@ -18,7 +18,7 @@ export const DECOMPILED_DIR = join(WORKDIR_DIR, "decompiled");
 export const ASSETS_MANIFEST_PATH = join(SCRIPTS_DIR, "cs2.manifest");
 export const DEPOT_FILELIST_PATH = join(SCRIPTS_DIR, "cs2.depot");
 export const PAK_FILELIST_PATH = join(WORKDIR_DIR, "cs2_pak.depot");
-export const IMAGE_PAK_FILELIST_PATH = join(WORKDIR_DIR, "cs2_image_pak.depot");
+export const TEMP_PAK_FILELIST_PATH = join(WORKDIR_DIR, "cs2_temp_pak.depot");
 export const DEPOT_CSGO_PATH = join(WORKDIR_DIR, "game/csgo");
 export const CSGO_PAK_DIR_PATH = join(DEPOT_CSGO_PATH, "pak01_dir.vpk");
 
@@ -147,7 +147,7 @@ export class CS2 {
         await this.buildVpkIndex();
         await this.downloadCsgoPakDirParts(TEXT_DIRS);
         const threads = availableParallelism();
-        log(`Extracting text data files (${threads} threads)...`);
+        log(`Decompiling text objects (${threads} threads)...`);
         for (const dir of TEXT_DIRS) {
             await readProcess(
                 vrfDecompiler({
@@ -161,9 +161,9 @@ export class CS2 {
         }
     }
 
-    public async downloadAndDecompileImages(vpkPaths: string[]) {
+    public async downloadAndDecompile(vpkPaths: string[]) {
         if (vpkPaths.length === 0) {
-            return log("No images to download.");
+            return log("No objects to download.");
         }
         const vpks = new Set<string>();
         for (const vpkPath of vpkPaths) {
@@ -172,19 +172,23 @@ export class CS2 {
                 vpks.add(`game/csgo/pak01_${entry.fnumber.padStart(3, "0")}.vpk`);
             }
         }
-        await writeFile(IMAGE_PAK_FILELIST_PATH, [...vpks].join("\n"), "utf-8");
-        log(`Downloading ${vpks.size} image package(s)...`);
+        await writeFile(TEMP_PAK_FILELIST_PATH, [...vpks].join("\n"), "utf-8");
+        log(`Downloading ${vpks.size} package(s)...`);
         const dlOutput = await readProcess(
             depotDownloader({
                 app: APP_ID,
                 depot: ASSETS_DEPOT_ID,
                 dir: WORKDIR_DIR,
-                filelist: IMAGE_PAK_FILELIST_PATH
+                filelist: TEMP_PAK_FILELIST_PATH
             })
         );
         assert(DEPOT_SUCCESS_RE.test(dlOutput));
+        await this.decompilePaths(vpkPaths);
+    }
+
+    private async decompilePaths(vpkPaths: string[]) {
         const threads = availableParallelism();
-        log(`Decompiling ${vpkPaths.length} images (${threads} threads)...`);
+        log(`Decompiling ${vpkPaths.length} objects (${threads} threads)...`);
         const MAX_ARG_BYTES = 100_000;
         let batch: string[] = [];
         let batchBytes = 0;
@@ -214,15 +218,6 @@ export class CS2 {
             batchBytes += len;
         }
         await flush();
-    }
-
-    public async download() {
-        await mkdir(WORKDIR_DIR, { recursive: true });
-        await this.syncLatestAssetsManifest();
-        await this.downloadCsgoPakDir();
-        await this.downloadCsgoPakDirParts(EXTRACT_IMAGE_DIRS);
-        await this.extractAndDecompileFiles();
-        log("Game files successfully downloaded and decompiled.");
     }
 
     async decompile(options: DecompilerArgs) {
