@@ -129,6 +129,7 @@ export class ItemGenerator {
     private neededVpkPaths: Set<string> = new Set();
     private imagesToProcess: Map<string, PendingImageTask> = new Map();
     private modelsToProcess: Map<string, { crc: string; targetFilename: string }> = new Map();
+    private materialsToProcess: Set<string> = new Set();
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
@@ -376,6 +377,7 @@ export class ItemGenerator {
             const id = this.itemIdentityHelper.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
             this.addTranslation(id, "desc", item_description);
+            const modelInfo = this.getModel(model_player);
             this.addItem({
                 base: true,
                 category: this.getBaseWeaponCategory(name, category),
@@ -387,9 +389,8 @@ export class ItemGenerator {
                 image: image_inventory !== undefined ? this.getImage(image_inventory) : this.getBaseImage(name),
                 index: undefined,
                 model: name.replace("weapon_", ""),
-                // Read DATA -> Get DATA to JSON + .vmat references (update GLB with the CDN paths)
-                modelData: undefined /** TODO */,
-                modelPlayer: this.getModel(model_player) ?? this.itemHelper.get(id)?.modelPlayer,
+                modelData: modelInfo?.modelData ?? this.itemHelper.get(id)?.modelData,
+                modelPlayer: modelInfo?.modelPlayer ?? this.itemHelper.get(id)?.modelPlayer,
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
                 stickerMax: undefined /** TODO */,
@@ -1087,7 +1088,7 @@ export class ItemGenerator {
         warning("Script completed successfully.");
     }
 
-    private getModel(path?: string): string | undefined {
+    private getModel(path?: string): { modelPlayer: string; modelData: string } | undefined {
         if (!this.cs2.local || path === undefined) {
             return undefined;
         }
@@ -1100,7 +1101,10 @@ export class ItemGenerator {
         const base = basename(path, ".vmdl");
         const targetFilename = `/models/${base}_${entry.crc}.glb`;
         this.modelsToProcess.set(vpkPath, { crc: entry.crc, targetFilename });
-        return targetFilename;
+        return {
+            modelPlayer: targetFilename,
+            modelData: `/models/${base}_${entry.crc}.json`
+        };
     }
 
     async preProcessImages() {
@@ -1112,6 +1116,21 @@ export class ItemGenerator {
             return;
         }
         await this.cs2.decompileModels(Array.from(this.modelsToProcess.keys()));
+        await this.extractModelData();
+    }
+
+    private async extractModelData() {
+        const entries = Array.from(this.modelsToProcess.entries()).map(([vpkPath, { targetFilename }]) => ({
+            vpkPath,
+            targetFilename
+        }));
+        const results = await this.cs2.extractModelData(entries);
+        for (const { filename, data, materials } of results) {
+            for (const material of materials) {
+                this.materialsToProcess.add(material);
+            }
+            await writeFile(join(OUTPUT_DIR, "models", filename), JSON.stringify(data), "utf-8");
+        }
     }
 
     private async patchGlbTextures(glbPath: string, renames: Map<string, string>) {

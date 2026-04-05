@@ -7,7 +7,8 @@ import { depotDownloader } from "@ianlucas/depot-downloader";
 import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
 import { mkdir, writeFile } from "fs/promises";
 import { availableParallelism } from "os";
-import { join } from "path";
+import { basename, join } from "path";
+import { CS2KeyValues3 } from "../src/keyvalues3.ts";
 import { assert, ensure } from "../src/utils";
 import { CS2_CSGO_PATH, CWD_PATH, INPUT_FORCE } from "./env";
 import { log, readFileOrDefault, readProcess } from "./utils";
@@ -218,6 +219,72 @@ export class CS2 {
             gltfExportFormat: "glb",
             gltfExportMaterials: true
         });
+    }
+
+    public async extractModelData(entries: { vpkPath: string; targetFilename: string }[]) {
+        const MAX_ARG_BYTES = 100_000;
+        const results: { filename: string; data: any; materials: string[] }[] = [];
+        let batchEntries: typeof entries = [];
+        let batchBytes = 0;
+
+        function parseKv3Recursively(value: any): any {
+            if (typeof value === "string" && value.trimStart().startsWith("<!--")) {
+                try {
+                    return parseKv3Recursively(CS2KeyValues3.parse(value));
+                } catch {
+                    return value;
+                }
+            }
+            if (Array.isArray(value)) {
+                return value.map(parseKv3Recursively);
+            }
+            if (value !== null && typeof value === "object") {
+                return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, parseKv3Recursively(v)]));
+            }
+            return value;
+        }
+
+        const flush = async () => {
+            if (batchEntries.length === 0) return;
+            const stdout = await this.decompile({
+                vpkFilepath: batchEntries.map((e) => e.vpkPath).join(","),
+                block: "DATA"
+            });
+            // Split stdout into per-file chunks by "[N/M] path" boundaries
+            const chunks = stdout.split(/(?=\[\d+\/\d+\])/);
+            let chunkIndex = 0;
+            for (const entry of batchEntries) {
+                const chunk = chunks[chunkIndex++] ?? "";
+                // Extract .vmat references
+                const materialsMatch = chunk.match(/--- Resource External Refs: ---([\s\S]*?)(?=---|$)/);
+                const materials: string[] = [];
+                if (materialsMatch) {
+                    for (const line of materialsMatch[1].split("\n")) {
+                        const m = line.match(/\s+[0-9A-F]+\s+(\S+\.vmat)\s*$/);
+                        if (m) materials.push(m[1]);
+                    }
+                }
+                // Extract and parse DATA block
+                const dataMatch = chunk.match(/--- Data for block "DATA" ---\s*([\s\S]+)$/);
+                let data: any = null;
+                if (dataMatch) {
+                    data = parseKv3Recursively(CS2KeyValues3.parse(dataMatch[1].trim()));
+                }
+                const filename = basename(entry.targetFilename).replace(/\.glb$/, ".json");
+                results.push({ filename, data, materials });
+            }
+            batchEntries = [];
+            batchBytes = 0;
+        };
+
+        for (const entry of entries) {
+            const len = Buffer.byteLength(entry.vpkPath) + 1;
+            if (batchBytes + len > MAX_ARG_BYTES) await flush();
+            batchEntries.push(entry);
+            batchBytes += len;
+        }
+        await flush();
+        return results;
     }
 
     async decompile(options: DecompilerArgs) {
