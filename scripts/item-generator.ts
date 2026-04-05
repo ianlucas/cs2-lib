@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
+import { NodeIO } from "@gltf-transform/core";
 import { createReadStream } from "fs";
-import { copyFile, mkdir, readdir, readFile } from "fs/promises";
+import { copyFile, mkdir, readdir, readFile, rename, writeFile } from "fs/promises";
 import { availableParallelism } from "os";
-import { basename, join } from "path";
+import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
 import { stripHtml } from "string-strip-html";
@@ -27,8 +28,8 @@ import {
 } from "../src/economy-types.ts";
 import { CS2KeyValues } from "../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../src/utils.ts";
-import { CS2, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
-import { CS2_CSGO_PATH, STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
+import { CS2, DECOMPILED_DIR, SCRIPTS_DIR, WORKDIR_DIR } from "./cs2.ts";
+import { STORAGE_ACCESS_KEY, STORAGE_ZONE } from "./env.ts";
 import { ContainerHelper } from "./item-generator-container.ts";
 import { FallbackImageHelper } from "./item-generator-fallback.ts";
 import { useItemsTemplate, useStickerMarkupTemplate, useTranslationTemplate } from "./item-generator-templates.ts";
@@ -47,9 +48,9 @@ import {
     writeJson
 } from "./utils.ts";
 
-const GAME_IMAGES_DIR = join(CS2_CSGO_PATH, "panorama/images");
-const GAME_ITEMS_PATH = join(CS2_CSGO_PATH, "scripts/items/items_game.txt");
-const GAME_RESOURCE_DIR = join(CS2_CSGO_PATH, "resource");
+const GAME_IMAGES_DIR = join(DECOMPILED_DIR, "panorama/images");
+const GAME_ITEMS_PATH = join(DECOMPILED_DIR, "scripts/items/items_game.txt");
+const GAME_RESOURCE_DIR = join(DECOMPILED_DIR, "resource");
 const OUTPUT_DIR = join(WORKDIR_DIR, "output");
 
 const ITEM_IDS_JSON_PATH = "scripts/data/items-ids.json";
@@ -127,6 +128,7 @@ export class ItemGenerator {
     private existingImages: Set<string> = new Set();
     private neededVpkPaths: Set<string> = new Set();
     private imagesToProcess: Map<string, PendingImageTask> = new Map();
+    private modelsToProcess: Map<string, { crc: string; targetFilename: string }> = new Map();
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
@@ -176,17 +178,15 @@ export class ItemGenerator {
         await this.parseContainers();
         await this.preProcessImages();
         await this.processImages();
+        await this.preProcessModels();
+        await this.processModels();
         await this.uploadAssets();
         await this.end();
     }
 
     async validate() {
-        if (this.cs2.local) {
-            await this.cs2.buildVpkIndex();
-        } else {
-            await this.cs2.syncLatestAssetsManifest();
-            await this.cs2.downloadTextData();
-        }
+        await this.cs2.syncLatestAssetsManifest();
+        await this.cs2.downloadAndDecompileScripts();
     }
 
     async start() {
@@ -258,7 +258,8 @@ export class ItemGenerator {
                     })
             )
         );
-        assert(Object.keys(this.csgoTranslationByLanguage).length > 0);
+        const { length } = Object.keys(this.csgoTranslationByLanguage);
+        assert(length > 0);
         assert(this.csgoTranslationByLanguage.english !== undefined);
         warning(`Loaded ${length} language(s).`);
     }
@@ -370,7 +371,7 @@ export class ItemGenerator {
             if (category === undefined || (category === "equipment" && !BASE_WEAPON_EQUIPMENT.includes(name))) {
                 continue;
             }
-            const { used_by_classes, item_name, item_description } = this.getPrefab(prefab);
+            const { used_by_classes, item_name, item_description, model_player } = this.getPrefab(prefab);
             const teams = this.getTeams(used_by_classes);
             const id = this.itemIdentityHelper.get(`weapon_${this.getTeamsString(used_by_classes)}_${itemDef}`);
             this.addTranslation(id, "name", item_name);
@@ -388,8 +389,7 @@ export class ItemGenerator {
                 model: name.replace("weapon_", ""),
                 // Read DATA -> Get DATA to JSON + .vmat references (update GLB with the CDN paths)
                 modelData: undefined /** TODO */,
-                // GLB CDN path
-                modelPlayer: undefined /** TODO */,
+                modelPlayer: this.getModel(model_player) ?? this.itemHelper.get(id)?.modelPlayer,
                 nameToken: item_name,
                 rarity: this.getRarityColorHex(["default"]),
                 stickerMax: undefined /** TODO */,
@@ -1087,14 +1087,74 @@ export class ItemGenerator {
         warning("Script completed successfully.");
     }
 
+    private getModel(path?: string): string | undefined {
+        if (!this.cs2.local || path === undefined) {
+            return undefined;
+        }
+        const vpkPath = path.replace(".vmdl", ".vmdl_c").toLowerCase();
+        const entry = this.cs2.vpkIndex.get(vpkPath);
+        if (!entry) {
+            warning(`Model not found in VPK: ${vpkPath}`);
+            return undefined;
+        }
+        const base = basename(path, ".vmdl");
+        const targetFilename = `/models/${base}_${entry.crc}.glb`;
+        this.modelsToProcess.set(vpkPath, { crc: entry.crc, targetFilename });
+        return targetFilename;
+    }
+
     async preProcessImages() {
-        if (!this.cs2.local) {
-            await this.cs2.downloadAndDecompile(Array.from(this.neededVpkPaths));
+        await this.cs2.downloadAndDecompile(Array.from(this.neededVpkPaths));
+    }
+
+    private async preProcessModels() {
+        if (!this.cs2.local || this.modelsToProcess.size === 0) {
+            return;
+        }
+        await this.cs2.decompileModels(Array.from(this.modelsToProcess.keys()));
+    }
+
+    private async patchGlbTextures(glbPath: string, renames: Map<string, string>) {
+        const io = new NodeIO();
+        const document = await io.read(glbPath);
+        for (const texture of document.getRoot().listTextures()) {
+            const uri = texture.getURI();
+            if (uri !== null && renames.has(uri)) {
+                texture.setURI(renames.get(uri)!);
+                texture.setImage(null);
+            }
+        }
+        await writeFile(glbPath, await io.writeBinary(document));
+    }
+
+    private async processModels() {
+        for (const [vpkPath, { targetFilename }] of this.modelsToProcess) {
+            const modelDir = join(DECOMPILED_DIR, dirname(vpkPath));
+            const base = basename(vpkPath, ".vmdl_c");
+            const renames = new Map<string, string>();
+            await Promise.all(
+                (await readdir(modelDir)).map(async (file) => {
+                    if (file.endsWith(".png")) {
+                        const webpFile = file.replace(/\.png$/, ".webp");
+                        await sharp(join(modelDir, file))
+                            .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                            .toFile(join(OUTPUT_DIR, "textures", webpFile));
+                        renames.set(file, `/textures/${webpFile}`);
+                    } else if (file.endsWith(".exr")) {
+                        await rename(join(modelDir, file), join(OUTPUT_DIR, "textures", file));
+                        renames.set(file, `/textures/${file}`);
+                    }
+                })
+            );
+            await this.patchGlbTextures(join(modelDir, `${base}.glb`), renames);
+            await rename(join(modelDir, `${base}.glb`), join(OUTPUT_DIR, targetFilename));
         }
     }
 
     private async processImages() {
-        if (this.imagesToProcess.size === 0) return;
+        if (this.imagesToProcess.size === 0) {
+            return;
+        }
         const threads = availableParallelism();
         log(`Processing ${this.imagesToProcess.size} images (${threads} threads)...`);
         const queue = new PromiseQueue(threads);
