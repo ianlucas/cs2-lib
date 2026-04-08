@@ -221,28 +221,28 @@ export class CS2 {
         });
     }
 
+    private parseKv3Recursively(value: any): any {
+        if (typeof value === "string" && value.trimStart().startsWith("<!--")) {
+            try {
+                return this.parseKv3Recursively(CS2KeyValues3.parse(value));
+            } catch {
+                return value;
+            }
+        }
+        if (Array.isArray(value)) {
+            return value.map((v) => this.parseKv3Recursively(v));
+        }
+        if (value !== null && typeof value === "object") {
+            return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, this.parseKv3Recursively(v)]));
+        }
+        return value;
+    }
+
     public async extractModelData(entries: { vpkPath: string; targetFilename: string }[]) {
         const MAX_ARG_BYTES = 100_000;
         const results: { filename: string; data: any; materials: string[] }[] = [];
         let batchEntries: typeof entries = [];
         let batchBytes = 0;
-
-        function parseKv3Recursively(value: any): any {
-            if (typeof value === "string" && value.trimStart().startsWith("<!--")) {
-                try {
-                    return parseKv3Recursively(CS2KeyValues3.parse(value));
-                } catch {
-                    return value;
-                }
-            }
-            if (Array.isArray(value)) {
-                return value.map(parseKv3Recursively);
-            }
-            if (value !== null && typeof value === "object") {
-                return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, parseKv3Recursively(v)]));
-            }
-            return value;
-        }
 
         const flush = async () => {
             if (batchEntries.length === 0) {
@@ -271,10 +271,67 @@ export class CS2 {
                 const dataMatch = chunk.match(/--- Data for block "DATA" ---\s*([\s\S]+)$/);
                 let data: any = null;
                 if (dataMatch) {
-                    data = parseKv3Recursively(CS2KeyValues3.parse(dataMatch[1].trim()));
+                    data = this.parseKv3Recursively(CS2KeyValues3.parse(dataMatch[1].trim()));
                 }
                 const filename = basename(entry.targetFilename).replace(/\.glb$/, ".json");
                 results.push({ filename, data, materials });
+            }
+            batchEntries = [];
+            batchBytes = 0;
+        };
+
+        for (const entry of entries) {
+            const len = Buffer.byteLength(entry.vpkPath) + 1;
+            if (batchBytes + len > MAX_ARG_BYTES) await flush();
+            batchEntries.push(entry);
+            batchBytes += len;
+        }
+        await flush();
+        return results;
+    }
+
+    public async extractMaterialData(vmatPaths: string[]) {
+        const MAX_ARG_BYTES = 100_000;
+        const results: { vmatPath: string; filename: string; data: any; vtexRefs: string[]; vmatRefs: string[] }[] = [];
+        const entries = vmatPaths
+            .map((p) => ({ vmatPath: p, vpkPath: p.replace(".vmat", ".vmat_c").toLowerCase() }))
+            .filter((e) => this.vpkIndex.has(e.vpkPath));
+        let batchEntries: typeof entries = [];
+        let batchBytes = 0;
+
+        const flush = async () => {
+            if (batchEntries.length === 0) {
+                return;
+            }
+            const stdout = await this.decompile({
+                block: "DATA",
+                threads: 1,
+                vpkFilepath: batchEntries.map((e) => e.vpkPath).join(",")
+            });
+            const chunks = stdout.split(/(?=\[\d+\/\d+\])/);
+            let chunkIndex = 0;
+            for (const entry of batchEntries) {
+                const chunk = chunks[chunkIndex++] ?? "";
+                const externalRefsMatch = chunk.match(/--- Resource External Refs: ---([\s\S]*?)(?=---|$)/);
+                const vtexRefs: string[] = [];
+                if (externalRefsMatch) {
+                    for (const line of externalRefsMatch[1].split("\n")) {
+                        const m = line.match(/\s+[0-9A-F]+\s+(\S+\.vtex)\s*$/);
+                        if (m) vtexRefs.push(m[1]);
+                    }
+                }
+                const dataMatch = chunk.match(/--- Data for block "DATA" ---\s*([\s\S]+)$/);
+                let data: any = null;
+                const vmatRefs: string[] = [];
+                if (dataMatch) {
+                    data = this.parseKv3Recursively(CS2KeyValues3.parse(dataMatch[1].trim()));
+                    for (const m of dataMatch[1].matchAll(/"([^"]+\.vmat)"/g)) {
+                        vmatRefs.push(m[1].replace(/\\/g, "/"));
+                    }
+                }
+                const crc = this.vpkIndex.get(entry.vpkPath)!.crc;
+                const filename = `${basename(entry.vmatPath, ".vmat")}_${crc}.vmat.json`;
+                results.push({ vmatPath: entry.vmatPath, filename, data, vtexRefs, vmatRefs });
             }
             batchEntries = [];
             batchBytes = 0;

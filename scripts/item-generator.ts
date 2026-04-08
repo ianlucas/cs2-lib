@@ -130,6 +130,7 @@ export class ItemGenerator {
     private imagesToProcess: Map<string, PendingImageTask> = new Map();
     private modelsToProcess: Map<string, { crc: string; targetFilename: string }> = new Map();
     private materialsToProcess: Set<string> = new Set();
+    private texturesToProcess: Set<string> = new Set();
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
@@ -181,6 +182,7 @@ export class ItemGenerator {
         await this.processImages();
         await this.preProcessModels();
         await this.processModels();
+        await this.preProcessMaterials();
         await this.uploadAssets();
         await this.end();
     }
@@ -193,7 +195,7 @@ export class ItemGenerator {
     async start() {
         await rmIfExists(OUTPUT_DIR);
         this.staticAssets = {};
-        const folders = ["images", "models", "textures"];
+        const folders = ["images", "materials", "models", "textures"];
         for (const folder of folders) {
             const directory = join(SCRIPTS_DIR, folder);
             const outputDirectory = join(OUTPUT_DIR, folder);
@@ -1140,6 +1142,45 @@ export class ItemGenerator {
                         item.stickerMax = stickerMax;
                         item.stickerMaxForLegacy = stickerMaxForLegacy;
                     }
+                }
+            }
+        }
+    }
+
+    private async preProcessMaterials() {
+        if (!this.cs2.local || this.materialsToProcess.size === 0) {
+            return;
+        }
+        const getVmatFilename = (vmatPath: string): string | null => {
+            const vpkPath = vmatPath.replace(".vmat", ".vmat_c").toLowerCase();
+            const entry = this.cs2.vpkIndex.get(vpkPath);
+            if (!entry) return null;
+            return `${basename(vmatPath, ".vmat")}_${entry.crc}.vmat.json`;
+        };
+        function patchVmatRefs(value: any): any {
+            if (typeof value === "string" && value.endsWith(".vmat")) {
+                return getVmatFilename(value.replace(/\\/g, "/")) ?? value;
+            }
+            if (Array.isArray(value)) return value.map(patchVmatRefs);
+            if (value !== null && typeof value === "object")
+                return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, patchVmatRefs(v)]));
+            return value;
+        }
+        const processed = new Set<string>();
+        const queue = new Set<string>(this.materialsToProcess);
+        while (queue.size > 0) {
+            const batch = Array.from(queue);
+            queue.clear();
+            const results = await this.cs2.extractMaterialData(batch);
+            for (const { vmatPath, filename, data, vtexRefs, vmatRefs } of results) {
+                processed.add(vmatPath);
+                for (const vtex of vtexRefs) this.texturesToProcess.add(vtex);
+                for (const vmat of vmatRefs) {
+                    if (!processed.has(vmat) && !queue.has(vmat)) queue.add(vmat);
+                }
+                if (data !== null) {
+                    const patched = patchVmatRefs(data);
+                    await writeFile(join(OUTPUT_DIR, "materials", filename), JSON.stringify(patched), "utf-8");
                 }
             }
         }
