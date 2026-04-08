@@ -5,6 +5,7 @@
 
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
 import { NodeIO } from "@gltf-transform/core";
+import { createHash } from "crypto";
 import { createReadStream } from "fs";
 import { copyFile, mkdir, readdir, readFile, rename, writeFile } from "fs/promises";
 import { availableParallelism } from "os";
@@ -83,6 +84,22 @@ type PendingImageTask =
     | { kind: "graffiti"; localPath: string; hexColor: string; filename: string }
     | { kind: "svg"; localPath: string; filename: string };
 
+type PendingModelTask = {
+    base: string;
+    crc: string;
+    modelData: string;
+    modelPlayer: string;
+    directMaterials: Set<string>;
+    materialFilenames: Set<string>;
+    textureFilenames: Set<string>;
+};
+
+type GlbMaterialExtras = {
+    vmat?: {
+        Name?: string;
+    };
+};
+
 export class ItemHelper extends Map<number, CS2Item> {
     constructor() {
         super(readJson<any[]>(ITEMS_JSON_PATH, []).map((item) => [item.id, item]));
@@ -128,9 +145,11 @@ export class ItemGenerator {
     private existingImages: Set<string> = new Set();
     private neededVpkPaths: Set<string> = new Set();
     private imagesToProcess: Map<string, PendingImageTask> = new Map();
-    private modelsToProcess: Map<string, { crc: string; targetFilename: string }> = new Map();
+    private modelsToProcess: Map<string, PendingModelTask> = new Map();
     private materialsToProcess: Set<string> = new Set();
     private texturesToProcess: Set<string> = new Set();
+    private materialFilenameByPath = new Map<string, string>();
+    private materialRefsByPath = new Map<string, string[]>();
 
     private baseItems: CS2ExtendedItem[] = [];
     private containerItems = new Map<string, number>();
@@ -181,8 +200,8 @@ export class ItemGenerator {
         await this.preProcessImages();
         await this.processImages();
         await this.preProcessModels();
-        await this.processModels();
         await this.preProcessMaterials();
+        await this.processModels();
         await this.uploadAssets();
         await this.end();
     }
@@ -1101,11 +1120,20 @@ export class ItemGenerator {
             return undefined;
         }
         const base = basename(path, ".vmdl");
-        const targetFilename = `/models/${base}_${entry.crc}.glb`;
-        this.modelsToProcess.set(vpkPath, { crc: entry.crc, targetFilename });
+        const modelPlayer = `/models/${base}_${entry.crc}.glb`;
+        const modelData = `/models/${base}_${entry.crc}.json`;
+        this.modelsToProcess.set(vpkPath, {
+            base,
+            crc: entry.crc,
+            modelData,
+            modelPlayer,
+            directMaterials: new Set(),
+            materialFilenames: new Set(),
+            textureFilenames: new Set()
+        });
         return {
-            modelPlayer: targetFilename,
-            modelData: `/models/${base}_${entry.crc}.json`
+            modelPlayer,
+            modelData
         };
     }
 
@@ -1122,14 +1150,17 @@ export class ItemGenerator {
     }
 
     private async extractModelData() {
-        const entries = Array.from(this.modelsToProcess.entries()).map(([vpkPath, { targetFilename }]) => ({
+        const entries = Array.from(this.modelsToProcess.entries()).map(([vpkPath, { modelPlayer }]) => ({
             vpkPath,
-            targetFilename
+            targetFilename: modelPlayer
         }));
         const results = await this.cs2.extractModelData(entries);
-        for (const { filename, data, materials } of results) {
+        for (const [index, { filename, data, materials }] of results.entries()) {
+            const { vpkPath } = ensure(entries[index]);
+            const model = ensure(this.modelsToProcess.get(vpkPath));
             for (const material of materials) {
                 this.materialsToProcess.add(material);
+                model.directMaterials.add(material);
             }
             await writeFile(join(OUTPUT_DIR, "models", filename), JSON.stringify(data), "utf-8");
             const stickerMarkup = data?.m_modelInfo?.m_keyValueText?.StickerMarkup;
@@ -1174,6 +1205,8 @@ export class ItemGenerator {
             const results = await this.cs2.extractMaterialData(batch);
             for (const { vmatPath, filename, data, vtexRefs, vmatRefs } of results) {
                 processed.add(vmatPath);
+                this.materialFilenameByPath.set(vmatPath, filename);
+                this.materialRefsByPath.set(vmatPath, vmatRefs);
                 for (const vtex of vtexRefs) this.texturesToProcess.add(vtex);
                 for (const vmat of vmatRefs) {
                     if (!processed.has(vmat) && !queue.has(vmat)) queue.add(vmat);
@@ -1184,23 +1217,89 @@ export class ItemGenerator {
                 }
             }
         }
+        for (const model of this.modelsToProcess.values()) {
+            for (const material of this.collectMaterialGraph(model.directMaterials)) {
+                model.materialFilenames.add(`/materials/${material}`);
+            }
+        }
     }
 
-    private async patchGlbTextures(glbPath: string, renames: Map<string, string>) {
+    private collectMaterialGraph(materials: Iterable<string>): Set<string> {
+        const outputFilenames = new Set<string>();
+        const queue = [...materials];
+        const seen = new Set<string>();
+        while (queue.length > 0) {
+            const vmatPath = ensure(queue.pop());
+            if (seen.has(vmatPath)) {
+                continue;
+            }
+            seen.add(vmatPath);
+            const filename = this.materialFilenameByPath.get(vmatPath);
+            if (filename !== undefined) {
+                outputFilenames.add(filename);
+            }
+            for (const child of this.materialRefsByPath.get(vmatPath) ?? []) {
+                queue.push(child);
+            }
+        }
+        return outputFilenames;
+    }
+
+    private getMaterialName(vmatPath: string): string | undefined {
+        const filename = this.materialFilenameByPath.get(vmatPath);
+        return filename ? basename(filename, ".vmat.json") : undefined;
+    }
+
+    private getDependencyHash(dependencies: Iterable<string>): string {
+        const hash = createHash("sha256");
+        hash.update(
+            [...new Set(dependencies)]
+                .sort()
+                .join("\n"),
+            "utf8"
+        );
+        return hash.digest("hex").toLowerCase().slice(0, 8);
+    }
+
+    private updateModelAssetReferences(model: PendingModelTask, modelPlayer: string, modelData: string) {
+        for (const item of this.items.values()) {
+            if (item.modelPlayer === model.modelPlayer) {
+                item.modelPlayer = modelPlayer;
+            }
+            if (item.modelData === model.modelData) {
+                item.modelData = modelData;
+            }
+        }
+        model.modelPlayer = modelPlayer;
+        model.modelData = modelData;
+    }
+
+    private async patchGlbAssets(glbPath: string, textureRenames: Map<string, string>) {
         const io = new NodeIO();
         const document = await io.read(glbPath);
         for (const texture of document.getRoot().listTextures()) {
             const uri = texture.getURI();
-            if (uri !== null && renames.has(uri)) {
-                texture.setURI(renames.get(uri)!);
+            if (uri !== null && textureRenames.has(uri)) {
+                texture.setURI(textureRenames.get(uri)!);
                 texture.setImage(null);
+            }
+        }
+        for (const material of document.getRoot().listMaterials()) {
+            const extras = material.getExtras() as GlbMaterialExtras | null;
+            const vmatPath = extras?.vmat?.Name;
+            if (typeof vmatPath !== "string") {
+                continue;
+            }
+            const name = this.getMaterialName(vmatPath.replace(/\\/g, "/"));
+            if (name !== undefined) {
+                material.setName(name);
             }
         }
         await writeFile(glbPath, await io.writeBinary(document));
     }
 
     private async processModels() {
-        for (const [vpkPath, { targetFilename }] of this.modelsToProcess) {
+        for (const [vpkPath, model] of this.modelsToProcess) {
             const modelDir = join(DECOMPILED_DIR, dirname(vpkPath));
             const base = basename(vpkPath, ".vmdl_c");
             const renames = new Map<string, string>();
@@ -1218,8 +1317,18 @@ export class ItemGenerator {
                     }
                 })
             );
-            await this.patchGlbTextures(join(modelDir, `${base}.glb`), renames);
-            await rename(join(modelDir, `${base}.glb`), join(OUTPUT_DIR, targetFilename));
+            for (const filename of renames.values()) {
+                model.textureFilenames.add(filename);
+            }
+            const glbPath = join(modelDir, `${base}.glb`);
+            await this.patchGlbAssets(glbPath, renames);
+            const dependencyHash = this.getDependencyHash([...model.materialFilenames, ...model.textureFilenames]);
+            const versionedBase = `${model.base}_${model.crc}_${dependencyHash}`;
+            const versionedModelPlayer = `/models/${versionedBase}.glb`;
+            const versionedModelData = `/models/${versionedBase}.json`;
+            await rename(glbPath, join(OUTPUT_DIR, versionedModelPlayer));
+            await rename(join(OUTPUT_DIR, model.modelData), join(OUTPUT_DIR, versionedModelData));
+            this.updateModelAssetReferences(model, versionedModelPlayer, versionedModelData);
         }
     }
 
