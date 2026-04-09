@@ -11,10 +11,17 @@ import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
-import { DECOMPILED_DIR } from "../../cs2.ts";
+import {
+    decompileAssets,
+    decompileModelAssets,
+    ensureAssetPackages,
+    extractMaterialMetadata,
+    extractModelMetadata
+} from "../../cs2-v2.ts";
 import { STORAGE_ACCESS_KEY, STORAGE_ZONE } from "../../env.ts";
 import {
     CDN_UPLOAD_CONCURRENCY,
+    DECOMPILED_DIR,
     OUTPUT_DIR,
     OUTPUT_IMAGE_QUALITY,
     STATIC_IMAGES_DIR,
@@ -58,7 +65,9 @@ export async function prepareWorkspace(ctx: ItemGeneratorV2Context) {
 
 export async function processAssets(ctx: ItemGeneratorV2Context) {
     if (ctx.neededVpkPaths.size > 0) {
-        await ctx.cs2.downloadAndDecompile(Array.from(ctx.neededVpkPaths));
+        const vpkPaths = Array.from(ctx.neededVpkPaths);
+        await ensureAssetPackages(ctx.cs2, vpkPaths);
+        await decompileAssets(ctx.cs2, vpkPaths);
     }
     await processImages(ctx);
     if (ctx.mode === "full") {
@@ -111,7 +120,7 @@ async function processModels(ctx: ItemGeneratorV2Context) {
     if (ctx.modelsToProcess.size === 0) {
         return;
     }
-    await ctx.cs2.decompileModels(Array.from(ctx.modelsToProcess.keys()));
+    await decompileModelAssets(ctx.cs2, Array.from(ctx.modelsToProcess.keys()));
     await extractModelData(ctx);
     await preProcessMaterials(ctx);
     for (const [vpkPath, model] of ctx.modelsToProcess) {
@@ -152,7 +161,7 @@ async function extractModelData(ctx: ItemGeneratorV2Context) {
         vpkPath,
         targetFilename: model.modelPlayer
     }));
-    const results = await ctx.cs2.extractModelData(entries);
+    const results = await extractModelMetadata(ctx.cs2, entries);
     for (const [index, result] of results.entries()) {
         const { filename, data, materials } = result;
         const { vpkPath } = ensure(entries[index]);
@@ -202,7 +211,7 @@ async function preProcessMaterials(ctx: ItemGeneratorV2Context) {
     while (queue.size > 0) {
         const batch = Array.from(queue);
         queue.clear();
-        const results = await ctx.cs2.extractMaterialData(batch);
+        const results = await extractMaterialMetadata(ctx.cs2, batch);
         for (const { vmatPath, filename, data, vtexRefs, vmatRefs } of results) {
             processed.add(vmatPath);
             ctx.materialFilenameByPath.set(vmatPath, filename);

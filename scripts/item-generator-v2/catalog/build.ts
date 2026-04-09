@@ -20,8 +20,14 @@ import {
 } from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
-import { CS2 } from "../../cs2.ts";
-import { useTranslationTemplate } from "../../item-generator-templates.ts";
+import {
+    buildVpkIndex,
+    createCs2Runtime,
+    decompileItemDefinitionResources,
+    ensureItemDefinitionPackages,
+    syncAssetsManifest
+} from "../../cs2-v2.ts";
+import { INPUT_FORCE } from "../../env.ts";
 import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../../item-generator-types.ts";
 import {
     BASE_WEAPON_EQUIPMENT,
@@ -38,10 +44,13 @@ import {
     OUTPUT_DIR,
     PAINT_IMAGE_SUFFIXES,
     REMOVE_KEYCHAIN_TOOL_INDEX,
+    SCRIPTS_DIR,
     SKIN_PHASE_RE,
     STATIC_IMAGES_DIR,
     UNCATEGORIZED_STICKERS,
-    WEAPON_CATEGORY_RE
+    WEAPON_CATEGORY_RE,
+    WORKDIR_DIR,
+    getInstalledGamePathForV2,
 } from "../config.ts";
 import { findFallbackImage, populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
 import { ItemGeneratorV2Context } from "../types.ts";
@@ -51,9 +60,23 @@ const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemTy
 
 export function createItemGeneratorV2Context(mode: ItemGeneratorV2Context["mode"]): ItemGeneratorV2Context {
     const existingItemsSnapshot = readJson<CS2Item[]>(ITEMS_JSON_PATH, []);
+    const source = mode === "full" ? "installed_game" : "workspace_depot";
     return {
         mode,
-        cs2: new CS2(),
+        cs2: createCs2Runtime({
+            force: INPUT_FORCE === "true",
+            installedGamePath: getInstalledGamePathForV2(source),
+            paths: {
+                assetsManifestPath: join(SCRIPTS_DIR, "cs2.manifest"),
+                decompiledDir: join(WORKDIR_DIR, "decompiled"),
+                depotCsgoPath: join(WORKDIR_DIR, "game/csgo"),
+                depotFileListPath: join(SCRIPTS_DIR, "cs2.depot"),
+                pakDirPath: "",
+                tempPakFileListPath: join(WORKDIR_DIR, "cs2_temp_pak.depot"),
+                workdirPath: WORKDIR_DIR
+            },
+            source
+        }),
         gameItemsAsText: "",
         gameItems: {} as CS2GameItems["items_game"],
         csgoTranslationByLanguage: {},
@@ -98,8 +121,10 @@ export function createItemGeneratorV2Context(mode: ItemGeneratorV2Context["mode"
 
 export async function loadSourceData(ctx: ItemGeneratorV2Context) {
     await mkdir(STATIC_IMAGES_DIR, { recursive: true });
-    await ctx.cs2.syncLatestAssetsManifest();
-    await ctx.cs2.downloadAndDecompileScripts();
+    await syncAssetsManifest(ctx.cs2);
+    await ensureItemDefinitionPackages(ctx.cs2);
+    await buildVpkIndex(ctx.cs2);
+    await decompileItemDefinitionResources(ctx.cs2);
     await readCsgoLanguageFiles(ctx);
     await readItemsGameFile(ctx);
 }

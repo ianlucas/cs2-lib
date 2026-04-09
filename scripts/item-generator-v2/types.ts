@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2 } from "../cs2.ts";
+import { Cs2Runtime } from "../cs2-v2.ts";
 import { ItemGeneratorV2Mode } from "./config.ts";
 import {
     CS2Item,
@@ -85,7 +85,7 @@ export type ItemGeneratorV2Report = {
 
 export interface ItemGeneratorV2Context {
     mode: ItemGeneratorV2Mode;
-    cs2: CS2;
+    cs2: Cs2Runtime;
     gameItemsAsText: string;
     gameItems: CS2GameItems["items_game"];
     csgoTranslationByLanguage: Record<string, CS2Language["lang"]["Tokens"]>;

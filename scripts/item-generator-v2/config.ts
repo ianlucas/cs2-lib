@@ -5,11 +5,16 @@
 
 import { join } from "path";
 import { availableParallelism } from "os";
-import { CS2, SCRIPTS_DIR, WORKDIR_DIR } from "../cs2.ts";
+import { CWD_PATH, CS2_CSGO_PATH } from "../env.ts";
+import { Cs2SourceMode } from "../cs2-v2.ts";
 
-export const GAME_IMAGES_DIR = join(WORKDIR_DIR, "decompiled/panorama/images");
-export const GAME_ITEMS_PATH = join(WORKDIR_DIR, "decompiled/scripts/items/items_game.txt");
-export const GAME_RESOURCE_DIR = join(WORKDIR_DIR, "decompiled/resource");
+export const SCRIPTS_DIR = join(CWD_PATH, "scripts");
+export const WORKDIR_DIR = join(SCRIPTS_DIR, "workdir");
+export const DECOMPILED_DIR = join(WORKDIR_DIR, "decompiled");
+
+export const GAME_IMAGES_DIR = join(DECOMPILED_DIR, "panorama/images");
+export const GAME_ITEMS_PATH = join(DECOMPILED_DIR, "scripts/items/items_game.txt");
+export const GAME_RESOURCE_DIR = join(DECOMPILED_DIR, "resource");
 export const OUTPUT_DIR = join(WORKDIR_DIR, "output");
 
 export const V2_WORKDIR_DIR = join(WORKDIR_DIR, "item-generator-v2");
@@ -69,5 +74,13 @@ export const PARITY_IGNORED_FIELDS = new Set([
 export type ItemGeneratorV2Mode = "limited" | "full";
 
 export function detectItemGeneratorV2Mode() {
-    return new CS2().local ? "full" : "limited" as ItemGeneratorV2Mode;
+    return process.env.CS2_CSGO_PATH !== undefined ? ("full" as ItemGeneratorV2Mode) : "limited";
+}
+
+export function detectItemGeneratorV2SourceMode(): Cs2SourceMode {
+    return detectItemGeneratorV2Mode() === "full" ? "installed_game" : "workspace_depot";
+}
+
+export function getInstalledGamePathForV2(source: Cs2SourceMode) {
+    return source === "installed_game" ? CS2_CSGO_PATH : undefined;
 }
