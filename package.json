@@ -44,7 +44,8 @@
         "update": "npm run item-generator && npm run item-generator-changelog",
         "upgrade": "npx npm-check-updates@latest --target minor -u",
         "item-generator-changelog": "tsx scripts/item-generator-changelog.ts",
-        "item-generator": "tsx scripts/item-generator.ts"
+        "item-generator": "tsx scripts/item-generator.ts",
+        "item-generator-v2": "tsx scripts/item-generator-v2.ts"
     },
     "devDependencies": {
         "@bunny.net/storage-sdk": "^0.3.1",
