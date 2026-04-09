@@ -83,7 +83,9 @@ async function processImages(ctx: ItemGeneratorV2Context) {
     for (const task of ctx.imagesToProcess.values()) {
         if (task.kind === "regular") {
             queue.push(async () => {
-                await sharp(task.localPath).webp({ quality: OUTPUT_IMAGE_QUALITY }).toFile(join(OUTPUT_DIR, task.filename));
+                await sharp(task.localPath)
+                    .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                    .toFile(join(OUTPUT_DIR, task.filename));
             });
             continue;
         }
@@ -312,13 +314,16 @@ async function colorizeGraffitiImage(src: string, hexColor: string, dest: string
     const output = Buffer.alloc(info.width * info.height * 4);
     for (let index = 0; index < info.width * info.height; index++) {
         const offset = index * 4;
-        const gray = 0.2126 * (data[offset] / 255) + 0.7152 * (data[offset + 1] / 255) + 0.0722 * (data[offset + 2] / 255);
+        const gray =
+            0.2126 * (data[offset] / 255) + 0.7152 * (data[offset + 1] / 255) + 0.0722 * (data[offset + 2] / 255);
         output[offset] = Math.round(gray * colorR * 255);
         output[offset + 1] = Math.round(gray * colorG * 255);
         output[offset + 2] = Math.round(gray * colorB * 255);
         output[offset + 3] = data[offset + 3];
     }
-    await sharp(output, { raw: { width: info.width, height: info.height, channels: 4 } }).webp().toFile(join(OUTPUT_DIR, dest));
+    await sharp(output, { raw: { width: info.width, height: info.height, channels: 4 } })
+        .webp()
+        .toFile(join(OUTPUT_DIR, dest));
 }
 
 async function copyAndOptimizeImage(src: string, dest: string) {

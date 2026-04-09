@@ -45,16 +45,8 @@ export async function emitOutputs(ctx: ItemGeneratorV2Context) {
 
     await mkdir(V2_STATE_DIR, { recursive: true });
     await mkdir(V2_REPORTS_DIR, { recursive: true });
-    await writeFile(
-        `${V2_STATE_DIR}/catalog.json`,
-        JSON.stringify(items),
-        "utf-8"
-    );
-    await writeFile(
-        `${V2_STATE_DIR}/translations.json`,
-        JSON.stringify(ctx.itemTranslationByLanguage),
-        "utf-8"
-    );
+    await writeFile(`${V2_STATE_DIR}/catalog.json`, JSON.stringify(items), "utf-8");
+    await writeFile(`${V2_STATE_DIR}/translations.json`, JSON.stringify(ctx.itemTranslationByLanguage), "utf-8");
     await writeFile(`${V2_REPORTS_DIR}/parity.json`, JSON.stringify(ctx.report), "utf-8");
 
     warning(`Successfully generated '${ITEMS_JSON_PATH}'.`);

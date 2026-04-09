@@ -50,7 +50,7 @@ import {
     UNCATEGORIZED_STICKERS,
     WEAPON_CATEGORY_RE,
     WORKDIR_DIR,
-    getInstalledGamePathForV2,
+    getInstalledGamePathForV2
 } from "../config.ts";
 import { findFallbackImage, populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
 import { ItemGeneratorV2Context } from "../types.ts";
@@ -166,8 +166,8 @@ async function readCsgoLanguageFiles(ctx: ItemGeneratorV2Context, include?: stri
                     return [
                         language,
                         Object.entries(
-                            CS2KeyValues.parse<CS2Language>(await readFile(join(GAME_RESOURCE_DIR, file), "utf-8"))
-                                .lang.Tokens
+                            CS2KeyValues.parse<CS2Language>(await readFile(join(GAME_RESOURCE_DIR, file), "utf-8")).lang
+                                .Tokens
                         ).reduce(
                             (tokens, [key, value]) => {
                                 key = key.toLowerCase();
@@ -206,7 +206,8 @@ async function readItemsGameFile(ctx: ItemGeneratorV2Context) {
                 return rarityKey !== undefined
                     ? Object.keys(clientLootList)
                           .map((itemOrClientLootListKey) =>
-                              itemOrClientLootListKey.includes("customplayer_") || LOOT_ITEM_RE.test(itemOrClientLootListKey)
+                              itemOrClientLootListKey.includes("customplayer_") ||
+                              LOOT_ITEM_RE.test(itemOrClientLootListKey)
                                   ? ([itemOrClientLootListKey, ctx.raritiesColorHex[rarityKey]] as const)
                                   : undefined
                           )
@@ -218,7 +219,15 @@ async function readItemsGameFile(ctx: ItemGeneratorV2Context) {
     );
     ctx.paintKits = Object.entries(ctx.gameItems.paint_kits)
         .map(([paintKitIndex, data]) => {
-            const { composite_material_path, description_string, description_tag, name, use_legacy_model, wear_remap_max, wear_remap_min } = data;
+            const {
+                composite_material_path,
+                description_string,
+                description_tag,
+                name,
+                use_legacy_model,
+                wear_remap_max,
+                wear_remap_min
+            } = data;
             if (name === undefined || name === "default" || description_tag === undefined) {
                 return undefined;
             }
@@ -261,7 +270,9 @@ async function readItemsGameFile(ctx: ItemGeneratorV2Context) {
 }
 
 async function parseBaseWeapons(ctx: ItemGeneratorV2Context) {
-    for (const [itemDef, { baseitem, flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(ctx.gameItems.items)) {
+    for (const [itemDef, { baseitem, flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(
+        ctx.gameItems.items
+    )) {
         if (baseitem !== "1" || flexible_loadout_slot === undefined) {
             continue;
         }
@@ -350,7 +361,10 @@ async function parseBaseGloves(ctx: ItemGeneratorV2Context) {
             descToken: item_description,
             free: baseitem === "1" ? true : undefined,
             id,
-            image: image_inventory !== undefined ? getImage(ctx, image_inventory) : requireStaticAsset(ctx, `/images/${name}.png`),
+            image:
+                image_inventory !== undefined
+                    ? getImage(ctx, image_inventory)
+                    : requireStaticAsset(ctx, `/images/${name}.png`),
             index: baseitem === "1" ? undefined : 0,
             model: name,
             nameToken: item_name,
@@ -362,7 +376,9 @@ async function parseBaseGloves(ctx: ItemGeneratorV2Context) {
 }
 
 async function parseUtilities(ctx: ItemGeneratorV2Context) {
-    for (const [itemDef, { flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(ctx.gameItems.items)) {
+    for (const [itemDef, { flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(
+        ctx.gameItems.items
+    )) {
         if (!flexible_loadout_slot?.startsWith("grenade")) {
             continue;
         }
@@ -429,7 +445,9 @@ async function parsePaintKits(ctx: ItemGeneratorV2Context) {
 
 async function parseMusicKits(ctx: ItemGeneratorV2Context) {
     const baseId = createStub(ctx, "musickit", "#CSGO_musickit_desc");
-    for (const [index, { name, loc_name, loc_description, image_inventory }] of Object.entries(ctx.gameItems.music_definitions)) {
+    for (const [index, { name, loc_name, loc_description, image_inventory }] of Object.entries(
+        ctx.gameItems.music_definitions
+    )) {
         if (index === "2") {
             continue;
         }
@@ -456,7 +474,9 @@ async function parseMusicKits(ctx: ItemGeneratorV2Context) {
 
 async function parseKeychains(ctx: ItemGeneratorV2Context) {
     ctx.keychainBaseId = createStub(ctx, "keychain", "#CSGO_Tool_Keychain_Desc");
-    for (const [index, { name, loc_name, loc_description, item_rarity, image_inventory }] of Object.entries(ctx.gameItems.keychain_definitions)) {
+    for (const [index, { name, loc_name, loc_description, item_rarity, image_inventory }] of Object.entries(
+        ctx.gameItems.keychain_definitions
+    )) {
         if (!hasTranslation(ctx, loc_name)) {
             continue;
         }
@@ -504,7 +524,13 @@ async function parseStickers(ctx: ItemGeneratorV2Context) {
         addTranslation(ctx, id, "category", categoryToken !== undefined ? categoryToken : category);
         tryAddTranslation(ctx, id, "desc", description_string);
         if (tournament_event_id !== undefined) {
-            addFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc", `#CSGO_Tournament_Event_Name_${tournament_event_id}`);
+            addFormattedTranslation(
+                ctx,
+                id,
+                "tournamentDesc",
+                "#CSGO_Event_Desc",
+                `#CSGO_Tournament_Event_Name_${tournament_event_id}`
+            );
         }
         addItem(ctx, {
             baseId,
@@ -578,7 +604,13 @@ async function parseGraffiti(ctx: ItemGeneratorV2Context) {
         addTranslation(ctx, id, "name", "#CSGO_Type_Spray", " | ", item_name);
         addTranslation(ctx, id, "desc", description_string);
         if (tournament_event_id !== undefined) {
-            addFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc", `#CSGO_Tournament_Event_Name_${tournament_event_id}`);
+            addFormattedTranslation(
+                ctx,
+                id,
+                "tournamentDesc",
+                "#CSGO_Event_Desc",
+                `#CSGO_Tournament_Event_Name_${tournament_event_id}`
+            );
         }
         addItem(ctx, {
             baseId,
@@ -606,7 +638,13 @@ async function parsePatches(ctx: ItemGeneratorV2Context) {
         addTranslation(ctx, id, "name", "#CSGO_Tool_Patch", " | ", item_name);
         addTranslation(ctx, id, "desc", description_string);
         if (tournament_event_id !== undefined) {
-            addFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc", `#CSGO_Tournament_Event_Name_${tournament_event_id}`);
+            addFormattedTranslation(
+                ctx,
+                id,
+                "tournamentDesc",
+                "#CSGO_Event_Desc",
+                `#CSGO_Tournament_Event_Name_${tournament_event_id}`
+            );
         }
         addItem(ctx, {
             baseId,
@@ -623,7 +661,16 @@ async function parsePatches(ctx: ItemGeneratorV2Context) {
 
 async function parseAgents(ctx: ItemGeneratorV2Context) {
     for (const [index, item] of Object.entries(ctx.gameItems.items)) {
-        const { name, item_name, used_by_classes, image_inventory, model_player, item_rarity, prefab, item_description } = item;
+        const {
+            name,
+            item_name,
+            used_by_classes,
+            image_inventory,
+            model_player,
+            item_rarity,
+            prefab,
+            item_description
+        } = item;
         if (
             item_name === undefined ||
             used_by_classes === undefined ||
@@ -677,7 +724,13 @@ async function parseCollectibles(ctx: ItemGeneratorV2Context) {
         addTranslation(ctx, id, "name", "#CSGO_Type_Collectible", " | ", item_name);
         tryAddTranslation(ctx, id, "desc", item_description ?? `${item_name}_Desc`);
         if (attributes?.["tournament event id"] !== undefined) {
-            addFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc", `#CSGO_Tournament_Event_Name_${attributes["tournament event id"].value}`);
+            addFormattedTranslation(
+                ctx,
+                id,
+                "tournamentDesc",
+                "#CSGO_Event_Desc",
+                `#CSGO_Tournament_Event_Name_${attributes["tournament event id"].value}`
+            );
         }
         addItem(ctx, {
             altName: name,
@@ -725,7 +778,19 @@ async function parseTools(ctx: ItemGeneratorV2Context) {
 async function parseContainers(ctx: ItemGeneratorV2Context) {
     const keyItems = new Map<string, number>();
     for (const [containerIndex, item] of Object.entries(ctx.gameItems.items)) {
-        const { associated_items, attributes, image_inventory, image_unusual_item, item_description, item_name, loot_list_name, name, prefab, tags, tool } = item;
+        const {
+            associated_items,
+            attributes,
+            image_inventory,
+            image_unusual_item,
+            item_description,
+            item_name,
+            loot_list_name,
+            name,
+            prefab,
+            tags,
+            tool
+        } = item;
         const hasSupplyCrateSeries = attributes?.["set supply crate series"]?.attribute_class === "supply_crate_series";
         if (
             item_name === undefined ||
@@ -737,7 +802,10 @@ async function parseContainers(ctx: ItemGeneratorV2Context) {
             continue;
         }
         const revolvingLootListKey = attributes?.["set supply crate series"]?.value;
-        const clientLootListKey = revolvingLootListKey !== undefined ? ctx.gameItems.revolving_loot_lists[revolvingLootListKey] : loot_list_name;
+        const clientLootListKey =
+            revolvingLootListKey !== undefined
+                ? ctx.gameItems.revolving_loot_lists[revolvingLootListKey]
+                : loot_list_name;
         if (clientLootListKey === undefined) {
             continue;
         }
@@ -845,14 +913,21 @@ function getItemId(ctx: ItemGeneratorV2Context, identifier: string) {
 
 function getRarityColorHex(ctx: ItemGeneratorV2Context, keywords: (string | undefined)[], defaultsTo?: string) {
     let colorHex =
-        defaultsTo !== undefined ? (defaultsTo.startsWith("#") ? defaultsTo : ctx.raritiesColorHex[defaultsTo]) : undefined;
+        defaultsTo !== undefined
+            ? defaultsTo.startsWith("#")
+                ? defaultsTo
+                : ctx.raritiesColorHex[defaultsTo]
+            : undefined;
     for (const keyword of keywords) {
         if (keyword === undefined) continue;
         if (keyword.startsWith("#")) {
             colorHex = keyword;
             break;
         }
-        colorHex = ctx.itemsRaritiesColorHex[keyword] ?? ctx.paintKitsRaritiesColorHex[keyword] ?? ctx.raritiesColorHex[keyword];
+        colorHex =
+            ctx.itemsRaritiesColorHex[keyword] ??
+            ctx.paintKitsRaritiesColorHex[keyword] ??
+            ctx.raritiesColorHex[keyword];
         if (colorHex !== undefined) {
             break;
         }
@@ -886,13 +961,20 @@ function hasTranslation(ctx: ItemGeneratorV2Context, token?: string) {
     return token !== undefined && ctx.csgoTranslationByLanguage.english[token] !== undefined;
 }
 
-function addTranslation(ctx: ItemGeneratorV2Context, id: number, property: keyof CS2ItemTranslation, ...tokens: (string | undefined)[]) {
+function addTranslation(
+    ctx: ItemGeneratorV2Context,
+    id: number,
+    property: keyof CS2ItemTranslation,
+    ...tokens: (string | undefined)[]
+) {
     for (const [language, items] of Object.entries(ctx.itemTranslationByLanguage)) {
         const itemLanguage = (items[id] ??= {} as CS2ItemTranslation);
         const value = tokens
             .map((token) => {
                 assert(token !== undefined);
-                return isTranslationKey(ctx, token) ? (findTranslation(ctx, token, language) ?? requireTranslation(ctx, token)) : token;
+                return isTranslationKey(ctx, token)
+                    ? (findTranslation(ctx, token, language) ?? requireTranslation(ctx, token))
+                    : token;
             })
             .join("")
             .trim();
@@ -905,7 +987,12 @@ function addTranslation(ctx: ItemGeneratorV2Context, id: number, property: keyof
     }
 }
 
-function tryAddTranslation(ctx: ItemGeneratorV2Context, id: number, property: keyof CS2ItemTranslation, token: string | undefined) {
+function tryAddTranslation(
+    ctx: ItemGeneratorV2Context,
+    id: number,
+    property: keyof CS2ItemTranslation,
+    token: string | undefined
+) {
     if (isTranslationKey(ctx, token)) {
         addTranslation(ctx, id, property, token);
     }
@@ -986,7 +1073,11 @@ function hydrateExistingModelFields(ctx: ItemGeneratorV2Context, item: CS2Extend
             (item as unknown as Record<string, unknown>)[field] = fallback;
             continue;
         }
-        if (current === undefined && fallback === undefined && (item.model !== undefined || previous.model !== undefined)) {
+        if (
+            current === undefined &&
+            fallback === undefined &&
+            (item.model !== undefined || previous.model !== undefined)
+        ) {
             missingFields.push(field);
         }
     }
@@ -1039,7 +1130,10 @@ function getImagePath(path: string) {
 }
 
 function getPaintImagePath(className: string | undefined, paintClassName: string | undefined, suffix = "light") {
-    return join(GAME_IMAGES_DIR, `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase());
+    return join(
+        GAME_IMAGES_DIR,
+        `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase()
+    );
 }
 
 function requireStaticAsset(ctx: ItemGeneratorV2Context, path: string) {
@@ -1090,7 +1184,9 @@ function getPaintImage(ctx: ItemGeneratorV2Context, className: string | undefine
     const baseName = `${cn}_${pcn}_${entry.crc}`;
     const baseFilename = `/images/${baseName}.webp`;
     if (!ctx.existingImages.has(baseFilename)) {
-        const localPaths = PAINT_IMAGE_SUFFIXES.map((suffix) => [getPaintImagePath(cn, pcn, suffix), suffix] as [string, string]);
+        const localPaths = PAINT_IMAGE_SUFFIXES.map(
+            (suffix) => [getPaintImagePath(cn, pcn, suffix), suffix] as [string, string]
+        );
         for (const suffix of PAINT_IMAGE_SUFFIXES) {
             ctx.neededVpkPaths.add(getVpkPaintImagePath(cn, pcn, suffix));
         }
@@ -1144,7 +1240,9 @@ function getModel(ctx: ItemGeneratorV2Context, path?: string, existingId?: numbe
     }
     if (ctx.mode === "limited" && existingId !== undefined) {
         const existing = ctx.existingItemsById.get(existingId);
-        return existing !== undefined ? { modelData: existing.modelData, modelPlayer: existing.modelPlayer } : undefined;
+        return existing !== undefined
+            ? { modelData: existing.modelData, modelPlayer: existing.modelPlayer }
+            : undefined;
     }
     const vpkPath = path.replace(".vmdl", ".vmdl_c").toLowerCase();
     const entry = ctx.cs2.vpkIndex.get(vpkPath);
@@ -1183,7 +1281,10 @@ function getPaintAltName(className: string) {
     }
 }
 
-function getStickerCategory(ctx: ItemGeneratorV2Context, input: { sticker_material: string; tournament_event_id?: string }) {
+function getStickerCategory(
+    ctx: ItemGeneratorV2Context,
+    input: { sticker_material: string; tournament_event_id?: string }
+) {
     const { sticker_material, tournament_event_id } = input;
     let category: string | undefined;
     let categoryToken: string | undefined;
@@ -1237,7 +1338,10 @@ function getCollectionImage(ctx: ItemGeneratorV2Context, name: string) {
         const ext = isSvg ? ".svg" : "_png.png";
         const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}${ext}`);
         ctx.neededVpkPaths.add(vpkPath);
-        ctx.imagesToProcess.set(vpkPath, isSvg ? { kind: "svg", localPath, filename } : { kind: "regular", localPath, filename });
+        ctx.imagesToProcess.set(
+            vpkPath,
+            isSvg ? { kind: "svg", localPath, filename } : { kind: "regular", localPath, filename }
+        );
     }
     return filename;
 }

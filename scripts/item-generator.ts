@@ -1252,12 +1252,7 @@ export class ItemGenerator {
 
     private getDependencyHash(dependencies: Iterable<string>): string {
         const hash = createHash("sha256");
-        hash.update(
-            [...new Set(dependencies)]
-                .sort()
-                .join("\n"),
-            "utf8"
-        );
+        hash.update([...new Set(dependencies)].sort().join("\n"), "utf8");
         return hash.digest("hex").toLowerCase().slice(0, 8);
     }
 

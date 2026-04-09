@@ -6,7 +6,12 @@
 import { basename } from "path";
 import { CS2KeyValues3 } from "../../src/keyvalues3.ts";
 import { decompileDataBlocks } from "./decompile.ts";
-import { Cs2Runtime, MaterialMetadataExtractionResult, ModelMetadataEntry, ModelMetadataExtractionResult } from "./types.ts";
+import {
+    Cs2Runtime,
+    MaterialMetadataExtractionResult,
+    ModelMetadataEntry,
+    ModelMetadataExtractionResult
+} from "./types.ts";
 
 function parseKv3Recursively(value: any): any {
     if (typeof value === "string" && value.trimStart().startsWith("<!--")) {
@@ -42,11 +47,14 @@ export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMe
     let batchEntries: ModelMetadataEntry[] = [];
     let batchBytes = 0;
 
-    const flush = async () => {
+    async function flush() {
         if (batchEntries.length === 0) {
             return;
         }
-        const stdout = await decompileDataBlocks(runtime, batchEntries.map((entry) => entry.vpkPath));
+        const stdout = await decompileDataBlocks(
+            runtime,
+            batchEntries.map((entry) => entry.vpkPath)
+        );
         const chunksByPath = buildChunkByPathMap(stdout);
         for (const entry of batchEntries) {
             const chunk = chunksByPath.get(entry.vpkPath) ?? "";
@@ -73,7 +81,7 @@ export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMe
         }
         batchEntries = [];
         batchBytes = 0;
-    };
+    }
 
     for (const entry of entries) {
         const length = Buffer.byteLength(entry.vpkPath) + 1;
@@ -96,11 +104,14 @@ export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: st
     let batchEntries = [] as typeof entries;
     let batchBytes = 0;
 
-    const flush = async () => {
+    async function flush() {
         if (batchEntries.length === 0) {
             return;
         }
-        const stdout = await decompileDataBlocks(runtime, batchEntries.map((entry) => entry.vpkPath));
+        const stdout = await decompileDataBlocks(
+            runtime,
+            batchEntries.map((entry) => entry.vpkPath)
+        );
         const chunksByPath = buildChunkByPathMap(stdout);
         for (const entry of batchEntries) {
             const chunk = chunksByPath.get(entry.vpkPath) ?? "";
@@ -134,7 +145,7 @@ export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: st
         }
         batchEntries = [];
         batchBytes = 0;
-    };
+    }
 
     for (const entry of entries) {
         const length = Buffer.byteLength(entry.vpkPath) + 1;

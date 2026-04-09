@@ -80,7 +80,7 @@ export async function decompileAssets(runtime: Cs2Runtime, vpkPaths: string[], o
     let batch: string[] = [];
     let batchBytes = 0;
 
-    const flush = async () => {
+    async function flush() {
         if (batch.length === 0) {
             return;
         }
@@ -93,7 +93,7 @@ export async function decompileAssets(runtime: Cs2Runtime, vpkPaths: string[], o
         });
         batch = [];
         batchBytes = 0;
-    };
+    }
 
     for (const path of vpkPaths) {
         const decompilerPath = toDecompilerPath(path);
