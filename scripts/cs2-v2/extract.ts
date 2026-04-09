@@ -25,6 +25,17 @@ function parseKv3Recursively(value: any): any {
     return value;
 }
 
+function buildChunkByPathMap(stdout: string) {
+    const map = new Map<string, string>();
+    for (const chunk of stdout.split(/(?=\[\d+\/\d+\])/)) {
+        const match = chunk.match(/^\[\d+\/\d+\]\s+([^\r\n]+)/);
+        if (match !== null) {
+            map.set(match[1].trim(), chunk);
+        }
+    }
+    return map;
+}
+
 export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMetadataEntry[]) {
     const MAX_ARG_BYTES = 100_000;
     const results: ModelMetadataExtractionResult[] = [];
@@ -36,10 +47,9 @@ export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMe
             return;
         }
         const stdout = await decompileDataBlocks(runtime, batchEntries.map((entry) => entry.vpkPath));
-        const chunks = stdout.split(/(?=\[\d+\/\d+\])/);
-        let chunkIndex = 0;
+        const chunksByPath = buildChunkByPathMap(stdout);
         for (const entry of batchEntries) {
-            const chunk = chunks[chunkIndex++] ?? "";
+            const chunk = chunksByPath.get(entry.vpkPath) ?? "";
             const materialsMatch = chunk.match(/--- Resource External Refs: ---([\s\S]*?)(?=---|$)/);
             const materials: string[] = [];
             if (materialsMatch) {
@@ -91,10 +101,9 @@ export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: st
             return;
         }
         const stdout = await decompileDataBlocks(runtime, batchEntries.map((entry) => entry.vpkPath));
-        const chunks = stdout.split(/(?=\[\d+\/\d+\])/);
-        let chunkIndex = 0;
+        const chunksByPath = buildChunkByPathMap(stdout);
         for (const entry of batchEntries) {
-            const chunk = chunks[chunkIndex++] ?? "";
+            const chunk = chunksByPath.get(entry.vpkPath) ?? "";
             const externalRefsMatch = chunk.match(/--- Resource External Refs: ---([\s\S]*?)(?=---|$)/);
             const vtexRefs: string[] = [];
             if (externalRefsMatch) {
