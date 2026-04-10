@@ -3,21 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename, join } from "path";
+import { join } from "path";
 import { mkdir, readdir, readFile } from "fs/promises";
-import sharp from "sharp";
-import { stripHtml } from "string-strip-html";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
 import { CS2RarityColorValues } from "../../../src/economy-container.ts";
-import {
-    CS2ContainerType,
-    CS2Item,
-    CS2ItemTeam,
-    CS2ItemTeamValues,
-    CS2ItemTranslation,
-    CS2ItemType,
-    CS2ItemTypeValues
-} from "../../../src/economy-types.ts";
+import { CS2Item, CS2ItemTeam, CS2ItemTeamValues, CS2ItemType, CS2ItemTypeValues } from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
 import {
@@ -31,9 +21,7 @@ import { INPUT_FORCE } from "../../env.ts";
 import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../../item-generator-types.ts";
 import {
     BASE_WEAPON_EQUIPMENT,
-    FORMATTED_STRING_RE,
     FREE_MUSIC_KITS,
-    GAME_IMAGES_DIR,
     GAME_ITEMS_PATH,
     GAME_RESOURCE_DIR,
     HEAVY_WEAPONS,
@@ -41,8 +29,6 @@ import {
     ITEMS_JSON_PATH,
     LANGUAGE_FILE_RE,
     LOOT_ITEM_RE,
-    OUTPUT_DIR,
-    PAINT_IMAGE_SUFFIXES,
     REMOVE_KEYCHAIN_TOOL_INDEX,
     SCRIPTS_DIR,
     SKIN_PHASE_RE,
@@ -52,9 +38,31 @@ import {
     WORKDIR_DIR,
     getInstalledGamePathForV2
 } from "../config.ts";
-import { findFallbackImage, populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
+import { populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
 import { ItemGeneratorV2Context } from "../types.ts";
-import { exists, getFileSha256, prependHash, readJson } from "../../utils.ts";
+import { prependHash, readJson } from "../../utils.ts";
+import {
+    addFormattedTranslation,
+    addTranslation,
+    findTranslation,
+    hasTranslation,
+    requireTranslation,
+    tryAddTranslation
+} from "./translations.ts";
+import {
+    getBaseImage,
+    getCollectionImage,
+    getDefaultGraffitiImage,
+    getImage,
+    getModel,
+    getPaintImage,
+    getSpecialsImage,
+    isImageValid,
+    isPaintImageValid,
+    requireStaticAsset,
+    tryGetFallbackImage
+} from "./assets.ts";
+import { addContainerItem, getClientLootListItems, getCollection, getContainerType, getItemCollection } from "./collections.ts";
 
 const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 
@@ -935,86 +943,6 @@ function getRarityColorHex(ctx: ItemGeneratorV2Context, keywords: (string | unde
     return ensure((colorHex ?? ctx.raritiesColorHex.default) as CS2RarityColorValues);
 }
 
-function resolveToken(token?: string) {
-    return (token?.charAt(0) === "#" ? token.substring(1) : token)?.toLowerCase();
-}
-
-function isTranslationKey(ctx: ItemGeneratorV2Context, token?: string) {
-    if (token === undefined || token.length === 0) return false;
-    const resolved = resolveToken(token);
-    return resolved !== undefined && ctx.csgoTranslationByLanguage.english[resolved] !== undefined;
-}
-
-function findTranslation(ctx: ItemGeneratorV2Context, token?: string, language = "english") {
-    token = resolveToken(token);
-    if (token === undefined) return undefined;
-    const value = ctx.csgoTranslationByLanguage[language][token];
-    return value !== undefined ? stripHtml(value).result : undefined;
-}
-
-function requireTranslation(ctx: ItemGeneratorV2Context, token?: string, language = "english") {
-    return ensure(findTranslation(ctx, token, language), `Failed to find translation for '${token}' (${language}).`);
-}
-
-function hasTranslation(ctx: ItemGeneratorV2Context, token?: string) {
-    token = resolveToken(token);
-    return token !== undefined && ctx.csgoTranslationByLanguage.english[token] !== undefined;
-}
-
-function addTranslation(
-    ctx: ItemGeneratorV2Context,
-    id: number,
-    property: keyof CS2ItemTranslation,
-    ...tokens: (string | undefined)[]
-) {
-    for (const [language, items] of Object.entries(ctx.itemTranslationByLanguage)) {
-        const itemLanguage = (items[id] ??= {} as CS2ItemTranslation);
-        const value = tokens
-            .map((token) => {
-                assert(token !== undefined);
-                return isTranslationKey(ctx, token)
-                    ? (findTranslation(ctx, token, language) ?? requireTranslation(ctx, token))
-                    : token;
-            })
-            .join("")
-            .trim();
-        if (property === "name" && language === "english" && value.length > 0) {
-            ctx.itemNames.set(id, value);
-        }
-        if (value.length > 0) {
-            itemLanguage[property] = value;
-        }
-    }
-}
-
-function tryAddTranslation(
-    ctx: ItemGeneratorV2Context,
-    id: number,
-    property: keyof CS2ItemTranslation,
-    token: string | undefined
-) {
-    if (isTranslationKey(ctx, token)) {
-        addTranslation(ctx, id, property, token);
-    }
-}
-
-function addFormattedTranslation(
-    ctx: ItemGeneratorV2Context,
-    id: number,
-    property: keyof CS2ItemTranslation,
-    key?: string,
-    ...values: string[]
-) {
-    for (const [language, items] of Object.entries(ctx.itemTranslationByLanguage)) {
-        (items[id] ??= {} as CS2ItemTranslation)[property] = (
-            findTranslation(ctx, key, language) ?? requireTranslation(ctx, key, "english")
-        ).replace(FORMATTED_STRING_RE, (_, index) => {
-            const valueKey = values[parseInt(index, 10) - 1];
-            return findTranslation(ctx, valueKey, language) ?? requireTranslation(ctx, valueKey, "english");
-        });
-    }
-}
-
 function getPrefab(ctx: ItemGeneratorV2Context, prefab?: string) {
     return ensure(ctx.gameItems.prefabs[ensure(prefab)]);
 }
@@ -1102,168 +1030,6 @@ function getBaseWeaponCategory(name: string, category: string) {
     return HEAVY_WEAPONS.includes(name) ? "heavy" : category;
 }
 
-async function tryGetFallbackImage(
-    ctx: ItemGeneratorV2Context,
-    source: "collectible" | "container" | "keychain",
-    imagePath: string,
-    existingId: number
-) {
-    const existing = ctx.existingItemsById.get(existingId)?.image;
-    if (existing !== undefined) {
-        return existing;
-    }
-    const staticKey = `/images/${basename(imagePath)}.png`;
-    if (ctx.staticAssets[staticKey] !== undefined) {
-        return ctx.staticAssets[staticKey];
-    }
-    const localPath = join(STATIC_IMAGES_DIR, basename(staticKey));
-    if (!(await exists(localPath)) && (await findFallbackImage(source, imagePath)) === undefined) {
-        return undefined;
-    }
-    const filename = await copyAndOptimizeImage(ctx, localPath, "/images/{sha256}.webp");
-    ctx.staticAssets[staticKey] = filename;
-    return filename;
-}
-
-function getImagePath(path: string) {
-    return join(GAME_IMAGES_DIR, `${path}_png.png`.toLowerCase());
-}
-
-function getPaintImagePath(className: string | undefined, paintClassName: string | undefined, suffix = "light") {
-    return join(
-        GAME_IMAGES_DIR,
-        `econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase()
-    );
-}
-
-function requireStaticAsset(ctx: ItemGeneratorV2Context, path: string) {
-    return ensure(ctx.staticAssets[path], `Unable to find '${path}' static asset.`);
-}
-
-function getVpkImagePath(path: string) {
-    return `panorama/images/${path}_png.png`.toLowerCase();
-}
-
-function getVpkPaintImagePath(className: string, paintClassName: string, suffix: string) {
-    return `panorama/images/econ/default_generated/${className}_${paintClassName}_${suffix}_png.png`.toLowerCase();
-}
-
-function vpkCrcFilename(vpkPath: string, crc: string, suffix?: string) {
-    const base = basename(vpkPath, ".png").replace(/_png$/, "");
-    return suffix ? `/images/${base}_${crc}_${suffix}.webp` : `/images/${base}_${crc}.webp`;
-}
-
-function isImageValid(ctx: ItemGeneratorV2Context, path: string) {
-    return ctx.cs2.vpkIndex.has(getVpkImagePath(path));
-}
-
-function isPaintImageValid(ctx: ItemGeneratorV2Context, className?: string, paintClassName?: string) {
-    return ctx.cs2.vpkIndex.has(getVpkPaintImagePath(ensure(className), ensure(paintClassName), "light"));
-}
-
-function getBaseImage(ctx: ItemGeneratorV2Context, className: string) {
-    return getImage(ctx, `econ/weapons/base_weapons/${className}`);
-}
-
-function getImage(ctx: ItemGeneratorV2Context, path: string) {
-    const vpkPath = getVpkImagePath(path);
-    const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
-    const filename = vpkCrcFilename(vpkPath, entry.crc);
-    if (!ctx.existingImages.has(filename)) {
-        ctx.neededVpkPaths.add(vpkPath);
-        ctx.imagesToProcess.set(vpkPath, { kind: "regular", localPath: getImagePath(path), filename });
-    }
-    return filename;
-}
-
-function getPaintImage(ctx: ItemGeneratorV2Context, className: string | undefined, paintClassName: string | undefined) {
-    const cn = ensure(className);
-    const pcn = ensure(paintClassName);
-    const lightVpkPath = getVpkPaintImagePath(cn, pcn, "light");
-    const entry = ensure(ctx.cs2.vpkIndex.get(lightVpkPath), `VPK entry not found: ${lightVpkPath}`);
-    const baseName = `${cn}_${pcn}_${entry.crc}`;
-    const baseFilename = `/images/${baseName}.webp`;
-    if (!ctx.existingImages.has(baseFilename)) {
-        const localPaths = PAINT_IMAGE_SUFFIXES.map(
-            (suffix) => [getPaintImagePath(cn, pcn, suffix), suffix] as [string, string]
-        );
-        for (const suffix of PAINT_IMAGE_SUFFIXES) {
-            ctx.neededVpkPaths.add(getVpkPaintImagePath(cn, pcn, suffix));
-        }
-        ctx.imagesToProcess.set(lightVpkPath, { kind: "paint", localPaths, baseName, baseFilename });
-    }
-    return baseFilename;
-}
-
-function getDefaultGraffitiImage(ctx: ItemGeneratorV2Context, stickerMaterial: string, hexColor: string) {
-    const vpkPath = getVpkImagePath(`econ/stickers/${stickerMaterial}`);
-    const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
-    const materialBase = ensure(stickerMaterial.split("/").pop());
-    const colorNoHash = hexColor.replace("#", "");
-    const filename = `/images/${materialBase}_${colorNoHash}_${entry.crc}.webp`;
-    if (!ctx.existingImages.has(filename)) {
-        ctx.neededVpkPaths.add(vpkPath);
-        ctx.imagesToProcess.set(`${vpkPath}:${hexColor}`, {
-            kind: "graffiti",
-            localPath: getImagePath(`econ/stickers/${stickerMaterial}`),
-            hexColor,
-            filename
-        });
-    }
-    return filename;
-}
-
-function getSpecialsImage(ctx: ItemGeneratorV2Context, path?: string) {
-    if (path === undefined) {
-        return requireStaticAsset(ctx, "/images/default_rare_item.png");
-    }
-    const vpkPath = getVpkImagePath(path);
-    if (!ctx.cs2.vpkIndex.has(vpkPath)) {
-        return requireStaticAsset(ctx, "/images/default_rare_item.png");
-    }
-    const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath));
-    const filename = vpkCrcFilename(vpkPath, entry.crc, "rare");
-    if (!ctx.existingImages.has(filename)) {
-        ctx.neededVpkPaths.add(vpkPath);
-        ctx.imagesToProcess.set(`${vpkPath}:rare`, {
-            kind: "regular",
-            localPath: getImagePath(path),
-            filename
-        });
-    }
-    return filename;
-}
-
-function getModel(ctx: ItemGeneratorV2Context, path?: string, existingId?: number) {
-    if (path === undefined) {
-        return undefined;
-    }
-    if (ctx.mode === "limited" && existingId !== undefined) {
-        const existing = ctx.existingItemsById.get(existingId);
-        return existing !== undefined
-            ? { modelData: existing.modelData, modelPlayer: existing.modelPlayer }
-            : undefined;
-    }
-    const vpkPath = path.replace(".vmdl", ".vmdl_c").toLowerCase();
-    const entry = ctx.cs2.vpkIndex.get(vpkPath);
-    if (!entry) {
-        return undefined;
-    }
-    const base = basename(path, ".vmdl");
-    const modelPlayer = `/models/${base}_${entry.crc}.glb`;
-    const modelData = `/models/${base}_${entry.crc}.json`;
-    ctx.modelsToProcess.set(vpkPath, {
-        base,
-        crc: entry.crc,
-        modelData,
-        modelPlayer,
-        directMaterials: new Set(),
-        materialFilenames: new Set(),
-        textureFilenames: new Set()
-    });
-    return { modelPlayer, modelData };
-}
-
 function getPaintAltName(className: string) {
     switch (true) {
         case className.includes("_phase"):
@@ -1324,90 +1090,10 @@ function getStickerCategory(
     return [ensure(category ?? "Valve"), categoryToken] as const;
 }
 
-function getCollectionImage(ctx: ItemGeneratorV2Context, name: string) {
-    const pngVpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
-    const svgVpkPath = `panorama/images/econ/set_icons/${name}.svg`;
-    const isSvg = !ctx.cs2.vpkIndex.has(pngVpkPath) && ctx.cs2.vpkIndex.has(svgVpkPath);
-    const vpkPath = isSvg ? svgVpkPath : pngVpkPath;
-    if (!ctx.cs2.vpkIndex.has(vpkPath)) {
-        return undefined;
-    }
-    const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath));
-    const filename = `/images/${name}_${entry.crc}.webp`;
-    if (!ctx.existingImages.has(filename)) {
-        const ext = isSvg ? ".svg" : "_png.png";
-        const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}${ext}`);
-        ctx.neededVpkPaths.add(vpkPath);
-        ctx.imagesToProcess.set(
-            vpkPath,
-            isSvg ? { kind: "svg", localPath, filename } : { kind: "regular", localPath, filename }
-        );
-    }
-    return filename;
-}
-
-function getCollection(ctx: ItemGeneratorV2Context, itemId: number, collection?: string) {
-    let collectionImage: string | undefined;
-    if (collection !== undefined) {
-        const itemSet = ctx.gameItems.item_sets[collection];
-        assert(itemSet);
-        assert(itemSet.name);
-        tryAddTranslation(ctx, itemId, "collectionName", itemSet.name);
-        tryAddTranslation(ctx, itemId, "collectionDesc", itemSet.set_description);
-        collectionImage = ctx.itemSetImage[collection];
-    }
-    return { collection, collectionImage };
-}
-
-function getItemCollection(ctx: ItemGeneratorV2Context, itemId: number, itemKey: string) {
-    return getCollection(ctx, itemId, ctx.itemSetItemKey[itemKey]);
-}
-
-function addContainerItem(ctx: ItemGeneratorV2Context, itemKey: string, id: number) {
-    if (!ctx.containerItems.has(itemKey)) {
-        ctx.containerItems.set(itemKey, id);
-    }
-}
-
-function getClientLootListItems(ctx: ItemGeneratorV2Context, clientLootListKey: string, items: string[] = []) {
-    if (!ctx.gameItems.client_loot_lists[clientLootListKey]) {
-        return [];
-    }
-    for (const itemOrClientLootListKey of Object.keys(ctx.gameItems.client_loot_lists[clientLootListKey])) {
-        if (ctx.containerItems.has(itemOrClientLootListKey)) {
-            items.push(itemOrClientLootListKey);
-        } else {
-            getClientLootListItems(ctx, itemOrClientLootListKey, items);
-        }
-    }
-    return items;
-}
-
-function getContainerType(name?: string, type?: CS2ItemTypeValues) {
-    switch (true) {
-        case name?.includes("Souvenir"):
-            return CS2ContainerType.SouvenirCase;
-        case type === CS2ItemType.Weapon:
-            return CS2ContainerType.WeaponCase;
-        case type === CS2ItemType.Sticker:
-            return CS2ContainerType.StickerCapsule;
-        case type === CS2ItemType.Graffiti:
-            return CS2ContainerType.GraffitiBox;
-        default:
-            return undefined;
-    }
-}
-
 function createStub(ctx: ItemGeneratorV2Context, name: string, descToken: string) {
     const id = getItemId(ctx, `stub_${name}`);
     addTranslation(ctx, id, "name", "#Rarity_Default");
     addTranslation(ctx, id, "desc", descToken);
     addItem(ctx, { id, type: CS2ItemType.Stub });
     return id;
-}
-
-async function copyAndOptimizeImage(ctx: ItemGeneratorV2Context, src: string, dest: string) {
-    const filename = dest.includes("{sha256}") ? dest.replace("{sha256}", await getFileSha256(src)) : dest;
-    await sharp(src).webp({ quality: 95 }).toFile(join(OUTPUT_DIR, filename));
-    return filename;
 }
