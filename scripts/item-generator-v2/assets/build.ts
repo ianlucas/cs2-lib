@@ -32,7 +32,7 @@ import {
     V2_WORKDIR_DIR
 } from "../config.ts";
 import { GlbMaterialExtras, ItemGeneratorV2Context, PendingModelTask } from "../types.ts";
-import { PromiseQueue, getFileSha256, log, rmIfExists } from "../../utils.ts";
+import { PromiseQueue, getFileSha256, rmIfExists } from "../../utils.ts";
 import { ensure } from "../../../src/utils.ts";
 
 export async function prepareWorkspace(ctx: ItemGeneratorV2Context) {

@@ -5,7 +5,7 @@
 
 import { Cs2Runtime } from "../cs2-v2.ts";
 import { ItemGeneratorV2Mode } from "./config.ts";
-import { CS2Item, CS2ItemTranslationByLanguage, CS2ItemTypeValues, CS2StickerMarkup } from "../../src/economy-types.ts";
+import { CS2Item, CS2ItemTranslationByLanguage, CS2StickerMarkup } from "../../src/economy-types.ts";
 import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "../item-generator-types.ts";
 
 export type PendingImageTask =

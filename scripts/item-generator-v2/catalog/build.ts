@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename, dirname, join } from "path";
-import { copyFile, mkdir, readdir, readFile } from "fs/promises";
+import { basename, join } from "path";
+import { mkdir, readdir, readFile } from "fs/promises";
 import sharp from "sharp";
 import { stripHtml } from "string-strip-html";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
