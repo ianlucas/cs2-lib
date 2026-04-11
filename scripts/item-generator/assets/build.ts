@@ -11,24 +11,24 @@ import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
+import { ensure } from "../../../src/utils.ts";
 import { decompileAssets, decompileModelAssets } from "../../cs2-tools/decompile.ts";
 import { ensureAssetPackages } from "../../cs2-tools/depot.ts";
 import { extractMaterialMetadata, extractModelMetadata } from "../../cs2-tools/extract.ts";
 import { STORAGE_ACCESS_KEY, STORAGE_ZONE } from "../../env.ts";
+import { PromiseQueue, getFileSha256, log, rmIfExists } from "../../utils.ts";
 import {
     CDN_UPLOAD_CONCURRENCY,
     DECOMPILED_DIR,
-    OUTPUT_DIR,
-    OUTPUT_IMAGE_QUALITY,
-    STATIC_IMAGES_DIR,
     ITEM_GENERATOR_BUILD_DIR,
     ITEM_GENERATOR_CACHE_DIR,
-    ITEM_GENERATOR_WORKDIR_DIR
+    ITEM_GENERATOR_WORKDIR_DIR,
+    OUTPUT_DIR,
+    OUTPUT_IMAGE_QUALITY,
+    STATIC_IMAGES_DIR
 } from "../config.ts";
-import { formatCount, itemGeneratorLog } from "../logging.ts";
+import { formatCount } from "../logging.ts";
 import { GlbMaterialExtras, ItemGeneratorContext, PendingModelTask } from "../types.ts";
-import { PromiseQueue, getFileSha256, rmIfExists } from "../../utils.ts";
-import { ensure } from "../../../src/utils.ts";
 
 export async function prepareWorkspace(ctx: ItemGeneratorContext) {
     await mkdir(ITEM_GENERATOR_WORKDIR_DIR, { recursive: true });
@@ -59,7 +59,7 @@ export async function prepareWorkspace(ctx: ItemGeneratorContext) {
 export async function processAssets(ctx: ItemGeneratorContext) {
     if (ctx.neededVpkPaths.size > 0) {
         const vpkPaths = Array.from(ctx.neededVpkPaths);
-        itemGeneratorLog(`Resolving ${formatCount(vpkPaths.length, "VPK asset")}...`);
+        log(`Resolving ${formatCount(vpkPaths.length, "VPK asset")}...`);
         await ensureAssetPackages(ctx.cs2, vpkPaths);
         await decompileAssets(ctx.cs2, vpkPaths);
     }
@@ -84,7 +84,7 @@ async function processImages(ctx: ItemGeneratorContext) {
         .filter(([_, count]) => count > 0)
         .map(([kind, count]) => `${count} ${kind}`)
         .join(", ");
-    itemGeneratorLog(`Processing ${formatCount(ctx.imagesToProcess.size, "image task")} (${kinds})...`);
+    log(`Processing ${formatCount(ctx.imagesToProcess.size, "image task")} (${kinds})...`);
     const queue = new PromiseQueue(Math.max(2, ctx.imagesToProcess.size > 8 ? 8 : ctx.imagesToProcess.size));
     for (const task of ctx.imagesToProcess.values()) {
         if (task.kind === "regular") {
@@ -122,14 +122,14 @@ async function processImages(ctx: ItemGeneratorContext) {
         });
     }
     await queue.waitForIdle();
-    itemGeneratorLog(`Processed ${formatCount(ctx.imagesToProcess.size, "image task")}.`);
+    log(`Processed ${formatCount(ctx.imagesToProcess.size, "image task")}.`);
 }
 
 async function processModels(ctx: ItemGeneratorContext) {
     if (ctx.modelsToProcess.size === 0) {
         return;
     }
-    itemGeneratorLog(`Processing ${formatCount(ctx.modelsToProcess.size, "model")}...`);
+    log(`Processing ${formatCount(ctx.modelsToProcess.size, "model")}...`);
     await decompileModelAssets(ctx.cs2, Array.from(ctx.modelsToProcess.keys()));
     await extractModelData(ctx);
     await preProcessMaterials(ctx);
@@ -164,7 +164,7 @@ async function processModels(ctx: ItemGeneratorContext) {
         await rename(join(OUTPUT_DIR, model.modelData), join(OUTPUT_DIR, versionedModelData));
         updateModelAssetReferences(ctx, model, versionedModelPlayer, versionedModelData);
     }
-    itemGeneratorLog(`Processed ${formatCount(ctx.modelsToProcess.size, "model")}.`);
+    log(`Processed ${formatCount(ctx.modelsToProcess.size, "model")}.`);
 }
 
 async function extractModelData(ctx: ItemGeneratorContext) {
@@ -201,7 +201,7 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
     if (ctx.materialsToProcess.size === 0) {
         return;
     }
-    itemGeneratorLog(`Extracting ${formatCount(ctx.materialsToProcess.size, "material")}...`);
+    log(`Extracting ${formatCount(ctx.materialsToProcess.size, "material")}...`);
     const getVmatFilename = (vmatPath: string): string | null => {
         const vpkPath = vmatPath.replace(".vmat", ".vmat_c").toLowerCase();
         const entry = ctx.cs2.vpkIndex.get(vpkPath);
@@ -242,7 +242,7 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
             model.materialFilenames.add(`/materials/${material}`);
         }
     }
-    itemGeneratorLog(
+    log(
         `Extracted ${formatCount(processed.size, "material")} and found ${formatCount(ctx.texturesToProcess.size, "texture reference")}.`
     );
 }
@@ -347,7 +347,7 @@ async function copyAndOptimizeImage(src: string, dest: string) {
 
 export async function uploadAssets(ctx: ItemGeneratorContext) {
     if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
-        itemGeneratorLog("CDN credentials not configured; skipping upload.");
+        log("CDN credentials not configured; skipping upload.");
         return;
     }
     const sz = BunnyStorageSDK.zone.connect_with_accesskey(
@@ -376,7 +376,7 @@ export async function uploadAssets(ctx: ItemGeneratorContext) {
             }
         }
     }
-    itemGeneratorLog(`Uploading ${formatCount(uploadCount, "new CDN asset")}...`);
+    log(`Uploading ${formatCount(uploadCount, "new CDN asset")}...`);
     await queue.waitForIdle();
-    itemGeneratorLog(`Uploaded ${formatCount(uploadCount, "new CDN asset")}.`);
+    log(`Uploaded ${formatCount(uploadCount, "new CDN asset")}.`);
 }
