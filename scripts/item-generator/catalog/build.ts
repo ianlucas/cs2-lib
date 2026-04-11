@@ -953,7 +953,9 @@ function getRarityColorHex(ctx: ItemGeneratorContext, keywords: (string | undefi
                 : ctx.raritiesColorHex[defaultsTo]
             : undefined;
     for (const keyword of keywords) {
-        if (keyword === undefined) continue;
+        if (keyword === undefined) {
+            continue;
+        }
         if (keyword.startsWith("#")) {
             colorHex = keyword;
             break;

@@ -61,9 +61,15 @@ export async function prepareWorkspace(ctx: ItemGeneratorContext): Promise<void>
         }
     }
     for (const item of ctx.existingItemsById.values()) {
-        if (item.image !== undefined) ctx.existingImages.add(item.image);
-        if (item.collectionImage !== undefined) ctx.existingImages.add(item.collectionImage);
-        if (item.specialsImage !== undefined) ctx.existingImages.add(item.specialsImage);
+        if (item.image !== undefined) {
+            ctx.existingImages.add(item.image);
+        }
+        if (item.collectionImage !== undefined) {
+            ctx.existingImages.add(item.collectionImage);
+        }
+        if (item.specialsImage !== undefined) {
+            ctx.existingImages.add(item.specialsImage);
+        }
     }
 }
 
@@ -241,7 +247,9 @@ async function preProcessCompositeMaterials(ctx: ItemGeneratorContext) {
             for (const child of compositeMaterialRefs) {
                 const normalized = resolveMaterialResourcePath(ctx.cs2, child);
                 ctx.compositeMaterialsToProcess.add(normalized);
-                if (!processed.has(normalized) && !queue.has(normalized)) queue.add(normalized);
+                if (!processed.has(normalized) && !queue.has(normalized)) {
+                    queue.add(normalized);
+                }
             }
         }
     }
@@ -282,7 +290,9 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
             for (const vmat of vmatRefs) {
                 const normalized = resolveMaterialResourcePath(ctx.cs2, vmat);
                 ctx.materialsToProcess.add(normalized);
-                if (!processed.has(normalized) && !queue.has(normalized)) queue.add(normalized);
+                if (!processed.has(normalized) && !queue.has(normalized)) {
+                    queue.add(normalized);
+                }
             }
         }
     }
@@ -346,7 +356,9 @@ async function writeMaterialMetadata(ctx: ItemGeneratorContext) {
     };
     const resolveTexture = (path: string) => ctx.textureFilenameByPath.get(resolveMaterialResourcePath(ctx.cs2, path));
     for (const [vcompmatPath, data] of ctx.compositeMaterialDataByPath) {
-        if (data === null) continue;
+        if (data === null) {
+            continue;
+        }
         const filename = ensure(ctx.compositeMaterialFilenameByPath.get(vcompmatPath));
         const json = JSON.stringify(
             patchMaterialResourceReferences(data, resolveCompositeMaterial, resolveVmat, resolveTexture)
@@ -355,7 +367,9 @@ async function writeMaterialMetadata(ctx: ItemGeneratorContext) {
         await writeFile(join(OUTPUT_DIR, "materials", filename), json, "utf-8");
     }
     for (const [vmatPath, data] of ctx.materialDataByPath) {
-        if (data === null) continue;
+        if (data === null) {
+            continue;
+        }
         const filename = ensure(ctx.materialFilenameByPath.get(vmatPath));
         const json = JSON.stringify(
             patchMaterialResourceReferences(data, resolveCompositeMaterial, resolveVmat, resolveTexture)
@@ -378,7 +392,9 @@ function collectMaterialGraph(ctx: ItemGeneratorContext, materials: Iterable<str
     const seen = new Set<string>();
     while (queue.length > 0) {
         const vmatPath = ensure(queue.pop());
-        if (seen.has(vmatPath)) continue;
+        if (seen.has(vmatPath)) {
+            continue;
+        }
         seen.add(vmatPath);
         const filename = ctx.materialFilenameByPath.get(vmatPath);
         if (filename !== undefined) {
