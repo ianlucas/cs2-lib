@@ -11,6 +11,7 @@ import {
     getVmatFilename,
     normalizeMaterialResourcePath,
     patchMaterialResourceReferences,
+    resolveMaterialResourcePath,
     toCompiledMaterialResourcePath
 } from "./material-paths.ts";
 
@@ -24,10 +25,24 @@ describe("material path helpers", () => {
 
     test("normalizes resource prefixes and compiled paths", () => {
         expect(normalizeMaterialResourcePath("resource:materials\\foo.vtex")).toBe("materials/foo.vtex");
+        expect(normalizeMaterialResourcePath("weapons//models//awp//materials//foo.vmat")).toBe(
+            "weapons/models/awp/materials/foo.vmat"
+        );
         expect(normalizeMaterialResourcePath("resource_name:materials/foo.vmat")).toBe("materials/foo.vmat");
         expect(toCompiledMaterialResourcePath("Materials/Foo.vmat")).toBe("materials/foo.vmat_c");
         expect(toCompiledMaterialResourcePath("weapons/paints/foo.vcompmat_c")).toBe(
             "weapons/paints/foo.vcompmat_c"
+        );
+    });
+
+    test("resolves missing direct paths by unique compiled basename", () => {
+        const runtime = {
+            vpkIndex: new Map([
+                ["materials/models/weapons/customization/default_composite_inputs.vmat_c", { crc: "123", fnumber: "1" }]
+            ])
+        };
+        expect(resolveMaterialResourcePath(runtime as any, "default_composite_inputs.vmat")).toBe(
+            "materials/models/weapons/customization/default_composite_inputs.vmat"
         );
     });
 

@@ -35,8 +35,8 @@ import { formatCount } from "../logging.ts";
 import { GlbMaterialExtras, ItemGeneratorContext, PendingModelTask } from "../types.ts";
 import {
     getTextureFilename,
-    normalizeMaterialResourcePath,
     patchMaterialResourceReferences,
+    resolveMaterialResourcePath,
     toCompiledMaterialResourcePath
 } from "./material-paths.ts";
 
@@ -232,10 +232,10 @@ async function preProcessCompositeMaterials(ctx: ItemGeneratorContext) {
             ctx.compositeMaterialFilenameByPath.set(vcompmatPath, filename);
             ctx.compositeMaterialRefsByPath.set(vcompmatPath, compositeMaterialRefs);
             for (const vmat of vmatRefs) {
-                ctx.materialsToProcess.add(normalizeMaterialResourcePath(vmat));
+                ctx.materialsToProcess.add(resolveMaterialResourcePath(ctx.cs2, vmat));
             }
             for (const child of compositeMaterialRefs) {
-                const normalized = normalizeMaterialResourcePath(child);
+                const normalized = resolveMaterialResourcePath(ctx.cs2, child);
                 ctx.compositeMaterialsToProcess.add(normalized);
                 if (!processed.has(normalized) && !queue.has(normalized)) queue.add(normalized);
             }
@@ -247,11 +247,8 @@ async function preProcessCompositeMaterials(ctx: ItemGeneratorContext) {
 }
 
 function requireVpkEntries(ctx: ItemGeneratorContext, paths: Iterable<string>) {
-    const missing = [...paths]
-        .map((path) => toCompiledMaterialResourcePath(path))
-        .filter((path) => !ctx.cs2.vpkIndex.has(path));
-    if (missing.length > 0) {
-        throw new Error(`VPK entry not found: ${missing.join(", ")}`);
+    for (const path of paths) {
+        resolveMaterialResourcePath(ctx.cs2, path);
     }
 }
 
@@ -273,9 +270,9 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
             ctx.materialFilenameByPath.set(vmatPath, filename);
             ctx.materialRefsByPath.set(vmatPath, vmatRefs);
             ctx.materialDataByPath.set(vmatPath, data);
-            for (const vtex of vtexRefs) ctx.texturesToProcess.add(normalizeMaterialResourcePath(vtex));
+            for (const vtex of vtexRefs) ctx.texturesToProcess.add(resolveMaterialResourcePath(ctx.cs2, vtex));
             for (const vmat of vmatRefs) {
-                const normalized = normalizeMaterialResourcePath(vmat);
+                const normalized = resolveMaterialResourcePath(ctx.cs2, vmat);
                 ctx.materialsToProcess.add(normalized);
                 if (!processed.has(normalized) && !queue.has(normalized)) queue.add(normalized);
             }
@@ -304,25 +301,26 @@ async function processMaterialTextures(ctx: ItemGeneratorContext) {
     const queue = new PromiseQueue(Math.max(2, pending.length > 8 ? 8 : pending.length));
     for (const vtexPath of pending) {
         queue.push(async () => {
-            const entry = ensure(ctx.cs2.vpkIndex.get(toCompiledMaterialResourcePath(vtexPath)));
-            const base = join(DECOMPILED_DIR, dirname(vtexPath), basename(vtexPath, ".vtex"));
+            const resolvedVtexPath = resolveMaterialResourcePath(ctx.cs2, vtexPath);
+            const entry = ensure(ctx.cs2.vpkIndex.get(toCompiledMaterialResourcePath(resolvedVtexPath)));
+            const base = join(DECOMPILED_DIR, dirname(resolvedVtexPath), basename(resolvedVtexPath, ".vtex"));
             const pngPath = `${base}.png`;
             const exrPath = `${base}.exr`;
             if (await exists(pngPath)) {
-                const filename = getTextureFilename(vtexPath, entry.crc, ".webp");
+                const filename = getTextureFilename(resolvedVtexPath, entry.crc, ".webp");
                 await sharp(pngPath)
                     .webp({ quality: OUTPUT_IMAGE_QUALITY })
                     .toFile(join(OUTPUT_DIR, "textures", filename));
-                ctx.textureFilenameByPath.set(vtexPath, `/textures/${filename}`);
+                ctx.textureFilenameByPath.set(resolvedVtexPath, `/textures/${filename}`);
                 return;
             }
             if (await exists(exrPath)) {
-                const filename = getTextureFilename(vtexPath, entry.crc, ".exr");
+                const filename = getTextureFilename(resolvedVtexPath, entry.crc, ".exr");
                 await rename(exrPath, join(OUTPUT_DIR, "textures", filename));
-                ctx.textureFilenameByPath.set(vtexPath, `/textures/${filename}`);
+                ctx.textureFilenameByPath.set(resolvedVtexPath, `/textures/${filename}`);
                 return;
             }
-            throw new Error(`Unable to find decompiled texture output for '${vtexPath}'.`);
+            throw new Error(`Unable to find decompiled texture output for '${resolvedVtexPath}'.`);
         });
     }
     await queue.waitForIdle();
@@ -331,14 +329,14 @@ async function processMaterialTextures(ctx: ItemGeneratorContext) {
 
 async function writeMaterialMetadata(ctx: ItemGeneratorContext) {
     const resolveCompositeMaterial = (path: string) => {
-        const filename = ctx.compositeMaterialFilenameByPath.get(path);
+        const filename = ctx.compositeMaterialFilenameByPath.get(resolveMaterialResourcePath(ctx.cs2, path));
         return filename === undefined ? undefined : `/materials/${filename}`;
     };
     const resolveVmat = (path: string) => {
-        const filename = ctx.materialFilenameByPath.get(path);
+        const filename = ctx.materialFilenameByPath.get(resolveMaterialResourcePath(ctx.cs2, path));
         return filename === undefined ? undefined : `/materials/${filename}`;
     };
-    const resolveTexture = (path: string) => ctx.textureFilenameByPath.get(path);
+    const resolveTexture = (path: string) => ctx.textureFilenameByPath.get(resolveMaterialResourcePath(ctx.cs2, path));
     for (const [vcompmatPath, data] of ctx.compositeMaterialDataByPath) {
         if (data === null) continue;
         const filename = ensure(ctx.compositeMaterialFilenameByPath.get(vcompmatPath));

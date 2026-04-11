@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename } from "path";
 import { CS2KeyValues3 } from "../../src/keyvalues3.ts";
 import {
     getCompositeMaterialFilename,
     getVmatFilename,
     normalizeMaterialResourcePath,
+    resolveMaterialResourcePath,
     toCompiledMaterialResourcePath
 } from "../item-generator/assets/material-paths.ts";
 import { decompileDataBlocks } from "./decompile.ts";
@@ -111,10 +111,10 @@ export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMe
 export async function extractCompositeMaterialMetadata(runtime: Cs2Runtime, vcompmatPaths: string[]) {
     const MAX_ARG_BYTES = 100_000;
     const results: CompositeMaterialMetadataExtractionResult[] = [];
-    const entries = vcompmatPaths.map((path) => ({
-        vcompmatPath: normalizeMaterialResourcePath(path),
-        vpkPath: toCompiledMaterialResourcePath(path)
-    }));
+    const entries = vcompmatPaths.map((path) => {
+        const vcompmatPath = resolveMaterialResourcePath(runtime, path);
+        return { vcompmatPath, vpkPath: toCompiledMaterialResourcePath(vcompmatPath) };
+    });
     let batchEntries = [] as typeof entries;
     let batchBytes = 0;
 
@@ -172,7 +172,10 @@ export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: st
     const MAX_ARG_BYTES = 100_000;
     const results: MaterialMetadataExtractionResult[] = [];
     const entries = vmatPaths
-        .map((path) => ({ vmatPath: normalizeMaterialResourcePath(path), vpkPath: toCompiledMaterialResourcePath(path) }))
+        .map((path) => {
+            const vmatPath = resolveMaterialResourcePath(runtime, path);
+            return { vmatPath, vpkPath: toCompiledMaterialResourcePath(vmatPath) };
+        })
         .filter((entry) => runtime.vpkIndex.has(entry.vpkPath));
     let batchEntries = [] as typeof entries;
     let batchBytes = 0;

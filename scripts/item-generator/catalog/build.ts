@@ -17,8 +17,9 @@ import { INPUT_FORCE } from "../../env.ts";
 import { prependHash, readJson } from "../../utils.ts";
 import {
     getIndexedCompositeMaterialFilename,
+    getPaintCompositeMaterialPath,
     normalizeMaterialResourcePath,
-    getPaintCompositeMaterialPath
+    resolveMaterialResourcePath
 } from "../assets/material-paths.ts";
 import {
     BASE_WEAPON_EQUIPMENT,
@@ -430,16 +431,18 @@ async function parsePaintKits(ctx: ItemGeneratorContext) {
             addContainerItem(ctx, itemKey, id);
             addTranslation(ctx, id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
             addTranslation(ctx, id, "desc", paintKit.descToken);
-            const compositeMaterialPath =
-                baseItem.type === CS2ItemType.Gloves
-                    ? undefined
-                    : getPaintCompositeMaterialPath(paintKit.className, paintKit.compositeMaterialPath);
+            const compositeMaterialPath = getPaintCompositeMaterialPath(
+                paintKit.className,
+                paintKit.compositeMaterialPath
+            );
+            const resolvedCompositeMaterialPath =
+                ctx.mode === "full" ? resolveMaterialResourcePath(ctx.cs2, compositeMaterialPath) : undefined;
             const compositeMaterial =
-                ctx.mode === "full" && compositeMaterialPath !== undefined
-                    ? `/materials/${getIndexedCompositeMaterialFilename(ctx.cs2, compositeMaterialPath)}`
+                resolvedCompositeMaterialPath !== undefined
+                    ? `/materials/${getIndexedCompositeMaterialFilename(ctx.cs2, resolvedCompositeMaterialPath)}`
                     : undefined;
-            if (ctx.mode === "full" && compositeMaterialPath !== undefined) {
-                ctx.compositeMaterialsToProcess.add(normalizeMaterialResourcePath(compositeMaterialPath));
+            if (resolvedCompositeMaterialPath !== undefined) {
+                ctx.compositeMaterialsToProcess.add(normalizeMaterialResourcePath(resolvedCompositeMaterialPath));
             }
             addItem(ctx, {
                 ...baseItem,
@@ -1010,7 +1013,13 @@ export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2E
     if (ctx.mode !== "limited" || previous === undefined) {
         return;
     }
-    const requiredFields = ["compositeMaterial", "modelData", "modelPlayer", "stickerMax", "stickerMaxForLegacy"] as const;
+    const requiredFields = [
+        "compositeMaterial",
+        "modelData",
+        "modelPlayer",
+        "stickerMax",
+        "stickerMaxForLegacy"
+    ] as const;
     for (const field of requiredFields) {
         const current = item[field];
         const fallback = previous[field];

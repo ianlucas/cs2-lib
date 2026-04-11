@@ -10,7 +10,10 @@ import { type Cs2Runtime } from "../../cs2-tools/types.ts";
 export type MaterialReferenceResolver = (path: string) => string | undefined;
 
 export function normalizeMaterialResourcePath(path: string) {
-    return path.replace(/\\/g, "/").replace(/^resource(?:_name)?:/, "");
+    return path
+        .replace(/\\/g, "/")
+        .replace(/^resource(?:_name)?:/, "")
+        .replace(/\/+/g, "/");
 }
 
 export function getPaintCompositeMaterialPath(className: string, compositeMaterialPath?: string) {
@@ -28,6 +31,26 @@ export function toCompiledMaterialResourcePath(path: string) {
     return normalized;
 }
 
+function toSourceMaterialResourcePath(path: string) {
+    return path.endsWith("_c") ? path.slice(0, -2) : path;
+}
+
+export function resolveMaterialResourcePath(runtime: Cs2Runtime, path: string) {
+    const compiledPath = toCompiledMaterialResourcePath(path);
+    if (runtime.vpkIndex.has(compiledPath)) {
+        return toSourceMaterialResourcePath(compiledPath);
+    }
+    const name = basename(compiledPath);
+    const matches = [...runtime.vpkIndex.keys()].filter((candidate) => basename(candidate) === name);
+    if (matches.length === 1) {
+        return toSourceMaterialResourcePath(matches[0]);
+    }
+    if (matches.length > 1) {
+        throw new Error(`Ambiguous VPK entry for '${compiledPath}': ${matches.join(", ")}`);
+    }
+    throw new Error(`VPK entry not found: ${compiledPath}`);
+}
+
 export function getCompositeMaterialFilename(vcompmatPath: string, crc: string) {
     return `${basename(normalizeMaterialResourcePath(vcompmatPath), ".vcompmat")}_${crc}.vcompmat.json`;
 }
@@ -41,15 +64,17 @@ export function getTextureFilename(vtexPath: string, crc: string, extension: ".w
 }
 
 export function getIndexedCompositeMaterialFilename(runtime: Cs2Runtime, vcompmatPath: string) {
-    const vpkPath = toCompiledMaterialResourcePath(vcompmatPath);
+    const resolvedPath = resolveMaterialResourcePath(runtime, vcompmatPath);
+    const vpkPath = toCompiledMaterialResourcePath(resolvedPath);
     const entry = ensure(runtime.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
-    return getCompositeMaterialFilename(vcompmatPath, entry.crc);
+    return getCompositeMaterialFilename(resolvedPath, entry.crc);
 }
 
 export function getIndexedVmatFilename(runtime: Cs2Runtime, vmatPath: string) {
-    const vpkPath = toCompiledMaterialResourcePath(vmatPath);
+    const resolvedPath = resolveMaterialResourcePath(runtime, vmatPath);
+    const vpkPath = toCompiledMaterialResourcePath(resolvedPath);
     const entry = ensure(runtime.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
-    return getVmatFilename(vmatPath, entry.crc);
+    return getVmatFilename(resolvedPath, entry.crc);
 }
 
 export function patchMaterialResourceReferences(
