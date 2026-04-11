@@ -18,7 +18,9 @@ import { INPUT_FORCE } from "../../env.ts";
 import { prependHash, readJson } from "../../utils.ts";
 import {
     getIndexedCompositeMaterialFilename,
+    getIndexedVmatFilename,
     getPaintCompositeMaterialPath,
+    getStickerMaterialPath,
     normalizeMaterialResourcePath,
     resolveMaterialResourcePath
 } from "../assets/material-paths.ts";
@@ -531,7 +533,7 @@ async function parseKeychains(ctx: ItemGeneratorContext) {
     }
 }
 
-async function parseStickers(ctx: ItemGeneratorContext) {
+export async function parseStickers(ctx: ItemGeneratorContext): Promise<void> {
     const baseId = createStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc");
     for (const [index, sticker] of Object.entries(ctx.gameItems.sticker_kits)) {
         const { name, description_string, item_name, sticker_material, tournament_event_id, item_rarity } = sticker;
@@ -549,6 +551,7 @@ async function parseStickers(ctx: ItemGeneratorContext) {
         const id = getItemId(ctx, `sticker_${index}`);
         const itemKey = `[${name}]sticker`;
         const rarity = getRarityColorHex(ctx, [itemKey, item_rarity]);
+        const compositeMaterial = getStickerCompositeMaterial(ctx, sticker_material);
         addContainerItem(ctx, itemKey, id);
         addTranslation(ctx, id, "name", "#CSGO_Tool_Sticker", " | ", item_name);
         addTranslation(ctx, id, "category", categoryToken !== undefined ? categoryToken : category);
@@ -564,6 +567,7 @@ async function parseStickers(ctx: ItemGeneratorContext) {
         }
         addItem(ctx, {
             baseId,
+            compositeMaterial,
             def: 1209,
             id,
             image: getImage(ctx, `econ/stickers/${sticker_material}`),
@@ -1028,6 +1032,16 @@ export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2E
             (item as unknown as Record<string, unknown>)[field] = fallback;
         }
     }
+}
+
+export function getStickerCompositeMaterial(ctx: ItemGeneratorContext, stickerMaterial: string): string | undefined {
+    if (ctx.mode !== "full") {
+        return undefined;
+    }
+    const resolvedMaterialPath = resolveMaterialResourcePath(ctx.cs2, getStickerMaterialPath(stickerMaterial));
+    const normalizedMaterialPath = normalizeMaterialResourcePath(resolvedMaterialPath);
+    ctx.materialsToProcess.add(normalizedMaterialPath);
+    return `/materials/${getIndexedVmatFilename(ctx.cs2, normalizedMaterialPath)}`;
 }
 
 function addItem(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {

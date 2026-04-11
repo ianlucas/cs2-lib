@@ -35,6 +35,7 @@ import { formatCount } from "../logging.ts";
 import { type GlbMaterialExtras, type ItemGeneratorContext, type PendingModelTask } from "../types.ts";
 import {
     getTextureFilename,
+    normalizeMaterialResourcePath,
     patchMaterialResourceReferences,
     resolveMaterialResourcePath,
     toCompiledMaterialResourcePath
@@ -235,7 +236,7 @@ async function preProcessCompositeMaterials(ctx: ItemGeneratorContext) {
                 ctx.materialsToProcess.add(resolveMaterialResourcePath(ctx.cs2, vmat));
             }
             for (const vtex of vtexRefs) {
-                ctx.texturesToProcess.add(resolveMaterialResourcePath(ctx.cs2, vtex));
+                addTextureToProcess(ctx, vtex);
             }
             for (const child of compositeMaterialRefs) {
                 const normalized = resolveMaterialResourcePath(ctx.cs2, child);
@@ -253,6 +254,10 @@ function requireVpkEntries(ctx: ItemGeneratorContext, paths: Iterable<string>) {
     for (const path of paths) {
         resolveMaterialResourcePath(ctx.cs2, path);
     }
+}
+
+export function addTextureToProcess(ctx: ItemGeneratorContext, vtexPath: string): void {
+    ctx.texturesToProcess.add(normalizeMaterialResourcePath(resolveMaterialResourcePath(ctx.cs2, vtexPath)));
 }
 
 async function preProcessMaterials(ctx: ItemGeneratorContext) {
@@ -273,7 +278,7 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
             ctx.materialFilenameByPath.set(vmatPath, filename);
             ctx.materialRefsByPath.set(vmatPath, vmatRefs);
             ctx.materialDataByPath.set(vmatPath, data);
-            for (const vtex of vtexRefs) ctx.texturesToProcess.add(resolveMaterialResourcePath(ctx.cs2, vtex));
+            for (const vtex of vtexRefs) addTextureToProcess(ctx, vtex);
             for (const vmat of vmatRefs) {
                 const normalized = resolveMaterialResourcePath(ctx.cs2, vmat);
                 ctx.materialsToProcess.add(normalized);
