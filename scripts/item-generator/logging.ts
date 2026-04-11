@@ -6,7 +6,7 @@
 import { log } from "../utils.ts";
 
 export function itemGeneratorLog(message: string) {
-    log(`[item-generator] ${message}`);
+    log(message);
 }
 
 export function formatCount(count: number, singular: string, plural = `${singular}s`) {
