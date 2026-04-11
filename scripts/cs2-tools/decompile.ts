@@ -55,10 +55,12 @@ export async function buildVpkIndex(runtime: Cs2Runtime): Promise<Map<string, Vp
             }
         }
         if (meta.crc && meta.fnumber) {
-            runtime.vpkIndex.set(normalizeIndexedPath(path), {
+            const entry = {
                 crc: meta.crc.replace("0x", ""),
                 fnumber: meta.fnumber
-            });
+            };
+            runtime.vpkIndex.set(path, entry);
+            runtime.vpkIndex.set(normalizeIndexedPath(path), entry);
         }
     }
     return runtime.vpkIndex;
