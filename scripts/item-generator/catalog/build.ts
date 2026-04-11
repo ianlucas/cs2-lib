@@ -6,14 +6,8 @@
 import { mkdir, readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
-import { type CS2RarityColorValues } from "../../../src/economy-container.ts";
-import {
-    CS2ItemTeam,
-    CS2ItemType,
-    type CS2Item,
-    type CS2ItemTeamValues,
-    type CS2ItemTypeValues
-} from "../../../src/economy-types.ts";
+import { type CS2RarityColor } from "../../../src/economy-container.ts";
+import { CS2ItemTeam, CS2ItemType, type CS2Item } from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
 import { buildVpkIndex, decompileItemDefinitionResources } from "../../cs2-tools/decompile.ts";
@@ -80,7 +74,7 @@ import {
     tryAddTranslation
 } from "./translations.ts";
 
-const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
+const MELEE_OR_GLOVES_TYPES: CS2ItemType[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 
 export function createItemGeneratorContext(mode: ItemGeneratorContext["mode"]): ItemGeneratorContext {
     const existingItemsSnapshot = readJson<CS2Item[]>(ITEMS_JSON_PATH, []);
@@ -849,7 +843,7 @@ async function parseContainers(ctx: ItemGeneratorContext) {
         if (clientLootListKey === undefined) {
             continue;
         }
-        let contentsType: CS2ItemTypeValues | undefined;
+        let contentsType: CS2ItemType | undefined;
         const contents: number[] = [];
         for (const itemKey of getClientLootListItems(ctx, clientLootListKey)) {
             const id = ensure(ctx.containerItems.get(itemKey));
@@ -972,7 +966,7 @@ function getRarityColorHex(ctx: ItemGeneratorContext, keywords: (string | undefi
             break;
         }
     }
-    return ensure((colorHex ?? ctx.raritiesColorHex.default) as CS2RarityColorValues);
+    return ensure((colorHex ?? ctx.raritiesColorHex.default) as CS2RarityColor);
 }
 
 function getPrefab(ctx: ItemGeneratorContext, prefab?: string) {
@@ -983,7 +977,7 @@ function tryGetPrefab(ctx: ItemGeneratorContext, prefab?: string) {
     return prefab !== undefined ? ctx.gameItems.prefabs[prefab] : undefined;
 }
 
-function getTeams(teams?: Record<string, string>, fallback?: CS2ItemTeamValues) {
+function getTeams(teams?: Record<string, string>, fallback?: CS2ItemTeam) {
     if (teams === undefined) {
         return ensure(fallback);
     }

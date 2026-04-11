@@ -11,8 +11,8 @@ export const CS2Team = {
     CT: 3
 } as const;
 
-export type CS2TeamValues = EnumValues<typeof CS2Team>;
+export type CS2Team = EnumValues<typeof CS2Team>;
 
-export function toggleCS2Team(team: CS2TeamValues): CS2TeamValues {
+export function toggleCS2Team(team: CS2Team): CS2Team {
     return team === CS2Team.CT ? CS2Team.T : CS2Team.CT;
 }

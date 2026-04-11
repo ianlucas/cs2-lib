@@ -3,15 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import {
-    CS2ContainerType,
-    CS2ItemType,
-    type CS2ContainerTypeValues,
-    type CS2ItemTypeValues
-} from "../../../src/economy-types.ts";
+import { CS2ContainerType, CS2ItemType } from "../../../src/economy-types.ts";
 import { assert } from "../../../src/utils.ts";
-import { tryAddTranslation } from "./translations.ts";
 import { type ItemGeneratorContext } from "../types.ts";
+import { tryAddTranslation } from "./translations.ts";
 
 export function getCollection(
     ctx: ItemGeneratorContext,
@@ -62,7 +57,7 @@ export function getClientLootListItems(
     return items;
 }
 
-export function getContainerType(name?: string, type?: CS2ItemTypeValues): CS2ContainerTypeValues | undefined {
+export function getContainerType(name?: string, type?: CS2ItemType): CS2ContainerType | undefined {
     switch (true) {
         case name?.includes("Souvenir"):
             return CS2ContainerType.SouvenirCase;

@@ -16,7 +16,7 @@ export const CS2Rarity = {
 } as const;
 
 export type CS2RarityKeys = keyof typeof CS2Rarity;
-export type CS2RarityValues = EnumValues<typeof CS2Rarity>;
+export type CS2Rarity = EnumValues<typeof CS2Rarity>;
 
 export const CS2RarityColor = {
     Default: "#ded6cc",
@@ -29,7 +29,7 @@ export const CS2RarityColor = {
     Immortal: "#e4ae39"
 } as const;
 
-export type CS2RarityColorValues = EnumValues<typeof CS2RarityColor>;
+export type CS2RarityColor = EnumValues<typeof CS2RarityColor>;
 
 export const CS2_RARITIES: ("common" | "uncommon" | "rare" | "mythical" | "legendary" | "ancient" | "immortal")[] =
     Object.values(CS2Rarity);
@@ -78,7 +78,7 @@ export const CS2RaritySoundName: {
     [CS2RarityColor.Immortal]: CS2Rarity.Ancient
 } as const;
 
-export type CS2RaritySoundNameValues = EnumValues<typeof CS2RaritySoundName>;
+export type CS2RaritySoundName = EnumValues<typeof CS2RaritySoundName>;
 
 export const CS2RarityColorOrder: {
     readonly "#ded6cc": 1;

@@ -13,7 +13,7 @@ export const CS2VetoAction = {
     Ban: 2
 } as const;
 
-export type CS2VetoActionValues = EnumValues<typeof CS2VetoAction>;
+export type CS2VetoAction = EnumValues<typeof CS2VetoAction>;
 
 export const CS2VetoType = {
     BO1: "bo1",
@@ -23,21 +23,21 @@ export const CS2VetoType = {
     Custom: "custom"
 } as const;
 
-export type CS2VetoTypeValues = EnumValues<typeof CS2VetoType>;
+export type CS2VetoType = EnumValues<typeof CS2VetoType>;
 
 export interface CS2VetoMap {
     mapname: string;
-    value: CS2VetoActionValues;
+    value: CS2VetoAction;
     team?: number;
 }
 
 export class CS2Veto {
-    private actions: CS2VetoActionValues[];
+    private actions: CS2VetoAction[];
     private maps: CS2VetoMap[];
     private pickedMaps: string[] = [];
     private toggleTeam = false;
 
-    constructor(type: CS2VetoTypeValues, maps: CS2Map[], actions?: CS2VetoActionValues[]) {
+    constructor(type: CS2VetoType, maps: CS2Map[], actions?: CS2VetoAction[]) {
         assert(type !== "custom" || actions !== undefined);
         assert(maps.length === 7);
         assert(actions === undefined || actions.length === 6);
@@ -104,7 +104,7 @@ export class CS2Veto {
         return this.getAvailableMaps().map((map) => map.mapname);
     }
 
-    getCurrentAction(): CS2VetoActionValues | undefined {
+    getCurrentAction(): CS2VetoAction | undefined {
         return this.actions[0];
     }
 
