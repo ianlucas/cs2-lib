@@ -91,7 +91,11 @@ export function getImage(ctx: ItemGeneratorContext, path: string) {
     return filename;
 }
 
-export function getPaintImage(ctx: ItemGeneratorContext, className: string | undefined, paintClassName: string | undefined) {
+export function getPaintImage(
+    ctx: ItemGeneratorContext,
+    className: string | undefined,
+    paintClassName: string | undefined
+) {
     const cn = ensure(className);
     const pcn = ensure(paintClassName);
     const lightVpkPath = getVpkPaintImagePath(cn, pcn, "light");
@@ -99,7 +103,9 @@ export function getPaintImage(ctx: ItemGeneratorContext, className: string | und
     const baseName = `${cn}_${pcn}_${entry.crc}`;
     const baseFilename = `/images/${baseName}.webp`;
     if (!ctx.existingImages.has(baseFilename)) {
-        const localPaths = PAINT_IMAGE_SUFFIXES.map((suffix) => [getPaintImagePath(cn, pcn, suffix), suffix] as [string, string]);
+        const localPaths = PAINT_IMAGE_SUFFIXES.map(
+            (suffix) => [getPaintImagePath(cn, pcn, suffix), suffix] as [string, string]
+        );
         for (const suffix of PAINT_IMAGE_SUFFIXES) {
             ctx.neededVpkPaths.add(getVpkPaintImagePath(cn, pcn, suffix));
         }
@@ -153,7 +159,9 @@ export function getModel(ctx: ItemGeneratorContext, path?: string, existingId?: 
     }
     if (ctx.mode === "limited" && existingId !== undefined) {
         const existing = ctx.existingItemsById.get(existingId);
-        return existing !== undefined ? { modelData: existing.modelData, modelPlayer: existing.modelPlayer } : undefined;
+        return existing !== undefined
+            ? { modelData: existing.modelData, modelPlayer: existing.modelPlayer }
+            : undefined;
     }
     const vpkPath = path.replace(".vmdl", ".vmdl_c").toLowerCase();
     const entry = ctx.cs2.vpkIndex.get(vpkPath);
@@ -189,7 +197,10 @@ export function getCollectionImage(ctx: ItemGeneratorContext, name: string) {
         const ext = isSvg ? ".svg" : "_png.png";
         const localPath = join(GAME_IMAGES_DIR, `econ/set_icons/${name}${ext}`);
         ctx.neededVpkPaths.add(vpkPath);
-        ctx.imagesToProcess.set(vpkPath, isSvg ? { kind: "svg", localPath, filename } : { kind: "regular", localPath, filename });
+        ctx.imagesToProcess.set(
+            vpkPath,
+            isSvg ? { kind: "svg", localPath, filename } : { kind: "regular", localPath, filename }
+        );
     }
     return filename;
 }

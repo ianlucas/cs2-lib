@@ -3,26 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { join } from "path";
 import { mkdir, readdir, readFile } from "fs/promises";
+import { join } from "path";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
 import { CS2RarityColorValues } from "../../../src/economy-container.ts";
 import { CS2Item, CS2ItemTeam, CS2ItemTeamValues, CS2ItemType, CS2ItemTypeValues } from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
-import {
-    buildVpkIndex,
-    decompileItemDefinitionResources
-} from "../../cs2-tools/decompile.ts";
+import { buildVpkIndex, decompileItemDefinitionResources } from "../../cs2-tools/decompile.ts";
 import { ensureItemDefinitionPackages, syncAssetsManifest } from "../../cs2-tools/depot.ts";
 import { createCs2Runtime } from "../../cs2-tools/runtime.ts";
 import { INPUT_FORCE } from "../../env.ts";
-import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../source-types.ts";
+import { prependHash, readJson } from "../../utils.ts";
 import {
     BASE_WEAPON_EQUIPMENT,
     FREE_MUSIC_KITS,
     GAME_ITEMS_PATH,
     GAME_RESOURCE_DIR,
+    getInstalledGamePath,
     HEAVY_WEAPONS,
     ITEM_IDS_JSON_PATH,
     ITEMS_JSON_PATH,
@@ -34,20 +32,11 @@ import {
     STATIC_IMAGES_DIR,
     UNCATEGORIZED_STICKERS,
     WEAPON_CATEGORY_RE,
-    WORKDIR_DIR,
-    getInstalledGamePath
+    WORKDIR_DIR
 } from "../config.ts";
+import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../source-types.ts";
 import { populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
 import { ItemGeneratorContext } from "../types.ts";
-import { prependHash, readJson } from "../../utils.ts";
-import {
-    addFormattedTranslation,
-    addTranslation,
-    findTranslation,
-    hasTranslation,
-    requireTranslation,
-    tryAddTranslation
-} from "./translations.ts";
 import {
     getBaseImage,
     getCollectionImage,
@@ -61,7 +50,21 @@ import {
     requireStaticAsset,
     tryGetFallbackImage
 } from "./assets.ts";
-import { addContainerItem, getClientLootListItems, getCollection, getContainerType, getItemCollection } from "./collections.ts";
+import {
+    addContainerItem,
+    getClientLootListItems,
+    getCollection,
+    getContainerType,
+    getItemCollection
+} from "./collections.ts";
+import {
+    addFormattedTranslation,
+    addTranslation,
+    findTranslation,
+    hasTranslation,
+    requireTranslation,
+    tryAddTranslation
+} from "./translations.ts";
 
 const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 
@@ -434,6 +437,8 @@ async function parsePaintKits(ctx: ItemGeneratorContext) {
                         ? [baseItem.rarity, paintKit.rarityColorHex]
                         : [itemKey, paintKit.rarityColorHex]
                 ),
+                stickerMax: undefined,
+                stickerMaxForLegacy: undefined,
                 wearMax: paintKit.wearMax,
                 wearMin: paintKit.wearMin
             });

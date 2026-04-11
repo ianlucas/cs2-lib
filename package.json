@@ -43,7 +43,7 @@
         "typecheck": "tsc --noEmit",
         "update": "npm run item-generator && npm run item-generator-changelog",
         "upgrade": "npx npm-check-updates@latest --target minor -u",
-        "item-generator-changelog": "tsx scripts/generate-item-changelog.ts",
+        "item-generator-changelog": "tsx scripts/item-generator-changelog.ts",
         "item-generator": "tsx scripts/item-generator.ts"
     },
     "devDependencies": {
