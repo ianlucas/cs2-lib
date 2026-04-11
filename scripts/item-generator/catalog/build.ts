@@ -16,6 +16,11 @@ import { createCs2Runtime } from "../../cs2-tools/runtime.ts";
 import { INPUT_FORCE } from "../../env.ts";
 import { prependHash, readJson } from "../../utils.ts";
 import {
+    getIndexedCompositeMaterialFilename,
+    normalizeMaterialResourcePath,
+    getPaintCompositeMaterialPath
+} from "../assets/material-paths.ts";
+import {
     BASE_WEAPON_EQUIPMENT,
     FREE_MUSIC_KITS,
     GAME_ITEMS_PATH,
@@ -102,10 +107,16 @@ export function createItemGeneratorContext(mode: ItemGeneratorContext["mode"]): 
         neededVpkPaths: new Set(),
         imagesToProcess: new Map(),
         modelsToProcess: new Map(),
+        compositeMaterialsToProcess: new Set(),
         materialsToProcess: new Set(),
         texturesToProcess: new Set(),
+        compositeMaterialDataByPath: new Map(),
+        compositeMaterialFilenameByPath: new Map(),
+        compositeMaterialRefsByPath: new Map(),
+        materialDataByPath: new Map(),
         materialFilenameByPath: new Map(),
         materialRefsByPath: new Map(),
+        textureFilenameByPath: new Map(),
         baseItems: [],
         containerItems: new Map(),
         items: new Map(),
@@ -419,12 +430,24 @@ async function parsePaintKits(ctx: ItemGeneratorContext) {
             addContainerItem(ctx, itemKey, id);
             addTranslation(ctx, id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
             addTranslation(ctx, id, "desc", paintKit.descToken);
+            const compositeMaterialPath = getPaintCompositeMaterialPath(
+                paintKit.className,
+                paintKit.compositeMaterialPath
+            );
+            const compositeMaterial =
+                ctx.mode === "full"
+                    ? `/materials/${getIndexedCompositeMaterialFilename(ctx.cs2, compositeMaterialPath)}`
+                    : undefined;
+            if (ctx.mode === "full") {
+                ctx.compositeMaterialsToProcess.add(normalizeMaterialResourcePath(compositeMaterialPath));
+            }
             addItem(ctx, {
                 ...baseItem,
                 ...getItemCollection(ctx, id, itemKey),
                 altName: getPaintAltName(paintKit.className),
                 base: undefined,
                 baseId: baseItem.id,
+                compositeMaterial,
                 free: undefined,
                 id,
                 image: getPaintImage(ctx, baseItem.className, paintKit.className),
@@ -982,12 +1005,12 @@ function getTeamsString(teams?: Record<string, string>, fallback?: string) {
               .join("_");
 }
 
-function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {
+export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {
     const previous = ctx.existingItemsById.get(item.id);
     if (ctx.mode !== "limited" || previous === undefined) {
         return;
     }
-    const requiredFields = ["modelData", "modelPlayer", "stickerMax", "stickerMaxForLegacy"] as const;
+    const requiredFields = ["compositeMaterial", "modelData", "modelPlayer", "stickerMax", "stickerMaxForLegacy"] as const;
     for (const field of requiredFields) {
         const current = item[field];
         const fallback = previous[field];

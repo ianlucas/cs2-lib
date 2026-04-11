@@ -37,6 +37,7 @@ export interface DecompileAssetsOptions {
     gltfExportFormat?: "glb";
     gltfExportMaterials?: boolean;
     output?: string;
+    textureDecodeFlags?: string;
     threads?: number;
 }
 
@@ -49,6 +50,14 @@ export interface ModelMetadataExtractionResult {
     data: any;
     filename: string;
     materials: string[];
+}
+
+export interface CompositeMaterialMetadataExtractionResult {
+    compositeMaterialRefs: string[];
+    data: any;
+    filename: string;
+    vcompmatPath: string;
+    vmatRefs: string[];
 }
 
 export interface MaterialMetadataExtractionResult {

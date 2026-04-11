@@ -11,12 +11,16 @@ import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
-import { ensure } from "../../../src/utils.ts";
+import { assert, ensure } from "../../../src/utils.ts";
 import { decompileAssets, decompileModelAssets } from "../../cs2-tools/decompile.ts";
 import { ensureAssetPackages } from "../../cs2-tools/depot.ts";
-import { extractMaterialMetadata, extractModelMetadata } from "../../cs2-tools/extract.ts";
+import {
+    extractCompositeMaterialMetadata,
+    extractMaterialMetadata,
+    extractModelMetadata
+} from "../../cs2-tools/extract.ts";
 import { STORAGE_ACCESS_KEY, STORAGE_ZONE } from "../../env.ts";
-import { PromiseQueue, getFileSha256, log, rmIfExists } from "../../utils.ts";
+import { PromiseQueue, exists, getFileSha256, log, rmIfExists } from "../../utils.ts";
 import {
     CDN_UPLOAD_CONCURRENCY,
     DECOMPILED_DIR,
@@ -29,6 +33,12 @@ import {
 } from "../config.ts";
 import { formatCount } from "../logging.ts";
 import { GlbMaterialExtras, ItemGeneratorContext, PendingModelTask } from "../types.ts";
+import {
+    getTextureFilename,
+    normalizeMaterialResourcePath,
+    patchMaterialResourceReferences,
+    toCompiledMaterialResourcePath
+} from "./material-paths.ts";
 
 export async function prepareWorkspace(ctx: ItemGeneratorContext) {
     await mkdir(ITEM_GENERATOR_WORKDIR_DIR, { recursive: true });
@@ -65,7 +75,11 @@ export async function processAssets(ctx: ItemGeneratorContext) {
     }
     await processImages(ctx);
     if (ctx.mode === "full") {
+        await preProcessCompositeMaterials(ctx);
         await processModels(ctx);
+        await preProcessMaterials(ctx);
+        await processMaterialTextures(ctx);
+        await writeMaterialMetadata(ctx);
     }
 }
 
@@ -197,43 +211,73 @@ async function extractModelData(ctx: ItemGeneratorContext) {
     }
 }
 
-async function preProcessMaterials(ctx: ItemGeneratorContext) {
-    if (ctx.materialsToProcess.size === 0) {
+async function preProcessCompositeMaterials(ctx: ItemGeneratorContext) {
+    const pending = Array.from(ctx.compositeMaterialsToProcess).filter(
+        (vcompmatPath) => !ctx.compositeMaterialDataByPath.has(vcompmatPath)
+    );
+    if (pending.length === 0) {
         return;
     }
-    log(`Extracting ${formatCount(ctx.materialsToProcess.size, "material")}...`);
-    const getVmatFilename = (vmatPath: string): string | null => {
-        const vpkPath = vmatPath.replace(".vmat", ".vmat_c").toLowerCase();
-        const entry = ctx.cs2.vpkIndex.get(vpkPath);
-        if (!entry) return null;
-        return `${basename(vmatPath, ".vmat")}_${entry.crc}.vmat.json`;
-    };
-    function patchVmatRefs(value: unknown): unknown {
-        if (typeof value === "string" && value.endsWith(".vmat")) {
-            return getVmatFilename(value.replace(/\\/g, "/")) ?? value;
-        }
-        if (Array.isArray(value)) return value.map(patchVmatRefs);
-        if (value !== null && typeof value === "object") {
-            return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, patchVmatRefs(child)]));
-        }
-        return value;
-    }
-    const processed = new Set<string>();
-    const queue = new Set<string>(ctx.materialsToProcess);
+    log(`Extracting ${formatCount(pending.length, "composite material")}...`);
+    const processed = new Set<string>(ctx.compositeMaterialDataByPath.keys());
+    const queue = new Set<string>(pending);
     while (queue.size > 0) {
         const batch = Array.from(queue);
         queue.clear();
+        requireVpkEntries(ctx, batch);
+        const results = await extractCompositeMaterialMetadata(ctx.cs2, batch);
+        for (const { compositeMaterialRefs, data, filename, vcompmatPath, vmatRefs } of results) {
+            processed.add(vcompmatPath);
+            ctx.compositeMaterialDataByPath.set(vcompmatPath, data);
+            ctx.compositeMaterialFilenameByPath.set(vcompmatPath, filename);
+            ctx.compositeMaterialRefsByPath.set(vcompmatPath, compositeMaterialRefs);
+            for (const vmat of vmatRefs) {
+                ctx.materialsToProcess.add(normalizeMaterialResourcePath(vmat));
+            }
+            for (const child of compositeMaterialRefs) {
+                const normalized = normalizeMaterialResourcePath(child);
+                ctx.compositeMaterialsToProcess.add(normalized);
+                if (!processed.has(normalized) && !queue.has(normalized)) queue.add(normalized);
+            }
+        }
+    }
+    log(
+        `Extracted ${formatCount(processed.size, "composite material")} and found ${formatCount(ctx.materialsToProcess.size, "material reference")}.`
+    );
+}
+
+function requireVpkEntries(ctx: ItemGeneratorContext, paths: Iterable<string>) {
+    const missing = [...paths]
+        .map((path) => toCompiledMaterialResourcePath(path))
+        .filter((path) => !ctx.cs2.vpkIndex.has(path));
+    if (missing.length > 0) {
+        throw new Error(`VPK entry not found: ${missing.join(", ")}`);
+    }
+}
+
+async function preProcessMaterials(ctx: ItemGeneratorContext) {
+    const pending = Array.from(ctx.materialsToProcess).filter((vmatPath) => !ctx.materialDataByPath.has(vmatPath));
+    if (pending.length === 0) {
+        return;
+    }
+    log(`Extracting ${formatCount(pending.length, "material")}...`);
+    const processed = new Set<string>(ctx.materialDataByPath.keys());
+    const queue = new Set<string>(pending);
+    while (queue.size > 0) {
+        const batch = Array.from(queue);
+        queue.clear();
+        requireVpkEntries(ctx, batch);
         const results = await extractMaterialMetadata(ctx.cs2, batch);
         for (const { vmatPath, filename, data, vtexRefs, vmatRefs } of results) {
             processed.add(vmatPath);
             ctx.materialFilenameByPath.set(vmatPath, filename);
             ctx.materialRefsByPath.set(vmatPath, vmatRefs);
-            for (const vtex of vtexRefs) ctx.texturesToProcess.add(vtex);
+            ctx.materialDataByPath.set(vmatPath, data);
+            for (const vtex of vtexRefs) ctx.texturesToProcess.add(normalizeMaterialResourcePath(vtex));
             for (const vmat of vmatRefs) {
-                if (!processed.has(vmat) && !queue.has(vmat)) queue.add(vmat);
-            }
-            if (data !== null) {
-                await writeFile(join(OUTPUT_DIR, "materials", filename), JSON.stringify(patchVmatRefs(data)), "utf-8");
+                const normalized = normalizeMaterialResourcePath(vmat);
+                ctx.materialsToProcess.add(normalized);
+                if (!processed.has(normalized) && !queue.has(normalized)) queue.add(normalized);
             }
         }
     }
@@ -245,6 +289,81 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
     log(
         `Extracted ${formatCount(processed.size, "material")} and found ${formatCount(ctx.texturesToProcess.size, "texture reference")}.`
     );
+}
+
+async function processMaterialTextures(ctx: ItemGeneratorContext) {
+    const pending = Array.from(ctx.texturesToProcess).filter((vtexPath) => !ctx.textureFilenameByPath.has(vtexPath));
+    if (pending.length === 0) {
+        return;
+    }
+    log(`Processing ${formatCount(pending.length, "material texture")}...`);
+    requireVpkEntries(ctx, pending);
+    const compiledPaths = pending.map(toCompiledMaterialResourcePath);
+    await ensureAssetPackages(ctx.cs2, compiledPaths);
+    await decompileAssets(ctx.cs2, compiledPaths, { textureDecodeFlags: "none" });
+    const queue = new PromiseQueue(Math.max(2, pending.length > 8 ? 8 : pending.length));
+    for (const vtexPath of pending) {
+        queue.push(async () => {
+            const entry = ensure(ctx.cs2.vpkIndex.get(toCompiledMaterialResourcePath(vtexPath)));
+            const base = join(DECOMPILED_DIR, dirname(vtexPath), basename(vtexPath, ".vtex"));
+            const pngPath = `${base}.png`;
+            const exrPath = `${base}.exr`;
+            if (await exists(pngPath)) {
+                const filename = getTextureFilename(vtexPath, entry.crc, ".webp");
+                await sharp(pngPath)
+                    .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                    .toFile(join(OUTPUT_DIR, "textures", filename));
+                ctx.textureFilenameByPath.set(vtexPath, `/textures/${filename}`);
+                return;
+            }
+            if (await exists(exrPath)) {
+                const filename = getTextureFilename(vtexPath, entry.crc, ".exr");
+                await rename(exrPath, join(OUTPUT_DIR, "textures", filename));
+                ctx.textureFilenameByPath.set(vtexPath, `/textures/${filename}`);
+                return;
+            }
+            throw new Error(`Unable to find decompiled texture output for '${vtexPath}'.`);
+        });
+    }
+    await queue.waitForIdle();
+    log(`Processed ${formatCount(pending.length, "material texture")}.`);
+}
+
+async function writeMaterialMetadata(ctx: ItemGeneratorContext) {
+    const resolveCompositeMaterial = (path: string) => {
+        const filename = ctx.compositeMaterialFilenameByPath.get(path);
+        return filename === undefined ? undefined : `/materials/${filename}`;
+    };
+    const resolveVmat = (path: string) => {
+        const filename = ctx.materialFilenameByPath.get(path);
+        return filename === undefined ? undefined : `/materials/${filename}`;
+    };
+    const resolveTexture = (path: string) => ctx.textureFilenameByPath.get(path);
+    for (const [vcompmatPath, data] of ctx.compositeMaterialDataByPath) {
+        if (data === null) continue;
+        const filename = ensure(ctx.compositeMaterialFilenameByPath.get(vcompmatPath));
+        const json = JSON.stringify(
+            patchMaterialResourceReferences(data, resolveCompositeMaterial, resolveVmat, resolveTexture)
+        );
+        assertMaterialReferencesRewritten(json, filename);
+        await writeFile(join(OUTPUT_DIR, "materials", filename), json, "utf-8");
+    }
+    for (const [vmatPath, data] of ctx.materialDataByPath) {
+        if (data === null) continue;
+        const filename = ensure(ctx.materialFilenameByPath.get(vmatPath));
+        const json = JSON.stringify(
+            patchMaterialResourceReferences(data, resolveCompositeMaterial, resolveVmat, resolveTexture)
+        );
+        assertMaterialReferencesRewritten(json, filename);
+        await writeFile(join(OUTPUT_DIR, "materials", filename), json, "utf-8");
+    }
+}
+
+function assertMaterialReferencesRewritten(json: string, filename: string) {
+    const originalReference = json.match(/resource(?:_name)?:|\.vtex|\.vmat(?!\.json)|\.vcompmat(?!\.json)/);
+    if (originalReference !== null) {
+        throw new Error(`Unrewritten material reference '${originalReference[0]}' found in '${filename}'.`);
+    }
 }
 
 function collectMaterialGraph(ctx: ItemGeneratorContext, materials: Iterable<string>) {
@@ -357,7 +476,7 @@ export async function uploadAssets(ctx: ItemGeneratorContext) {
     );
     const queue = new PromiseQueue(CDN_UPLOAD_CONCURRENCY);
     let uploadCount = 0;
-    for (const folder of ["images", "textures", "models"]) {
+    for (const folder of ["images", "materials", "textures", "models"]) {
         const fileChecksums = Object.fromEntries(
             (await BunnyStorageSDK.file.list(sz, `/${folder}`)).map((file) => [
                 `${file.path.replace(`/${STORAGE_ZONE}`, "")}${file.objectName}`,

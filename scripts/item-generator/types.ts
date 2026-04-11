@@ -73,10 +73,16 @@ export interface ItemGeneratorContext {
     neededVpkPaths: Set<string>;
     imagesToProcess: Map<string, PendingImageTask>;
     modelsToProcess: Map<string, PendingModelTask>;
+    compositeMaterialsToProcess: Set<string>;
     materialsToProcess: Set<string>;
     texturesToProcess: Set<string>;
+    compositeMaterialDataByPath: Map<string, unknown>;
+    compositeMaterialFilenameByPath: Map<string, string>;
+    compositeMaterialRefsByPath: Map<string, string[]>;
+    materialDataByPath: Map<string, unknown>;
     materialFilenameByPath: Map<string, string>;
     materialRefsByPath: Map<string, string[]>;
+    textureFilenameByPath: Map<string, string>;
     baseItems: CS2ExtendedItem[];
     containerItems: Map<string, number>;
     items: Map<number, CS2ExtendedItem>;
