@@ -8,7 +8,7 @@ const banner = `/*--------------------------------------------------------------
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/`;
 
-export function useItemsTemplate(items: unknown) {
+export function createItemsModule(items: unknown) {
     return `${banner}
 
 import type { CS2Item } from "./economy-types.ts";
@@ -18,7 +18,7 @@ import type { CS2Item } from "./economy-types.ts";
 export const CS2_ITEMS: CS2Item[] = ${JSON.stringify(items)};`;
 }
 
-export function useStickerMarkupTemplate(stickerMarkup: unknown) {
+export function createStickerMarkupModule(stickerMarkup: unknown) {
     return `${banner}
 
 import type { CS2StickerMarkup } from "./economy-types.ts";
@@ -28,7 +28,7 @@ import type { CS2StickerMarkup } from "./economy-types.ts";
 export const CS2_STICKER_MARKUP: CS2StickerMarkup = ${JSON.stringify(stickerMarkup)};`;
 }
 
-export function useTranslationTemplate(language: string, tokens: unknown) {
+export function createTranslationModule(language: string, tokens: unknown) {
     return `${banner}
 
 import type { CS2ItemTranslationMap } from "../economy-types.ts";

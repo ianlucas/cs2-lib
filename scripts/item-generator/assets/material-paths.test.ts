@@ -1,0 +1,93 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import { describe, expect, test } from "vitest";
+import {
+    getCompositeMaterialFilename,
+    getPaintCompositeMaterialPath,
+    getTextureFilename,
+    getVmatFilename,
+    normalizeMaterialResourcePath,
+    patchMaterialResourceReferences,
+    resolveMaterialResourcePath,
+    toCompiledMaterialResourcePath
+} from "./material-paths.ts";
+
+describe("material path helpers", () => {
+    test("resolves explicit and legacy paint composite material paths", () => {
+        expect(getPaintCompositeMaterialPath("aq_oiled", "weapons/paints/custom/foo.vcompmat")).toBe(
+            "weapons/paints/custom/foo.vcompmat"
+        );
+        expect(getPaintCompositeMaterialPath("aq_oiled")).toBe("weapons/paints/legacy/aq_oiled.vcompmat");
+    });
+
+    test("normalizes resource prefixes and compiled paths", () => {
+        expect(normalizeMaterialResourcePath("resource:materials\\foo.vtex")).toBe("materials/foo.vtex");
+        expect(normalizeMaterialResourcePath("weapons//models//awp//materials//foo.vmat")).toBe(
+            "weapons/models/awp/materials/foo.vmat"
+        );
+        expect(normalizeMaterialResourcePath("resource_name:materials/foo.vmat")).toBe("materials/foo.vmat");
+        expect(toCompiledMaterialResourcePath("Materials/Foo.vmat")).toBe("materials/foo.vmat_c");
+        expect(toCompiledMaterialResourcePath("weapons/paints/foo.vcompmat_c")).toBe(
+            "weapons/paints/foo.vcompmat_c"
+        );
+    });
+
+    test("resolves missing direct paths by unique compiled basename", () => {
+        const runtime = {
+            vpkIndex: new Map([
+                ["materials/models/weapons/customization/default_composite_inputs.vmat_c", { crc: "123", fnumber: "1" }]
+            ])
+        };
+        expect(resolveMaterialResourcePath(runtime as any, "default_composite_inputs.vmat")).toBe(
+            "materials/models/weapons/customization/default_composite_inputs.vmat"
+        );
+    });
+
+    test("builds CRC-appended output filenames", () => {
+        expect(getCompositeMaterialFilename("weapons/paints/legacy/aq_oiled.vcompmat", "abc123")).toBe(
+            "aq_oiled_abc123.vcompmat.json"
+        );
+        expect(getVmatFilename("materials/models/weapons/customization/paints/vmats/aq_oiled.vmat", "def456")).toBe(
+            "aq_oiled_def456.vmat.json"
+        );
+        expect(
+            getTextureFilename(
+                "materials/models/weapons/customization/paints/antiqued/oiled_psd_9f35e709.vtex",
+                "789abc",
+                ".webp"
+            )
+        ).toBe("oiled_psd_9f35e709_789abc.webp");
+    });
+
+    test("rewrites nested material references", () => {
+        const textureMap = new Map([
+            [
+                "items/assets/paintkits/community/community_34/m4a1s_vaporwave_albedo_texture_tga_25d261b9.vtex",
+                "/textures/m4a1s_vaporwave_albedo_texture_tga_25d261b9_crc.webp"
+            ]
+        ]);
+        const patched = patchMaterialResourceReferences(
+            {
+                include: "weapons/paints/legacy/_shared.vcompmat",
+                material: "resource_name:materials/foo.vmat",
+                nested: [
+                    {
+                        texture:
+                            "resource:items/assets/paintkits/community/community_34/m4a1s_vaporwave_albedo_texture_tga_25d261b9.vtex"
+                    }
+                ]
+            },
+            (path) => `/materials/${path.split("/").pop()}.json`,
+            (path) => `/materials/${path.split("/").pop()}.json`,
+            (path) => textureMap.get(path)
+        );
+        expect(patched).toEqual({
+            include: "/materials/_shared.vcompmat.json",
+            material: "/materials/foo.vmat.json",
+            nested: [{ texture: "/textures/m4a1s_vaporwave_albedo_texture_tga_25d261b9_crc.webp" }]
+        });
+    });
+});

@@ -165,6 +165,10 @@ export class CS2KeyValues3 {
             if (data[index] === '"') {
                 return parseString();
             }
+            if (data[index] === "#" && data[index + 1] === "[") {
+                index += 2;
+                return parseBinaryBlob();
+            }
             if (data[index] === "[") {
                 index += 1;
                 return parseArray();
@@ -179,6 +183,26 @@ export class CS2KeyValues3 {
 
             printDebug();
             fail(`Unexpected character at index ${index}`);
+        }
+
+        function parseBinaryBlob(): number[] {
+            const bytes: number[] = [];
+            while (data[index]) {
+                skipWhitespace();
+                if (data[index] === "]") {
+                    index += 1;
+                    return bytes;
+                }
+                const hex = (data[index] ?? "") + (data[index + 1] ?? "");
+                if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+                    bytes.push(parseInt(hex, 16));
+                    index += 2;
+                } else {
+                    printDebug();
+                    fail(`Invalid hex byte at ${index}`);
+                }
+            }
+            fail("Bad end of binary blob");
         }
 
         function parseArray(): CS2KeyValue3Value[] {
