@@ -114,11 +114,7 @@ export function getPaintImage(
     return baseFilename;
 }
 
-export function getDefaultGraffitiImage(
-    ctx: ItemGeneratorContext,
-    stickerMaterial: string,
-    hexColor: string
-): string {
+export function getDefaultGraffitiImage(ctx: ItemGeneratorContext, stickerMaterial: string, hexColor: string): string {
     const vpkPath = getVpkImagePath(`econ/stickers/${stickerMaterial}`);
     const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
     const materialBase = ensure(stickerMaterial.split("/").pop());

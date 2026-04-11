@@ -14,14 +14,18 @@ function resolveToken(token?: string) {
 }
 
 function isTranslationKey(ctx: ItemGeneratorContext, token?: string) {
-    if (token === undefined || token.length === 0) return false;
+    if (token === undefined || token.length === 0) {
+        return false;
+    }
     const resolved = resolveToken(token);
     return resolved !== undefined && ensure(ctx.csgoTranslationByLanguage.english)[resolved] !== undefined;
 }
 
 export function findTranslation(ctx: ItemGeneratorContext, token?: string, language = "english"): string | undefined {
     token = resolveToken(token);
-    if (token === undefined) return undefined;
+    if (token === undefined) {
+        return undefined;
+    }
     const value = ensure(ctx.csgoTranslationByLanguage[language])[token];
     return value !== undefined ? stripHtml(value).result : undefined;
 }
