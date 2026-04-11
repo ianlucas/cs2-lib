@@ -24,7 +24,6 @@ export const ITEM_GENERATOR_BUILD_DIR: string = join(ITEM_GENERATOR_WORKDIR_DIR,
 export const ITEM_IDS_JSON_PATH: string = "scripts/data/items-ids.json";
 export const ITEMS_JSON_PATH: string = "scripts/data/items.json";
 export const ITEMS_TS_PATH: string = "src/items.ts";
-export const STICKER_MARKUP_TS_PATH: string = "src/sticker-markup.ts";
 export const TRANSLATIONS_TS_PATH: string = "src/translations/%s.ts";
 export const ENGLISH_JSON_PATH: string = "scripts/data/english.json";
 

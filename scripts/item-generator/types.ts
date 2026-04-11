@@ -5,7 +5,7 @@
 
 import { type Cs2Runtime } from "../cs2-tools/types.ts";
 import { type ItemGeneratorMode } from "./config.ts";
-import { type CS2Item, type CS2ItemTranslationByLanguage, type CS2StickerMarkup } from "../../src/economy-types.ts";
+import { type CS2Item, type CS2ItemTranslationByLanguage } from "../../src/economy-types.ts";
 import { type CS2ExportItem, type CS2ExtendedItem, type CS2GameItems, type CS2Language } from "./source-types.ts";
 
 export type PendingImageTask =
@@ -86,7 +86,6 @@ export interface ItemGeneratorContext {
     baseItems: CS2ExtendedItem[];
     containerItems: Map<string, number>;
     items: Map<number, CS2ExtendedItem>;
-    stickerMarkup: CS2StickerMarkup;
     paintKits: PaintKitRecord[];
     graffitiTints: GraffitiTintRecord[];
     keychainBaseId: number | undefined;

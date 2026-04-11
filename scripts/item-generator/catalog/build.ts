@@ -123,7 +123,6 @@ export function createItemGeneratorContext(mode: ItemGeneratorContext["mode"]): 
         baseItems: [],
         containerItems: new Map(),
         items: new Map(),
-        stickerMarkup: {},
         paintKits: [],
         graffitiTints: [],
         keychainBaseId: undefined,
