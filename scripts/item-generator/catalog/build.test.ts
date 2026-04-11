@@ -51,6 +51,51 @@ describe("hydrateExistingModelFields", () => {
         expect(item.compositeMaterial).toBe("/materials/current.vcompmat.json");
     });
 
+    test("does not overwrite fields explicitly set to undefined", () => {
+        const item = {
+            compositeMaterial: undefined,
+            id: 1,
+            modelData: undefined,
+            modelPlayer: undefined,
+            stickerMax: undefined,
+            stickerMaxForLegacy: undefined,
+            type: CS2ItemType.Weapon
+        };
+        hydrateExistingModelFields(createContext("limited"), item);
+        expect(item).toEqual({
+            compositeMaterial: undefined,
+            id: 1,
+            modelData: undefined,
+            modelPlayer: undefined,
+            stickerMax: undefined,
+            stickerMaxForLegacy: undefined,
+            type: CS2ItemType.Weapon
+        });
+    });
+
+    test("keeps paint-cleared parent fields while hydrating omitted paint fields", () => {
+        const item = {
+            baseId: 10,
+            id: 1,
+            modelData: undefined,
+            modelPlayer: undefined,
+            stickerMax: undefined,
+            stickerMaxForLegacy: undefined,
+            type: CS2ItemType.Weapon
+        };
+        hydrateExistingModelFields(createContext("limited"), item);
+        expect(item).toEqual({
+            baseId: 10,
+            compositeMaterial: "/materials/known.vcompmat.json",
+            id: 1,
+            modelData: undefined,
+            modelPlayer: undefined,
+            stickerMax: undefined,
+            stickerMaxForLegacy: undefined,
+            type: CS2ItemType.Weapon
+        });
+    });
+
     test("does not copy known values in full mode", () => {
         const item = { id: 1, type: CS2ItemType.Weapon };
         hydrateExistingModelFields(createContext("full"), item);

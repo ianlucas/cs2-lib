@@ -7,8 +7,13 @@ import { mkdir, readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
 import { type CS2RarityColorValues } from "../../../src/economy-container.ts";
-import { CS2ItemTeam, CS2ItemType } from "../../../src/economy-types.ts";
-import { type CS2Item, type CS2ItemTeamValues, type CS2ItemTypeValues } from "../../../src/economy-types.ts";
+import {
+    CS2ItemTeam,
+    CS2ItemType,
+    type CS2Item,
+    type CS2ItemTeamValues,
+    type CS2ItemTypeValues
+} from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
 import { buildVpkIndex, decompileItemDefinitionResources } from "../../cs2-tools/decompile.ts";
@@ -459,6 +464,7 @@ async function parsePaintKits(ctx: ItemGeneratorContext) {
                 image: getPaintImage(ctx, baseItem.className, paintKit.className),
                 index: Number(paintKit.index),
                 legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
+                modelData: undefined,
                 modelPlayer: undefined,
                 rarity: getRarityColorHex(
                     ctx,
@@ -1026,9 +1032,8 @@ export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2E
         "stickerMaxForLegacy"
     ] as const;
     for (const field of requiredFields) {
-        const current = item[field];
         const fallback = previous[field];
-        if (current === undefined && fallback !== undefined) {
+        if (!(field in item) && fallback !== undefined) {
             (item as unknown as Record<string, unknown>)[field] = fallback;
         }
     }
