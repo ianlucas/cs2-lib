@@ -44,9 +44,9 @@ import {
     CS2_WEAR_FACTOR
 } from "./economy-constants.ts";
 import {
+    type CS2RarityColor,
     CS2RarityColorName,
     CS2RarityColorOrder,
-    type CS2RarityColorValues,
     CS2RaritySoundName,
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
@@ -57,22 +57,18 @@ import {
 } from "./economy-container.ts";
 import {
     CS2ContainerType,
-    type CS2ContainerTypeValues,
     type CS2Item,
     CS2ItemTeam,
-    type CS2ItemTeamValues,
     type CS2ItemTranslation,
     type CS2ItemTranslationMap,
     CS2ItemType,
-    type CS2ItemTypeValues,
     CS2ItemWear,
-    type CS2ItemWearValues,
     type CS2UnlockedItem
 } from "./economy-types.ts";
-import { type CS2TeamValues } from "./teams.ts";
+import { type CS2Team } from "./teams.ts";
 import { type Interface, assert, compare, ensure, safe } from "./utils.ts";
 
-type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2TeamValues };
+type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2Team };
 
 function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem) => boolean {
     return function filter(item: CS2EconomyItem) {
@@ -211,7 +207,7 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
-    getWearFromValue(value: number): CS2ItemWearValues {
+    getWearFromValue(value: number): CS2ItemWear {
         switch (true) {
             case value <= CS2_MAX_FACTORY_NEW_WEAR:
                 return CS2ItemWear.FactoryNew;
@@ -265,7 +261,7 @@ export class CS2EconomyItem implements Interface<
     Omit<CS2Item, "contents" | "specials" | "teams"> &
         CS2ItemTranslation & {
             contents: CS2EconomyItem[] | undefined;
-            teams: CS2TeamValues[] | undefined;
+            teams: CS2Team[] | undefined;
         }
 > {
     altName: string | undefined;
@@ -277,7 +273,7 @@ export class CS2EconomyItem implements Interface<
     collectionImage: string | undefined;
     collectionName: string | undefined;
     compositeMaterial: string | undefined;
-    containerType: CS2ContainerTypeValues | undefined;
+    containerType: CS2ContainerType | undefined;
     def: number | undefined;
     desc: string | undefined;
     free: boolean | undefined;
@@ -290,7 +286,7 @@ export class CS2EconomyItem implements Interface<
     modelData: string | undefined;
     modelPlayer: string | undefined;
     name: string = null!;
-    rarity: CS2RarityColorValues = null!;
+    rarity: CS2RarityColor = null!;
     specialsImage: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
@@ -299,13 +295,13 @@ export class CS2EconomyItem implements Interface<
     stickerMaxForLegacy: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
-    type: CS2ItemTypeValues = null!;
+    type: CS2ItemType = null!;
     wearMax: number | undefined;
     wearMin: number | undefined;
 
     private _contents: number[] | undefined;
     private _specials: number[] | undefined;
-    private _teams: CS2ItemTeamValues | undefined;
+    private _teams: CS2ItemTeam | undefined;
 
     constructor(
         public economy: CS2EconomyInstance,
@@ -354,11 +350,11 @@ export class CS2EconomyItem implements Interface<
         return this._specials?.map((id) => this.economy.get(id));
     }
 
-    set teams(value: CS2ItemTeamValues) {
+    set teams(value: CS2ItemTeam) {
         this._teams = value;
     }
 
-    get teams(): CS2TeamValues[] | undefined {
+    get teams(): CS2Team[] | undefined {
         switch (this._teams) {
             case CS2ItemTeam.Both:
                 return CS2_TEAMS_BOTH;
