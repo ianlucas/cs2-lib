@@ -6,9 +6,9 @@
 import { CS2ContainerType, CS2ItemType, CS2ItemTypeValues } from "../../../src/economy-types.ts";
 import { assert } from "../../../src/utils.ts";
 import { tryAddTranslation } from "./translations.ts";
-import { ItemGeneratorV2Context } from "../types.ts";
+import { ItemGeneratorContext } from "../types.ts";
 
-export function getCollection(ctx: ItemGeneratorV2Context, itemId: number, collection?: string) {
+export function getCollection(ctx: ItemGeneratorContext, itemId: number, collection?: string) {
     let collectionImage: string | undefined;
     if (collection !== undefined) {
         const itemSet = ctx.gameItems.item_sets[collection];
@@ -21,17 +21,17 @@ export function getCollection(ctx: ItemGeneratorV2Context, itemId: number, colle
     return { collection, collectionImage };
 }
 
-export function getItemCollection(ctx: ItemGeneratorV2Context, itemId: number, itemKey: string) {
+export function getItemCollection(ctx: ItemGeneratorContext, itemId: number, itemKey: string) {
     return getCollection(ctx, itemId, ctx.itemSetItemKey[itemKey]);
 }
 
-export function addContainerItem(ctx: ItemGeneratorV2Context, itemKey: string, id: number) {
+export function addContainerItem(ctx: ItemGeneratorContext, itemKey: string, id: number) {
     if (!ctx.containerItems.has(itemKey)) {
         ctx.containerItems.set(itemKey, id);
     }
 }
 
-export function getClientLootListItems(ctx: ItemGeneratorV2Context, clientLootListKey: string, items: string[] = []) {
+export function getClientLootListItems(ctx: ItemGeneratorContext, clientLootListKey: string, items: string[] = []) {
     if (!ctx.gameItems.client_loot_lists[clientLootListKey]) {
         return [];
     }

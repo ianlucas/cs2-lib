@@ -7,36 +7,36 @@ import { stripHtml } from "string-strip-html";
 import { CS2ItemTranslation } from "../../../src/economy-types.ts";
 import { assert, ensure } from "../../../src/utils.ts";
 import { FORMATTED_STRING_RE } from "../config.ts";
-import { ItemGeneratorV2Context } from "../types.ts";
+import { ItemGeneratorContext } from "../types.ts";
 
 function resolveToken(token?: string) {
     return (token?.charAt(0) === "#" ? token.substring(1) : token)?.toLowerCase();
 }
 
-function isTranslationKey(ctx: ItemGeneratorV2Context, token?: string) {
+function isTranslationKey(ctx: ItemGeneratorContext, token?: string) {
     if (token === undefined || token.length === 0) return false;
     const resolved = resolveToken(token);
     return resolved !== undefined && ctx.csgoTranslationByLanguage.english[resolved] !== undefined;
 }
 
-export function findTranslation(ctx: ItemGeneratorV2Context, token?: string, language = "english") {
+export function findTranslation(ctx: ItemGeneratorContext, token?: string, language = "english") {
     token = resolveToken(token);
     if (token === undefined) return undefined;
     const value = ctx.csgoTranslationByLanguage[language][token];
     return value !== undefined ? stripHtml(value).result : undefined;
 }
 
-export function requireTranslation(ctx: ItemGeneratorV2Context, token?: string, language = "english") {
+export function requireTranslation(ctx: ItemGeneratorContext, token?: string, language = "english") {
     return ensure(findTranslation(ctx, token, language), `Failed to find translation for '${token}' (${language}).`);
 }
 
-export function hasTranslation(ctx: ItemGeneratorV2Context, token?: string) {
+export function hasTranslation(ctx: ItemGeneratorContext, token?: string) {
     token = resolveToken(token);
     return token !== undefined && ctx.csgoTranslationByLanguage.english[token] !== undefined;
 }
 
 export function addTranslation(
-    ctx: ItemGeneratorV2Context,
+    ctx: ItemGeneratorContext,
     id: number,
     property: keyof CS2ItemTranslation,
     ...tokens: (string | undefined)[]
@@ -62,7 +62,7 @@ export function addTranslation(
 }
 
 export function tryAddTranslation(
-    ctx: ItemGeneratorV2Context,
+    ctx: ItemGeneratorContext,
     id: number,
     property: keyof CS2ItemTranslation,
     token: string | undefined
@@ -73,7 +73,7 @@ export function tryAddTranslation(
 }
 
 export function addFormattedTranslation(
-    ctx: ItemGeneratorV2Context,
+    ctx: ItemGeneratorContext,
     id: number,
     property: keyof CS2ItemTranslation,
     key?: string,

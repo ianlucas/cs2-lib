@@ -7,7 +7,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { basename, join } from "path";
 import { assert, ensure } from "../../../src/utils.ts";
 import { readFileOrDefault } from "../../utils.ts";
-import { STATIC_IMAGES_DIR, V2_CACHE_DIR } from "../config.ts";
+import { STATIC_IMAGES_DIR, ITEM_GENERATOR_CACHE_DIR } from "../config.ts";
 import { ExternalCacheMetadata } from "../types.ts";
 
 const EXTERNAL_URLS = {
@@ -31,15 +31,15 @@ type CrateEntry = {
 
 function getCachePaths(key: ExternalSourceKey) {
     return {
-        dataPath: join(V2_CACHE_DIR, `${key}.json`),
-        metadataPath: join(V2_CACHE_DIR, `${key}.metadata.json`)
+        dataPath: join(ITEM_GENERATOR_CACHE_DIR, `${key}.json`),
+        metadataPath: join(ITEM_GENERATOR_CACHE_DIR, `${key}.metadata.json`)
     };
 }
 
 export async function fetchCachedExternalJson<T>(key: ExternalSourceKey): Promise<T> {
     const url = EXTERNAL_URLS[key];
     const { dataPath, metadataPath } = getCachePaths(key);
-    await mkdir(V2_CACHE_DIR, { recursive: true });
+    await mkdir(ITEM_GENERATOR_CACHE_DIR, { recursive: true });
     const metadataRaw = await readFileOrDefault(metadataPath, "");
     const metadata = metadataRaw.length > 0 ? (JSON.parse(metadataRaw) as ExternalCacheMetadata) : undefined;
     const headers = new Headers();

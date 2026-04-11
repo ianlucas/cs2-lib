@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2Runtime } from "../cs2-v2.ts";
-import { ItemGeneratorV2Mode } from "./config.ts";
+import { Cs2Runtime } from "../cs2-tools/types.ts";
+import { ItemGeneratorMode } from "./config.ts";
 import { CS2Item, CS2ItemTranslationByLanguage, CS2StickerMarkup } from "../../src/economy-types.ts";
-import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "../item-generator-types.ts";
+import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./source-types.ts";
 
 export type PendingImageTask =
     | { kind: "regular"; localPath: string; filename: string }
@@ -55,31 +55,8 @@ export type ExternalCacheMetadata = {
     url: string;
 };
 
-export type MissingModelFallback = {
-    fields: string[];
-    id: number;
-    identifier?: string;
-    type: string;
-};
-
-export type ParityDiff = {
-    id: number;
-    field: string;
-    left: unknown;
-    right: unknown;
-};
-
-export type ItemGeneratorV2Report = {
-    assetOnlyDiffs: number[];
-    missingItems: number[];
-    missingLimitedModeFallbacks: MissingModelFallback[];
-    newItems: number[];
-    nonAssetDiffs: ParityDiff[];
-    ok: boolean;
-};
-
-export interface ItemGeneratorV2Context {
-    mode: ItemGeneratorV2Mode;
+export interface ItemGeneratorContext {
+    mode: ItemGeneratorMode;
     cs2: Cs2Runtime;
     gameItemsAsText: string;
     gameItems: CS2GameItems["items_game"];
@@ -110,8 +87,6 @@ export interface ItemGeneratorV2Context {
     allIdentifiers: string[];
     uniqueIdentifiers: string[];
     existingItemsById: Map<number, CS2Item>;
-    existingItemsSnapshot: CS2Item[];
-    report: ItemGeneratorV2Report;
     workState: Record<string, unknown>;
 }
 

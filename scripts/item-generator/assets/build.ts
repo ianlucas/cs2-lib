@@ -11,13 +11,9 @@ import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
-import {
-    decompileAssets,
-    decompileModelAssets,
-    ensureAssetPackages,
-    extractMaterialMetadata,
-    extractModelMetadata
-} from "../../cs2-v2.ts";
+import { decompileAssets, decompileModelAssets } from "../../cs2-tools/decompile.ts";
+import { ensureAssetPackages } from "../../cs2-tools/depot.ts";
+import { extractMaterialMetadata, extractModelMetadata } from "../../cs2-tools/extract.ts";
 import { STORAGE_ACCESS_KEY, STORAGE_ZONE } from "../../env.ts";
 import {
     CDN_UPLOAD_CONCURRENCY,
@@ -25,22 +21,18 @@ import {
     OUTPUT_DIR,
     OUTPUT_IMAGE_QUALITY,
     STATIC_IMAGES_DIR,
-    V2_BUILD_DIR,
-    V2_CACHE_DIR,
-    V2_REPORTS_DIR,
-    V2_STATE_DIR,
-    V2_WORKDIR_DIR
+    ITEM_GENERATOR_BUILD_DIR,
+    ITEM_GENERATOR_CACHE_DIR,
+    ITEM_GENERATOR_WORKDIR_DIR
 } from "../config.ts";
-import { GlbMaterialExtras, ItemGeneratorV2Context, PendingModelTask } from "../types.ts";
+import { GlbMaterialExtras, ItemGeneratorContext, PendingModelTask } from "../types.ts";
 import { PromiseQueue, getFileSha256, rmIfExists } from "../../utils.ts";
 import { ensure } from "../../../src/utils.ts";
 
-export async function prepareWorkspace(ctx: ItemGeneratorV2Context) {
-    await mkdir(V2_WORKDIR_DIR, { recursive: true });
-    await mkdir(V2_CACHE_DIR, { recursive: true });
-    await mkdir(V2_BUILD_DIR, { recursive: true });
-    await mkdir(V2_STATE_DIR, { recursive: true });
-    await mkdir(V2_REPORTS_DIR, { recursive: true });
+export async function prepareWorkspace(ctx: ItemGeneratorContext) {
+    await mkdir(ITEM_GENERATOR_WORKDIR_DIR, { recursive: true });
+    await mkdir(ITEM_GENERATOR_CACHE_DIR, { recursive: true });
+    await mkdir(ITEM_GENERATOR_BUILD_DIR, { recursive: true });
     await rmIfExists(OUTPUT_DIR);
     ctx.staticAssets = {};
     for (const folder of ["images", "materials", "models", "textures"]) {
@@ -63,7 +55,7 @@ export async function prepareWorkspace(ctx: ItemGeneratorV2Context) {
     }
 }
 
-export async function processAssets(ctx: ItemGeneratorV2Context) {
+export async function processAssets(ctx: ItemGeneratorContext) {
     if (ctx.neededVpkPaths.size > 0) {
         const vpkPaths = Array.from(ctx.neededVpkPaths);
         await ensureAssetPackages(ctx.cs2, vpkPaths);
@@ -75,7 +67,7 @@ export async function processAssets(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function processImages(ctx: ItemGeneratorV2Context) {
+async function processImages(ctx: ItemGeneratorContext) {
     if (ctx.imagesToProcess.size === 0) {
         return;
     }
@@ -118,7 +110,7 @@ async function processImages(ctx: ItemGeneratorV2Context) {
     await queue.waitForIdle();
 }
 
-async function processModels(ctx: ItemGeneratorV2Context) {
+async function processModels(ctx: ItemGeneratorContext) {
     if (ctx.modelsToProcess.size === 0) {
         return;
     }
@@ -158,7 +150,7 @@ async function processModels(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function extractModelData(ctx: ItemGeneratorV2Context) {
+async function extractModelData(ctx: ItemGeneratorContext) {
     const entries = Array.from(ctx.modelsToProcess.entries()).map(([vpkPath, model]) => ({
         vpkPath,
         targetFilename: model.modelPlayer
@@ -188,7 +180,7 @@ async function extractModelData(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function preProcessMaterials(ctx: ItemGeneratorV2Context) {
+async function preProcessMaterials(ctx: ItemGeneratorContext) {
     if (ctx.materialsToProcess.size === 0) {
         return;
     }
@@ -234,7 +226,7 @@ async function preProcessMaterials(ctx: ItemGeneratorV2Context) {
     }
 }
 
-function collectMaterialGraph(ctx: ItemGeneratorV2Context, materials: Iterable<string>) {
+function collectMaterialGraph(ctx: ItemGeneratorContext, materials: Iterable<string>) {
     const outputFilenames = new Set<string>();
     const queue = [...materials];
     const seen = new Set<string>();
@@ -260,7 +252,7 @@ function getDependencyHash(dependencies: Iterable<string>) {
 }
 
 function updateModelAssetReferences(
-    ctx: ItemGeneratorV2Context,
+    ctx: ItemGeneratorContext,
     model: PendingModelTask,
     modelPlayer: string,
     modelData: string
@@ -277,12 +269,12 @@ function updateModelAssetReferences(
     model.modelData = modelData;
 }
 
-function getMaterialName(ctx: ItemGeneratorV2Context, vmatPath: string) {
+function getMaterialName(ctx: ItemGeneratorContext, vmatPath: string) {
     const filename = ctx.materialFilenameByPath.get(vmatPath);
     return filename ? basename(filename, ".vmat.json") : undefined;
 }
 
-async function patchGlbAssets(ctx: ItemGeneratorV2Context, glbPath: string, textureRenames: Map<string, string>) {
+async function patchGlbAssets(ctx: ItemGeneratorContext, glbPath: string, textureRenames: Map<string, string>) {
     const io = new NodeIO();
     const document = await io.read(glbPath);
     for (const texture of document.getRoot().listTextures()) {
@@ -332,7 +324,7 @@ async function copyAndOptimizeImage(src: string, dest: string) {
     return filename;
 }
 
-export async function uploadAssets(ctx: ItemGeneratorV2Context) {
+export async function uploadAssets(ctx: ItemGeneratorContext) {
     if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
         return;
     }

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2Item } from "../src/economy-types";
+import { CS2Item } from "../../src/economy-types.ts";
 
 export type CS2Language = {
     lang: {

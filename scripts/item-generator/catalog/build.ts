@@ -12,13 +12,12 @@ import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
 import {
     buildVpkIndex,
-    createCs2Runtime,
-    decompileItemDefinitionResources,
-    ensureItemDefinitionPackages,
-    syncAssetsManifest
-} from "../../cs2-v2.ts";
+    decompileItemDefinitionResources
+} from "../../cs2-tools/decompile.ts";
+import { ensureItemDefinitionPackages, syncAssetsManifest } from "../../cs2-tools/depot.ts";
+import { createCs2Runtime } from "../../cs2-tools/runtime.ts";
 import { INPUT_FORCE } from "../../env.ts";
-import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../../item-generator-types.ts";
+import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../source-types.ts";
 import {
     BASE_WEAPON_EQUIPMENT,
     FREE_MUSIC_KITS,
@@ -36,10 +35,10 @@ import {
     UNCATEGORIZED_STICKERS,
     WEAPON_CATEGORY_RE,
     WORKDIR_DIR,
-    getInstalledGamePathForV2
+    getInstalledGamePath
 } from "../config.ts";
 import { populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
-import { ItemGeneratorV2Context } from "../types.ts";
+import { ItemGeneratorContext } from "../types.ts";
 import { prependHash, readJson } from "../../utils.ts";
 import {
     addFormattedTranslation,
@@ -66,14 +65,14 @@ import { addContainerItem, getClientLootListItems, getCollection, getContainerTy
 
 const MELEE_OR_GLOVES_TYPES: CS2ItemTypeValues[] = [CS2ItemType.Melee, CS2ItemType.Gloves];
 
-export function createItemGeneratorV2Context(mode: ItemGeneratorV2Context["mode"]): ItemGeneratorV2Context {
+export function createItemGeneratorContext(mode: ItemGeneratorContext["mode"]): ItemGeneratorContext {
     const existingItemsSnapshot = readJson<CS2Item[]>(ITEMS_JSON_PATH, []);
     const source = mode === "full" ? "installed_game" : "workspace_depot";
     return {
         mode,
         cs2: createCs2Runtime({
             force: INPUT_FORCE === "true",
-            installedGamePath: getInstalledGamePathForV2(source),
+            installedGamePath: getInstalledGamePath(source),
             paths: {
                 assetsManifestPath: join(SCRIPTS_DIR, "cs2.manifest"),
                 decompiledDir: join(WORKDIR_DIR, "decompiled"),
@@ -114,20 +113,11 @@ export function createItemGeneratorV2Context(mode: ItemGeneratorV2Context["mode"
         allIdentifiers: readJson<string[]>(ITEM_IDS_JSON_PATH, []),
         uniqueIdentifiers: [],
         existingItemsById: new Map(existingItemsSnapshot.map((item) => [item.id, item])),
-        existingItemsSnapshot,
-        report: {
-            assetOnlyDiffs: [],
-            missingItems: [],
-            missingLimitedModeFallbacks: [],
-            newItems: [],
-            nonAssetDiffs: [],
-            ok: false
-        },
         workState: {}
     };
 }
 
-export async function loadSourceData(ctx: ItemGeneratorV2Context) {
+export async function loadSourceData(ctx: ItemGeneratorContext) {
     await mkdir(STATIC_IMAGES_DIR, { recursive: true });
     await syncAssetsManifest(ctx.cs2);
     await ensureItemDefinitionPackages(ctx.cs2);
@@ -137,7 +127,7 @@ export async function loadSourceData(ctx: ItemGeneratorV2Context) {
     await readItemsGameFile(ctx);
 }
 
-export async function buildCatalog(ctx: ItemGeneratorV2Context) {
+export async function buildCatalog(ctx: ItemGeneratorContext) {
     await parseBaseWeapons(ctx);
     await parseBaseMelees(ctx);
     await parseBaseGloves(ctx);
@@ -158,7 +148,7 @@ export async function buildCatalog(ctx: ItemGeneratorV2Context) {
     };
 }
 
-async function readCsgoLanguageFiles(ctx: ItemGeneratorV2Context, include?: string[]) {
+async function readCsgoLanguageFiles(ctx: ItemGeneratorContext, include?: string[]) {
     ctx.itemTranslationByLanguage = {};
     ctx.csgoTranslationByLanguage = Object.fromEntries(
         await Promise.all(
@@ -193,7 +183,7 @@ async function readCsgoLanguageFiles(ctx: ItemGeneratorV2Context, include?: stri
     assert(ctx.csgoTranslationByLanguage.english !== undefined);
 }
 
-async function readItemsGameFile(ctx: ItemGeneratorV2Context) {
+async function readItemsGameFile(ctx: ItemGeneratorContext) {
     ctx.gameItemsAsText = await readFile(GAME_ITEMS_PATH, "utf-8");
     ctx.gameItems = CS2KeyValues.parse<CS2GameItems>(ctx.gameItemsAsText).items_game;
     ctx.raritiesColorHex = Object.fromEntries(
@@ -277,7 +267,7 @@ async function readItemsGameFile(ctx: ItemGeneratorV2Context) {
     );
 }
 
-async function parseBaseWeapons(ctx: ItemGeneratorV2Context) {
+async function parseBaseWeapons(ctx: ItemGeneratorContext) {
     for (const [itemDef, { baseitem, flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(
         ctx.gameItems.items
     )) {
@@ -315,7 +305,7 @@ async function parseBaseWeapons(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseBaseMelees(ctx: ItemGeneratorV2Context) {
+async function parseBaseMelees(ctx: ItemGeneratorContext) {
     for (const [itemDef, item] of Object.entries(ctx.gameItems.items)) {
         const { item_name, image_inventory, item_description, name, used_by_classes, prefab, baseitem } = item;
         if (
@@ -352,7 +342,7 @@ async function parseBaseMelees(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseBaseGloves(ctx: ItemGeneratorV2Context) {
+async function parseBaseGloves(ctx: ItemGeneratorContext) {
     for (const [itemDef, item] of Object.entries(ctx.gameItems.items)) {
         const { item_name, baseitem, name, prefab, image_inventory, item_description, used_by_classes } = item;
         if (item_name === undefined || !prefab?.includes("hands")) {
@@ -383,7 +373,7 @@ async function parseBaseGloves(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseUtilities(ctx: ItemGeneratorV2Context) {
+async function parseUtilities(ctx: ItemGeneratorContext) {
     for (const [itemDef, { flexible_loadout_slot, name, prefab, image_inventory }] of Object.entries(
         ctx.gameItems.items
     )) {
@@ -412,7 +402,7 @@ async function parseUtilities(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parsePaintKits(ctx: ItemGeneratorV2Context) {
+async function parsePaintKits(ctx: ItemGeneratorContext) {
     for (const paintKit of ctx.paintKits) {
         for (const baseItem of ctx.baseItems) {
             if (!isPaintImageValid(ctx, baseItem.className, paintKit.className)) {
@@ -451,7 +441,7 @@ async function parsePaintKits(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseMusicKits(ctx: ItemGeneratorV2Context) {
+async function parseMusicKits(ctx: ItemGeneratorContext) {
     const baseId = createStub(ctx, "musickit", "#CSGO_musickit_desc");
     for (const [index, { name, loc_name, loc_description, image_inventory }] of Object.entries(
         ctx.gameItems.music_definitions
@@ -480,7 +470,7 @@ async function parseMusicKits(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseKeychains(ctx: ItemGeneratorV2Context) {
+async function parseKeychains(ctx: ItemGeneratorContext) {
     ctx.keychainBaseId = createStub(ctx, "keychain", "#CSGO_Tool_Keychain_Desc");
     for (const [index, { name, loc_name, loc_description, item_rarity, image_inventory }] of Object.entries(
         ctx.gameItems.keychain_definitions
@@ -509,7 +499,7 @@ async function parseKeychains(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseStickers(ctx: ItemGeneratorV2Context) {
+async function parseStickers(ctx: ItemGeneratorContext) {
     const baseId = createStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc");
     for (const [index, sticker] of Object.entries(ctx.gameItems.sticker_kits)) {
         const { name, description_string, item_name, sticker_material, tournament_event_id, item_rarity } = sticker;
@@ -573,7 +563,7 @@ async function parseStickers(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseGraffiti(ctx: ItemGeneratorV2Context) {
+async function parseGraffiti(ctx: ItemGeneratorContext) {
     const baseId = createStub(ctx, "graffiti", "#CSGO_Tool_SprayPaint_Desc");
     for (const [index, sticker] of Object.entries(ctx.gameItems.sticker_kits)) {
         const { name, item_name, description_string, sticker_material, item_rarity, tournament_event_id } = sticker;
@@ -633,7 +623,7 @@ async function parseGraffiti(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parsePatches(ctx: ItemGeneratorV2Context) {
+async function parsePatches(ctx: ItemGeneratorContext) {
     const baseId = createStub(ctx, "patch", "#CSGO_Tool_Patch_Desc");
     for (const [index, sticker] of Object.entries(ctx.gameItems.sticker_kits)) {
         const { name, item_name, patch_material, description_string, tournament_event_id, item_rarity } = sticker;
@@ -667,7 +657,7 @@ async function parsePatches(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseAgents(ctx: ItemGeneratorV2Context) {
+async function parseAgents(ctx: ItemGeneratorContext) {
     for (const [index, item] of Object.entries(ctx.gameItems.items)) {
         const {
             name,
@@ -707,7 +697,7 @@ async function parseAgents(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseCollectibles(ctx: ItemGeneratorV2Context) {
+async function parseCollectibles(ctx: ItemGeneratorContext) {
     for (const [index, item] of Object.entries(ctx.gameItems.items)) {
         const { name, image_inventory, item_name, tool, attributes, item_rarity, item_description } = item;
         if (
@@ -753,7 +743,7 @@ async function parseCollectibles(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseTools(ctx: ItemGeneratorV2Context) {
+async function parseTools(ctx: ItemGeneratorContext) {
     for (const [index, item] of Object.entries(ctx.gameItems.items)) {
         const { name, baseitem, item_name, image_inventory, prefab, item_description } = item;
         if (
@@ -783,7 +773,7 @@ async function parseTools(ctx: ItemGeneratorV2Context) {
     }
 }
 
-async function parseContainers(ctx: ItemGeneratorV2Context) {
+async function parseContainers(ctx: ItemGeneratorContext) {
     const keyItems = new Map<string, number>();
     for (const [containerIndex, item] of Object.entries(ctx.gameItems.items)) {
         const {
@@ -908,7 +898,7 @@ async function parseContainers(ctx: ItemGeneratorV2Context) {
     }
 }
 
-function getItemId(ctx: ItemGeneratorV2Context, identifier: string) {
+function getItemId(ctx: ItemGeneratorContext, identifier: string) {
     assert(!ctx.uniqueIdentifiers.includes(identifier));
     ctx.uniqueIdentifiers.push(identifier);
     const index = ctx.allIdentifiers.indexOf(identifier);
@@ -919,7 +909,7 @@ function getItemId(ctx: ItemGeneratorV2Context, identifier: string) {
     return index;
 }
 
-function getRarityColorHex(ctx: ItemGeneratorV2Context, keywords: (string | undefined)[], defaultsTo?: string) {
+function getRarityColorHex(ctx: ItemGeneratorContext, keywords: (string | undefined)[], defaultsTo?: string) {
     let colorHex =
         defaultsTo !== undefined
             ? defaultsTo.startsWith("#")
@@ -943,11 +933,11 @@ function getRarityColorHex(ctx: ItemGeneratorV2Context, keywords: (string | unde
     return ensure((colorHex ?? ctx.raritiesColorHex.default) as CS2RarityColorValues);
 }
 
-function getPrefab(ctx: ItemGeneratorV2Context, prefab?: string) {
+function getPrefab(ctx: ItemGeneratorContext, prefab?: string) {
     return ensure(ctx.gameItems.prefabs[ensure(prefab)]);
 }
 
-function tryGetPrefab(ctx: ItemGeneratorV2Context, prefab?: string) {
+function tryGetPrefab(ctx: ItemGeneratorContext, prefab?: string) {
     return prefab !== undefined ? ctx.gameItems.prefabs[prefab] : undefined;
 }
 
@@ -987,38 +977,22 @@ function getTeamsString(teams?: Record<string, string>, fallback?: string) {
               .join("_");
 }
 
-function hydrateExistingModelFields(ctx: ItemGeneratorV2Context, item: CS2ExtendedItem) {
+function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {
     const previous = ctx.existingItemsById.get(item.id);
     if (ctx.mode !== "limited" || previous === undefined) {
         return;
     }
     const requiredFields = ["modelData", "modelPlayer", "stickerMax", "stickerMaxForLegacy"] as const;
-    const missingFields: string[] = [];
     for (const field of requiredFields) {
         const current = item[field];
         const fallback = previous[field];
         if (current === undefined && fallback !== undefined) {
             (item as unknown as Record<string, unknown>)[field] = fallback;
-            continue;
         }
-        if (
-            current === undefined &&
-            fallback === undefined &&
-            (item.model !== undefined || previous.model !== undefined)
-        ) {
-            missingFields.push(field);
-        }
-    }
-    if (missingFields.length > 0) {
-        ctx.report.missingLimitedModeFallbacks.push({
-            fields: missingFields,
-            id: item.id,
-            type: item.type
-        });
     }
 }
 
-function addItem(ctx: ItemGeneratorV2Context, item: CS2ExtendedItem) {
+function addItem(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {
     hydrateExistingModelFields(ctx, item);
     if (item.base) {
         ctx.baseItems.push(item);
@@ -1048,7 +1022,7 @@ function getPaintAltName(className: string) {
 }
 
 function getStickerCategory(
-    ctx: ItemGeneratorV2Context,
+    ctx: ItemGeneratorContext,
     input: { sticker_material: string; tournament_event_id?: string }
 ) {
     const { sticker_material, tournament_event_id } = input;
@@ -1090,7 +1064,7 @@ function getStickerCategory(
     return [ensure(category ?? "Valve"), categoryToken] as const;
 }
 
-function createStub(ctx: ItemGeneratorV2Context, name: string, descToken: string) {
+function createStub(ctx: ItemGeneratorContext, name: string, descToken: string) {
     const id = getItemId(ctx, `stub_${name}`);
     addTranslation(ctx, id, "name", "#Rarity_Default");
     addTranslation(ctx, id, "desc", descToken);
