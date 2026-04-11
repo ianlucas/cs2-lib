@@ -430,15 +430,15 @@ async function parsePaintKits(ctx: ItemGeneratorContext) {
             addContainerItem(ctx, itemKey, id);
             addTranslation(ctx, id, "name", baseItem.nameToken, " | ", paintKit.nameToken);
             addTranslation(ctx, id, "desc", paintKit.descToken);
-            const compositeMaterialPath = getPaintCompositeMaterialPath(
-                paintKit.className,
-                paintKit.compositeMaterialPath
-            );
+            const compositeMaterialPath =
+                baseItem.type === CS2ItemType.Gloves
+                    ? undefined
+                    : getPaintCompositeMaterialPath(paintKit.className, paintKit.compositeMaterialPath);
             const compositeMaterial =
-                ctx.mode === "full"
+                ctx.mode === "full" && compositeMaterialPath !== undefined
                     ? `/materials/${getIndexedCompositeMaterialFilename(ctx.cs2, compositeMaterialPath)}`
                     : undefined;
-            if (ctx.mode === "full") {
+            if (ctx.mode === "full" && compositeMaterialPath !== undefined) {
                 ctx.compositeMaterialsToProcess.add(normalizeMaterialResourcePath(compositeMaterialPath));
             }
             addItem(ctx, {
