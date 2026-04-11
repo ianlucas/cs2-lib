@@ -218,6 +218,7 @@ export async function extractMaterialMetadata(
                 const dataText = dataMatch[1]!.trim();
                 data = parseKv3Recursively(CS2KeyValues3.parse(dataText));
                 vmatRefs.push(...collectResourceRefs(dataText, ".vmat"));
+                vtexRefs.push(...collectResourceRefs(dataText, ".vtex"));
             }
             const crc = runtime.vpkIndex.get(entry.vpkPath)!.crc;
             results.push({
