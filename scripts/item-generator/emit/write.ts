@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { format } from "util";
+import { warning, write, writeJson } from "../../utils.ts";
 import {
     ENGLISH_JSON_PATH,
     ITEM_IDS_JSON_PATH,
@@ -14,7 +15,6 @@ import {
 } from "../config.ts";
 import { createItemsModule, createStickerMarkupModule, createTranslationModule } from "../output-templates.ts";
 import { ItemGeneratorContext } from "../types.ts";
-import { warning, write, writeJson } from "../../utils.ts";
 
 export async function emitOutputs(ctx: ItemGeneratorContext) {
     const items = Array.from(ctx.items.values()).map((item) => ({
@@ -31,6 +31,7 @@ export async function emitOutputs(ctx: ItemGeneratorContext) {
     for (const [language, translations] of Object.entries(ctx.itemTranslationByLanguage)) {
         const tsPath = format(TRANSLATIONS_TS_PATH, language);
         await write(tsPath, createTranslationModule(language, translations));
+        warning(`Successfully generated '${tsPath}'.`);
         if (language === "english") {
             await writeJson(ENGLISH_JSON_PATH, translations);
         }
