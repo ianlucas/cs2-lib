@@ -58,6 +58,7 @@ export interface CompositeMaterialMetadataExtractionResult {
     filename: string;
     vcompmatPath: string;
     vmatRefs: string[];
+    vtexRefs: string[];
 }
 
 export interface MaterialMetadataExtractionResult {

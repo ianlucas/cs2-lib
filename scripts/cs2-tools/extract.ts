@@ -144,11 +144,13 @@ export async function extractCompositeMaterialMetadata(
             let data: any = null;
             const compositeMaterialRefs: string[] = [];
             const vmatRefs: string[] = [];
+            const vtexRefs: string[] = [];
             if (dataMatch) {
                 const dataText = dataMatch[1]!.trim();
                 data = parseKv3Recursively(CS2KeyValues3.parse(dataText));
                 compositeMaterialRefs.push(...collectResourceRefs(dataText, ".vcompmat"));
                 vmatRefs.push(...collectResourceRefs(dataText, ".vmat"));
+                vtexRefs.push(...collectResourceRefs(dataText, ".vtex"));
             }
             const crc = runtime.vpkIndex.get(entry.vpkPath)!.crc;
             results.push({
@@ -156,7 +158,8 @@ export async function extractCompositeMaterialMetadata(
                 data,
                 filename: getCompositeMaterialFilename(entry.vcompmatPath, crc),
                 vcompmatPath: entry.vcompmatPath,
-                vmatRefs
+                vmatRefs,
+                vtexRefs
             });
         }
         batchEntries = [];

@@ -63,20 +63,31 @@ describe("material path helpers", () => {
     });
 
     test("rewrites nested material references", () => {
+        const textureMap = new Map([
+            [
+                "items/assets/paintkits/community/community_34/m4a1s_vaporwave_albedo_texture_tga_25d261b9.vtex",
+                "/textures/m4a1s_vaporwave_albedo_texture_tga_25d261b9_crc.webp"
+            ]
+        ]);
         const patched = patchMaterialResourceReferences(
             {
                 include: "weapons/paints/legacy/_shared.vcompmat",
                 material: "resource_name:materials/foo.vmat",
-                nested: [{ texture: "resource:materials/foo_color.vtex" }]
+                nested: [
+                    {
+                        texture:
+                            "resource:items/assets/paintkits/community/community_34/m4a1s_vaporwave_albedo_texture_tga_25d261b9.vtex"
+                    }
+                ]
             },
             (path) => `/materials/${path.split("/").pop()}.json`,
             (path) => `/materials/${path.split("/").pop()}.json`,
-            (path) => `/textures/${path.split("/").pop()}.webp`
+            (path) => textureMap.get(path)
         );
         expect(patched).toEqual({
             include: "/materials/_shared.vcompmat.json",
             material: "/materials/foo.vmat.json",
-            nested: [{ texture: "/textures/foo_color.vtex.webp" }]
+            nested: [{ texture: "/textures/m4a1s_vaporwave_albedo_texture_tga_25d261b9_crc.webp" }]
         });
     });
 });

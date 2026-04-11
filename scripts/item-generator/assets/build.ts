@@ -226,13 +226,16 @@ async function preProcessCompositeMaterials(ctx: ItemGeneratorContext) {
         queue.clear();
         requireVpkEntries(ctx, batch);
         const results = await extractCompositeMaterialMetadata(ctx.cs2, batch);
-        for (const { compositeMaterialRefs, data, filename, vcompmatPath, vmatRefs } of results) {
+        for (const { compositeMaterialRefs, data, filename, vcompmatPath, vmatRefs, vtexRefs } of results) {
             processed.add(vcompmatPath);
             ctx.compositeMaterialDataByPath.set(vcompmatPath, data);
             ctx.compositeMaterialFilenameByPath.set(vcompmatPath, filename);
             ctx.compositeMaterialRefsByPath.set(vcompmatPath, compositeMaterialRefs);
             for (const vmat of vmatRefs) {
                 ctx.materialsToProcess.add(resolveMaterialResourcePath(ctx.cs2, vmat));
+            }
+            for (const vtex of vtexRefs) {
+                ctx.texturesToProcess.add(resolveMaterialResourcePath(ctx.cs2, vtex));
             }
             for (const child of compositeMaterialRefs) {
                 const normalized = resolveMaterialResourcePath(ctx.cs2, child);
