@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { ensure } from "../../../src/utils.ts";
 import { exists, getFileSha256 } from "../../utils.ts";
 import { findFallbackImage } from "../sources/external.ts";
-import { ItemGeneratorContext } from "../types.ts";
+import { type ItemGeneratorContext } from "../types.ts";
 import { GAME_IMAGES_DIR, OUTPUT_DIR, PAINT_IMAGE_SUFFIXES, STATIC_IMAGES_DIR } from "../config.ts";
 
 async function copyAndOptimizeImage(src: string, dest: string) {
@@ -28,7 +28,7 @@ function getPaintImagePath(className: string | undefined, paintClassName: string
     );
 }
 
-export function requireStaticAsset(ctx: ItemGeneratorContext, path: string) {
+export function requireStaticAsset(ctx: ItemGeneratorContext, path: string): string {
     return ensure(ctx.staticAssets[path], `Unable to find '${path}' static asset.`);
 }
 
@@ -50,7 +50,7 @@ export async function tryGetFallbackImage(
     source: "collectible" | "container" | "keychain",
     imagePath: string,
     existingId: number
-) {
+): Promise<string | undefined> {
     const existing = ctx.existingItemsById.get(existingId)?.image;
     if (existing !== undefined) {
         return existing;
@@ -68,19 +68,19 @@ export async function tryGetFallbackImage(
     return filename;
 }
 
-export function isImageValid(ctx: ItemGeneratorContext, path: string) {
+export function isImageValid(ctx: ItemGeneratorContext, path: string): boolean {
     return ctx.cs2.vpkIndex.has(getVpkImagePath(path));
 }
 
-export function isPaintImageValid(ctx: ItemGeneratorContext, className?: string, paintClassName?: string) {
+export function isPaintImageValid(ctx: ItemGeneratorContext, className?: string, paintClassName?: string): boolean {
     return ctx.cs2.vpkIndex.has(getVpkPaintImagePath(ensure(className), ensure(paintClassName), "light"));
 }
 
-export function getBaseImage(ctx: ItemGeneratorContext, className: string) {
+export function getBaseImage(ctx: ItemGeneratorContext, className: string): string {
     return getImage(ctx, `econ/weapons/base_weapons/${className}`);
 }
 
-export function getImage(ctx: ItemGeneratorContext, path: string) {
+export function getImage(ctx: ItemGeneratorContext, path: string): string {
     const vpkPath = getVpkImagePath(path);
     const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
     const filename = vpkCrcFilename(vpkPath, entry.crc);
@@ -95,7 +95,7 @@ export function getPaintImage(
     ctx: ItemGeneratorContext,
     className: string | undefined,
     paintClassName: string | undefined
-) {
+): string {
     const cn = ensure(className);
     const pcn = ensure(paintClassName);
     const lightVpkPath = getVpkPaintImagePath(cn, pcn, "light");
@@ -114,7 +114,11 @@ export function getPaintImage(
     return baseFilename;
 }
 
-export function getDefaultGraffitiImage(ctx: ItemGeneratorContext, stickerMaterial: string, hexColor: string) {
+export function getDefaultGraffitiImage(
+    ctx: ItemGeneratorContext,
+    stickerMaterial: string,
+    hexColor: string
+): string {
     const vpkPath = getVpkImagePath(`econ/stickers/${stickerMaterial}`);
     const entry = ensure(ctx.cs2.vpkIndex.get(vpkPath), `VPK entry not found: ${vpkPath}`);
     const materialBase = ensure(stickerMaterial.split("/").pop());
@@ -132,7 +136,7 @@ export function getDefaultGraffitiImage(ctx: ItemGeneratorContext, stickerMateri
     return filename;
 }
 
-export function getSpecialsImage(ctx: ItemGeneratorContext, path?: string) {
+export function getSpecialsImage(ctx: ItemGeneratorContext, path?: string): string {
     if (path === undefined) {
         return requireStaticAsset(ctx, "/images/default_rare_item.png");
     }
@@ -153,7 +157,11 @@ export function getSpecialsImage(ctx: ItemGeneratorContext, path?: string) {
     return filename;
 }
 
-export function getModel(ctx: ItemGeneratorContext, path?: string, existingId?: number) {
+export function getModel(
+    ctx: ItemGeneratorContext,
+    path?: string,
+    existingId?: number
+): { modelData: string | undefined; modelPlayer: string | undefined } | undefined {
     if (path === undefined) {
         return undefined;
     }
@@ -183,7 +191,7 @@ export function getModel(ctx: ItemGeneratorContext, path?: string, existingId?: 
     return { modelPlayer, modelData };
 }
 
-export function getCollectionImage(ctx: ItemGeneratorContext, name: string) {
+export function getCollectionImage(ctx: ItemGeneratorContext, name: string): string | undefined {
     const pngVpkPath = `panorama/images/econ/set_icons/${name}_png.png`;
     const svgVpkPath = `panorama/images/econ/set_icons/${name}.svg`;
     const isSvg = !ctx.cs2.vpkIndex.has(pngVpkPath) && ctx.cs2.vpkIndex.has(svgVpkPath);

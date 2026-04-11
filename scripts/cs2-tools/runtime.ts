@@ -6,7 +6,7 @@
 import { existsSync } from "fs";
 import { join } from "path";
 import { assert } from "../../src/utils.ts";
-import { Cs2Runtime, Cs2RuntimeConfig } from "./types.ts";
+import { type Cs2Runtime, type Cs2RuntimeConfig } from "./types.ts";
 import { CSGO_PAK_DIR_PATH } from "./paths.ts";
 
 export function createCs2Runtime(config: Cs2RuntimeConfig): Cs2Runtime {
@@ -38,6 +38,6 @@ export function createCs2Runtime(config: Cs2RuntimeConfig): Cs2Runtime {
     };
 }
 
-export function isWorkspaceDepotSource(runtime: Cs2Runtime) {
+export function isWorkspaceDepotSource(runtime: Cs2Runtime): boolean {
     return runtime.config.source === "workspace_depot";
 }

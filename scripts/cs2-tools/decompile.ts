@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DecompilerArgs, vrfDecompiler } from "@ianlucas/vrf-decompiler";
+import { vrfDecompiler } from "@ianlucas/vrf-decompiler";
+import { type DecompilerArgs } from "@ianlucas/vrf-decompiler";
 import { availableParallelism } from "os";
 import { readProcess } from "../utils.ts";
-import { Cs2Runtime, DecompileAssetsOptions } from "./types.ts";
+import { type Cs2Runtime, type DecompileAssetsOptions, type VpkIndexEntry } from "./types.ts";
 
 const COMPILED_EXT: Record<string, string> = {
     ".vsvg_c": ".svg",
@@ -35,7 +36,7 @@ async function runDecompiler(runtime: Cs2Runtime, options: DecompilerArgs) {
     );
 }
 
-export async function buildVpkIndex(runtime: Cs2Runtime) {
+export async function buildVpkIndex(runtime: Cs2Runtime): Promise<Map<string, VpkIndexEntry>> {
     if (runtime.vpkIndex.size > 0) {
         return runtime.vpkIndex;
     }
@@ -45,7 +46,7 @@ export async function buildVpkIndex(runtime: Cs2Runtime) {
         if (parts.length < 2) {
             continue;
         }
-        const path = parts[0];
+        const path = parts[0]!;
         const meta: Record<string, string> = {};
         for (const part of parts.slice(1)) {
             const eqIdx = part.indexOf("=");
@@ -63,7 +64,7 @@ export async function buildVpkIndex(runtime: Cs2Runtime) {
     return runtime.vpkIndex;
 }
 
-export async function decompileItemDefinitionResources(runtime: Cs2Runtime) {
+export async function decompileItemDefinitionResources(runtime: Cs2Runtime): Promise<void> {
     await runDecompiler(runtime, {
         output: runtime.config.paths.decompiledDir,
         threads: availableParallelism(),
@@ -72,7 +73,11 @@ export async function decompileItemDefinitionResources(runtime: Cs2Runtime) {
     });
 }
 
-export async function decompileAssets(runtime: Cs2Runtime, vpkPaths: string[], options: DecompileAssetsOptions = {}) {
+export async function decompileAssets(
+    runtime: Cs2Runtime,
+    vpkPaths: string[],
+    options: DecompileAssetsOptions = {}
+): Promise<void> {
     if (vpkPaths.length === 0) {
         return;
     }
@@ -107,14 +112,14 @@ export async function decompileAssets(runtime: Cs2Runtime, vpkPaths: string[], o
     await flush();
 }
 
-export async function decompileModelAssets(runtime: Cs2Runtime, vpkPaths: string[]) {
+export async function decompileModelAssets(runtime: Cs2Runtime, vpkPaths: string[]): Promise<void> {
     await decompileAssets(runtime, vpkPaths, {
         gltfExportFormat: "glb",
         gltfExportMaterials: true
     });
 }
 
-export async function decompileDataBlocks(runtime: Cs2Runtime, vpkPaths: string[], threads = 1) {
+export async function decompileDataBlocks(runtime: Cs2Runtime, vpkPaths: string[], threads = 1): Promise<string> {
     return await runDecompiler(runtime, {
         block: "DATA",
         threads,

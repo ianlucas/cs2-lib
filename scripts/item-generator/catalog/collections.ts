@@ -3,12 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2ContainerType, CS2ItemType, CS2ItemTypeValues } from "../../../src/economy-types.ts";
+import {
+    CS2ContainerType,
+    CS2ItemType,
+    type CS2ContainerTypeValues,
+    type CS2ItemTypeValues
+} from "../../../src/economy-types.ts";
 import { assert } from "../../../src/utils.ts";
 import { tryAddTranslation } from "./translations.ts";
-import { ItemGeneratorContext } from "../types.ts";
+import { type ItemGeneratorContext } from "../types.ts";
 
-export function getCollection(ctx: ItemGeneratorContext, itemId: number, collection?: string) {
+export function getCollection(
+    ctx: ItemGeneratorContext,
+    itemId: number,
+    collection?: string
+): { collection: string | undefined; collectionImage: string | undefined } {
     let collectionImage: string | undefined;
     if (collection !== undefined) {
         const itemSet = ctx.gameItems.item_sets[collection];
@@ -21,17 +30,25 @@ export function getCollection(ctx: ItemGeneratorContext, itemId: number, collect
     return { collection, collectionImage };
 }
 
-export function getItemCollection(ctx: ItemGeneratorContext, itemId: number, itemKey: string) {
+export function getItemCollection(
+    ctx: ItemGeneratorContext,
+    itemId: number,
+    itemKey: string
+): { collection: string | undefined; collectionImage: string | undefined } {
     return getCollection(ctx, itemId, ctx.itemSetItemKey[itemKey]);
 }
 
-export function addContainerItem(ctx: ItemGeneratorContext, itemKey: string, id: number) {
+export function addContainerItem(ctx: ItemGeneratorContext, itemKey: string, id: number): void {
     if (!ctx.containerItems.has(itemKey)) {
         ctx.containerItems.set(itemKey, id);
     }
 }
 
-export function getClientLootListItems(ctx: ItemGeneratorContext, clientLootListKey: string, items: string[] = []) {
+export function getClientLootListItems(
+    ctx: ItemGeneratorContext,
+    clientLootListKey: string,
+    items: string[] = []
+): string[] {
     if (!ctx.gameItems.client_loot_lists[clientLootListKey]) {
         return [];
     }
@@ -45,7 +62,7 @@ export function getClientLootListItems(ctx: ItemGeneratorContext, clientLootList
     return items;
 }
 
-export function getContainerType(name?: string, type?: CS2ItemTypeValues) {
+export function getContainerType(name?: string, type?: CS2ItemTypeValues): CS2ContainerTypeValues | undefined {
     switch (true) {
         case name?.includes("Souvenir"):
             return CS2ContainerType.SouvenirCase;

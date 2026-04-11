@@ -32,7 +32,7 @@ import {
     STATIC_IMAGES_DIR
 } from "../config.ts";
 import { formatCount } from "../logging.ts";
-import { GlbMaterialExtras, ItemGeneratorContext, PendingModelTask } from "../types.ts";
+import { type GlbMaterialExtras, type ItemGeneratorContext, type PendingModelTask } from "../types.ts";
 import {
     getTextureFilename,
     patchMaterialResourceReferences,
@@ -40,7 +40,7 @@ import {
     toCompiledMaterialResourcePath
 } from "./material-paths.ts";
 
-export async function prepareWorkspace(ctx: ItemGeneratorContext) {
+export async function prepareWorkspace(ctx: ItemGeneratorContext): Promise<void> {
     await mkdir(ITEM_GENERATOR_WORKDIR_DIR, { recursive: true });
     await mkdir(ITEM_GENERATOR_CACHE_DIR, { recursive: true });
     await mkdir(ITEM_GENERATOR_BUILD_DIR, { recursive: true });
@@ -66,7 +66,7 @@ export async function prepareWorkspace(ctx: ItemGeneratorContext) {
     }
 }
 
-export async function processAssets(ctx: ItemGeneratorContext) {
+export async function processAssets(ctx: ItemGeneratorContext): Promise<void> {
     if (ctx.neededVpkPaths.size > 0) {
         const vpkPaths = Array.from(ctx.neededVpkPaths);
         log(`Resolving ${formatCount(vpkPaths.length, "VPK asset")}...`);
@@ -116,7 +116,7 @@ async function processImages(ctx: ItemGeneratorContext) {
                         .webp({ quality: OUTPUT_IMAGE_QUALITY })
                         .toFile(join(OUTPUT_DIR, `/images/${task.baseName}_${suffix}.webp`));
                 }
-                await sharp(task.localPaths[0][0])
+                await sharp(ensure(task.localPaths[0])[0])
                     .webp({ quality: OUTPUT_IMAGE_QUALITY })
                     .toFile(join(OUTPUT_DIR, task.baseFilename));
             });
@@ -445,11 +445,13 @@ async function colorizeGraffitiImage(src: string, hexColor: string, dest: string
     for (let index = 0; index < info.width * info.height; index++) {
         const offset = index * 4;
         const gray =
-            0.2126 * (data[offset] / 255) + 0.7152 * (data[offset + 1] / 255) + 0.0722 * (data[offset + 2] / 255);
+            0.2126 * ((data[offset] ?? 0) / 255) +
+            0.7152 * ((data[offset + 1] ?? 0) / 255) +
+            0.0722 * ((data[offset + 2] ?? 0) / 255);
         output[offset] = Math.round(gray * colorR * 255);
         output[offset + 1] = Math.round(gray * colorG * 255);
         output[offset + 2] = Math.round(gray * colorB * 255);
-        output[offset + 3] = data[offset + 3];
+        output[offset + 3] = data[offset + 3] ?? 255;
     }
     await sharp(output, { raw: { width: info.width, height: info.height, channels: 4 } })
         .webp()
@@ -462,7 +464,7 @@ async function copyAndOptimizeImage(src: string, dest: string) {
     return filename;
 }
 
-export async function uploadAssets(ctx: ItemGeneratorContext) {
+export async function uploadAssets(ctx: ItemGeneratorContext): Promise<void> {
     if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
         log("CDN credentials not configured; skipping upload.");
         return;

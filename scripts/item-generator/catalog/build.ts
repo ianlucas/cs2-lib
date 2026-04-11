@@ -6,8 +6,9 @@
 import { mkdir, readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
-import { CS2RarityColorValues } from "../../../src/economy-container.ts";
-import { CS2Item, CS2ItemTeam, CS2ItemTeamValues, CS2ItemType, CS2ItemTypeValues } from "../../../src/economy-types.ts";
+import { type CS2RarityColorValues } from "../../../src/economy-container.ts";
+import { CS2ItemTeam, CS2ItemType } from "../../../src/economy-types.ts";
+import { type CS2Item, type CS2ItemTeamValues, type CS2ItemTypeValues } from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
 import { buildVpkIndex, decompileItemDefinitionResources } from "../../cs2-tools/decompile.ts";
@@ -40,9 +41,9 @@ import {
     WEAPON_CATEGORY_RE,
     WORKDIR_DIR
 } from "../config.ts";
-import { CS2ExtendedItem, CS2GameItems, CS2Language } from "../source-types.ts";
+import { type CS2ExtendedItem, type CS2GameItems, type CS2Language } from "../source-types.ts";
 import { populateContainerContents, populateContainerSpecials } from "../sources/external.ts";
-import { ItemGeneratorContext } from "../types.ts";
+import { type ItemGeneratorContext } from "../types.ts";
 import {
     getBaseImage,
     getCollectionImage,
@@ -132,7 +133,7 @@ export function createItemGeneratorContext(mode: ItemGeneratorContext["mode"]): 
     };
 }
 
-export async function loadSourceData(ctx: ItemGeneratorContext) {
+export async function loadSourceData(ctx: ItemGeneratorContext): Promise<void> {
     await mkdir(STATIC_IMAGES_DIR, { recursive: true });
     await syncAssetsManifest(ctx.cs2);
     await ensureItemDefinitionPackages(ctx.cs2);
@@ -142,7 +143,7 @@ export async function loadSourceData(ctx: ItemGeneratorContext) {
     await readItemsGameFile(ctx);
 }
 
-export async function buildCatalog(ctx: ItemGeneratorContext) {
+export async function buildCatalog(ctx: ItemGeneratorContext): Promise<void> {
     await parseBaseWeapons(ctx);
     await parseBaseMelees(ctx);
     await parseBaseGloves(ctx);
@@ -170,7 +171,7 @@ async function readCsgoLanguageFiles(ctx: ItemGeneratorContext, include?: string
             (await readdir(GAME_RESOURCE_DIR))
                 .map((file) => {
                     const matches = file.match(LANGUAGE_FILE_RE);
-                    return matches !== null ? ([file, matches[1]] as const) : undefined;
+                    return matches !== null ? ([file, matches[1]!] as const) : undefined;
                 })
                 .filter(isNotUndefined)
                 .filter(([_, language]) => include === undefined || include.includes(language))
@@ -882,7 +883,7 @@ async function parseContainers(ctx: ItemGeneratorContext) {
                 if (keyItems.has(keyItemDef)) {
                     return ensure(keyItems.get(keyItemDef));
                 }
-                const keyItem = ctx.gameItems.items[keyItemDef];
+                const keyItem = ensure(ctx.gameItems.items[keyItemDef]);
                 assert(keyItem.image_inventory);
                 const id = getItemId(ctx, `key_${keyItemDef}`);
                 const nameToken = keyItem.item_name ?? "#CSGO_base_crate_key";
@@ -1008,7 +1009,7 @@ function getTeamsString(teams?: Record<string, string>, fallback?: string) {
               .join("_");
 }
 
-export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {
+export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2ExtendedItem): void {
     const previous = ctx.existingItemsById.get(item.id);
     if (ctx.mode !== "limited" || previous === undefined) {
         return;
@@ -1074,7 +1075,7 @@ function getStickerCategory(
         categoryToken = "#CSGO_crate_sticker_pack_stkr_craft_01_capsule";
         category = findTranslation(ctx, categoryToken);
     }
-    if (UNCATEGORIZED_STICKERS.includes(folder)) {
+    if (folder !== undefined && UNCATEGORIZED_STICKERS.includes(folder)) {
         category = "Valve";
         categoryToken = undefined;
     }

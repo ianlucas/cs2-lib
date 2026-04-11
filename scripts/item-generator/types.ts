@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cs2Runtime } from "../cs2-tools/types.ts";
-import { ItemGeneratorMode } from "./config.ts";
-import { CS2Item, CS2ItemTranslationByLanguage, CS2StickerMarkup } from "../../src/economy-types.ts";
-import { CS2ExportItem, CS2ExtendedItem, CS2GameItems, CS2Language } from "./source-types.ts";
+import { type Cs2Runtime } from "../cs2-tools/types.ts";
+import { type ItemGeneratorMode } from "./config.ts";
+import {
+    type CS2Item,
+    type CS2ItemTranslationByLanguage,
+    type CS2StickerMarkup
+} from "../../src/economy-types.ts";
+import { type CS2ExportItem, type CS2ExtendedItem, type CS2GameItems, type CS2Language } from "./source-types.ts";
 
 export type PendingImageTask =
     | { kind: "regular"; localPath: string; filename: string }

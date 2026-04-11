@@ -14,9 +14,9 @@ import {
     TRANSLATIONS_TS_PATH
 } from "../config.ts";
 import { createItemsModule, createStickerMarkupModule, createTranslationModule } from "../output-templates.ts";
-import { ItemGeneratorContext } from "../types.ts";
+import { type ItemGeneratorContext } from "../types.ts";
 
-export async function emitOutputs(ctx: ItemGeneratorContext) {
+export async function emitOutputs(ctx: ItemGeneratorContext): Promise<void> {
     const items = Array.from(ctx.items.values()).map((item) => ({
         ...item,
         className: undefined,

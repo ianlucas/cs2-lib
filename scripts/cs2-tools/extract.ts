@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { basename } from "path";
 import { CS2KeyValues3 } from "../../src/keyvalues3.ts";
 import {
     getCompositeMaterialFilename,
@@ -12,7 +13,7 @@ import {
     toCompiledMaterialResourcePath
 } from "../item-generator/assets/material-paths.ts";
 import { decompileDataBlocks } from "./decompile.ts";
-import {
+import type {
     CompositeMaterialMetadataExtractionResult,
     Cs2Runtime,
     MaterialMetadataExtractionResult,
@@ -42,7 +43,7 @@ function buildChunkByPathMap(stdout: string) {
     for (const chunk of stdout.split(/(?=\[\d+\/\d+\])/)) {
         const match = chunk.match(/^\[\d+\/\d+\]\s+([^\r\n]+)/);
         if (match !== null) {
-            map.set(match[1].trim(), chunk);
+            map.set(match[1]!.trim(), chunk);
         }
     }
     return map;
@@ -50,11 +51,14 @@ function buildChunkByPathMap(stdout: string) {
 
 function collectResourceRefs(data: string, extension: ".vcompmat" | ".vmat" | ".vtex") {
     return [...data.matchAll(/"([^"]+\.(?:vcompmat|vmat|vtex))"/g)]
-        .map((match) => normalizeMaterialResourcePath(match[1]))
+        .map((match) => normalizeMaterialResourcePath(match[1]!))
         .filter((path) => path.endsWith(extension));
 }
 
-export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMetadataEntry[]) {
+export async function extractModelMetadata(
+    runtime: Cs2Runtime,
+    entries: ModelMetadataEntry[]
+): Promise<ModelMetadataExtractionResult[]> {
     const MAX_ARG_BYTES = 100_000;
     const results: ModelMetadataExtractionResult[] = [];
     let batchEntries: ModelMetadataEntry[] = [];
@@ -74,17 +78,17 @@ export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMe
             const materialsMatch = chunk.match(/--- Resource External Refs: ---([\s\S]*?)(?=---|$)/);
             const materials: string[] = [];
             if (materialsMatch) {
-                for (const line of materialsMatch[1].split("\n")) {
+                for (const line of materialsMatch[1]!.split("\n")) {
                     const match = line.match(/\s+[0-9A-F]+\s+(\S+\.vmat)\s*$/);
                     if (match) {
-                        materials.push(match[1]);
+                        materials.push(match[1]!);
                     }
                 }
             }
             const dataMatch = chunk.match(/--- Data for block "DATA" ---\s*([\s\S]+)$/);
             let data: any = null;
             if (dataMatch) {
-                data = parseKv3Recursively(CS2KeyValues3.parse(dataMatch[1].trim()));
+                data = parseKv3Recursively(CS2KeyValues3.parse(dataMatch[1]!.trim()));
             }
             results.push({
                 data,
@@ -108,7 +112,10 @@ export async function extractModelMetadata(runtime: Cs2Runtime, entries: ModelMe
     return results;
 }
 
-export async function extractCompositeMaterialMetadata(runtime: Cs2Runtime, vcompmatPaths: string[]) {
+export async function extractCompositeMaterialMetadata(
+    runtime: Cs2Runtime,
+    vcompmatPaths: string[]
+): Promise<CompositeMaterialMetadataExtractionResult[]> {
     const MAX_ARG_BYTES = 100_000;
     const results: CompositeMaterialMetadataExtractionResult[] = [];
     const entries = vcompmatPaths.map((path) => {
@@ -138,7 +145,7 @@ export async function extractCompositeMaterialMetadata(runtime: Cs2Runtime, vcom
             const compositeMaterialRefs: string[] = [];
             const vmatRefs: string[] = [];
             if (dataMatch) {
-                const dataText = dataMatch[1].trim();
+                const dataText = dataMatch[1]!.trim();
                 data = parseKv3Recursively(CS2KeyValues3.parse(dataText));
                 compositeMaterialRefs.push(...collectResourceRefs(dataText, ".vcompmat"));
                 vmatRefs.push(...collectResourceRefs(dataText, ".vmat"));
@@ -168,7 +175,10 @@ export async function extractCompositeMaterialMetadata(runtime: Cs2Runtime, vcom
     return results;
 }
 
-export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: string[]) {
+export async function extractMaterialMetadata(
+    runtime: Cs2Runtime,
+    vmatPaths: string[]
+): Promise<MaterialMetadataExtractionResult[]> {
     const MAX_ARG_BYTES = 100_000;
     const results: MaterialMetadataExtractionResult[] = [];
     const entries = vmatPaths
@@ -194,10 +204,10 @@ export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: st
             const externalRefsMatch = chunk.match(/--- Resource External Refs: ---([\s\S]*?)(?=---|$)/);
             const vtexRefs: string[] = [];
             if (externalRefsMatch) {
-                for (const line of externalRefsMatch[1].split("\n")) {
+                for (const line of externalRefsMatch[1]!.split("\n")) {
                     const match = line.match(/\s+[0-9A-F]+\s+(\S+\.vtex)\s*$/);
                     if (match) {
-                        vtexRefs.push(match[1]);
+                        vtexRefs.push(match[1]!);
                     }
                 }
             }
@@ -205,7 +215,7 @@ export async function extractMaterialMetadata(runtime: Cs2Runtime, vmatPaths: st
             let data: any = null;
             const vmatRefs: string[] = [];
             if (dataMatch) {
-                const dataText = dataMatch[1].trim();
+                const dataText = dataMatch[1]!.trim();
                 data = parseKv3Recursively(CS2KeyValues3.parse(dataText));
                 vmatRefs.push(...collectResourceRefs(dataText, ".vmat"));
             }

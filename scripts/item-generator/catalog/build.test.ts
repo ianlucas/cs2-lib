@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "vitest";
 import { CS2ItemType } from "../../../src/economy-types.ts";
-import { ItemGeneratorContext } from "../types.ts";
+import { type ItemGeneratorContext } from "../types.ts";
 import { hydrateExistingModelFields } from "./build.ts";
 
 function createContext(mode: ItemGeneratorContext["mode"]): ItemGeneratorContext {

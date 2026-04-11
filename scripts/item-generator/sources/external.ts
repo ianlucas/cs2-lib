@@ -8,7 +8,7 @@ import { basename, join } from "path";
 import { assert, ensure } from "../../../src/utils.ts";
 import { readFileOrDefault } from "../../utils.ts";
 import { STATIC_IMAGES_DIR, ITEM_GENERATOR_CACHE_DIR } from "../config.ts";
-import { ExternalCacheMetadata } from "../types.ts";
+import { type ExternalCacheMetadata } from "../types.ts";
 
 const EXTERNAL_URLS = {
     collectible: "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/collectibles.json",
@@ -82,7 +82,11 @@ function resolveContainerItemId(nameToId: Map<string, number>, item: { id: strin
     );
 }
 
-export async function populateContainerContents(itemName: string, contents: number[], itemNames: Map<number, string>) {
+export async function populateContainerContents(
+    itemName: string,
+    contents: number[],
+    itemNames: Map<number, string>
+): Promise<void> {
     const crates = await fetchCachedExternalJson<CrateEntry[]>("container");
     const crate = crates.find((entry) => entry.original.item_name === itemName);
     if (crate === undefined) {
@@ -97,7 +101,11 @@ export async function populateContainerContents(itemName: string, contents: numb
     }
 }
 
-export async function populateContainerSpecials(itemName: string, specials: number[], itemNames: Map<number, string>) {
+export async function populateContainerSpecials(
+    itemName: string,
+    specials: number[],
+    itemNames: Map<number, string>
+): Promise<void> {
     const crates = await fetchCachedExternalJson<CrateEntry[]>("container");
     const crate = crates.find((entry) => entry.original.item_name === itemName);
     if (crate === undefined) {
@@ -112,7 +120,7 @@ export async function populateContainerSpecials(itemName: string, specials: numb
     }
 }
 
-export async function findFallbackImage(source: ExternalSourceKey, imagePath: string) {
+export async function findFallbackImage(source: ExternalSourceKey, imagePath: string): Promise<string | undefined> {
     const entries = await fetchCachedExternalJson<SourceEntry[]>(source);
     const normalizedPath = imagePath.toLowerCase();
     const entry = entries.find((candidate) => candidate.original.image_inventory.toLowerCase() === normalizedPath);

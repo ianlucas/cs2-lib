@@ -9,7 +9,7 @@ import { assert, ensure } from "../../src/utils.ts";
 import { readFileOrDefault, readProcess } from "../utils.ts";
 import { buildVpkIndex } from "./decompile.ts";
 import { isWorkspaceDepotSource } from "./runtime.ts";
-import { Cs2Runtime } from "./types.ts";
+import { type Cs2Runtime } from "./types.ts";
 
 const APP_ID = 730;
 const ASSETS_DEPOT_ID = 2347770;
@@ -41,7 +41,7 @@ async function downloadDepotFileList(runtime: Cs2Runtime, filelistPath: string) 
     assert(DEPOT_SUCCESS_RE.test(output));
 }
 
-export async function syncAssetsManifest(runtime: Cs2Runtime) {
+export async function syncAssetsManifest(runtime: Cs2Runtime): Promise<void> {
     if (!isWorkspaceDepotSource(runtime)) {
         return;
     }
@@ -51,7 +51,7 @@ export async function syncAssetsManifest(runtime: Cs2Runtime) {
     await writeFile(runtime.config.paths.assetsManifestPath, latest, "utf-8");
 }
 
-export async function ensureItemDefinitionPackages(runtime: Cs2Runtime) {
+export async function ensureItemDefinitionPackages(runtime: Cs2Runtime): Promise<void> {
     await mkdir(runtime.config.paths.workdirPath, { recursive: true });
     if (!isWorkspaceDepotSource(runtime)) {
         return;
@@ -68,7 +68,7 @@ export async function ensureItemDefinitionPackages(runtime: Cs2Runtime) {
     await downloadDepotFileList(runtime, runtime.config.paths.tempPakFileListPath);
 }
 
-export async function ensureAssetPackages(runtime: Cs2Runtime, vpkPaths: string[]) {
+export async function ensureAssetPackages(runtime: Cs2Runtime, vpkPaths: string[]): Promise<void> {
     if (!isWorkspaceDepotSource(runtime) || vpkPaths.length === 0) {
         return;
     }

@@ -10,7 +10,7 @@ import { detectItemGeneratorMode } from "./config.ts";
 import { emitOutputs } from "./emit/write.ts";
 import { runStep } from "./logging.ts";
 
-export async function runItemGenerator() {
+export async function runItemGenerator(): Promise<void> {
     const ctx = createItemGeneratorContext(detectItemGeneratorMode());
     log(`Starting item generator in ${ctx.mode} mode.`);
     await runStep(

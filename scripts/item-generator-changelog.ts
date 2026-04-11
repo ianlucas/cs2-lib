@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { stringify } from "javascript-stringify";
-import { CS2Item } from "../src/economy-types";
-import { CS2_ITEMS } from "../src/items";
-import { ensure } from "../src/utils";
-import { readJson, shouldRun, write } from "./utils";
+import { type CS2Item } from "../src/economy-types.ts";
+import { CS2_ITEMS } from "../src/items.ts";
+import { ensure } from "../src/utils.ts";
+import { readJson, shouldRun, write } from "./utils.ts";
 
 const repoBaseUrl = "https://raw.githubusercontent.com/ianlucas/cs2-lib/main";
 
