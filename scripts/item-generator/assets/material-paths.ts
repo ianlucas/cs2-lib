@@ -20,6 +20,10 @@ export function getPaintCompositeMaterialPath(className: string, compositeMateri
     return compositeMaterialPath ?? `weapons/paints/legacy/${className}.vcompmat`;
 }
 
+export function getStickerMaterialPath(stickerMaterial: string): string {
+    return `stickers/${stickerMaterial}.vmat`;
+}
+
 export function toCompiledMaterialResourcePath(path: string): string {
     const normalized = normalizeMaterialResourcePath(path).toLowerCase();
     if (normalized.endsWith("_c")) {
@@ -86,7 +90,10 @@ export function patchMaterialResourceReferences(
     if (typeof value === "string") {
         const normalized = normalizeMaterialResourcePath(value);
         if (normalized.endsWith(".vcompmat")) {
-            return ensure(resolveCompositeMaterial(normalized), `Unable to rewrite composite material reference: ${value}`);
+            return ensure(
+                resolveCompositeMaterial(normalized),
+                `Unable to rewrite composite material reference: ${value}`
+            );
         }
         if (normalized.endsWith(".vmat")) {
             return ensure(resolveVmat(normalized), `Unable to rewrite material reference: ${value}`);

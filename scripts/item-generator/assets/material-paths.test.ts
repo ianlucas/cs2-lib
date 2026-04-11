@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 import {
     getCompositeMaterialFilename,
     getPaintCompositeMaterialPath,
+    getStickerMaterialPath,
     getTextureFilename,
     getVmatFilename,
     normalizeMaterialResourcePath,
@@ -23,6 +24,10 @@ describe("material path helpers", () => {
         expect(getPaintCompositeMaterialPath("aq_oiled")).toBe("weapons/paints/legacy/aq_oiled.vcompmat");
     });
 
+    test("builds sticker material paths from sticker kit material names", () => {
+        expect(getStickerMaterialPath("columbus2016/sig_s1mple")).toBe("stickers/columbus2016/sig_s1mple.vmat");
+    });
+
     test("normalizes resource prefixes and compiled paths", () => {
         expect(normalizeMaterialResourcePath("resource:materials\\foo.vtex")).toBe("materials/foo.vtex");
         expect(normalizeMaterialResourcePath("weapons//models//awp//materials//foo.vmat")).toBe(
@@ -30,9 +35,7 @@ describe("material path helpers", () => {
         );
         expect(normalizeMaterialResourcePath("resource_name:materials/foo.vmat")).toBe("materials/foo.vmat");
         expect(toCompiledMaterialResourcePath("Materials/Foo.vmat")).toBe("materials/foo.vmat_c");
-        expect(toCompiledMaterialResourcePath("weapons/paints/foo.vcompmat_c")).toBe(
-            "weapons/paints/foo.vcompmat_c"
-        );
+        expect(toCompiledMaterialResourcePath("weapons/paints/foo.vcompmat_c")).toBe("weapons/paints/foo.vcompmat_c");
     });
 
     test("resolves missing direct paths by unique compiled basename", () => {

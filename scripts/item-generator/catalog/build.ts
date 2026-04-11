@@ -7,8 +7,13 @@ import { mkdir, readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { CS2_DEFAULT_MAX_WEAR, CS2_DEFAULT_MIN_WEAR } from "../../../src/economy-constants.ts";
 import { type CS2RarityColorValues } from "../../../src/economy-container.ts";
-import { CS2ItemTeam, CS2ItemType } from "../../../src/economy-types.ts";
-import { type CS2Item, type CS2ItemTeamValues, type CS2ItemTypeValues } from "../../../src/economy-types.ts";
+import {
+    CS2ItemTeam,
+    CS2ItemType,
+    type CS2Item,
+    type CS2ItemTeamValues,
+    type CS2ItemTypeValues
+} from "../../../src/economy-types.ts";
 import { CS2KeyValues } from "../../../src/keyvalues.ts";
 import { assert, ensure, fail, isNotUndefined } from "../../../src/utils.ts";
 import { buildVpkIndex, decompileItemDefinitionResources } from "../../cs2-tools/decompile.ts";
@@ -18,7 +23,9 @@ import { INPUT_FORCE } from "../../env.ts";
 import { prependHash, readJson } from "../../utils.ts";
 import {
     getIndexedCompositeMaterialFilename,
+    getIndexedVmatFilename,
     getPaintCompositeMaterialPath,
+    getStickerMaterialPath,
     normalizeMaterialResourcePath,
     resolveMaterialResourcePath
 } from "../assets/material-paths.ts";
@@ -457,6 +464,7 @@ async function parsePaintKits(ctx: ItemGeneratorContext) {
                 image: getPaintImage(ctx, baseItem.className, paintKit.className),
                 index: Number(paintKit.index),
                 legacy: (baseItem.type === "weapon" && paintKit.isLegacy) || undefined,
+                modelData: undefined,
                 modelPlayer: undefined,
                 rarity: getRarityColorHex(
                     ctx,
@@ -531,7 +539,7 @@ async function parseKeychains(ctx: ItemGeneratorContext) {
     }
 }
 
-async function parseStickers(ctx: ItemGeneratorContext) {
+export async function parseStickers(ctx: ItemGeneratorContext): Promise<void> {
     const baseId = createStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc");
     for (const [index, sticker] of Object.entries(ctx.gameItems.sticker_kits)) {
         const { name, description_string, item_name, sticker_material, tournament_event_id, item_rarity } = sticker;
@@ -549,6 +557,7 @@ async function parseStickers(ctx: ItemGeneratorContext) {
         const id = getItemId(ctx, `sticker_${index}`);
         const itemKey = `[${name}]sticker`;
         const rarity = getRarityColorHex(ctx, [itemKey, item_rarity]);
+        const compositeMaterial = getStickerCompositeMaterial(ctx, sticker_material);
         addContainerItem(ctx, itemKey, id);
         addTranslation(ctx, id, "name", "#CSGO_Tool_Sticker", " | ", item_name);
         addTranslation(ctx, id, "category", categoryToken !== undefined ? categoryToken : category);
@@ -564,6 +573,7 @@ async function parseStickers(ctx: ItemGeneratorContext) {
         }
         addItem(ctx, {
             baseId,
+            compositeMaterial,
             def: 1209,
             id,
             image: getImage(ctx, `econ/stickers/${sticker_material}`),
@@ -1022,12 +1032,21 @@ export function hydrateExistingModelFields(ctx: ItemGeneratorContext, item: CS2E
         "stickerMaxForLegacy"
     ] as const;
     for (const field of requiredFields) {
-        const current = item[field];
         const fallback = previous[field];
-        if (current === undefined && fallback !== undefined) {
+        if (!(field in item) && fallback !== undefined) {
             (item as unknown as Record<string, unknown>)[field] = fallback;
         }
     }
+}
+
+export function getStickerCompositeMaterial(ctx: ItemGeneratorContext, stickerMaterial: string): string | undefined {
+    if (ctx.mode !== "full") {
+        return undefined;
+    }
+    const resolvedMaterialPath = resolveMaterialResourcePath(ctx.cs2, getStickerMaterialPath(stickerMaterial));
+    const normalizedMaterialPath = normalizeMaterialResourcePath(resolvedMaterialPath);
+    ctx.materialsToProcess.add(normalizedMaterialPath);
+    return `/materials/${getIndexedVmatFilename(ctx.cs2, normalizedMaterialPath)}`;
 }
 
 function addItem(ctx: ItemGeneratorContext, item: CS2ExtendedItem) {
