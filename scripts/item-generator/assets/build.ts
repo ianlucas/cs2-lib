@@ -25,6 +25,7 @@ import {
     ITEM_GENERATOR_CACHE_DIR,
     ITEM_GENERATOR_WORKDIR_DIR
 } from "../config.ts";
+import { formatCount, itemGeneratorLog } from "../logging.ts";
 import { GlbMaterialExtras, ItemGeneratorContext, PendingModelTask } from "../types.ts";
 import { PromiseQueue, getFileSha256, rmIfExists } from "../../utils.ts";
 import { ensure } from "../../../src/utils.ts";
@@ -58,6 +59,7 @@ export async function prepareWorkspace(ctx: ItemGeneratorContext) {
 export async function processAssets(ctx: ItemGeneratorContext) {
     if (ctx.neededVpkPaths.size > 0) {
         const vpkPaths = Array.from(ctx.neededVpkPaths);
+        itemGeneratorLog(`Resolving ${formatCount(vpkPaths.length, "VPK asset")}...`);
         await ensureAssetPackages(ctx.cs2, vpkPaths);
         await decompileAssets(ctx.cs2, vpkPaths);
     }
@@ -71,6 +73,18 @@ async function processImages(ctx: ItemGeneratorContext) {
     if (ctx.imagesToProcess.size === 0) {
         return;
     }
+    const kindCounts = Array.from(ctx.imagesToProcess.values()).reduce(
+        (counts, task) => {
+            counts[task.kind]++;
+            return counts;
+        },
+        { graffiti: 0, paint: 0, regular: 0, svg: 0 }
+    );
+    const kinds = Object.entries(kindCounts)
+        .filter(([_, count]) => count > 0)
+        .map(([kind, count]) => `${count} ${kind}`)
+        .join(", ");
+    itemGeneratorLog(`Processing ${formatCount(ctx.imagesToProcess.size, "image task")} (${kinds})...`);
     const queue = new PromiseQueue(Math.max(2, ctx.imagesToProcess.size > 8 ? 8 : ctx.imagesToProcess.size));
     for (const task of ctx.imagesToProcess.values()) {
         if (task.kind === "regular") {
@@ -108,12 +122,14 @@ async function processImages(ctx: ItemGeneratorContext) {
         });
     }
     await queue.waitForIdle();
+    itemGeneratorLog(`Processed ${formatCount(ctx.imagesToProcess.size, "image task")}.`);
 }
 
 async function processModels(ctx: ItemGeneratorContext) {
     if (ctx.modelsToProcess.size === 0) {
         return;
     }
+    itemGeneratorLog(`Processing ${formatCount(ctx.modelsToProcess.size, "model")}...`);
     await decompileModelAssets(ctx.cs2, Array.from(ctx.modelsToProcess.keys()));
     await extractModelData(ctx);
     await preProcessMaterials(ctx);
@@ -148,6 +164,7 @@ async function processModels(ctx: ItemGeneratorContext) {
         await rename(join(OUTPUT_DIR, model.modelData), join(OUTPUT_DIR, versionedModelData));
         updateModelAssetReferences(ctx, model, versionedModelPlayer, versionedModelData);
     }
+    itemGeneratorLog(`Processed ${formatCount(ctx.modelsToProcess.size, "model")}.`);
 }
 
 async function extractModelData(ctx: ItemGeneratorContext) {
@@ -184,6 +201,7 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
     if (ctx.materialsToProcess.size === 0) {
         return;
     }
+    itemGeneratorLog(`Extracting ${formatCount(ctx.materialsToProcess.size, "material")}...`);
     const getVmatFilename = (vmatPath: string): string | null => {
         const vpkPath = vmatPath.replace(".vmat", ".vmat_c").toLowerCase();
         const entry = ctx.cs2.vpkIndex.get(vpkPath);
@@ -224,6 +242,9 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
             model.materialFilenames.add(`/materials/${material}`);
         }
     }
+    itemGeneratorLog(
+        `Extracted ${formatCount(processed.size, "material")} and found ${formatCount(ctx.texturesToProcess.size, "texture reference")}.`
+    );
 }
 
 function collectMaterialGraph(ctx: ItemGeneratorContext, materials: Iterable<string>) {
@@ -326,6 +347,7 @@ async function copyAndOptimizeImage(src: string, dest: string) {
 
 export async function uploadAssets(ctx: ItemGeneratorContext) {
     if (STORAGE_ZONE === undefined || STORAGE_ACCESS_KEY === undefined) {
+        itemGeneratorLog("CDN credentials not configured; skipping upload.");
         return;
     }
     const sz = BunnyStorageSDK.zone.connect_with_accesskey(
@@ -334,6 +356,7 @@ export async function uploadAssets(ctx: ItemGeneratorContext) {
         STORAGE_ACCESS_KEY
     );
     const queue = new PromiseQueue(CDN_UPLOAD_CONCURRENCY);
+    let uploadCount = 0;
     for (const folder of ["images", "textures", "models"]) {
         const fileChecksums = Object.fromEntries(
             (await BunnyStorageSDK.file.list(sz, `/${folder}`)).map((file) => [
@@ -346,11 +369,14 @@ export async function uploadAssets(ctx: ItemGeneratorContext) {
             const assetPath = join(assetsPath, filename);
             const cdnPath = `/${folder}/${filename}`;
             if (fileChecksums[cdnPath] === undefined) {
+                uploadCount++;
                 queue.push(async () => {
                     await BunnyStorageSDK.file.upload(sz, cdnPath, Readable.toWeb(createReadStream(assetPath)));
                 });
             }
         }
     }
+    itemGeneratorLog(`Uploading ${formatCount(uploadCount, "new CDN asset")}...`);
     await queue.waitForIdle();
+    itemGeneratorLog(`Uploaded ${formatCount(uploadCount, "new CDN asset")}.`);
 }

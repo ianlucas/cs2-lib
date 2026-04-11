@@ -7,13 +7,34 @@ import { detectItemGeneratorMode } from "./config.ts";
 import { buildCatalog, createItemGeneratorContext, loadSourceData } from "./catalog/build.ts";
 import { emitOutputs } from "./emit/write.ts";
 import { prepareWorkspace, processAssets, uploadAssets } from "./assets/build.ts";
+import { itemGeneratorLog, runItemGeneratorStep } from "./logging.ts";
 
 export async function runItemGenerator() {
     const ctx = createItemGeneratorContext(detectItemGeneratorMode());
-    await prepareWorkspace(ctx);
-    await loadSourceData(ctx);
-    await buildCatalog(ctx);
-    await processAssets(ctx);
-    await emitOutputs(ctx);
-    await uploadAssets(ctx);
+    itemGeneratorLog(`Starting item generator in ${ctx.mode} mode.`);
+    await runItemGeneratorStep(
+        "Preparing workspace",
+        () => prepareWorkspace(ctx),
+        () => `${Object.keys(ctx.staticAssets).length} static images, ${ctx.existingImages.size} reusable images`
+    );
+    await runItemGeneratorStep(
+        "Loading CS2 source data",
+        () => loadSourceData(ctx),
+        () =>
+            `${Object.keys(ctx.csgoTranslationByLanguage).length} languages, ${ctx.paintKits.length} paint kits, ${ctx.graffitiTints.length} graffiti tints`
+    );
+    await runItemGeneratorStep(
+        "Building item catalog",
+        () => buildCatalog(ctx),
+        () =>
+            `${ctx.items.size} items, ${ctx.neededVpkPaths.size} VPK assets, ${ctx.imagesToProcess.size} image tasks, ${ctx.modelsToProcess.size} model tasks`
+    );
+    await runItemGeneratorStep("Processing assets", () => processAssets(ctx));
+    await runItemGeneratorStep(
+        "Emitting outputs",
+        () => emitOutputs(ctx),
+        () => `${ctx.items.size} items, ${Object.keys(ctx.itemTranslationByLanguage).length} translation files`
+    );
+    await runItemGeneratorStep("Uploading assets", () => uploadAssets(ctx));
+    itemGeneratorLog("Finished.");
 }
