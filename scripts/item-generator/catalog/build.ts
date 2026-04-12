@@ -533,7 +533,9 @@ async function parseKeychains(ctx: ItemGeneratorContext) {
 }
 
 export async function parseStickers(ctx: ItemGeneratorContext): Promise<void> {
-    const baseId = createStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc");
+    const baseId = createStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc", {
+        model: "stickers/dev/sticker_preview_mesh.vmdl"
+    });
     for (const [index, sticker] of Object.entries(ctx.gameItems.sticker_kits)) {
         const { name, description_string, item_name, sticker_material, tournament_event_id, item_rarity } = sticker;
         if (
@@ -1116,10 +1118,23 @@ function getStickerCategory(
     return [ensure(category ?? "Valve"), categoryToken] as const;
 }
 
-function createStub(ctx: ItemGeneratorContext, name: string, descToken: string) {
+function createStub(ctx: ItemGeneratorContext, name: string, descToken: string, options?: { model?: string }) {
     const id = getItemId(ctx, `stub_${name}`);
     addTranslation(ctx, id, "name", "#Rarity_Default");
     addTranslation(ctx, id, "desc", descToken);
-    addItem(ctx, { id, type: CS2ItemType.Stub });
+    const modelInfo = getModel(ctx, options?.model, id);
+    if (options?.model !== undefined && ctx.mode === "full" && modelInfo === undefined) {
+        fail(`Unable to resolve model '${options.model}' for '${name}' stub.`);
+    }
+    addItem(ctx, {
+        id,
+        ...(options?.model !== undefined
+            ? {
+                  modelData: modelInfo?.modelData,
+                  modelPlayer: modelInfo?.modelPlayer
+              }
+            : {}),
+        type: CS2ItemType.Stub
+    });
     return id;
 }

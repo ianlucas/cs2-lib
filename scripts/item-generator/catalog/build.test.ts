@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from "vitest";
-import { CS2ItemType } from "../../../src/economy-types.ts";
+import { type CS2Item, CS2ItemType } from "../../../src/economy-types.ts";
 import { type ItemGeneratorContext } from "../types.ts";
 import { getStickerCompositeMaterial, hydrateExistingModelFields, parseStickers } from "./build.ts";
 
@@ -149,20 +149,103 @@ describe("sticker material extraction", () => {
         expect(keychain).toBeDefined();
         expect(keychain?.compositeMaterial).toBeUndefined();
     });
+
+    test("queues the sticker preview model on the sticker stub in full mode", async () => {
+        const ctx = createStickerParsingContext();
+
+        await parseStickers(ctx);
+
+        const stub = ctx.items.get(0);
+        const sticker = [...ctx.items.values()].find((item) => item.type === CS2ItemType.Sticker);
+        expect(stub).toMatchObject({
+            id: 0,
+            modelData: "/models/sticker_preview_mesh_model123.json",
+            modelPlayer: "/models/sticker_preview_mesh_model123.glb",
+            type: CS2ItemType.Stub
+        });
+        expect(ctx.modelsToProcess.get("stickers/dev/sticker_preview_mesh.vmdl_c")).toMatchObject({
+            base: "sticker_preview_mesh",
+            crc: "model123",
+            modelData: "/models/sticker_preview_mesh_model123.json",
+            modelPlayer: "/models/sticker_preview_mesh_model123.glb"
+        });
+        expect(sticker?.modelData).toBeUndefined();
+        expect(sticker?.modelPlayer).toBeUndefined();
+    });
+
+    test("fails full-mode sticker parsing when the sticker preview model is missing", async () => {
+        const ctx = createStickerParsingContext({ includeModel: false });
+
+        await expect(parseStickers(ctx)).rejects.toThrow(
+            "Unable to resolve model 'stickers/dev/sticker_preview_mesh.vmdl' for 'sticker' stub."
+        );
+    });
+
+    test("reuses existing sticker stub model fields in limited mode", async () => {
+        const ctx = createStickerParsingContext({
+            existingItemsById: new Map([
+                [
+                    0,
+                    {
+                        id: 0,
+                        modelData: "/models/existing-sticker.json",
+                        modelPlayer: "/models/existing-sticker.glb",
+                        type: CS2ItemType.Stub
+                    }
+                ]
+            ]),
+            includeModel: false,
+            mode: "limited"
+        });
+
+        await parseStickers(ctx);
+
+        expect(ctx.items.get(0)).toMatchObject({
+            modelData: "/models/existing-sticker.json",
+            modelPlayer: "/models/existing-sticker.glb"
+        });
+        expect(ctx.modelsToProcess.size).toBe(0);
+    });
+
+    test("leaves sticker stub model fields unset in limited mode when no existing fields are available", async () => {
+        const ctx = createStickerParsingContext({ includeModel: false, mode: "limited" });
+
+        await parseStickers(ctx);
+
+        expect(ctx.items.get(0)).toMatchObject({
+            id: 0,
+            type: CS2ItemType.Stub
+        });
+        expect(ctx.items.get(0)?.modelData).toBeUndefined();
+        expect(ctx.items.get(0)?.modelPlayer).toBeUndefined();
+        expect(ctx.modelsToProcess.size).toBe(0);
+    });
 });
 
-function createStickerParsingContext(): ItemGeneratorContext {
+function createStickerParsingContext({
+    existingItemsById = new Map(),
+    includeModel = true,
+    mode = "full"
+}: {
+    existingItemsById?: Map<number, CS2Item>;
+    includeModel?: boolean;
+    mode?: ItemGeneratorContext["mode"];
+} = {}): ItemGeneratorContext {
+    const vpkIndex = new Map([
+        ["stickers/columbus2016/sig_s1mple.vmat_c", { crc: "abc123", fnumber: "1" }],
+        ["panorama/images/econ/stickers/columbus2016/sig_s1mple_png.png", { crc: "img123", fnumber: "1" }],
+        [
+            "panorama/images/econ/stickers/columbus2016/sig_s1mple_1355_37_png.png",
+            { crc: "key123", fnumber: "1" }
+        ]
+    ]);
+    if (includeModel) {
+        vpkIndex.set("stickers/dev/sticker_preview_mesh.vmdl_c", { crc: "model123", fnumber: "1" });
+    }
     return {
-        mode: "full",
+        mode,
         cs2: {
-            vpkIndex: new Map([
-                ["stickers/columbus2016/sig_s1mple.vmat_c", { crc: "abc123", fnumber: "1" }],
-                ["panorama/images/econ/stickers/columbus2016/sig_s1mple_png.png", { crc: "img123", fnumber: "1" }],
-                [
-                    "panorama/images/econ/stickers/columbus2016/sig_s1mple_1355_37_png.png",
-                    { crc: "key123", fnumber: "1" }
-                ]
-            ])
+            vpkIndex
         },
         gameItems: {
             sticker_kits: {
@@ -193,12 +276,13 @@ function createStickerParsingContext(): ItemGeneratorContext {
         uniqueIdentifiers: [],
         containerItems: new Map(),
         existingImages: new Set(),
-        existingItemsById: new Map(),
+        existingItemsById,
         imagesToProcess: new Map(),
         itemsRaritiesColorHex: {},
         items: new Map(),
         itemNames: new Map(),
         materialsToProcess: new Set(),
+        modelsToProcess: new Map(),
         neededVpkPaths: new Set(),
         paintKitsRaritiesColorHex: {},
         raritiesColorHex: {

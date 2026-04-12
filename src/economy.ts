@@ -637,7 +637,8 @@ export class CS2EconomyItem implements Interface<
     }
 
     getModelData(): string {
-        return this.economy.resolveUrl(this.modelData);
+        const { modelData } = this.parent ?? this;
+        return this.economy.resolveUrl(modelData);
     }
 
     getMinimumWear(): number {
