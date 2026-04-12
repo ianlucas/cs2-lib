@@ -12,7 +12,6 @@ export * from "./items.ts";
 export * from "./keyvalues.ts";
 export * from "./keyvalues3.ts";
 export * from "./maps.ts";
-export * from "./sticker-markup.ts";
 export * from "./teams.ts";
 export * from "./utils.ts";
 export * from "./veto.ts";

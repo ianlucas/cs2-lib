@@ -100,11 +100,6 @@ export interface CS2ItemTranslation {
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
 export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
-export type CS2StickerMarkup = Record<
-    string,
-    { slot: number; offsets: number[]; scale: number; rotation: number; legacy?: boolean }[] | undefined
->;
-
 export interface CS2UnlockedItem {
     attributes: {
         containerId: number;

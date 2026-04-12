@@ -18,16 +18,6 @@ import type { CS2Item } from "./economy-types.ts";
 export const CS2_ITEMS: CS2Item[] = ${JSON.stringify(items)};`;
 }
 
-export function createStickerMarkupModule(stickerMarkup: unknown) {
-    return `${banner}
-
-import type { CS2StickerMarkup } from "./economy-types.ts";
-
-// @generated
-// @ts-ignore
-export const CS2_STICKER_MARKUP: CS2StickerMarkup = ${JSON.stringify(stickerMarkup)};`;
-}
-
 export function createTranslationModule(language: string, tokens: unknown) {
     return `${banner}
 

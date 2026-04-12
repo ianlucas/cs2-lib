@@ -10,10 +10,9 @@ import {
     ITEM_IDS_JSON_PATH,
     ITEMS_JSON_PATH,
     ITEMS_TS_PATH,
-    STICKER_MARKUP_TS_PATH,
     TRANSLATIONS_TS_PATH
 } from "../config.ts";
-import { createItemsModule, createStickerMarkupModule, createTranslationModule } from "../output-templates.ts";
+import { createItemsModule, createTranslationModule } from "../output-templates.ts";
 import { type ItemGeneratorContext } from "../types.ts";
 
 export async function emitOutputs(ctx: ItemGeneratorContext): Promise<void> {
@@ -35,10 +34,6 @@ export async function emitOutputs(ctx: ItemGeneratorContext): Promise<void> {
         if (language === "english") {
             await writeJson(ENGLISH_JSON_PATH, translations);
         }
-    }
-
-    if (Object.keys(ctx.stickerMarkup).length > 0) {
-        await write(STICKER_MARKUP_TS_PATH, createStickerMarkupModule(ctx.stickerMarkup));
     }
 
     warning(`Successfully generated '${ITEMS_JSON_PATH}'.`);
