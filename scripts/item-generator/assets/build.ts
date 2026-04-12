@@ -28,7 +28,7 @@ import {
     ITEM_GENERATOR_CACHE_DIR,
     ITEM_GENERATOR_WORKDIR_DIR,
     OUTPUT_DIR,
-    OUTPUT_IMAGE_QUALITY,
+    OUTPUT_WEBP_OPTIONS,
     STATIC_IMAGES_DIR
 } from "../config.ts";
 import { formatCount } from "../logging.ts";
@@ -110,9 +110,7 @@ async function processImages(ctx: ItemGeneratorContext) {
     for (const task of ctx.imagesToProcess.values()) {
         if (task.kind === "regular") {
             queue.push(async () => {
-                await sharp(task.localPath)
-                    .webp({ quality: OUTPUT_IMAGE_QUALITY })
-                    .toFile(join(OUTPUT_DIR, task.filename));
+                await sharp(task.localPath).webp(OUTPUT_WEBP_OPTIONS).toFile(join(OUTPUT_DIR, task.filename));
             });
             continue;
         }
@@ -120,11 +118,11 @@ async function processImages(ctx: ItemGeneratorContext) {
             queue.push(async () => {
                 for (const [src, suffix] of task.localPaths) {
                     await sharp(src)
-                        .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                        .webp(OUTPUT_WEBP_OPTIONS)
                         .toFile(join(OUTPUT_DIR, `/images/${task.baseName}_${suffix}.webp`));
                 }
                 await sharp(ensure(task.localPaths[0])[0])
-                    .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                    .webp(OUTPUT_WEBP_OPTIONS)
                     .toFile(join(OUTPUT_DIR, task.baseFilename));
             });
             continue;
@@ -138,7 +136,7 @@ async function processImages(ctx: ItemGeneratorContext) {
         queue.push(async () => {
             await sharp(task.localPath)
                 .resize(256, 198, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-                .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                .webp(OUTPUT_WEBP_OPTIONS)
                 .toFile(join(OUTPUT_DIR, task.filename));
         });
     }
@@ -163,7 +161,7 @@ async function processModels(ctx: ItemGeneratorContext) {
                 if (file.endsWith(".png")) {
                     const webpFile = file.replace(/\.png$/, ".webp");
                     await sharp(join(modelDir, file))
-                        .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                        .webp(OUTPUT_WEBP_OPTIONS)
                         .toFile(join(OUTPUT_DIR, "textures", webpFile));
                     renames.set(file, `/textures/${webpFile}`);
                 } else if (file.endsWith(".exr")) {
@@ -327,7 +325,7 @@ async function processMaterialTextures(ctx: ItemGeneratorContext) {
             if (await exists(pngPath)) {
                 const filename = getTextureFilename(resolvedVtexPath, entry.crc, ".webp");
                 await sharp(pngPath)
-                    .webp({ quality: OUTPUT_IMAGE_QUALITY })
+                    .webp(OUTPUT_WEBP_OPTIONS)
                     .toFile(join(OUTPUT_DIR, "textures", filename));
                 ctx.textureFilenameByPath.set(resolvedVtexPath, `/textures/${filename}`);
                 return;
@@ -478,13 +476,13 @@ async function colorizeGraffitiImage(src: string, hexColor: string, dest: string
         output[offset + 3] = data[offset + 3] ?? 255;
     }
     await sharp(output, { raw: { width: info.width, height: info.height, channels: 4 } })
-        .webp()
+        .webp(OUTPUT_WEBP_OPTIONS)
         .toFile(join(OUTPUT_DIR, dest));
 }
 
 async function copyAndOptimizeImage(src: string, dest: string) {
     const filename = dest.includes("{sha256}") ? dest.replace("{sha256}", await getFileSha256(src)) : dest;
-    await sharp(src).webp({ quality: OUTPUT_IMAGE_QUALITY }).toFile(join(OUTPUT_DIR, filename));
+    await sharp(src).webp(OUTPUT_WEBP_OPTIONS).toFile(join(OUTPUT_DIR, filename));
     return filename;
 }
 

@@ -9,11 +9,17 @@ import { ensure } from "../../../src/utils.ts";
 import { exists, getFileSha256 } from "../../utils.ts";
 import { findFallbackImage } from "../sources/external.ts";
 import { type ItemGeneratorContext } from "../types.ts";
-import { GAME_IMAGES_DIR, OUTPUT_DIR, PAINT_IMAGE_SUFFIXES, STATIC_IMAGES_DIR } from "../config.ts";
+import {
+    GAME_IMAGES_DIR,
+    OUTPUT_DIR,
+    OUTPUT_WEBP_OPTIONS,
+    PAINT_IMAGE_SUFFIXES,
+    STATIC_IMAGES_DIR
+} from "../config.ts";
 
 async function copyAndOptimizeImage(src: string, dest: string) {
     const filename = dest.includes("{sha256}") ? dest.replace("{sha256}", await getFileSha256(src)) : dest;
-    await sharp(src).webp({ quality: 95 }).toFile(join(OUTPUT_DIR, filename));
+    await sharp(src).webp(OUTPUT_WEBP_OPTIONS).toFile(join(OUTPUT_DIR, filename));
     return filename;
 }
 

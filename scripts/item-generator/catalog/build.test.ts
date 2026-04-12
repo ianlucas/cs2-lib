@@ -234,10 +234,7 @@ function createStickerParsingContext({
     const vpkIndex = new Map([
         ["stickers/columbus2016/sig_s1mple.vmat_c", { crc: "abc123", fnumber: "1" }],
         ["panorama/images/econ/stickers/columbus2016/sig_s1mple_png.png", { crc: "img123", fnumber: "1" }],
-        [
-            "panorama/images/econ/stickers/columbus2016/sig_s1mple_1355_37_png.png",
-            { crc: "key123", fnumber: "1" }
-        ]
+        ["panorama/images/econ/stickers/columbus2016/sig_s1mple_1355_37_png.png", { crc: "key123", fnumber: "1" }]
     ]);
     if (includeModel) {
         vpkIndex.set("stickers/dev/sticker_preview_mesh.vmdl_c", { crc: "model123", fnumber: "1" });
