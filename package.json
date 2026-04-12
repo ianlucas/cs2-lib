@@ -29,6 +29,10 @@
         "./translations": {
             "types": "./dist/translations/index.d.mts",
             "import": "./dist/translations/index.mjs"
+        },
+        "./translations/*": {
+            "types": "./dist/translations/*.d.mts",
+            "import": "./dist/translations/*.mjs"
         }
     },
     "sideEffects": false,
