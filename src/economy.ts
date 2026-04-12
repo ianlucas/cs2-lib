@@ -255,6 +255,10 @@ export class CS2EconomyInstance {
         item = this.get(item).expectContainer();
         assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
     }
+
+    resolveUrl(uri?: string): string {
+        return `${this.baseUrl}${uri}`;
+    }
 }
 
 export class CS2EconomyItem implements Interface<
@@ -598,8 +602,8 @@ export class CS2EconomyItem implements Interface<
 
     getImage(wear?: number): string {
         assert(this.image);
+        const url = this.economy.resolveUrl(this.image);
         if (this.hasWear() && wear !== undefined) {
-            const url = `${this.economy.baseUrl}${this.image}`;
             switch (true) {
                 case wear < 1 / 3:
                     return url.replace(".webp", "_light.webp");
@@ -609,27 +613,31 @@ export class CS2EconomyItem implements Interface<
                     return url.replace(".webp", "_heavy.webp");
             }
         }
-        return `${this.economy.baseUrl}${this.image}`;
+        return url;
     }
 
     getCollectionImage(): string {
-        return `${this.economy.baseUrl}${this.collectionImage}`;
+        return this.economy.resolveUrl(this.collectionImage);
     }
 
     getSpecialsImage(): string {
         this.expectContainer();
         assert(this.rawSpecials);
         assert(this.specialsImage);
-        return `${this.economy.baseUrl}${this.specialsImage}`;
+        return this.economy.resolveUrl(this.specialsImage);
     }
 
     getCompositeMaterial(): string {
-        return `${this.economy.baseUrl}${ensure(this.compositeMaterial)}`;
+        return this.economy.resolveUrl(this.compositeMaterial);
     }
 
     getModelPlayer(): string {
         const { modelPlayer } = this.parent ?? this;
-        return `${this.economy.baseUrl}${ensure(modelPlayer)}`;
+        return this.economy.resolveUrl(modelPlayer);
+    }
+
+    getModelData(): string {
+        return this.economy.resolveUrl(this.modelData);
     }
 
     getMinimumWear(): number {
