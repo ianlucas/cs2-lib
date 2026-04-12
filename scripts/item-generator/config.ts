@@ -53,7 +53,7 @@ export const UNCATEGORIZED_STICKERS: string[] = [
     "tournament_assets"
 ];
 export const REMOVE_KEYCHAIN_TOOL_INDEX: string = "65";
-export const OUTPUT_WEBP_OPTIONS = { lossless: false } as const;
+export const OUTPUT_WEBP_OPTIONS = { quality: 95, exact: true } as const;
 export const CDN_UPLOAD_CONCURRENCY: number = 40;
 export const EXTERNAL_CONCURRENCY: number = Math.max(2, availableParallelism());
 
