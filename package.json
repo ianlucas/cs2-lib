@@ -57,7 +57,7 @@
         "dotenv": "^17.4.1",
         "html-entities": "^2.6.0",
         "javascript-stringify": "^2.1.0",
-        "prettier": "3.8.1",
+        "prettier": "3.8.2",
         "rolldown": "^1.0.0-rc.12",
         "rolldown-plugin-dts": "^0.23.2",
         "rollup-plugin-delete": "^3.0.2",
