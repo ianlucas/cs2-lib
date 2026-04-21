@@ -58,19 +58,19 @@
         "@total-typescript/tsconfig": "^1.0.4",
         "@types/node": "^22.19.17",
         "cheerio": "^1.2.0",
-        "dotenv": "^17.4.0",
+        "dotenv": "^17.4.2",
         "html-entities": "^2.6.0",
         "javascript-stringify": "^2.1.0",
-        "prettier": "3.8.1",
+        "prettier": "3.8.2",
         "rolldown": "^1.0.0-rc.12",
         "rolldown-plugin-dts": "^0.23.2",
         "rollup-plugin-delete": "^3.0.2",
         "sharp": "^0.35.0-rc.2",
         "string-strip-html": "^13.5.3",
         "tsx": "^4.21.0",
-        "typedoc": "^0.28.18",
+        "typedoc": "^0.28.19",
         "typescript": "^6.0.2",
-        "vitest": "^4.1.2"
+        "vitest": "^4.1.4"
     },
     "engines": {
         "node": ">=20"
