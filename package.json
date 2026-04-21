@@ -54,7 +54,7 @@
         "@total-typescript/tsconfig": "^1.0.4",
         "@types/node": "^22.19.17",
         "cheerio": "^1.2.0",
-        "dotenv": "^17.4.1",
+        "dotenv": "^17.4.2",
         "html-entities": "^2.6.0",
         "javascript-stringify": "^2.1.0",
         "prettier": "3.8.2",
@@ -64,7 +64,7 @@
         "sharp": "^0.34.5",
         "string-strip-html": "^13.5.3",
         "tsx": "^4.21.0",
-        "typedoc": "^0.28.18",
+        "typedoc": "^0.28.19",
         "typescript": "^6.0.2",
         "vitest": "^4.1.4"
     },
