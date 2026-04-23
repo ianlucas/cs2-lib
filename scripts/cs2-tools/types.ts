@@ -34,8 +34,11 @@ export interface Cs2Runtime {
 
 export interface DecompileAssetsOptions {
     block?: string;
+    gltfAnimationList?: string;
+    gltfExportAnimations?: boolean;
     gltfExportFormat?: "glb";
     gltfExportMaterials?: boolean;
+    gltfTexturesAdapt?: boolean;
     output?: string;
     textureDecodeFlags?: string;
     threads?: number;

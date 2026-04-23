@@ -186,9 +186,7 @@ export function getModel(
         crc: entry.crc,
         modelData,
         modelPlayer,
-        directMaterials: new Set(),
-        materialFilenames: new Set(),
-        textureFilenames: new Set()
+        directMaterials: new Set()
     });
     return { modelPlayer, modelData };
 }

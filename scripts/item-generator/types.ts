@@ -20,8 +20,6 @@ export type PendingModelTask = {
     modelData: string;
     modelPlayer: string;
     directMaterials: Set<string>;
-    materialFilenames: Set<string>;
-    textureFilenames: Set<string>;
 };
 
 export type GlbMaterialExtras = {

@@ -116,6 +116,7 @@ export async function decompileAssets(
 
 export async function decompileModelAssets(runtime: Cs2Runtime, vpkPaths: string[]): Promise<void> {
     await decompileAssets(runtime, vpkPaths, {
+        gltfExportAnimations: true,
         gltfExportFormat: "glb",
         gltfExportMaterials: true
     });

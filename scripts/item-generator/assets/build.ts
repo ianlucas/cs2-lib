@@ -4,14 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
-import { NodeIO } from "@gltf-transform/core";
+import { type Document, NodeIO } from "@gltf-transform/core";
+import { execFile } from "child_process";
 import { createHash } from "crypto";
 import { createReadStream } from "fs";
-import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
+import { copyFile, mkdir, readFile, readdir, rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
-import { assert, ensure } from "../../../src/utils.ts";
+import { promisify } from "util";
+import { ensure } from "../../../src/utils.ts";
 import { decompileAssets, decompileModelAssets } from "../../cs2-tools/decompile.ts";
 import { ensureAssetPackages } from "../../cs2-tools/depot.ts";
 import {
@@ -40,6 +42,42 @@ import {
     resolveMaterialResourcePath,
     toCompiledMaterialResourcePath
 } from "./material-paths.ts";
+
+const execFileAsync = promisify(execFile);
+const GLTFPACK_BINARY = join(
+    process.cwd(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "gltfpack.cmd" : "gltfpack"
+);
+
+type GltfJsonImage = {
+    bufferView?: unknown;
+    mimeType?: unknown;
+    uri?: unknown;
+};
+
+type GltfJson = {
+    buffers?: unknown;
+    bufferViews?: unknown;
+    extensionsRequired?: unknown;
+    extensionsUsed?: unknown;
+    images?: unknown;
+    textures?: unknown;
+};
+
+type GltfJsonBufferView = {
+    buffer?: unknown;
+    byteLength?: unknown;
+    byteOffset?: unknown;
+    [key: string]: unknown;
+};
+
+type GltfJsonTexture = {
+    extensions?: Record<string, unknown>;
+    source?: unknown;
+    [key: string]: unknown;
+};
 
 export async function prepareWorkspace(ctx: ItemGeneratorContext): Promise<void> {
     await mkdir(ITEM_GENERATOR_WORKDIR_DIR, { recursive: true });
@@ -155,27 +193,13 @@ async function processModels(ctx: ItemGeneratorContext) {
     for (const [vpkPath, model] of ctx.modelsToProcess) {
         const modelDir = join(DECOMPILED_DIR, dirname(vpkPath));
         const base = basename(vpkPath, ".vmdl_c");
-        const renames = new Map<string, string>();
-        await Promise.all(
-            (await readdir(modelDir)).map(async (file) => {
-                if (file.endsWith(".png")) {
-                    const webpFile = file.replace(/\.png$/, ".webp");
-                    await sharp(join(modelDir, file))
-                        .webp(OUTPUT_WEBP_OPTIONS)
-                        .toFile(join(OUTPUT_DIR, "textures", webpFile));
-                    renames.set(file, `/textures/${webpFile}`);
-                } else if (file.endsWith(".exr")) {
-                    await rename(join(modelDir, file), join(OUTPUT_DIR, "textures", file));
-                    renames.set(file, `/textures/${file}`);
-                }
-            })
-        );
-        for (const filename of renames.values()) {
-            model.textureFilenames.add(filename);
-        }
         const glbPath = join(modelDir, `${base}.glb`);
-        await patchGlbAssets(ctx, glbPath, renames);
-        const dependencyHash = getDependencyHash([...model.materialFilenames, ...model.textureFilenames]);
+        await patchGlbAssets(ctx, glbPath);
+        await optimizeModelGlb(glbPath);
+        const dependencyHash = getDependencyHash([
+            await getFileSha256(glbPath),
+            await getFileSha256(join(OUTPUT_DIR, model.modelData))
+        ]);
         const versionedBase = `${model.base}_${model.crc}_${dependencyHash}`;
         const versionedModelPlayer = `/models/${versionedBase}.glb`;
         const versionedModelData = `/models/${versionedBase}.json`;
@@ -294,11 +318,6 @@ async function preProcessMaterials(ctx: ItemGeneratorContext) {
             }
         }
     }
-    for (const model of ctx.modelsToProcess.values()) {
-        for (const material of collectMaterialGraph(ctx, model.directMaterials)) {
-            model.materialFilenames.add(`/materials/${material}`);
-        }
-    }
     log(
         `Extracted ${formatCount(processed.size, "material")} and found ${formatCount(ctx.texturesToProcess.size, "texture reference")}.`
     );
@@ -384,27 +403,6 @@ function assertMaterialReferencesRewritten(json: string, filename: string) {
     }
 }
 
-function collectMaterialGraph(ctx: ItemGeneratorContext, materials: Iterable<string>) {
-    const outputFilenames = new Set<string>();
-    const queue = [...materials];
-    const seen = new Set<string>();
-    while (queue.length > 0) {
-        const vmatPath = ensure(queue.pop());
-        if (seen.has(vmatPath)) {
-            continue;
-        }
-        seen.add(vmatPath);
-        const filename = ctx.materialFilenameByPath.get(vmatPath);
-        if (filename !== undefined) {
-            outputFilenames.add(filename);
-        }
-        for (const child of ctx.materialRefsByPath.get(vmatPath) ?? []) {
-            queue.push(child);
-        }
-    }
-    return outputFilenames;
-}
-
 function getDependencyHash(dependencies: Iterable<string>) {
     const hash = createHash("sha256");
     hash.update([...new Set(dependencies)].sort().join("\n"), "utf8");
@@ -434,16 +432,24 @@ function getMaterialName(ctx: ItemGeneratorContext, vmatPath: string) {
     return filename ? basename(filename, ".vmat.json") : undefined;
 }
 
-async function patchGlbAssets(ctx: ItemGeneratorContext, glbPath: string, textureRenames: Map<string, string>) {
+export function buildGltfpackArgs(input: string, output: string): string[] {
+    return ["-i", input, "-o", output, "-cc", "-ke", "-km", "-kn"];
+}
+
+async function optimizeModelGlb(glbPath: string) {
+    const optimizedGlbPath = glbPath.replace(/\.glb$/i, ".optimized.glb");
+    await execFileAsync(GLTFPACK_BINARY, buildGltfpackArgs(glbPath, optimizedGlbPath), {
+        maxBuffer: 10 * 1024 * 1024
+    });
+    await embedOptimizedWebpTexturesInGlb(optimizedGlbPath);
+    await assertOptimizedGlbTextureContract(optimizedGlbPath);
+    await rename(optimizedGlbPath, glbPath);
+}
+
+async function patchGlbAssets(ctx: ItemGeneratorContext, glbPath: string) {
     const io = new NodeIO();
     const document = await io.read(glbPath);
-    for (const texture of document.getRoot().listTextures()) {
-        const uri = texture.getURI();
-        if (uri !== null && textureRenames.has(uri)) {
-            texture.setURI(textureRenames.get(uri)!);
-            texture.setImage(null);
-        }
-    }
+    await convertExrTextureUris(document, glbPath);
     for (const material of document.getRoot().listMaterials()) {
         const extras = material.getExtras() as GlbMaterialExtras | null;
         const vmatPath = extras?.vmat?.Name;
@@ -456,6 +462,280 @@ async function patchGlbAssets(ctx: ItemGeneratorContext, glbPath: string, textur
         }
     }
     await writeFile(glbPath, await io.writeBinary(document));
+}
+
+async function convertExrTextureUris(document: Document, glbPath: string) {
+    const glbDir = dirname(glbPath);
+    for (const texture of document.getRoot().listTextures()) {
+        const uri = texture.getURI();
+        if (uri === "" || !uri.toLowerCase().endsWith(".exr")) {
+            continue;
+        }
+        const pngUri = uri.replace(/\.exr$/i, ".png");
+        await sharp(join(glbDir, uri)).png().toFile(join(glbDir, pngUri));
+        texture.setURI(pngUri);
+        texture.setImage(null);
+    }
+}
+
+export async function embedOptimizedWebpTexturesInGlb(glbPath: string): Promise<void> {
+    const { bin, json } = parseGlb(await readFile(glbPath));
+    const images = Array.isArray(json.images) ? (json.images as GltfJsonImage[]) : [];
+    const webpImages: { data: Buffer; image: GltfJsonImage }[] = [];
+    for (const image of images) {
+        const data = await readGltfImageData(json, bin, image, dirname(glbPath));
+        if (data === undefined) {
+            continue;
+        }
+        webpImages.push({
+            data: await sharp(data).webp(OUTPUT_WEBP_OPTIONS).toBuffer(),
+            image
+        });
+        delete image.bufferView;
+        delete image.uri;
+        image.mimeType = "image/webp";
+    }
+    if (webpImages.length === 0) {
+        return;
+    }
+    markTexturesAsWebp(json);
+    await writeFile(glbPath, writeGlb(json, compactGlbBufferViews(json, bin, webpImages)));
+}
+
+async function assertOptimizedGlbTextureContract(glbPath: string) {
+    const { json: gltf } = parseGlb(await readFile(glbPath));
+    assertNoExternalGltfImageUris(gltf, glbPath);
+    const extensionsUsed = Array.isArray(gltf.extensionsUsed) ? gltf.extensionsUsed : [];
+    if (extensionsUsed.includes("KHR_texture_basisu")) {
+        throw new Error(`Unexpected KHR_texture_basisu output found in '${glbPath}'; expected embedded WebP textures.`);
+    }
+}
+
+async function readGltfImageData(
+    gltf: GltfJson,
+    bin: Buffer,
+    image: GltfJsonImage,
+    glbDir: string
+): Promise<Buffer | undefined> {
+    if (typeof image.bufferView === "number") {
+        const bufferView = getGltfBufferViews(gltf)[image.bufferView];
+        if (bufferView === undefined) {
+            return undefined;
+        }
+        const byteOffset = typeof bufferView.byteOffset === "number" ? bufferView.byteOffset : 0;
+        const byteLength = typeof bufferView.byteLength === "number" ? bufferView.byteLength : 0;
+        return bin.subarray(byteOffset, byteOffset + byteLength);
+    }
+    if (typeof image.uri !== "string") {
+        return undefined;
+    }
+    if (image.uri.startsWith("data:")) {
+        return decodeDataUri(image.uri);
+    }
+    return await readFile(join(glbDir, image.uri));
+}
+
+function compactGlbBufferViews(
+    gltf: GltfJson,
+    bin: Buffer,
+    webpImages: { data: Buffer; image: GltfJsonImage }[]
+): Buffer {
+    const originalBufferViews = getGltfBufferViews(gltf);
+    const usedBufferViews = collectUsedBufferViews(gltf);
+    const bufferViewIndexMap = new Map<number, number>();
+    const chunks: Buffer[] = [];
+    const compactedBufferViews: GltfJsonBufferView[] = [];
+    for (const index of usedBufferViews) {
+        const bufferView = originalBufferViews[index];
+        if (bufferView === undefined) {
+            continue;
+        }
+        const byteOffset = typeof bufferView.byteOffset === "number" ? bufferView.byteOffset : 0;
+        const byteLength = typeof bufferView.byteLength === "number" ? bufferView.byteLength : 0;
+        bufferViewIndexMap.set(index, compactedBufferViews.length);
+        compactedBufferViews.push({
+            ...bufferView,
+            buffer: 0,
+            byteOffset: getPaddedByteLength(chunks),
+            byteLength
+        });
+        pushGlbChunkData(chunks, bin.subarray(byteOffset, byteOffset + byteLength));
+    }
+    remapBufferViewRefs(gltf, bufferViewIndexMap);
+    for (const { data, image } of webpImages) {
+        image.bufferView = compactedBufferViews.length;
+        compactedBufferViews.push({
+            buffer: 0,
+            byteOffset: getPaddedByteLength(chunks),
+            byteLength: data.byteLength
+        });
+        pushGlbChunkData(chunks, data);
+    }
+    const compactedBin = Buffer.concat(chunks);
+    gltf.bufferViews = compactedBufferViews;
+    gltf.buffers = [{ byteLength: compactedBin.byteLength }];
+    return compactedBin;
+}
+
+function getGltfBufferViews(gltf: GltfJson): GltfJsonBufferView[] {
+    return Array.isArray(gltf.bufferViews) ? (gltf.bufferViews as GltfJsonBufferView[]) : [];
+}
+
+function collectUsedBufferViews(value: unknown, output = new Set<number>()): Set<number> {
+    if (Array.isArray(value)) {
+        for (const child of value) {
+            collectUsedBufferViews(child, output);
+        }
+        return output;
+    }
+    if (value !== null && typeof value === "object") {
+        for (const [key, child] of Object.entries(value)) {
+            if (key === "bufferView" && typeof child === "number") {
+                output.add(child);
+            } else {
+                collectUsedBufferViews(child, output);
+            }
+        }
+    }
+    return output;
+}
+
+function remapBufferViewRefs(value: unknown, indexMap: Map<number, number>): void {
+    if (Array.isArray(value)) {
+        for (const child of value) {
+            remapBufferViewRefs(child, indexMap);
+        }
+        return;
+    }
+    if (value !== null && typeof value === "object") {
+        const record = value as Record<string, unknown>;
+        for (const [key, child] of Object.entries(record)) {
+            if (key === "bufferView" && typeof child === "number") {
+                record[key] = ensure(indexMap.get(child));
+            } else {
+                remapBufferViewRefs(child, indexMap);
+            }
+        }
+    }
+}
+
+function markTexturesAsWebp(gltf: GltfJson): void {
+    addGltfExtension(gltf, "extensionsUsed", "EXT_texture_webp");
+    addGltfExtension(gltf, "extensionsRequired", "EXT_texture_webp");
+    if (!Array.isArray(gltf.textures)) {
+        return;
+    }
+    for (const texture of gltf.textures as GltfJsonTexture[]) {
+        if (typeof texture.source !== "number") {
+            continue;
+        }
+        texture.extensions = {
+            ...texture.extensions,
+            EXT_texture_webp: { source: texture.source }
+        };
+    }
+}
+
+function addGltfExtension(gltf: GltfJson, key: "extensionsRequired" | "extensionsUsed", extension: string): void {
+    const extensions = new Set(Array.isArray(gltf[key]) ? (gltf[key] as string[]) : []);
+    extensions.add(extension);
+    gltf[key] = [...extensions];
+}
+
+export function assertNoExternalGltfImageUris(gltf: GltfJson, glbPath: string): void {
+    const externalUris = getExternalGltfImageUris(gltf);
+    if (externalUris.length > 0) {
+        throw new Error(`External GLB texture URI found in '${glbPath}': ${externalUris.join(", ")}`);
+    }
+}
+
+function getExternalGltfImageUris(gltf: GltfJson): string[] {
+    if (!Array.isArray(gltf.images)) {
+        return [];
+    }
+    return (gltf.images as GltfJsonImage[])
+        .map((image) => image.uri)
+        .filter((uri): uri is string => typeof uri === "string" && !uri.startsWith("data:"));
+}
+
+function parseGlb(buffer: Buffer): { bin: Buffer; json: GltfJson } {
+    const magic = buffer.readUInt32LE(0);
+    const version = buffer.readUInt32LE(4);
+    if (magic !== 0x46546c67 || version !== 2) {
+        throw new Error("Invalid GLB header.");
+    }
+    const jsonChunkLength = buffer.readUInt32LE(12);
+    const jsonChunkType = buffer.readUInt32LE(16);
+    if (jsonChunkType !== 0x4e4f534a) {
+        throw new Error("Invalid GLB JSON chunk.");
+    }
+    const binChunkOffset = 20 + jsonChunkLength;
+    const binChunkLength = binChunkOffset + 8 <= buffer.byteLength ? buffer.readUInt32LE(binChunkOffset) : 0;
+    const binChunkType = binChunkLength > 0 ? buffer.readUInt32LE(binChunkOffset + 4) : 0x004e4942;
+    if (binChunkLength > 0 && binChunkType !== 0x004e4942) {
+        throw new Error("Invalid GLB BIN chunk.");
+    }
+    return {
+        bin: buffer.subarray(binChunkOffset + 8, binChunkOffset + 8 + binChunkLength),
+        json: JSON.parse(
+            buffer
+                .subarray(20, 20 + jsonChunkLength)
+                .toString("utf8")
+                .trimEnd()
+        ) as GltfJson
+    };
+}
+
+function writeGlb(json: GltfJson, bin: Buffer): Buffer {
+    const jsonBuffer = padBuffer(Buffer.from(JSON.stringify(json), "utf8"), 0x20);
+    const binBuffer = padBuffer(bin, 0);
+    const header = Buffer.alloc(12);
+    header.writeUInt32LE(0x46546c67, 0);
+    header.writeUInt32LE(2, 4);
+    header.writeUInt32LE(12 + 8 + jsonBuffer.byteLength + 8 + binBuffer.byteLength, 8);
+    const jsonHeader = Buffer.alloc(8);
+    jsonHeader.writeUInt32LE(jsonBuffer.byteLength, 0);
+    jsonHeader.writeUInt32LE(0x4e4f534a, 4);
+    const binHeader = Buffer.alloc(8);
+    binHeader.writeUInt32LE(binBuffer.byteLength, 0);
+    binHeader.writeUInt32LE(0x004e4942, 4);
+    return Buffer.concat([header, jsonHeader, jsonBuffer, binHeader, binBuffer]);
+}
+
+function decodeDataUri(uri: string): Buffer {
+    const match = uri.match(/^data:.*?(;base64)?,(.*)$/);
+    if (match === null) {
+        throw new Error("Invalid data URI.");
+    }
+    return match[1] === ";base64" ? Buffer.from(match[2]!, "base64") : Buffer.from(decodeURIComponent(match[2]!));
+}
+
+function pushGlbChunkData(chunks: Buffer[], data: Buffer): void {
+    const padding = getPaddedByteLength(chunks) - getByteLength(chunks);
+    if (padding > 0) {
+        chunks.push(Buffer.alloc(padding));
+    }
+    chunks.push(data);
+}
+
+function getByteLength(chunks: Buffer[]): number {
+    return chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+}
+
+function getPaddedByteLength(chunks: Buffer[]): number {
+    return padNumber(getByteLength(chunks));
+}
+
+function padBuffer(buffer: Buffer, paddingByte: number): Buffer {
+    const paddedLength = padNumber(buffer.byteLength);
+    if (paddedLength === buffer.byteLength) {
+        return buffer;
+    }
+    return Buffer.concat([buffer, Buffer.alloc(paddedLength - buffer.byteLength, paddingByte)]);
+}
+
+function padNumber(value: number): number {
+    return Math.ceil(value / 4) * 4;
 }
 
 async function colorizeGraffitiImage(src: string, hexColor: string, dest: string) {

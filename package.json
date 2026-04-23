@@ -59,6 +59,7 @@
         "@types/node": "^22.19.17",
         "cheerio": "^1.2.0",
         "dotenv": "^17.4.2",
+        "gltfpack": "^1.1.0",
         "html-entities": "^2.6.0",
         "javascript-stringify": "^2.1.0",
         "prettier": "3.8.2",
