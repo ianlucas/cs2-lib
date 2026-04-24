@@ -70,7 +70,7 @@
         "string-strip-html": "^13.5.3",
         "tsx": "^4.21.0",
         "typedoc": "^0.28.19",
-        "typescript": "^6.0.2",
+        "typescript": "^6.0.3",
         "vitest": "^4.1.4"
     },
     "engines": {
