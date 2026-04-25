@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
-import { type Document, NodeIO } from "@gltf-transform/core";
-import { execFile } from "child_process";
+import { NodeIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
+import { textureCompress } from "@gltf-transform/functions";
 import { createHash } from "crypto";
 import { createReadStream } from "fs";
-import { copyFile, mkdir, readFile, readdir, rename, writeFile } from "fs/promises";
+import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 import sharp from "sharp";
 import { Readable } from "stream";
-import { promisify } from "util";
 import { ensure } from "../../../src/utils.ts";
 import { decompileAssets, decompileModelAssets } from "../../cs2-tools/decompile.ts";
 import { ensureAssetPackages } from "../../cs2-tools/depot.ts";
@@ -43,41 +43,7 @@ import {
     toCompiledMaterialResourcePath
 } from "./material-paths.ts";
 
-const execFileAsync = promisify(execFile);
-const GLTFPACK_BINARY = join(
-    process.cwd(),
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "gltfpack.cmd" : "gltfpack"
-);
-
-type GltfJsonImage = {
-    bufferView?: unknown;
-    mimeType?: unknown;
-    uri?: unknown;
-};
-
-type GltfJson = {
-    buffers?: unknown;
-    bufferViews?: unknown;
-    extensionsRequired?: unknown;
-    extensionsUsed?: unknown;
-    images?: unknown;
-    textures?: unknown;
-};
-
-type GltfJsonBufferView = {
-    buffer?: unknown;
-    byteLength?: unknown;
-    byteOffset?: unknown;
-    [key: string]: unknown;
-};
-
-type GltfJsonTexture = {
-    extensions?: Record<string, unknown>;
-    source?: unknown;
-    [key: string]: unknown;
-};
+const MODEL_TEXTURE_FORMATS_TO_OPTIMIZE = /^image\/(?:jpeg|png|webp)$/;
 
 export async function prepareWorkspace(ctx: ItemGeneratorContext): Promise<void> {
     await mkdir(ITEM_GENERATOR_WORKDIR_DIR, { recursive: true });
@@ -432,24 +398,27 @@ function getMaterialName(ctx: ItemGeneratorContext, vmatPath: string) {
     return filename ? basename(filename, ".vmat.json") : undefined;
 }
 
-export function buildGltfpackArgs(input: string, output: string): string[] {
-    return ["-i", input, "-o", output, "-cc", "-ke", "-km", "-kn"];
+function createModelGlbIO(): NodeIO {
+    return new NodeIO().registerExtensions(ALL_EXTENSIONS);
 }
 
-async function optimizeModelGlb(glbPath: string) {
-    const optimizedGlbPath = glbPath.replace(/\.glb$/i, ".optimized.glb");
-    await execFileAsync(GLTFPACK_BINARY, buildGltfpackArgs(glbPath, optimizedGlbPath), {
-        maxBuffer: 10 * 1024 * 1024
-    });
-    await embedOptimizedWebpTexturesInGlb(optimizedGlbPath);
-    await assertOptimizedGlbTextureContract(optimizedGlbPath);
-    await rename(optimizedGlbPath, glbPath);
+export async function optimizeModelGlb(glbPath: string): Promise<void> {
+    const io = createModelGlbIO();
+    const document = await io.read(glbPath);
+    await document.transform(
+        textureCompress({
+            encoder: sharp,
+            formats: MODEL_TEXTURE_FORMATS_TO_OPTIMIZE,
+            quality: OUTPUT_WEBP_OPTIONS.quality,
+            targetFormat: "webp"
+        })
+    );
+    await writeFile(glbPath, await io.writeBinary(document));
 }
 
 async function patchGlbAssets(ctx: ItemGeneratorContext, glbPath: string) {
-    const io = new NodeIO();
+    const io = createModelGlbIO();
     const document = await io.read(glbPath);
-    await convertExrTextureUris(document, glbPath);
     for (const material of document.getRoot().listMaterials()) {
         const extras = material.getExtras() as GlbMaterialExtras | null;
         const vmatPath = extras?.vmat?.Name;
@@ -462,255 +431,6 @@ async function patchGlbAssets(ctx: ItemGeneratorContext, glbPath: string) {
         }
     }
     await writeFile(glbPath, await io.writeBinary(document));
-}
-
-async function convertExrTextureUris(document: Document, glbPath: string) {
-    const glbDir = dirname(glbPath);
-    for (const texture of document.getRoot().listTextures()) {
-        const uri = texture.getURI();
-        if (uri === "" || !uri.toLowerCase().endsWith(".exr")) {
-            continue;
-        }
-        const pngUri = uri.replace(/\.exr$/i, ".png");
-        await sharp(join(glbDir, uri)).png().toFile(join(glbDir, pngUri));
-        texture.setURI(pngUri);
-        texture.setImage(null);
-    }
-}
-
-export async function embedOptimizedWebpTexturesInGlb(glbPath: string): Promise<void> {
-    const { bin, json } = parseGlb(await readFile(glbPath));
-    const images = Array.isArray(json.images) ? (json.images as GltfJsonImage[]) : [];
-    const webpImages: { data: Buffer; image: GltfJsonImage }[] = [];
-    for (const image of images) {
-        const data = await readGltfImageData(json, bin, image, dirname(glbPath));
-        if (data === undefined) {
-            continue;
-        }
-        webpImages.push({
-            data: await sharp(data).webp(OUTPUT_WEBP_OPTIONS).toBuffer(),
-            image
-        });
-        delete image.bufferView;
-        delete image.uri;
-        image.mimeType = "image/webp";
-    }
-    if (webpImages.length === 0) {
-        return;
-    }
-    markTexturesAsWebp(json);
-    await writeFile(glbPath, writeGlb(json, appendGlbImageBufferViews(json, bin, webpImages)));
-}
-
-async function assertOptimizedGlbTextureContract(glbPath: string) {
-    const { bin, json: gltf } = parseGlb(await readFile(glbPath));
-    assertNoExternalGltfImageUris(gltf, glbPath);
-    assertGltfMeshoptCompressionRangesInBounds(gltf, bin.byteLength, glbPath);
-    const extensionsUsed = Array.isArray(gltf.extensionsUsed) ? gltf.extensionsUsed : [];
-    if (extensionsUsed.includes("KHR_texture_basisu")) {
-        throw new Error(`Unexpected KHR_texture_basisu output found in '${glbPath}'; expected embedded WebP textures.`);
-    }
-}
-
-async function readGltfImageData(
-    gltf: GltfJson,
-    bin: Buffer,
-    image: GltfJsonImage,
-    glbDir: string
-): Promise<Buffer | undefined> {
-    if (typeof image.bufferView === "number") {
-        const bufferView = getGltfBufferViews(gltf)[image.bufferView];
-        if (bufferView === undefined) {
-            return undefined;
-        }
-        const byteOffset = typeof bufferView.byteOffset === "number" ? bufferView.byteOffset : 0;
-        const byteLength = typeof bufferView.byteLength === "number" ? bufferView.byteLength : 0;
-        return bin.subarray(byteOffset, byteOffset + byteLength);
-    }
-    if (typeof image.uri !== "string") {
-        return undefined;
-    }
-    if (image.uri.startsWith("data:")) {
-        return decodeDataUri(image.uri);
-    }
-    return await readFile(join(glbDir, image.uri));
-}
-
-function appendGlbImageBufferViews(
-    gltf: GltfJson,
-    bin: Buffer,
-    webpImages: { data: Buffer; image: GltfJsonImage }[]
-): Buffer {
-    const bufferViews = getGltfBufferViews(gltf);
-    const chunks: Buffer[] = [bin];
-    for (const { data, image } of webpImages) {
-        image.bufferView = bufferViews.length;
-        bufferViews.push({
-            buffer: 0,
-            byteOffset: getPaddedByteLength(chunks),
-            byteLength: data.byteLength
-        });
-        pushGlbChunkData(chunks, data);
-    }
-    const appendedBin = Buffer.concat(chunks);
-    gltf.bufferViews = bufferViews;
-    gltf.buffers = [{ byteLength: appendedBin.byteLength }];
-    return appendedBin;
-}
-
-function getGltfBufferViews(gltf: GltfJson): GltfJsonBufferView[] {
-    return Array.isArray(gltf.bufferViews) ? (gltf.bufferViews as GltfJsonBufferView[]) : [];
-}
-
-function markTexturesAsWebp(gltf: GltfJson): void {
-    addGltfExtension(gltf, "extensionsUsed", "EXT_texture_webp");
-    addGltfExtension(gltf, "extensionsRequired", "EXT_texture_webp");
-    if (!Array.isArray(gltf.textures)) {
-        return;
-    }
-    for (const texture of gltf.textures as GltfJsonTexture[]) {
-        if (typeof texture.source !== "number") {
-            continue;
-        }
-        texture.extensions = {
-            ...texture.extensions,
-            EXT_texture_webp: { source: texture.source }
-        };
-    }
-}
-
-function addGltfExtension(gltf: GltfJson, key: "extensionsRequired" | "extensionsUsed", extension: string): void {
-    const extensions = new Set(Array.isArray(gltf[key]) ? (gltf[key] as string[]) : []);
-    extensions.add(extension);
-    gltf[key] = [...extensions];
-}
-
-export function assertNoExternalGltfImageUris(gltf: GltfJson, glbPath: string): void {
-    const externalUris = getExternalGltfImageUris(gltf);
-    if (externalUris.length > 0) {
-        throw new Error(`External GLB texture URI found in '${glbPath}': ${externalUris.join(", ")}`);
-    }
-}
-
-export function assertGltfMeshoptCompressionRangesInBounds(
-    gltf: GltfJson,
-    binByteLength: number,
-    glbPath: string
-): void {
-    for (const [index, bufferView] of getGltfBufferViews(gltf).entries()) {
-        const meshopt = getMeshoptCompressionExtension(bufferView);
-        if (meshopt === undefined) {
-            continue;
-        }
-        const byteOffset = typeof meshopt.byteOffset === "number" ? meshopt.byteOffset : 0;
-        const byteLength = typeof meshopt.byteLength === "number" ? meshopt.byteLength : undefined;
-        if (byteLength === undefined || byteOffset + byteLength > binByteLength) {
-            throw new Error(
-                `Out-of-bounds EXT_meshopt_compression range in '${glbPath}' bufferView ${index}: ${byteOffset}+${byteLength ?? "unknown"} > ${binByteLength}`
-            );
-        }
-    }
-}
-
-function getMeshoptCompressionExtension(bufferView: GltfJsonBufferView): Record<string, unknown> | undefined {
-    const extensions = bufferView.extensions;
-    if (extensions === null || typeof extensions !== "object" || Array.isArray(extensions)) {
-        return undefined;
-    }
-    const meshopt = (extensions as Record<string, unknown>).EXT_meshopt_compression;
-    if (meshopt === null || typeof meshopt !== "object" || Array.isArray(meshopt)) {
-        return undefined;
-    }
-    return meshopt as Record<string, unknown>;
-}
-
-function getExternalGltfImageUris(gltf: GltfJson): string[] {
-    if (!Array.isArray(gltf.images)) {
-        return [];
-    }
-    return (gltf.images as GltfJsonImage[])
-        .map((image) => image.uri)
-        .filter((uri): uri is string => typeof uri === "string" && !uri.startsWith("data:"));
-}
-
-function parseGlb(buffer: Buffer): { bin: Buffer; json: GltfJson } {
-    const magic = buffer.readUInt32LE(0);
-    const version = buffer.readUInt32LE(4);
-    if (magic !== 0x46546c67 || version !== 2) {
-        throw new Error("Invalid GLB header.");
-    }
-    const jsonChunkLength = buffer.readUInt32LE(12);
-    const jsonChunkType = buffer.readUInt32LE(16);
-    if (jsonChunkType !== 0x4e4f534a) {
-        throw new Error("Invalid GLB JSON chunk.");
-    }
-    const binChunkOffset = 20 + jsonChunkLength;
-    const binChunkLength = binChunkOffset + 8 <= buffer.byteLength ? buffer.readUInt32LE(binChunkOffset) : 0;
-    const binChunkType = binChunkLength > 0 ? buffer.readUInt32LE(binChunkOffset + 4) : 0x004e4942;
-    if (binChunkLength > 0 && binChunkType !== 0x004e4942) {
-        throw new Error("Invalid GLB BIN chunk.");
-    }
-    return {
-        bin: buffer.subarray(binChunkOffset + 8, binChunkOffset + 8 + binChunkLength),
-        json: JSON.parse(
-            buffer
-                .subarray(20, 20 + jsonChunkLength)
-                .toString("utf8")
-                .trimEnd()
-        ) as GltfJson
-    };
-}
-
-function writeGlb(json: GltfJson, bin: Buffer): Buffer {
-    const jsonBuffer = padBuffer(Buffer.from(JSON.stringify(json), "utf8"), 0x20);
-    const binBuffer = padBuffer(bin, 0);
-    const header = Buffer.alloc(12);
-    header.writeUInt32LE(0x46546c67, 0);
-    header.writeUInt32LE(2, 4);
-    header.writeUInt32LE(12 + 8 + jsonBuffer.byteLength + 8 + binBuffer.byteLength, 8);
-    const jsonHeader = Buffer.alloc(8);
-    jsonHeader.writeUInt32LE(jsonBuffer.byteLength, 0);
-    jsonHeader.writeUInt32LE(0x4e4f534a, 4);
-    const binHeader = Buffer.alloc(8);
-    binHeader.writeUInt32LE(binBuffer.byteLength, 0);
-    binHeader.writeUInt32LE(0x004e4942, 4);
-    return Buffer.concat([header, jsonHeader, jsonBuffer, binHeader, binBuffer]);
-}
-
-function decodeDataUri(uri: string): Buffer {
-    const match = uri.match(/^data:.*?(;base64)?,(.*)$/);
-    if (match === null) {
-        throw new Error("Invalid data URI.");
-    }
-    return match[1] === ";base64" ? Buffer.from(match[2]!, "base64") : Buffer.from(decodeURIComponent(match[2]!));
-}
-
-function pushGlbChunkData(chunks: Buffer[], data: Buffer): void {
-    const padding = getPaddedByteLength(chunks) - getByteLength(chunks);
-    if (padding > 0) {
-        chunks.push(Buffer.alloc(padding));
-    }
-    chunks.push(data);
-}
-
-function getByteLength(chunks: Buffer[]): number {
-    return chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
-}
-
-function getPaddedByteLength(chunks: Buffer[]): number {
-    return padNumber(getByteLength(chunks));
-}
-
-function padBuffer(buffer: Buffer, paddingByte: number): Buffer {
-    const paddedLength = padNumber(buffer.byteLength);
-    if (paddedLength === buffer.byteLength) {
-        return buffer;
-    }
-    return Buffer.concat([buffer, Buffer.alloc(paddedLength - buffer.byteLength, paddingByte)]);
-}
-
-function padNumber(value: number): number {
-    return Math.ceil(value / 4) * 4;
 }
 
 async function colorizeGraffitiImage(src: string, hexColor: string, dest: string) {
