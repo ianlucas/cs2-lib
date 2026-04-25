@@ -499,12 +499,13 @@ export async function embedOptimizedWebpTexturesInGlb(glbPath: string): Promise<
         return;
     }
     markTexturesAsWebp(json);
-    await writeFile(glbPath, writeGlb(json, compactGlbBufferViews(json, bin, webpImages)));
+    await writeFile(glbPath, writeGlb(json, appendGlbImageBufferViews(json, bin, webpImages)));
 }
 
 async function assertOptimizedGlbTextureContract(glbPath: string) {
-    const { json: gltf } = parseGlb(await readFile(glbPath));
+    const { bin, json: gltf } = parseGlb(await readFile(glbPath));
     assertNoExternalGltfImageUris(gltf, glbPath);
+    assertGltfMeshoptCompressionRangesInBounds(gltf, bin.byteLength, glbPath);
     const extensionsUsed = Array.isArray(gltf.extensionsUsed) ? gltf.extensionsUsed : [];
     if (extensionsUsed.includes("KHR_texture_basisu")) {
         throw new Error(`Unexpected KHR_texture_basisu output found in '${glbPath}'; expected embedded WebP textures.`);
@@ -535,88 +536,30 @@ async function readGltfImageData(
     return await readFile(join(glbDir, image.uri));
 }
 
-function compactGlbBufferViews(
+function appendGlbImageBufferViews(
     gltf: GltfJson,
     bin: Buffer,
     webpImages: { data: Buffer; image: GltfJsonImage }[]
 ): Buffer {
-    const originalBufferViews = getGltfBufferViews(gltf);
-    const usedBufferViews = collectUsedBufferViews(gltf);
-    const bufferViewIndexMap = new Map<number, number>();
-    const chunks: Buffer[] = [];
-    const compactedBufferViews: GltfJsonBufferView[] = [];
-    for (const index of usedBufferViews) {
-        const bufferView = originalBufferViews[index];
-        if (bufferView === undefined) {
-            continue;
-        }
-        const byteOffset = typeof bufferView.byteOffset === "number" ? bufferView.byteOffset : 0;
-        const byteLength = typeof bufferView.byteLength === "number" ? bufferView.byteLength : 0;
-        bufferViewIndexMap.set(index, compactedBufferViews.length);
-        compactedBufferViews.push({
-            ...bufferView,
-            buffer: 0,
-            byteOffset: getPaddedByteLength(chunks),
-            byteLength
-        });
-        pushGlbChunkData(chunks, bin.subarray(byteOffset, byteOffset + byteLength));
-    }
-    remapBufferViewRefs(gltf, bufferViewIndexMap);
+    const bufferViews = getGltfBufferViews(gltf);
+    const chunks: Buffer[] = [bin];
     for (const { data, image } of webpImages) {
-        image.bufferView = compactedBufferViews.length;
-        compactedBufferViews.push({
+        image.bufferView = bufferViews.length;
+        bufferViews.push({
             buffer: 0,
             byteOffset: getPaddedByteLength(chunks),
             byteLength: data.byteLength
         });
         pushGlbChunkData(chunks, data);
     }
-    const compactedBin = Buffer.concat(chunks);
-    gltf.bufferViews = compactedBufferViews;
-    gltf.buffers = [{ byteLength: compactedBin.byteLength }];
-    return compactedBin;
+    const appendedBin = Buffer.concat(chunks);
+    gltf.bufferViews = bufferViews;
+    gltf.buffers = [{ byteLength: appendedBin.byteLength }];
+    return appendedBin;
 }
 
 function getGltfBufferViews(gltf: GltfJson): GltfJsonBufferView[] {
     return Array.isArray(gltf.bufferViews) ? (gltf.bufferViews as GltfJsonBufferView[]) : [];
-}
-
-function collectUsedBufferViews(value: unknown, output = new Set<number>()): Set<number> {
-    if (Array.isArray(value)) {
-        for (const child of value) {
-            collectUsedBufferViews(child, output);
-        }
-        return output;
-    }
-    if (value !== null && typeof value === "object") {
-        for (const [key, child] of Object.entries(value)) {
-            if (key === "bufferView" && typeof child === "number") {
-                output.add(child);
-            } else {
-                collectUsedBufferViews(child, output);
-            }
-        }
-    }
-    return output;
-}
-
-function remapBufferViewRefs(value: unknown, indexMap: Map<number, number>): void {
-    if (Array.isArray(value)) {
-        for (const child of value) {
-            remapBufferViewRefs(child, indexMap);
-        }
-        return;
-    }
-    if (value !== null && typeof value === "object") {
-        const record = value as Record<string, unknown>;
-        for (const [key, child] of Object.entries(record)) {
-            if (key === "bufferView" && typeof child === "number") {
-                record[key] = ensure(indexMap.get(child));
-            } else {
-                remapBufferViewRefs(child, indexMap);
-            }
-        }
-    }
 }
 
 function markTexturesAsWebp(gltf: GltfJson): void {
@@ -647,6 +590,38 @@ export function assertNoExternalGltfImageUris(gltf: GltfJson, glbPath: string): 
     if (externalUris.length > 0) {
         throw new Error(`External GLB texture URI found in '${glbPath}': ${externalUris.join(", ")}`);
     }
+}
+
+export function assertGltfMeshoptCompressionRangesInBounds(
+    gltf: GltfJson,
+    binByteLength: number,
+    glbPath: string
+): void {
+    for (const [index, bufferView] of getGltfBufferViews(gltf).entries()) {
+        const meshopt = getMeshoptCompressionExtension(bufferView);
+        if (meshopt === undefined) {
+            continue;
+        }
+        const byteOffset = typeof meshopt.byteOffset === "number" ? meshopt.byteOffset : 0;
+        const byteLength = typeof meshopt.byteLength === "number" ? meshopt.byteLength : undefined;
+        if (byteLength === undefined || byteOffset + byteLength > binByteLength) {
+            throw new Error(
+                `Out-of-bounds EXT_meshopt_compression range in '${glbPath}' bufferView ${index}: ${byteOffset}+${byteLength ?? "unknown"} > ${binByteLength}`
+            );
+        }
+    }
+}
+
+function getMeshoptCompressionExtension(bufferView: GltfJsonBufferView): Record<string, unknown> | undefined {
+    const extensions = bufferView.extensions;
+    if (extensions === null || typeof extensions !== "object" || Array.isArray(extensions)) {
+        return undefined;
+    }
+    const meshopt = (extensions as Record<string, unknown>).EXT_meshopt_compression;
+    if (meshopt === null || typeof meshopt !== "object" || Array.isArray(meshopt)) {
+        return undefined;
+    }
+    return meshopt as Record<string, unknown>;
 }
 
 function getExternalGltfImageUris(gltf: GltfJson): string[] {

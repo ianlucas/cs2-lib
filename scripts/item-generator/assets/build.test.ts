@@ -10,6 +10,7 @@ import { join } from "path";
 import sharp from "sharp";
 import { type ItemGeneratorContext } from "../types.ts";
 import {
+    assertGltfMeshoptCompressionRangesInBounds,
     addTextureToProcess,
     assertNoExternalGltfImageUris,
     buildGltfpackArgs,
@@ -93,9 +94,16 @@ describe("model GLB optimization", () => {
             );
             await embedOptimizedWebpTexturesInGlb(glbPath);
 
-            const { json } = parseTestGlb(await readFile(glbPath));
-            expect(json.images).toEqual([{ mimeType: "image/webp", bufferView: 0 }]);
-            expect(json.bufferViews).toHaveLength(1);
+            const { bin, json } = parseTestGlb(await readFile(glbPath));
+            expect(json.images).toEqual([{ mimeType: "image/webp", bufferView: 1 }]);
+            expect(json.bufferViews).toHaveLength(2);
+            expect(json.bufferViews[0]).toEqual({ buffer: 0, byteOffset: 0, byteLength: png.byteLength });
+            expect(json.bufferViews[1]).toMatchObject({
+                buffer: 0,
+                byteOffset: Math.ceil(png.byteLength / 4) * 4
+            });
+            expect(json.bufferViews[1].byteLength).toBeGreaterThan(0);
+            expect(json.buffers).toEqual([{ byteLength: bin.byteLength }]);
             expect(json.extensionsRequired).toContain("EXT_texture_webp");
             expect(json.extensionsUsed).toContain("EXT_texture_webp");
             expect(json.textures[0].extensions.EXT_texture_webp).toEqual({ source: 0 });
@@ -103,11 +111,101 @@ describe("model GLB optimization", () => {
             await rm(dir, { force: true, recursive: true });
         }
     });
+
+    test("preserves meshopt compression ranges when embedding WebP images", async () => {
+        const dir = await mkdtemp(join(tmpdir(), "cs2-lib-glb-"));
+        try {
+            const glbPath = join(dir, "model.glb");
+            const png = await sharp({
+                create: {
+                    background: { alpha: 1, b: 255, g: 0, r: 0 },
+                    channels: 4,
+                    height: 1,
+                    width: 1
+                }
+            })
+                .png()
+                .toBuffer();
+            const meshoptData = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]);
+            const originalBin = Buffer.concat([padTestBuffer(png, 0), meshoptData]);
+            const meshoptByteOffset = Math.ceil(png.byteLength / 4) * 4;
+            await writeFile(
+                glbPath,
+                writeTestGlb(
+                    {
+                        asset: { version: "2.0" },
+                        buffers: [{ byteLength: originalBin.byteLength }],
+                        bufferViews: [
+                            { buffer: 0, byteOffset: 0, byteLength: png.byteLength },
+                            {
+                                buffer: 0,
+                                byteOffset: 0,
+                                byteLength: 24,
+                                extensions: {
+                                    EXT_meshopt_compression: {
+                                        buffer: 0,
+                                        byteOffset: meshoptByteOffset,
+                                        byteLength: meshoptData.byteLength,
+                                        byteStride: 12,
+                                        count: 2,
+                                        mode: "ATTRIBUTES"
+                                    }
+                                }
+                            }
+                        ],
+                        extensionsRequired: ["EXT_meshopt_compression"],
+                        extensionsUsed: ["EXT_meshopt_compression"],
+                        images: [{ bufferView: 0, mimeType: "image/png" }],
+                        textures: [{ source: 0 }]
+                    },
+                    originalBin
+                )
+            );
+
+            await embedOptimizedWebpTexturesInGlb(glbPath);
+
+            const { bin, json } = parseTestGlb(await readFile(glbPath));
+            expect(bin.subarray(meshoptByteOffset, meshoptByteOffset + meshoptData.byteLength)).toEqual(meshoptData);
+            expect(json.bufferViews[1].extensions.EXT_meshopt_compression).toMatchObject({
+                byteOffset: meshoptByteOffset,
+                byteLength: meshoptData.byteLength
+            });
+            expect(json.images).toEqual([{ mimeType: "image/webp", bufferView: 2 }]);
+            expect(json.bufferViews[2].byteOffset).toBeGreaterThanOrEqual(originalBin.byteLength);
+            assertGltfMeshoptCompressionRangesInBounds(json, bin.byteLength, "model.glb");
+        } finally {
+            await rm(dir, { force: true, recursive: true });
+        }
+    });
+
+    test("rejects out-of-bounds meshopt compression ranges", () => {
+        expect(() =>
+            assertGltfMeshoptCompressionRangesInBounds(
+                {
+                    bufferViews: [
+                        {
+                            extensions: {
+                                EXT_meshopt_compression: {
+                                    byteOffset: 12,
+                                    byteLength: 8
+                                }
+                            }
+                        }
+                    ]
+                },
+                16,
+                "weapon.glb"
+            )
+        ).toThrow("Out-of-bounds EXT_meshopt_compression range in 'weapon.glb' bufferView 0: 12+8 > 16");
+    });
 });
 
-function parseTestGlb(buffer: Buffer): { json: any } {
+function parseTestGlb(buffer: Buffer): { bin: Buffer; json: any } {
     const jsonChunkLength = buffer.readUInt32LE(12);
+    const binChunkOffset = 20 + jsonChunkLength;
+    const binChunkLength = buffer.readUInt32LE(binChunkOffset);
     return {
+        bin: buffer.subarray(binChunkOffset + 8, binChunkOffset + 8 + binChunkLength),
         json: JSON.parse(buffer.subarray(20, 20 + jsonChunkLength).toString("utf8").trimEnd())
     };
 }
