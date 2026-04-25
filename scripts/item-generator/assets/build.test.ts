@@ -42,14 +42,14 @@ describe("model GLB optimization", () => {
         try {
             const glbPath = join(dir, "model.glb");
             const io = createTestGlbIO();
-            const png = await sharp({
-                create: {
-                    background: { alpha: 1, b: 255, g: 0, r: 0 },
-                    channels: 4,
-                    height: 9,
-                    width: 13
+            const png = await sharp(
+                Buffer.from([
+                    255, 0, 0, 255, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0
+                ]),
+                {
+                    raw: { channels: 4, height: 1, width: 4 }
                 }
-            })
+            )
                 .png()
                 .toBuffer();
             const document = new Document();
@@ -63,10 +63,13 @@ describe("model GLB optimization", () => {
             const texture = optimized.getRoot().listTextures()[0]!;
             const image = texture.getImage()!;
             const metadata = await sharp(image).metadata();
+            const { data } = await sharp(image).raw().toBuffer({ resolveWithObject: true });
             expect(texture.getMimeType()).toBe("image/webp");
             expect(texture.getURI()).toBe("");
-            expect(metadata.width).toBe(13);
-            expect(metadata.height).toBe(9);
+            expect(metadata.width).toBe(4);
+            expect(metadata.height).toBe(1);
+            const transparentGreenChannel = data[13];
+            expect(transparentGreenChannel).toBeGreaterThan(240);
             expect(optimized.getRoot().listExtensionsUsed().map((extension) => extension.extensionName)).toContain(
                 "EXT_texture_webp"
             );

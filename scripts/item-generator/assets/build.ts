@@ -5,8 +5,7 @@
 
 import * as BunnyStorageSDK from "@bunny.net/storage-sdk";
 import { NodeIO } from "@gltf-transform/core";
-import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
-import { textureCompress } from "@gltf-transform/functions";
+import { ALL_EXTENSIONS, EXTTextureWebP } from "@gltf-transform/extensions";
 import { createHash } from "crypto";
 import { createReadStream } from "fs";
 import { copyFile, mkdir, readdir, rename, writeFile } from "fs/promises";
@@ -405,14 +404,25 @@ function createModelGlbIO(): NodeIO {
 export async function optimizeModelGlb(glbPath: string): Promise<void> {
     const io = createModelGlbIO();
     const document = await io.read(glbPath);
-    await document.transform(
-        textureCompress({
-            encoder: sharp,
-            formats: MODEL_TEXTURE_FORMATS_TO_OPTIMIZE,
-            quality: OUTPUT_WEBP_OPTIONS.quality,
-            targetFormat: "webp"
-        })
-    );
+    for (const texture of document.getRoot().listTextures()) {
+        if (!MODEL_TEXTURE_FORMATS_TO_OPTIMIZE.test(texture.getMimeType())) {
+            continue;
+        }
+        const image = texture.getImage();
+        if (image === null) {
+            continue;
+        }
+        const webp = await sharp(image).webp(OUTPUT_WEBP_OPTIONS).toBuffer();
+        texture.setImage(webp).setMimeType("image/webp").setURI("");
+    }
+    if (
+        document
+            .getRoot()
+            .listTextures()
+            .some((texture) => texture.getMimeType() === "image/webp")
+    ) {
+        document.createExtension(EXTTextureWebP).setRequired(true);
+    }
     await writeFile(glbPath, await io.writeBinary(document));
 }
 
