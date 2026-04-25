@@ -5,9 +5,6 @@
         "target": "ESNext",
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
-        "paths": {
-            "sharp": ["./node_modules/sharp/lib/index.d.ts"]
-        },
         "noEmit": true,
         "allowImportingTsExtensions": true,
         "allowJs": false,
