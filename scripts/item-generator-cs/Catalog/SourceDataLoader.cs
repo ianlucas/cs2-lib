@@ -42,11 +42,11 @@ public static class SourceDataLoader
             ctx.ItemTranslationByLanguage[language] = [];
 
             var serializer = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
-            using var stream = File.OpenRead(file);
-            KVObject doc;
-            try { doc = serializer.Deserialize(stream); }
-            catch { continue; }
-
+            var options = new KVSerializerOptions { HasEscapeSequences = true, EnableValveNullByteBugBehavior = true };
+            using var reader = new StreamReader(file, detectEncodingFromByteOrderMarks: true);
+            var text = reader.ReadToEnd();
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
+            KVObject doc = serializer.Deserialize(stream, options);
             var tokens = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
             var langObj = KvHelper.GetChild(doc, "Tokens");
             if (langObj != null)

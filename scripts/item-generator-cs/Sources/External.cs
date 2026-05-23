@@ -81,7 +81,7 @@ public static class External
     public static async Task PopulateContainerContents(string itemName, List<int> contents, Dictionary<int, string> itemNames)
     {
         var crates = await FetchCachedExternalJson<List<CrateEntry>>("container");
-        var crate = crates.FirstOrDefault(e => e.Original.ItemName == itemName);
+        var crate = crates.FirstOrDefault(e => e.Original?.ItemName == itemName);
         if (crate == null) return;
 
         var nameToId = new Dictionary<string, int>();
@@ -99,7 +99,7 @@ public static class External
     public static async Task PopulateContainerSpecials(string itemName, List<int> specials, Dictionary<int, string> itemNames)
     {
         var crates = await FetchCachedExternalJson<List<CrateEntry>>("container");
-        var crate = crates.FirstOrDefault(e => e.Original.ItemName == itemName);
+        var crate = crates.FirstOrDefault(e => e.Original?.ItemName == itemName);
         if (crate == null) return;
 
         var nameToId = new Dictionary<string, int>();
@@ -118,7 +118,7 @@ public static class External
     {
         var entries = await FetchCachedExternalJson<List<SourceEntry>>(source);
         var normalizedPath = imagePath.ToLowerInvariant();
-        var entry = entries.FirstOrDefault(e => e.Original.ImageInventory.ToLowerInvariant() == normalizedPath);
+        var entry = entries.FirstOrDefault(e => e.Original?.ImageInventory?.ToLowerInvariant() == normalizedPath);
         if (entry == null) return null;
 
         try
