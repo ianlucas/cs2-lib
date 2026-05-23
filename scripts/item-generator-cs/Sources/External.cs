@@ -93,9 +93,13 @@ public static class External
 
         foreach (var item in crate.Contains)
         {
-            var id = ResolveContainerItemId(nameToId, item);
-            if (id.HasValue && !contents.Contains(id.Value))
-                contents.Add(id.Value);
+            // Reference throws (ensure) on an unresolved item rather than silently
+            // dropping it, so a resolution gap surfaces loudly instead of as missing contents.
+            var id = ResolveContainerItemId(nameToId, item)
+                ?? throw new InvalidOperationException(
+                    $"Unable to resolve container content '{item.Name}' (id '{item.Id}') for '{itemName}'.");
+            if (!contents.Contains(id))
+                contents.Add(id);
         }
     }
 
@@ -111,9 +115,12 @@ public static class External
 
         foreach (var item in crate.ContainsRare)
         {
-            var id = ResolveContainerItemId(nameToId, item);
-            if (id.HasValue && !specials.Contains(id.Value))
-                specials.Add(id.Value);
+            // Reference throws (ensure) on an unresolved item rather than silently dropping it.
+            var id = ResolveContainerItemId(nameToId, item)
+                ?? throw new InvalidOperationException(
+                    $"Unable to resolve container special '{item.Name}' (id '{item.Id}') for '{itemName}'.");
+            if (!specials.Contains(id))
+                specials.Add(id);
         }
     }
 

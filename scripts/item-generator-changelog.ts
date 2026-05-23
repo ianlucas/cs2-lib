@@ -61,7 +61,13 @@ function formatList(values: (string | number)[]) {
     return values.map((value) => (typeof value === "string" ? `"${value}"` : String(value))).join(", ");
 }
 
-function getPropChanges(title: string, localItem: any, repoItem: any) {
+function getPropChanges(
+    title: string,
+    localItem: any,
+    repoItem: any,
+    localNames?: Record<string, { name?: string }>,
+    repoNames?: Record<string, { name?: string }>
+) {
     let changes = "";
     const addedProperties = Object.keys(localItem).filter((key) => !Object.keys(repoItem).includes(key));
     const repoProperties = Object.keys(repoItem);
@@ -69,12 +75,20 @@ function getPropChanges(title: string, localItem: any, repoItem: any) {
     const after: any = {};
     const arrayChanges: string[] = [];
 
+    // Properties like `contents`/`specials`/`keys` hold item ids. Diff them by the referenced
+    // item's name so that an internal id change for the same item (e.g. a different Doppler
+    // phase id that still exists in items.json) isn't reported as removed + added.
+    const resolveRefs = (values: (string | number)[], names?: Record<string, { name?: string }>) =>
+        names !== undefined && values.every((value) => typeof value === "number")
+            ? values.map((id) => names[id]?.name ?? id)
+            : values;
+
     // Render array properties as added/removed deltas instead of dumping the whole
     // before/after arrays (e.g. container `specials`/`contents` can hold hundreds of ids).
     const addArrayDelta = (property: string, localValue: any, repoValue: any) => {
         const { added, removed } = getArrayDelta(
-            Array.isArray(localValue) ? localValue : [],
-            Array.isArray(repoValue) ? repoValue : []
+            resolveRefs(Array.isArray(localValue) ? localValue : [], localNames),
+            resolveRefs(Array.isArray(repoValue) ? repoValue : [], repoNames)
         );
         if (added.length === 0 && removed.length === 0) return;
         let block = `**${property}**\n\n`;
@@ -160,7 +174,7 @@ async function main() {
         const repoTranslation = ensure(repoEnglish[key]);
         const localTranslation = ensure(localEnglish[key]);
         const name = `${repoTranslation.name || localTranslation.name} (id: ${key})`;
-        let itemChanges = getPropChanges("Item Changes", localItem, repoItem);
+        let itemChanges = getPropChanges("Item Changes", localItem, repoItem, localEnglish, repoEnglish);
         let translationChanges = getPropChanges("Translation Changes", localTranslation, repoTranslation);
         if (itemChanges || translationChanges) {
             itemDiffs.push(`## ${name}\n\n${itemChanges}\n${translationChanges}`);
