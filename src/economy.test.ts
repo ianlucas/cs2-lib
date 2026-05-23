@@ -17,7 +17,7 @@ describe("CS2Economy", () => {
             { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
             { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
         ];
-        CS2Economy.use({
+        CS2Economy.load({
             items,
             language: {
                 1: { name: "Item 1" },
@@ -34,7 +34,7 @@ describe("CS2Economy", () => {
     test("getById should return the item with the given id", () => {
         const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
-        CS2Economy.use({
+        CS2Economy.load({
             items: [item],
             language: {
                 1: { name: "Item 1" }
@@ -48,7 +48,7 @@ describe("CS2Economy", () => {
         const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
 
-        CS2Economy.use({
+        CS2Economy.load({
             items: [item],
             language: {
                 1: { name: "Item 1" }
@@ -64,7 +64,7 @@ describe("CS2Economy", () => {
 });
 
 test("nametag validation", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     expect(CS2Economy.safeValidateNametag(" fail")).toBeFalsy();
     expect(CS2Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
     expect(CS2Economy.safeValidateNametag("孔子")).toBeTruthy();
@@ -73,7 +73,7 @@ test("nametag validation", () => {
 });
 
 test("wear validation", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     expect(CS2Economy.safeValidateWear(0.1)).toBeTruthy();
     expect(CS2Economy.safeValidateWear(0.5)).toBeTruthy();
     expect(CS2Economy.safeValidateWear(1)).toBeTruthy();
@@ -96,7 +96,7 @@ test("wear validation", () => {
 });
 
 test("has seed", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     const baseGloves = CS2Economy.getById(56);
     const skinGloves = CS2Economy.getById(1707);
     expect(baseGloves.hasSeed()).toBe(false);
@@ -104,7 +104,7 @@ test("has seed", () => {
 });
 
 test("default cdn url", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     const dragonLore = CS2Economy.getById(307);
     assert(dragonLore.getImage().endsWith(".webp"));
     assert(dragonLore.getImage(1 / 3 - 0.1).endsWith("_light.webp"));

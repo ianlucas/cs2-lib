@@ -51,7 +51,7 @@ const BLOODHOUND_ID = 8569;
 const CT_GLOVE_ID = 59;
 const LIL_AVA_ID = 13113;
 
-CS2Economy.use({ items: CS2_ITEMS, language: english });
+CS2Economy.load({ items: CS2_ITEMS, language: english });
 
 describe("CS2Inventory methods", () => {
     let inventory: CS2Inventory;

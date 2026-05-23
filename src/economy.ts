@@ -90,7 +90,7 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
-    use({
+    load({
         assetsBaseUrl,
         items,
         language
