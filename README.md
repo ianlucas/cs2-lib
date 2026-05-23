@@ -16,7 +16,7 @@ npm install @ianlucas/cs2-lib
 import { CS2Economy, CS2_ITEMS } from "@ianlucas/cs2-lib";
 import { english } from "@ianlucas/cs2-lib/translations";
 
-CS2Economy.use({
+CS2Economy.load({
     items: CS2_ITEMS,
     language: english
 });
@@ -32,7 +32,7 @@ item.name;
 By default the library uses my CDN at `cdn.cstrike.app` for image URLs. If you need to self-host your content, you can find and download the latest images at [cs2-lib-assets repository](https://github.com/ianlucas/cs2-lib-assets). Make sure to point the assets base URL to your website:
 
 ```typescript
-CS2Economy.use({
+CS2Economy.load({
     assetsBaseUrl: "https://your-website.com/assets",
     items: CS2_ITEMS,
     language: english
