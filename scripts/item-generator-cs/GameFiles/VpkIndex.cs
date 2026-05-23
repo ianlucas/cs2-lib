@@ -35,7 +35,7 @@ public static class VpkIndexBuilder
         package.Read(pakDirPath);
         ctx.VpkPackage = package;
 
-        foreach (var (_, entries) in package.Entries)
+        foreach (var (_, entries) in package.Entries!)
         {
             foreach (var entry in entries)
             {

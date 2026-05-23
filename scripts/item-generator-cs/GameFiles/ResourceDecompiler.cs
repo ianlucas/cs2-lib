@@ -13,7 +13,7 @@ public static class ResourceDecompiler
         if (ctx.VpkPackage == null) return;
         var prefixes = new[] { "scripts/items/items_game.txt", "resource/csgo_" };
 
-        foreach (var (_, entries) in ctx.VpkPackage.Entries)
+        foreach (var (_, entries) in ctx.VpkPackage.Entries!)
         {
             foreach (var entry in entries)
             {
@@ -31,9 +31,9 @@ public static class ResourceDecompiler
                 {
                     using var resource = new Resource();
                     resource.Read(new MemoryStream(data));
-                    var extracted = FileExtract.Extract(resource, null);
+                    var extracted = FileExtract.Extract(resource, null!);
                     var outputPath = outPath[..^2]; // strip _c
-                    File.WriteAllBytes(outputPath, extracted.Data);
+                    File.WriteAllBytes(outputPath, extracted.Data!);
                 }
                 else
                 {
@@ -122,7 +122,7 @@ public static class ResourceDecompiler
 
         var textureExtract = new TextureExtract(resource);
         var content = textureExtract.ToContentFile();
-        File.WriteAllBytes(pngPath, content.Data);
+        File.WriteAllBytes(pngPath, content.Data!);
     }
 
     private static void DecompileSvg(byte[] data, string vpkPath, string outDir)
@@ -137,7 +137,7 @@ public static class ResourceDecompiler
         var outPath = Path.Combine(dir, Path.GetFileName(basePath));
         if (File.Exists(outPath)) return;
 
-        var extracted = FileExtract.Extract(resource, null);
-        File.WriteAllBytes(outPath, extracted.Data);
+        var extracted = FileExtract.Extract(resource, null!);
+        File.WriteAllBytes(outPath, extracted.Data!);
     }
 }
