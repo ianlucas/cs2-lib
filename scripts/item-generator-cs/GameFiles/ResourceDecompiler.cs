@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using SteamDatabase.ValvePak;
 using SkiaSharp;
 using ValveResourceFormat;
 using ValveResourceFormat.IO;
 using ValveResourceFormat.ResourceTypes;
+using static ItemGenerator.Logging;
 
 namespace ItemGenerator.GameFiles;
 
@@ -46,31 +48,59 @@ public static class ResourceDecompiler
     public static void DecompileAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
         if (ctx.VpkPackage == null) return;
+        var paths = vpkPaths.ToList();
+        if (paths.Count == 0) return;
 
-        foreach (var vpkPath in vpkPaths)
+        var parallelism = Math.Max(2, Environment.ProcessorCount);
+        var queue = new BlockingCollection<(string VpkPath, byte[] Data)>(parallelism * 4);
+        var outDir = Config.DecompiledDir;
+        var total = paths.Count;
+        var decompiled = 0;
+        var lastMilestone = 0;
+        var reportProgress = total >= 100;
+
+        var producer = Task.Run(() =>
         {
-            var entry = ctx.VpkPackage.FindEntry(vpkPath);
-            if (entry == null) continue;
+            try
+            {
+                foreach (var vpkPath in paths)
+                {
+                    var entry = ctx.VpkPackage.FindEntry(vpkPath);
+                    if (entry == null) continue;
+                    ctx.VpkPackage.ReadEntry(entry, out var data);
+                    queue.Add((vpkPath, data));
+                }
+            }
+            finally { queue.CompleteAdding(); }
+        });
 
-            ctx.VpkPackage.ReadEntry(entry, out var data);
-            var outDir = Config.DecompiledDir;
+        var consumers = Enumerable.Range(0, parallelism).Select(_ => Task.Run(() =>
+        {
+            foreach (var (vpkPath, data) in queue.GetConsumingEnumerable())
+            {
+                if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
+                    DecompileTexture(data, vpkPath, outDir);
+                else if (vpkPath.EndsWith(".vsvg_c", StringComparison.OrdinalIgnoreCase))
+                    DecompileSvg(data, vpkPath, outDir);
+                else
+                {
+                    var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath);
+                    Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+                    if (!File.Exists(outPath))
+                        File.WriteAllBytes(outPath, data);
+                }
 
-            if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
-            {
-                DecompileTexture(data, vpkPath, outDir);
+                if (!reportProgress) continue;
+                var current = Interlocked.Increment(ref decompiled);
+                var pct = current * 100 / total;
+                var milestone = pct / 5 * 5;
+                if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
+                    Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
+                    Log($"  {milestone}% ({current}/{total})");
             }
-            else if (vpkPath.EndsWith(".vsvg_c", StringComparison.OrdinalIgnoreCase))
-            {
-                DecompileSvg(data, vpkPath, outDir);
-            }
-            else
-            {
-                var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath);
-                Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                if (!File.Exists(outPath))
-                    File.WriteAllBytes(outPath, data);
-            }
-        }
+        })).ToArray();
+
+        Task.WaitAll([producer, .. consumers]);
     }
 
     public static void DecompileModelAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)

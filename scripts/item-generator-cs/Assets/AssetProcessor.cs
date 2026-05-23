@@ -279,50 +279,60 @@ public static partial class AssetProcessor
         var compiledPaths = pending.Select(MaterialPaths.ToCompiledMaterialResourcePath).ToList();
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
 
-        var semaphore = new SemaphoreSlim(Math.Max(2, Math.Min(8, pending.Count)));
-        var tasks = pending.Select(async vtexPath =>
+        var total = pending.Count;
+        var processed = 0;
+        var lastMilestone = 0;
+        var resultLock = new object();
+
+        Parallel.ForEach(pending, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, vtexPath =>
         {
-            await semaphore.WaitAsync();
-            try
+            var resolvedVtexPath = MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath);
+            var vpkPath = MaterialPaths.ToCompiledMaterialResourcePath(resolvedVtexPath);
+            if (!ctx.VpkIndex.TryGetValue(vpkPath, out var vpkEntry)) return;
+
+            var basePath = Path.Combine(Config.DecompiledDir,
+                Path.GetDirectoryName(resolvedVtexPath)!,
+                Path.GetFileNameWithoutExtension(resolvedVtexPath).Replace(".vtex", ""));
+            var pngPath = $"{basePath}.png";
+            var exrPath = $"{basePath}.exr";
+
+            string? textureFilename = null;
+
+            if (File.Exists(pngPath))
             {
-                var resolvedVtexPath = MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath);
-                var vpkPath = MaterialPaths.ToCompiledMaterialResourcePath(resolvedVtexPath);
-                if (!ctx.VpkIndex.TryGetValue(vpkPath, out var vpkEntry)) return;
-
-                var basePath = Path.Combine(Config.DecompiledDir,
-                    Path.GetDirectoryName(resolvedVtexPath)!,
-                    Path.GetFileNameWithoutExtension(resolvedVtexPath).Replace(".vtex", ""));
-                var pngPath = $"{basePath}.png";
-                var exrPath = $"{basePath}.exr";
-
-                if (File.Exists(pngPath))
+                var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, vpkEntry.Crc, ".webp");
+                var outPath = Path.Combine(Config.OutputDir, "textures", filename);
+                Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+                using var bitmap = SKBitmap.Decode(pngPath);
+                if (bitmap != null)
                 {
-                    var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, vpkEntry.Crc, ".webp");
-                    var outPath = Path.Combine(Config.OutputDir, "textures", filename);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                    using var bitmap = SKBitmap.Decode(pngPath);
-                    if (bitmap != null)
-                    {
-                        using var image = SKImage.FromBitmap(bitmap);
-                        using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
-                        using var stream = File.Create(outPath);
-                        data.SaveTo(stream);
-                    }
-                    ctx.TextureFilenameByPath[resolvedVtexPath] = $"/textures/{filename}";
-                }
-                else if (File.Exists(exrPath))
-                {
-                    var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, vpkEntry.Crc, ".exr");
-                    var outPath = Path.Combine(Config.OutputDir, "textures", filename);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                    File.Move(exrPath, outPath, true);
-                    ctx.TextureFilenameByPath[resolvedVtexPath] = $"/textures/{filename}";
+                    using var image = SKImage.FromBitmap(bitmap);
+                    using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
+                    using var stream = File.Create(outPath);
+                    data.SaveTo(stream);
+                    textureFilename = $"/textures/{filename}";
                 }
             }
-            finally { semaphore.Release(); }
+            else if (File.Exists(exrPath))
+            {
+                var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, vpkEntry.Crc, ".exr");
+                var outPath = Path.Combine(Config.OutputDir, "textures", filename);
+                Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+                File.Move(exrPath, outPath, true);
+                textureFilename = $"/textures/{filename}";
+            }
+
+            if (textureFilename != null)
+                lock (resultLock) ctx.TextureFilenameByPath[resolvedVtexPath] = textureFilename;
+
+            var current = Interlocked.Increment(ref processed);
+            var pct = current * 100 / total;
+            var milestone = pct / 5 * 5;
+            if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
+                Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
+                Log($"  {milestone}% ({current}/{total})");
         });
 
-        Task.WhenAll(tasks).GetAwaiter().GetResult();
         Log($"Processed {FormatCount(pending.Count, "material texture")}.");
     }
 
@@ -411,17 +421,15 @@ public static partial class AssetProcessor
 
     private static async Task<string> GetFileSha256(string path)
     {
-        using var sha = SHA256.Create();
         await using var fs = File.OpenRead(path);
-        var hash = await sha.ComputeHashAsync(fs);
+        var hash = await SHA256.HashDataAsync(fs);
         return Convert.ToHexStringLower(hash);
     }
 
     private static string GetDependencyHash(IEnumerable<string> dependencies)
     {
-        using var sha = SHA256.Create();
         var sorted = dependencies.Where(d => d.Length > 0).Distinct().Order().ToList();
-        var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", sorted)));
+        var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", sorted)));
         return Convert.ToHexStringLower(bytes)[..8];
     }
 

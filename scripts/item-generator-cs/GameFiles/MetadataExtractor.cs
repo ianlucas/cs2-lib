@@ -49,10 +49,16 @@ public static partial class MetadataExtractor
             }
 
             object? parsedData = null;
-            if (resource.DataBlock is BinaryKV3 kv3)
+            if (resource.DataBlock is Model model)
             {
-                parsedData = ConvertKV3ToObject(kv3.Data.Root);
-                ParseModelInfoKeyValueText(parsedData);
+                parsedData = ConvertKV3ToObject(model.Data);
+                if (parsedData is Dictionary<string, object?> topDict &&
+                    topDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
+                    modelInfoObj is Dictionary<string, object?> modelInfo &&
+                    model.KeyValues.IsCollection)
+                {
+                    modelInfo["m_keyValueText"] = ConvertKV3ToObject(model.KeyValues);
+                }
             }
 
             var filename = Path.GetFileNameWithoutExtension(targetFilename).Replace(".glb", "") + ".json";
@@ -91,9 +97,10 @@ public static partial class MetadataExtractor
             var vmatRefs = new List<string>();
             var vtexRefs = new List<string>();
 
-            if (resource.DataBlock is BinaryKV3 kv3)
+            var rootKv = GetRootKvObject(resource);
+            if (rootKv != null)
             {
-                parsedData = ConvertKV3ToObject(kv3.Data);
+                parsedData = ConvertKV3ToObject(rootKv);
                 var dataText = JsonSerializer.Serialize(parsedData);
                 CollectResourceRefs(dataText, ".vcompmat", compositeMaterialRefs);
                 CollectResourceRefs(dataText, ".vmat", vmatRefs);
@@ -140,9 +147,10 @@ public static partial class MetadataExtractor
                 }
             }
 
-            if (resource.DataBlock is BinaryKV3 kv3)
+            var rootKv = GetRootKvObject(resource);
+            if (rootKv != null)
             {
-                parsedData = ConvertKV3ToObject(kv3.Data);
+                parsedData = ConvertKV3ToObject(rootKv);
                 var dataText = JsonSerializer.Serialize(parsedData);
                 CollectResourceRefs(dataText, ".vmat", vmatRefs);
                 CollectResourceRefs(dataText, ".vtex", vtexRefs);
@@ -156,23 +164,12 @@ public static partial class MetadataExtractor
         return results;
     }
 
-    private static void ParseModelInfoKeyValueText(object? parsedData)
+    private static KVObject? GetRootKvObject(Resource resource) => resource.DataBlock switch
     {
-        if (parsedData is not Dictionary<string, object?> topDict) return;
-        if (!topDict.TryGetValue("m_modelInfo", out var modelInfoObj)) return;
-        if (modelInfoObj is not Dictionary<string, object?> modelInfo) return;
-        if (!modelInfo.TryGetValue("m_keyValueText", out var kvTextObj)) return;
-        if (kvTextObj is not string kvTextStr) return;
-        if (!kvTextStr.StartsWith("<!-- kv3 ", StringComparison.Ordinal)) return;
-        try
-        {
-            var serializer = KVSerializer.Create(KVSerializationFormat.KeyValues3Text);
-            using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(kvTextStr));
-            KVObject kvDoc = serializer.Deserialize(ms);
-            modelInfo["m_keyValueText"] = ConvertKV3ToObject(kvDoc);
-        }
-        catch { }
-    }
+        KeyValuesOrNTRO kv => kv.Data,
+        BinaryKV3 binkv => binkv.Data.Root,
+        _ => null,
+    };
 
     private static void CollectResourceRefs(string dataText, string extension, List<string> refs)
     {
