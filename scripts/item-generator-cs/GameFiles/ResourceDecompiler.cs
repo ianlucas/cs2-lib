@@ -122,8 +122,22 @@ public static class ResourceDecompiler
         if (File.Exists(pngPath)) return;
 
         var textureExtract = new TextureExtract(resource);
-        var content = textureExtract.ToContentFile();
-        File.WriteAllBytes(pngPath, content.Data!);
+        using var content = textureExtract.ToContentFile();
+        if (content.Data != null)
+        {
+            File.WriteAllBytes(pngPath, content.Data);
+            return;
+        }
+        var written = false;
+        foreach (var subFile in content.SubFiles)
+        {
+            if (!subFile.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) continue;
+            var pngBytes = subFile.Extract?.Invoke();
+            if (pngBytes != null) { File.WriteAllBytes(pngPath, pngBytes); written = true; }
+            break;
+        }
+        if (!written)
+            throw new InvalidOperationException($"No PNG data produced for texture: {vpkPath}");
     }
 
     private static void DecompileSvg(byte[] data, string vpkPath, string outDir)
