@@ -8,8 +8,8 @@ public static class Collections
         string? collectionImage = null;
         if (collection == null) return (null, null);
 
-        var itemSets = KvHelper.GetChild(ctx.GameItems!, "item_sets");
-        var itemSet = KvHelper.GetChild(itemSets, collection);
+        // "item_sets" is split across many sections in items_game.txt; search all of them.
+        var itemSet = KvHelper.FindInMergedSection(ctx.GameItems!, "item_sets", collection);
         if (itemSet == null) return (collection, null);
 
         var name = KvHelper.GetString(itemSet, "name");
@@ -38,8 +38,9 @@ public static class Collections
     public static List<string> GetClientLootListItems(ItemGeneratorContext ctx, string clientLootListKey, List<string>? items = null)
     {
         items ??= [];
-        var clientLootLists = KvHelper.GetChild(ctx.GameItems!, "client_loot_lists");
-        var lootList = KvHelper.GetChild(clientLootLists, clientLootListKey);
+        // items_game.txt contains many "client_loot_lists" sections; GetChild would only see
+        // the first, so most container loot lists must be resolved across all merged sections.
+        var lootList = KvHelper.FindInMergedSection(ctx.GameItems!, "client_loot_lists", clientLootListKey);
         if (lootList == null) return items;
 
         foreach (var child in lootList)

@@ -7,6 +7,9 @@ namespace ItemGenerator.Sources;
 public static class External
 {
     private static readonly HttpClient Http = new();
+    // External JSON uses lowercase keys (e.g. "contains", "original"); match them
+    // case-insensitively so records without explicit [JsonPropertyName] still bind.
+    private static readonly JsonSerializerOptions ExternalJsonOptions = new() { PropertyNameCaseInsensitive = true };
     private static readonly Dictionary<string, string> ExternalUrls = new()
     {
         ["collectible"] = "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/collectibles.json",
@@ -48,7 +51,7 @@ public static class External
         {
             var response = await Http.SendAsync(request);
             if (response.StatusCode == System.Net.HttpStatusCode.NotModified && File.Exists(dataPath))
-                return JsonSerializer.Deserialize<T>(await File.ReadAllTextAsync(dataPath))!;
+                return JsonSerializer.Deserialize<T>(await File.ReadAllTextAsync(dataPath), ExternalJsonOptions)!;
 
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
@@ -59,12 +62,12 @@ public static class External
                 response.Content.Headers.LastModified?.ToString("R"),
                 url);
             await File.WriteAllTextAsync(metadataPath, JsonSerializer.Serialize(nextMetadata));
-            return JsonSerializer.Deserialize<T>(body)!;
+            return JsonSerializer.Deserialize<T>(body, ExternalJsonOptions)!;
         }
         catch
         {
             if (File.Exists(dataPath))
-                return JsonSerializer.Deserialize<T>(await File.ReadAllTextAsync(dataPath))!;
+                return JsonSerializer.Deserialize<T>(await File.ReadAllTextAsync(dataPath), ExternalJsonOptions)!;
             throw;
         }
     }

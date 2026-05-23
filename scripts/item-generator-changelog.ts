@@ -44,22 +44,66 @@ function isDifferent(a: any, b: any) {
     return a !== b;
 }
 
+function isPrimitiveArray(value: any): value is (string | number)[] {
+    return Array.isArray(value) && value.every((item) => typeof item === "string" || typeof item === "number");
+}
+
+function getArrayDelta(localArr: (string | number)[], repoArr: (string | number)[]) {
+    const repoSet = new Set(repoArr);
+    const localSet = new Set(localArr);
+    return {
+        added: localArr.filter((value) => !repoSet.has(value)),
+        removed: repoArr.filter((value) => !localSet.has(value))
+    };
+}
+
+function formatList(values: (string | number)[]) {
+    return values.map((value) => (typeof value === "string" ? `"${value}"` : String(value))).join(", ");
+}
+
 function getPropChanges(title: string, localItem: any, repoItem: any) {
     let changes = "";
     const addedProperties = Object.keys(localItem).filter((key) => !Object.keys(repoItem).includes(key));
     const repoProperties = Object.keys(repoItem);
     const before: any = {};
     const after: any = {};
+    const arrayChanges: string[] = [];
+
+    // Render array properties as added/removed deltas instead of dumping the whole
+    // before/after arrays (e.g. container `specials`/`contents` can hold hundreds of ids).
+    const addArrayDelta = (property: string, localValue: any, repoValue: any) => {
+        const { added, removed } = getArrayDelta(
+            Array.isArray(localValue) ? localValue : [],
+            Array.isArray(repoValue) ? repoValue : []
+        );
+        if (added.length === 0 && removed.length === 0) return;
+        let block = `**${property}**\n\n`;
+        if (added.length > 0) block += `- Added (${added.length}): ${formatList(added)}\n`;
+        if (removed.length > 0) block += `- Removed (${removed.length}): ${formatList(removed)}\n`;
+        arrayChanges.push(block);
+    };
+
     for (const property of addedProperties) {
-        after[property] = localItem[property];
-    }
-    for (const property of repoProperties) {
-        if (isDifferent(repoItem[property], localItem[property])) {
-            before[property] = repoItem[property];
-            after[property] = localItem[property];
+        const value = localItem[property];
+        if (isPrimitiveArray(value)) {
+            addArrayDelta(property, value, []);
+        } else {
+            after[property] = value;
         }
     }
-    if (Object.keys(before).length > 0 || Object.keys(after).length > 0) {
+    for (const property of repoProperties) {
+        if (!isDifferent(repoItem[property], localItem[property])) continue;
+        const localValue = localItem[property];
+        const repoValue = repoItem[property];
+        if (isPrimitiveArray(localValue) || isPrimitiveArray(repoValue)) {
+            addArrayDelta(property, localValue, repoValue);
+        } else {
+            before[property] = repoValue;
+            after[property] = localValue;
+        }
+    }
+
+    if (Object.keys(before).length > 0 || Object.keys(after).length > 0 || arrayChanges.length > 0) {
         changes += `### ${title}\n\n`;
         if (Object.keys(before).length > 0) {
             changes += "#### Before\n\n";
@@ -72,6 +116,9 @@ function getPropChanges(title: string, localItem: any, repoItem: any) {
             changes += "```javascript\n";
             changes += stringify(after, replacer, 2);
             changes += "\n```\n";
+        }
+        for (const block of arrayChanges) {
+            changes += "\n" + block;
         }
     }
     return changes;
