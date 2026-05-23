@@ -5,6 +5,21 @@ using ItemGenerator.GameFiles;
 using ItemGenerator.Upload;
 using static ItemGenerator.Logging;
 
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envPath))
+{
+    foreach (var line in File.ReadAllLines(envPath))
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0 || trimmed.StartsWith('#')) continue;
+        var eq = trimmed.IndexOf('=');
+        if (eq < 0) continue;
+        var key = trimmed[..eq].Trim();
+        var value = trimmed[(eq + 1)..].Trim().Trim('"');
+        Environment.SetEnvironmentVariable(key, value);
+    }
+}
+
 var mode = Config.DetectMode();
 var ctx = new ItemGeneratorContext { Mode = mode };
 Log($"Starting item generator in {mode} mode.");
