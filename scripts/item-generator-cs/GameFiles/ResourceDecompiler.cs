@@ -109,6 +109,7 @@ public static class ResourceDecompiler
     private static void DecompileTexture(byte[] data, string vpkPath, string outDir)
     {
         using var resource = new Resource();
+        resource.FileName = vpkPath;
         resource.Read(new MemoryStream(data));
 
         var basePath = vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath;
