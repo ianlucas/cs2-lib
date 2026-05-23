@@ -3,3 +3,5 @@
 /dist
 /node_modules
 /scripts/workdir
+/scripts/item-generator-cs/bin
+/scripts/item-generator-cs/obj
