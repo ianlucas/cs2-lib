@@ -108,36 +108,36 @@ public static class ResourceDecompiler
 
     private static void DecompileTexture(byte[] data, string vpkPath, string outDir)
     {
-        using var resource = new Resource();
-        resource.FileName = vpkPath;
-        resource.Read(new MemoryStream(data));
-
         var basePath = vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath;
         var baseName = Path.GetFileNameWithoutExtension(basePath);
         if (baseName.EndsWith(".vtex")) baseName = baseName[..^5];
         var dir = Path.Combine(outDir, Path.GetDirectoryName(basePath) ?? "");
         Directory.CreateDirectory(dir);
 
-        var pngPath = Path.Combine(dir, $"{baseName}.png");
-        if (File.Exists(pngPath)) return;
+        if (File.Exists(Path.Combine(dir, $"{baseName}.png")) ||
+            File.Exists(Path.Combine(dir, $"{baseName}.exr"))) return;
+
+        using var resource = new Resource();
+        resource.FileName = vpkPath;
+        resource.Read(new MemoryStream(data));
 
         var textureExtract = new TextureExtract(resource);
+        var ext = textureExtract.ImageOutputExtension;
+        var outPath = Path.Combine(dir, $"{baseName}{ext}");
+
         using var content = textureExtract.ToContentFile();
         if (content.Data != null)
         {
-            File.WriteAllBytes(pngPath, content.Data);
+            File.WriteAllBytes(outPath, content.Data);
             return;
         }
-        var written = false;
-        foreach (var subFile in content.SubFiles)
-        {
-            if (!subFile.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) continue;
-            var pngBytes = subFile.Extract?.Invoke();
-            if (pngBytes != null) { File.WriteAllBytes(pngPath, pngBytes); written = true; }
-            break;
-        }
-        if (!written)
-            throw new InvalidOperationException($"No PNG data produced for texture: {vpkPath}");
+        var imageSubFile = content.SubFiles.FirstOrDefault(sf =>
+            sf.FileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+        if (imageSubFile == null)
+            throw new InvalidOperationException($"No {ext} subfile produced for texture: {vpkPath}");
+        var imageBytes = imageSubFile.Extract?.Invoke()
+            ?? throw new InvalidOperationException($"SubFile Extract returned null for texture: {vpkPath}");
+        File.WriteAllBytes(outPath, imageBytes);
     }
 
     private static void DecompileSvg(byte[] data, string vpkPath, string outDir)
