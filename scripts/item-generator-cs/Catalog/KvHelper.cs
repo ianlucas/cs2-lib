@@ -44,4 +44,29 @@ public static class KvHelper
         try { return obj[key] != null; }
         catch { return false; }
     }
+
+    // items_game.txt has multiple sections with the same key (e.g. 54x "sticker_kits", 126x "items").
+    // GetChild returns only the first; this method merges all matching sections.
+    public static IEnumerable<KeyValuePair<string, KVObject>> GetMergedSection(KVObject? parent, string key)
+    {
+        if (parent == null) yield break;
+        foreach (var entry in parent)
+        {
+            if (string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var child in entry.Value)
+                    yield return child;
+            }
+        }
+    }
+
+    public static KVObject? FindInMergedSection(KVObject? parent, string sectionKey, string childKey)
+    {
+        foreach (var entry in GetMergedSection(parent, sectionKey))
+        {
+            if (string.Equals(entry.Key, childKey, StringComparison.OrdinalIgnoreCase))
+                return entry.Value;
+        }
+        return null;
+    }
 }

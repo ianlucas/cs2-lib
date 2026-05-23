@@ -147,6 +147,7 @@ public static partial class AssetProcessor
                 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
                 File.WriteAllText(outPath, json);
 
+                var modelDataPath = $"/models/{result.Filename}";
                 if (result.Data is Dictionary<string, object?> dataDict &&
                     dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
                     modelInfoObj is Dictionary<string, object?> modelInfo &&
@@ -160,7 +161,6 @@ public static partial class AssetProcessor
                         d.TryGetValue("Mesh", out var mesh) &&
                         mesh?.ToString() == "body_hd");
                     var stickerMaxForLegacy = stickerMarkup.Count - stickerMax;
-                    var modelDataPath = $"/models/{result.Filename}";
 
                     foreach (var item in ctx.Items.Values)
                     {

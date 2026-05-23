@@ -92,25 +92,19 @@ public static class SourceDataLoader
         }
 
         // Build paint kits rarity color hex
-        var paintKitsRarity = KvHelper.GetChild(ctx.GameItems, "paint_kits_rarity");
         ctx.PaintKitsRaritiesColorHex = [];
-        if (paintKitsRarity != null)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems, "paint_kits_rarity"))
         {
-            foreach (var entry in paintKitsRarity)
-            {
-                var rarityKey = entry.Value?.ToString();
-                if (rarityKey != null && ctx.RaritiesColorHex.TryGetValue(rarityKey, out var color))
-                    ctx.PaintKitsRaritiesColorHex[entry.Key] = color;
-            }
+            var rarityKey = entry.Value?.ToString();
+            if (rarityKey != null && ctx.RaritiesColorHex.TryGetValue(rarityKey, out var color))
+                ctx.PaintKitsRaritiesColorHex[entry.Key] = color;
         }
 
         // Build items rarities color hex from client_loot_lists
-        var clientLootLists = KvHelper.GetChild(ctx.GameItems, "client_loot_lists");
         ctx.ItemsRaritiesColorHex = [];
-        if (clientLootLists != null)
         {
             var rarityKeys = ctx.RaritiesColorHex.Keys.ToList();
-            foreach (var lootList in clientLootLists)
+            foreach (var lootList in KvHelper.GetMergedSection(ctx.GameItems, "client_loot_lists"))
             {
                 var rarityKey = rarityKeys.FirstOrDefault(k => lootList.Key.Contains($"_{k}"));
                 if (rarityKey == null) continue;
@@ -125,31 +119,27 @@ public static class SourceDataLoader
         }
 
         // Build paint kits
-        var paintKitsObj = KvHelper.GetChild(ctx.GameItems, "paint_kits");
         ctx.PaintKits = [];
-        if (paintKitsObj != null)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems, "paint_kits"))
         {
-            foreach (var entry in paintKitsObj)
-            {
-                var name = KvHelper.GetString(entry.Value, "name");
-                var descriptionTag = KvHelper.GetString(entry.Value, "description_tag");
-                if (name == null || name == "default" || descriptionTag == null) continue;
+            var name = KvHelper.GetString(entry.Value, "name");
+            var descriptionTag = KvHelper.GetString(entry.Value, "description_tag");
+            if (name == null || name == "default" || descriptionTag == null) continue;
 
-                var wearMaxStr = KvHelper.GetString(entry.Value, "wear_remap_max");
-                var wearMinStr = KvHelper.GetString(entry.Value, "wear_remap_min");
+            var wearMaxStr = KvHelper.GetString(entry.Value, "wear_remap_max");
+            var wearMinStr = KvHelper.GetString(entry.Value, "wear_remap_min");
 
-                ctx.PaintKits.Add(new PaintKitRecord(
-                    ClassName: name,
-                    CompositeMaterialPath: KvHelper.GetString(entry.Value, "composite_material_path"),
-                    DescToken: PrependHash(KvHelper.GetString(entry.Value, "description_string")),
-                    Index: int.Parse(entry.Key),
-                    IsLegacy: KvHelper.GetString(entry.Value, "use_legacy_model") == "1",
-                    NameToken: PrependHash(descriptionTag)!,
-                    RarityColorHex: GetRarityColorHex(ctx, [name]),
-                    WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 0.8,
-                    WearMin: wearMinStr != null ? double.Parse(wearMinStr) : 0.06
-                ));
-            }
+            ctx.PaintKits.Add(new PaintKitRecord(
+                ClassName: name,
+                CompositeMaterialPath: KvHelper.GetString(entry.Value, "composite_material_path"),
+                DescToken: PrependHash(KvHelper.GetString(entry.Value, "description_string")),
+                Index: int.Parse(entry.Key),
+                IsLegacy: KvHelper.GetString(entry.Value, "use_legacy_model") == "1",
+                NameToken: PrependHash(descriptionTag)!,
+                RarityColorHex: GetRarityColorHex(ctx, [name]),
+                WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 0.8,
+                WearMin: wearMinStr != null ? double.Parse(wearMinStr) : 0.06
+            ));
         }
 
         // Build graffiti tints
@@ -173,19 +163,15 @@ public static class SourceDataLoader
         // Build item set mappings
         ctx.ItemSetImage = [];
         ctx.ItemSetItemKey = [];
-        var itemSets = KvHelper.GetChild(ctx.GameItems, "item_sets");
-        if (itemSets != null)
+        foreach (var itemSet in KvHelper.GetMergedSection(ctx.GameItems, "item_sets"))
         {
-            foreach (var itemSet in itemSets)
+            var items = KvHelper.GetChild(itemSet.Value, "items");
+            if (items == null) continue;
+            foreach (var item in items)
             {
-                var items = KvHelper.GetChild(itemSet.Value, "items");
-                if (items == null) continue;
-                foreach (var item in items)
-                {
-                    if (!ctx.ItemSetImage.ContainsKey(itemSet.Key))
-                        ctx.ItemSetImage[itemSet.Key] = CatalogAssets.GetCollectionImage(ctx, itemSet.Key);
-                    ctx.ItemSetItemKey[item.Key] = itemSet.Key;
-                }
+                if (!ctx.ItemSetImage.ContainsKey(itemSet.Key))
+                    ctx.ItemSetImage[itemSet.Key] = CatalogAssets.GetCollectionImage(ctx, itemSet.Key);
+                ctx.ItemSetItemKey[item.Key] = itemSet.Key;
             }
         }
 

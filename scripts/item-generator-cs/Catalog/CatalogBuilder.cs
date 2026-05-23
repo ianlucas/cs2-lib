@@ -24,10 +24,7 @@ public static class CatalogBuilder
 
     private static void ParseBaseWeapons(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var itemDef = entry.Key;
             var item = entry.Value;
@@ -80,10 +77,7 @@ public static class CatalogBuilder
 
     private static void ParseBaseMelees(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var itemDef = entry.Key;
             var item = entry.Value;
@@ -131,10 +125,7 @@ public static class CatalogBuilder
 
     private static void ParseBaseGloves(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var itemDef = entry.Key;
             var item = entry.Value;
@@ -180,10 +171,7 @@ public static class CatalogBuilder
 
     private static void ParseUtilities(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var itemDef = entry.Key;
             var item = entry.Value;
@@ -288,10 +276,7 @@ public static class CatalogBuilder
     private static void ParseMusicKits(ItemGeneratorContext ctx)
     {
         var baseId = CreateStub(ctx, "musickit", "#CSGO_musickit_desc");
-        var musicDefs = KvHelper.GetChild(ctx.GameItems!, "music_definitions");
-        if (musicDefs == null) return;
-
-        foreach (var entry in musicDefs)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "music_definitions"))
         {
             var index = entry.Key;
             if (index == "2") continue;
@@ -328,10 +313,7 @@ public static class CatalogBuilder
     private static void ParseKeychains(ItemGeneratorContext ctx)
     {
         ctx.KeychainBaseId = CreateStub(ctx, "keychain", "#CSGO_Tool_Keychain_Desc");
-        var keychainDefs = KvHelper.GetChild(ctx.GameItems!, "keychain_definitions");
-        if (keychainDefs == null) return;
-
-        foreach (var entry in keychainDefs)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "keychain_definitions"))
         {
             var index = entry.Key;
             var name = KvHelper.GetString(entry.Value, "name") ?? "";
@@ -366,10 +348,7 @@ public static class CatalogBuilder
     private static async Task ParseStickers(ItemGeneratorContext ctx)
     {
         var baseId = CreateStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc", "stickers/dev/sticker_preview_mesh.vmdl");
-        var stickerKits = KvHelper.GetChild(ctx.GameItems!, "sticker_kits");
-        if (stickerKits == null) return;
-
-        foreach (var entry in stickerKits)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "sticker_kits"))
         {
             var index = entry.Key;
             var sticker = entry.Value;
@@ -442,10 +421,7 @@ public static class CatalogBuilder
     private static void ParseGraffiti(ItemGeneratorContext ctx)
     {
         var baseId = CreateStub(ctx, "graffiti", "#CSGO_Tool_SprayPaint_Desc");
-        var stickerKits = KvHelper.GetChild(ctx.GameItems!, "sticker_kits");
-        if (stickerKits == null) return;
-
-        foreach (var entry in stickerKits)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "sticker_kits"))
         {
             var index = entry.Key;
             var sticker = entry.Value;
@@ -513,10 +489,7 @@ public static class CatalogBuilder
     private static void ParsePatches(ItemGeneratorContext ctx)
     {
         var baseId = CreateStub(ctx, "patch", "#CSGO_Tool_Patch_Desc");
-        var stickerKits = KvHelper.GetChild(ctx.GameItems!, "sticker_kits");
-        if (stickerKits == null) return;
-
-        foreach (var entry in stickerKits)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "sticker_kits"))
         {
             var index = entry.Key;
             var sticker = entry.Value;
@@ -554,10 +527,7 @@ public static class CatalogBuilder
 
     private static void ParseAgents(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var index = entry.Key;
             var item = entry.Value;
@@ -600,10 +570,7 @@ public static class CatalogBuilder
 
     private static async Task ParseCollectibles(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var index = entry.Key;
             var item = entry.Value;
@@ -661,10 +628,7 @@ public static class CatalogBuilder
 
     private static void ParseTools(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
-
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var index = entry.Key;
             var item = entry.Value;
@@ -682,7 +646,7 @@ public static class CatalogBuilder
                 continue;
 
             var id = GetItemId(ctx, $"tool_{index}");
-            var prefabData = prefab != null ? KvHelper.GetChild(KvHelper.GetChild(ctx.GameItems!, "prefabs"), prefab) : null;
+            var prefabData = prefab != null ? KvHelper.FindInMergedSection(ctx.GameItems!, "prefabs", prefab) : null;
             var image = imageInventory ?? KvHelper.GetString(prefabData, "image_inventory") ?? "";
 
             Collections.AddContainerItem(ctx, name, id);
@@ -704,11 +668,9 @@ public static class CatalogBuilder
 
     private static async Task ParseContainers(ItemGeneratorContext ctx)
     {
-        var items = KvHelper.GetChild(ctx.GameItems!, "items");
-        if (items == null) return;
         var keyItems = new Dictionary<string, int>();
 
-        foreach (var entry in items)
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
         {
             var containerIndex = entry.Key;
             var item = entry.Value;
@@ -733,9 +695,8 @@ public static class CatalogBuilder
             if (prefab != "weapon_case" && !hasSupplyCrateSeries && lootListName == null) continue;
 
             var revolvingKey = KvHelper.GetString(supplyCrate, "value");
-            var revolvingLootLists = KvHelper.GetChild(ctx.GameItems!, "revolving_loot_lists");
             var clientLootListKey = revolvingKey != null
-                ? KvHelper.GetString(revolvingLootLists, revolvingKey)
+                ? KvHelper.FindInMergedSection(ctx.GameItems!, "revolving_loot_lists", revolvingKey)?.ToString()
                 : lootListName;
             if (clientLootListKey == null) continue;
 
@@ -777,7 +738,7 @@ public static class CatalogBuilder
                         keys.Add(existingKeyId);
                         continue;
                     }
-                    var keyItem = KvHelper.GetChild(KvHelper.GetChild(ctx.GameItems!, "items"), keyItemDef);
+                    var keyItem = KvHelper.FindInMergedSection(ctx.GameItems!, "items", keyItemDef);
                     if (keyItem == null) continue;
                     var keyImageInventory = KvHelper.GetString(keyItem, "image_inventory");
                     if (keyImageInventory == null) continue;
@@ -898,7 +859,7 @@ public static class CatalogBuilder
     private static ValveKeyValue.KVObject? GetPrefab(ItemGeneratorContext ctx, string? prefab)
     {
         if (prefab == null) return null;
-        return KvHelper.GetChild(KvHelper.GetChild(ctx.GameItems!, "prefabs"), prefab);
+        return KvHelper.FindInMergedSection(ctx.GameItems!, "prefabs", prefab);
     }
 
     private static CS2ItemTeam GetTeams(ValveKeyValue.KVObject? teams, CS2ItemTeam fallback = CS2ItemTeam.Both)
