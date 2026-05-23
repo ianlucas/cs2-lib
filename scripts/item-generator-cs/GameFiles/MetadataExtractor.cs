@@ -52,6 +52,7 @@ public static partial class MetadataExtractor
             if (resource.DataBlock is BinaryKV3 kv3)
             {
                 parsedData = ConvertKV3ToObject(kv3.Data.Root);
+                ParseModelInfoKeyValueText(parsedData);
             }
 
             var filename = Path.GetFileNameWithoutExtension(targetFilename).Replace(".glb", "") + ".json";
@@ -153,6 +154,24 @@ public static partial class MetadataExtractor
         }
 
         return results;
+    }
+
+    private static void ParseModelInfoKeyValueText(object? parsedData)
+    {
+        if (parsedData is not Dictionary<string, object?> topDict) return;
+        if (!topDict.TryGetValue("m_modelInfo", out var modelInfoObj)) return;
+        if (modelInfoObj is not Dictionary<string, object?> modelInfo) return;
+        if (!modelInfo.TryGetValue("m_keyValueText", out var kvTextObj)) return;
+        if (kvTextObj is not string kvTextStr) return;
+        if (!kvTextStr.StartsWith("<!-- kv3 ", StringComparison.Ordinal)) return;
+        try
+        {
+            var serializer = KVSerializer.Create(KVSerializationFormat.KeyValues3Text);
+            using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(kvTextStr));
+            KVObject kvDoc = serializer.Deserialize(ms);
+            modelInfo["m_keyValueText"] = ConvertKV3ToObject(kvDoc);
+        }
+        catch { }
     }
 
     private static void CollectResourceRefs(string dataText, string extension, List<string> refs)

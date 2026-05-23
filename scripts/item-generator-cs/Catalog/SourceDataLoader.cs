@@ -146,7 +146,7 @@ public static class SourceDataLoader
                     IsLegacy: KvHelper.GetString(entry.Value, "use_legacy_model") == "1",
                     NameToken: PrependHash(descriptionTag)!,
                     RarityColorHex: GetRarityColorHex(ctx, [name]),
-                    WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 1.0,
+                    WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 0.8,
                     WearMin: wearMinStr != null ? double.Parse(wearMinStr) : 0.06
                 ));
             }
