@@ -55,9 +55,9 @@ public static class CatalogAssets
         var filename = VpkCrcFilename(vpkPath, entry.Crc);
         if (!ctx.ExistingImages.Contains(filename))
         {
-            ctx.NeededVpkPaths.Add(vpkPath);
+            ctx.NeededVpkPaths.Add(entry.EntryPath);
             var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
-            ctx.ImagesToProcess[vpkPath] = new RegularImageTask(localPath, filename);
+            ctx.ImagesToProcess[entry.EntryPath] = new RegularImageTask(localPath, filename);
         }
         return filename;
     }
@@ -82,9 +82,13 @@ public static class CatalogAssets
             }).ToList();
 
             foreach (var suffix in Config.PaintImageSuffixes)
-                ctx.NeededVpkPaths.Add(GetVpkPaintImagePath(cn, pcn, suffix));
+            {
+                var suffixVpkPath = GetVpkPaintImagePath(cn, pcn, suffix);
+                if (ctx.VpkIndex.TryGetValue(suffixVpkPath, out var suffixEntry))
+                    ctx.NeededVpkPaths.Add(suffixEntry.EntryPath);
+            }
 
-            ctx.ImagesToProcess[lightVpkPath] = new PaintImageTask(localPaths, baseName, baseFilename);
+            ctx.ImagesToProcess[entry.EntryPath] = new PaintImageTask(localPaths, baseName, baseFilename);
         }
         return baseFilename;
     }
@@ -100,9 +104,9 @@ public static class CatalogAssets
         var filename = $"/images/{materialBase}_{colorNoHash}_{entry.Crc}.webp";
         if (!ctx.ExistingImages.Contains(filename))
         {
-            ctx.NeededVpkPaths.Add(vpkPath);
+            ctx.NeededVpkPaths.Add(entry.EntryPath);
             var localPath = Path.Combine(Config.GameImagesDir, $"econ/stickers/{stickerMaterial}_png.png".ToLowerInvariant());
-            ctx.ImagesToProcess[$"{vpkPath}:{hexColor}"] = new GraffitiImageTask(localPath, hexColor, filename);
+            ctx.ImagesToProcess[$"{entry.EntryPath}:{hexColor}"] = new GraffitiImageTask(localPath, hexColor, filename);
         }
         return filename;
     }
@@ -120,9 +124,9 @@ public static class CatalogAssets
         var filename = VpkCrcFilename(vpkPath, entry.Crc, "rare");
         if (!ctx.ExistingImages.Contains(filename))
         {
-            ctx.NeededVpkPaths.Add(vpkPath);
+            ctx.NeededVpkPaths.Add(entry.EntryPath);
             var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
-            ctx.ImagesToProcess[$"{vpkPath}:rare"] = new RegularImageTask(localPath, filename);
+            ctx.ImagesToProcess[$"{entry.EntryPath}:rare"] = new RegularImageTask(localPath, filename);
         }
         return filename;
     }
@@ -171,8 +175,8 @@ public static class CatalogAssets
         {
             var ext = isSvg ? ".svg" : "_png.png";
             var localPath = Path.Combine(Config.GameImagesDir, $"econ/set_icons/{name}{ext}");
-            ctx.NeededVpkPaths.Add(vpkPath);
-            ctx.ImagesToProcess[vpkPath] = isSvg
+            ctx.NeededVpkPaths.Add(entry.EntryPath);
+            ctx.ImagesToProcess[entry.EntryPath] = isSvg
                 ? new SvgImageTask(localPath, filename)
                 : new RegularImageTask(localPath, filename);
         }

@@ -156,7 +156,7 @@ public class CS2ItemTranslation
     public string? TournamentDesc { get; set; }
 }
 
-public record VpkIndexEntry(string Crc, string Fnumber);
+public record VpkIndexEntry(string Crc, string Fnumber, string EntryPath);
 
 public record PaintKitRecord(
     string ClassName,

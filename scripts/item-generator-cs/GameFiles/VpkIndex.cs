@@ -33,6 +33,9 @@ public static class VpkIndexBuilder
 
         var package = new Package();
         package.Read(pakDirPath);
+        // Switch FindEntry from O(n) linear scan to binary search; matters for the
+        // tens of thousands of lookups performed by ResourceDecompiler.
+        package.OptimizeEntriesForBinarySearch(StringComparison.OrdinalIgnoreCase);
         ctx.VpkPackage = package;
 
         foreach (var (_, entries) in package.Entries!)
@@ -42,7 +45,10 @@ public static class VpkIndexBuilder
                 var fullPath = entry.GetFullPath();
                 var crc = entry.CRC32.ToString("x8");
                 var fnumber = entry.ArchiveIndex.ToString();
-                var vpkEntry = new VpkIndexEntry(crc, fnumber);
+                // EntryPath always holds the real VPK entry name (e.g. foo.vtex_c),
+                // even when this entry is also aliased under a normalized key (foo.png).
+                // Decompilation must use the real name so Package.FindEntry can resolve it.
+                var vpkEntry = new VpkIndexEntry(crc, fnumber, fullPath);
 
                 ctx.VpkIndex[fullPath] = vpkEntry;
                 var normalized = NormalizeIndexedPath(fullPath);

@@ -1,9 +1,6 @@
 using System.Collections.Concurrent;
-using SteamDatabase.ValvePak;
-using SkiaSharp;
 using ValveResourceFormat;
 using ValveResourceFormat.IO;
-using ValveResourceFormat.ResourceTypes;
 using static ItemGenerator.Logging;
 
 namespace ItemGenerator.GameFiles;
@@ -48,92 +45,161 @@ public static class ResourceDecompiler
     public static void DecompileAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
         if (ctx.VpkPackage == null) return;
-        var paths = vpkPaths.ToList();
-        if (paths.Count == 0) return;
 
-        var parallelism = Math.Max(2, Environment.ProcessorCount);
-        var queue = new BlockingCollection<(string VpkPath, byte[] Data)>(parallelism * 4);
+        var package = ctx.VpkPackage;
         var outDir = Config.DecompiledDir;
-        var total = paths.Count;
+        var parallelism = Math.Max(2, Environment.ProcessorCount);
+
+        // Resolve entries and drop already-extracted paths in parallel.
+        // FindEntry is a read-only dictionary lookup; File.Exists is independent per path.
+        var work = vpkPaths
+            .AsParallel()
+            .WithDegreeOfParallelism(parallelism)
+            .Select(vpkPath => (VpkPath: vpkPath, Entry: package.FindEntry(vpkPath)))
+            .Where(t => t.Entry != null && !IsAlreadyExtracted(t.VpkPath, outDir))
+            .ToArray();
+
+        if (work.Length == 0) return;
+
+        // Sort by (archive, offset) so each archive file is read sequentially,
+        // which avoids head-seek thrashing across the split _NNN.vpk files.
+        Array.Sort(work, static (a, b) =>
+        {
+            var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
+            return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
+        });
+
+        // Pre-create all unique output directories once instead of per-file in the hot loop.
+        var dirs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (vpkPath, _) in work)
+        {
+            var basePath = vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath;
+            dirs.Add(Path.Combine(outDir, Path.GetDirectoryName(basePath) ?? ""));
+        }
+        foreach (var d in dirs) Directory.CreateDirectory(d);
+
+        var total = work.Length;
         var decompiled = 0;
         var lastMilestone = 0;
         var reportProgress = total >= 100;
+        // Entries inlined in pak01_dir.vpk (ArchiveIndex 0x7FFF) share Package.Reader's
+        // base stream and seek on it, so they cannot be read concurrently.
+        var dirVpkLock = new object();
 
-        var producer = Task.Run(() =>
+        var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
+        Parallel.ForEach(Partitioner.Create(work, loadBalance: true), po, item =>
         {
-            try
+            var (vpkPath, entry) = item;
+            byte[] data;
+            if (entry!.ArchiveIndex == 0x7FFF)
             {
-                foreach (var vpkPath in paths)
-                {
-                    var entry = ctx.VpkPackage.FindEntry(vpkPath);
-                    if (entry == null) continue;
-                    ctx.VpkPackage.ReadEntry(entry, out var data);
-                    queue.Add((vpkPath, data));
-                }
+                lock (dirVpkLock)
+                    package.ReadEntry(entry, out data, validateCrc: false);
             }
-            finally { queue.CompleteAdding(); }
+            else
+            {
+                package.ReadEntry(entry, out data, validateCrc: false);
+            }
+
+            if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
+                DecompileTexture(data, vpkPath, outDir);
+            else if (vpkPath.EndsWith(".vsvg_c", StringComparison.OrdinalIgnoreCase))
+                DecompileSvg(data, vpkPath, outDir);
+            else
+            {
+                var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath);
+                if (!File.Exists(outPath))
+                    File.WriteAllBytes(outPath, data);
+            }
+
+            if (!reportProgress) return;
+            var current = Interlocked.Increment(ref decompiled);
+            var pct = current * 100 / total;
+            var milestone = pct / 5 * 5;
+            if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
+                Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
+                Log($"  {milestone}% ({current}/{total})");
         });
+    }
 
-        var consumers = Enumerable.Range(0, parallelism).Select(_ => Task.Run(() =>
+    private static bool IsAlreadyExtracted(string vpkPath, string outDir)
+    {
+        if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var (vpkPath, data) in queue.GetConsumingEnumerable())
-            {
-                if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
-                    DecompileTexture(data, vpkPath, outDir);
-                else if (vpkPath.EndsWith(".vsvg_c", StringComparison.OrdinalIgnoreCase))
-                    DecompileSvg(data, vpkPath, outDir);
-                else
-                {
-                    var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                    if (!File.Exists(outPath))
-                        File.WriteAllBytes(outPath, data);
-                }
-
-                if (!reportProgress) continue;
-                var current = Interlocked.Increment(ref decompiled);
-                var pct = current * 100 / total;
-                var milestone = pct / 5 * 5;
-                if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
-                    Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
-                    Log($"  {milestone}% ({current}/{total})");
-            }
-        })).ToArray();
-
-        Task.WaitAll([producer, .. consumers]);
+            // Texture output extension (.png vs .exr) depends on the resource header,
+            // so check both candidates conservatively to avoid re-reading.
+            var basePath = vpkPath[..^7]; // strip ".vtex_c"
+            var dir = Path.Combine(outDir, Path.GetDirectoryName(basePath) ?? "");
+            var baseName = Path.GetFileName(basePath);
+            return File.Exists(Path.Combine(dir, baseName + ".png"))
+                || File.Exists(Path.Combine(dir, baseName + ".exr"));
+        }
+        var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath);
+        return File.Exists(outPath);
     }
 
     public static void DecompileModelAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
         if (ctx.VpkPackage == null) return;
-        var fileLoader = new GameFileLoader(ctx.VpkPackage, ctx.VpkPackage.FileName);
+        var package = ctx.VpkPackage;
+        var fileLoader = new GameFileLoader(package, package.FileName);
+        var parallelism = Math.Max(2, Environment.ProcessorCount);
 
-        foreach (var vpkPath in vpkPaths)
+        // Resolve entries, compute glb output path, drop already-exported, in parallel.
+        var work = vpkPaths
+            .AsParallel()
+            .WithDegreeOfParallelism(parallelism)
+            .Select(vpkPath =>
+            {
+                var entry = package.FindEntry(vpkPath);
+                if (entry == null) return default;
+                var basePath = vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath;
+                var outDir = Path.Combine(Config.DecompiledDir, Path.GetDirectoryName(vpkPath) ?? "");
+                var glbPath = Path.Combine(outDir, Path.GetFileNameWithoutExtension(basePath) + ".glb");
+                if (File.Exists(glbPath)) return default;
+                return (VpkPath: vpkPath, Entry: entry, OutDir: outDir, GlbPath: glbPath);
+            })
+            .Where(t => t.Entry != null)
+            .ToArray();
+
+        if (work.Length == 0) return;
+
+        Array.Sort(work, static (a, b) =>
         {
-            var entry = ctx.VpkPackage.FindEntry(vpkPath);
-            if (entry == null) continue;
+            var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
+            return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
+        });
 
-            ctx.VpkPackage.ReadEntry(entry, out var data);
+        foreach (var d in work.Select(w => w.OutDir).Distinct(StringComparer.Ordinal))
+            Directory.CreateDirectory(d);
+
+        var dirVpkLock = new object();
+        var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
+        Parallel.ForEach(Partitioner.Create(work, loadBalance: true), po, item =>
+        {
+            var (vpkPath, entry, _, glbPath) = item;
+            byte[] data;
+            if (entry!.ArchiveIndex == 0x7FFF)
+            {
+                lock (dirVpkLock)
+                    package.ReadEntry(entry, out data, validateCrc: false);
+            }
+            else
+            {
+                package.ReadEntry(entry, out data, validateCrc: false);
+            }
+
             using var resource = new Resource();
             resource.Read(new MemoryStream(data));
+            if (!GltfModelExporter.CanExport(resource)) return;
 
-            if (!GltfModelExporter.CanExport(resource)) continue;
-
-            var baseName = Path.GetFileNameWithoutExtension(vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath);
-            var outDir = Path.Combine(Config.DecompiledDir, Path.GetDirectoryName(vpkPath) ?? "");
-            Directory.CreateDirectory(outDir);
-            var glbPath = Path.Combine(outDir, $"{baseName}.glb");
-
-            if (!File.Exists(glbPath))
+            var exporter = new GltfModelExporter(fileLoader)
             {
-                var exporter = new GltfModelExporter(fileLoader)
-                {
-                    ProgressReporter = new Progress<string>(_ => { }),
-                    ExportMaterials = true,
-                };
-                exporter.Export(resource, glbPath);
-            }
-        }
+                ProgressReporter = new Progress<string>(_ => { }),
+                ExportMaterials = true,
+            };
+            exporter.Export(resource, glbPath);
+        });
     }
 
     private static void DecompileTexture(byte[] data, string vpkPath, string outDir)
