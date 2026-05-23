@@ -32,10 +32,10 @@ public static class VpkIndexBuilder
             throw new FileNotFoundException($"pak01_dir.vpk not found at: {pakDirPath}");
 
         var package = new Package();
-        package.Read(pakDirPath);
-        // Switch FindEntry from O(n) linear scan to binary search; matters for the
-        // tens of thousands of lookups performed by ResourceDecompiler.
+        // Must be called before Read(): installs a comparer so entries get sorted on load
+        // and FindEntry can use binary search instead of an O(n) linear scan.
         package.OptimizeEntriesForBinarySearch(StringComparison.OrdinalIgnoreCase);
+        package.Read(pakDirPath);
         ctx.VpkPackage = package;
 
         foreach (var (_, entries) in package.Entries!)
