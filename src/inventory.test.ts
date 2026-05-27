@@ -692,4 +692,64 @@ describe("CS2Inventory methods", () => {
         expect(keychainWithCoords({ y: NaN })).toThrow();
         expect(keychainWithCoords({ z: NaN })).toThrow();
     });
+
+    test("heals items carrying attributes their type cannot hold without bricking the inventory", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    // Valid item that must survive alongside the bad ones.
+                    0: { id: AWP_DRAGON_LORE_ID },
+                    // Knife cannot hold stickers.
+                    1: { id: KARAMBIT_BOREAL_FOREST_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
+                    // Non-agent (weapon) cannot hold patches.
+                    2: { id: AK47_ID, patches: { 0: BLOODHOUND_ID } },
+                    // Knife cannot hold keychains.
+                    3: { id: KARAMBIT_BOREAL_FOREST_ID, keychains: { 0: { id: LIL_AVA_ID } } },
+                    // Wear below wearMin gets clamped up to wearMin.
+                    4: { id: BROKEN_FANG_GLOVES_JADE_ID, wear: 0.01 },
+                    // Wear above wearMax gets clamped down to wearMax.
+                    5: { id: BROKEN_FANG_GLOVES_JADE_ID, wear: 0.9 },
+                    // Wear on a type without wear gets dropped.
+                    6: { id: BLOODY_DARRYL_THE_STRAPPED_ID, wear: 0.5 },
+                    // Wear with excess precision gets dropped.
+                    7: { id: BROKEN_FANG_GLOVES_JADE_ID, wear: 0.123456789 }
+                },
+                version: 1
+            }
+        });
+        expect(inventory.size()).toBe(8);
+        expect(inventory.get(0).id).toBe(AWP_DRAGON_LORE_ID);
+        expect(inventory.get(1).stickers).toBe(undefined);
+        expect(inventory.get(2).patches).toBe(undefined);
+        expect(inventory.get(3).keychains).toBe(undefined);
+        expect(inventory.get(4).wear).toBe(0.06);
+        expect(inventory.get(5).wear).toBe(0.8);
+        expect(inventory.get(6).wear).toBe(undefined);
+        expect(inventory.get(7).wear).toBe(undefined);
+    });
+
+    test("edit throws when writing attributes an item type cannot hold", () => {
+        inventory.add({ id: KARAMBIT_BOREAL_FOREST_ID });
+        inventory.add({ id: AK47_ID });
+        inventory.add({ id: BROKEN_FANG_GLOVES_JADE_ID });
+        const knifeUid = 0;
+        const weaponUid = 1;
+        const glovesUid = 2;
+        // Knife cannot hold stickers or keychains.
+        expect(() => inventory.edit(knifeUid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } })).toThrow();
+        expect(() => inventory.edit(knifeUid, { keychains: { 0: { id: LIL_AVA_ID } } })).toThrow();
+        // Non-agent (weapon) cannot hold patches.
+        expect(() => inventory.edit(weaponUid, { patches: { 0: BLOODHOUND_ID } })).toThrow();
+        // Wear outside [wearMin, wearMax] is rejected.
+        expect(() => inventory.edit(glovesUid, { wear: 0.01 })).toThrow();
+        expect(() => inventory.edit(glovesUid, { wear: 0.9 })).toThrow();
+        // The invalid writes must not have mutated the items.
+        expect(inventory.get(knifeUid).stickers).toBe(undefined);
+        expect(inventory.get(knifeUid).keychains).toBe(undefined);
+        expect(inventory.get(weaponUid).patches).toBe(undefined);
+        expect(inventory.get(glovesUid).wear).toBe(undefined);
+        // A valid edit still goes through.
+        inventory.edit(glovesUid, { wear: 0.5 });
+        expect(inventory.get(glovesUid).wear).toBe(0.5);
+    });
 });

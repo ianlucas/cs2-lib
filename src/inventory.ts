@@ -193,21 +193,67 @@ export class CS2Inventory {
         }
     }
 
-    public removeInvalidItemReferences(item: CS2BaseInventoryItem): void {
+    public healBaseInventoryItem(item: CS2BaseInventoryItem): void {
+        if (!this.economy.items.has(item.id)) {
+            return;
+        }
+        const economyItem = this.economy.getById(item.id);
         if (item.patches !== undefined) {
-            for (const [slot, patchId] of Object.entries(item.patches)) {
-                if (!this.economy.items.has(patchId)) {
-                    delete item.patches[slot];
+            if (!economyItem.hasPatches()) {
+                item.patches = undefined;
+            } else {
+                for (const [slot, patchId] of Object.entries(item.patches)) {
+                    if (!this.economy.items.has(patchId)) {
+                        delete item.patches[slot];
+                    }
                 }
             }
         }
         if (item.stickers !== undefined) {
-            for (const [slot, sticker] of Object.entries(item.stickers)) {
-                if (!this.economy.items.has(sticker.id)) {
-                    delete item.stickers[slot];
+            if (!economyItem.hasStickers()) {
+                item.stickers = undefined;
+            } else {
+                for (const [slot, sticker] of Object.entries(item.stickers)) {
+                    if (!this.economy.items.has(sticker.id)) {
+                        delete item.stickers[slot];
+                    }
                 }
             }
         }
+        if (item.keychains !== undefined) {
+            if (!economyItem.hasKeychains()) {
+                item.keychains = undefined;
+            } else {
+                for (const [slot, keychain] of Object.entries(item.keychains)) {
+                    if (!this.economy.items.has(keychain.id)) {
+                        delete item.keychains[slot];
+                    }
+                }
+            }
+        }
+        if (item.wear !== undefined) {
+            if (!economyItem.hasWear()) {
+                item.wear = undefined;
+            } else {
+                const minimumWear = economyItem.getMinimumWear();
+                const maximumWear = economyItem.getMaximumWear();
+                if (item.wear < minimumWear) {
+                    item.wear = minimumWear;
+                } else if (item.wear > maximumWear) {
+                    item.wear = maximumWear;
+                }
+                if (!this.economy.safeValidateWear(item.wear, economyItem)) {
+                    item.wear = undefined;
+                }
+            }
+        }
+    }
+
+    /**
+     * @deprecated Use {@link healBaseInventoryItem} instead.
+     */
+    public removeInvalidItemReferences(item: CS2BaseInventoryItem): void {
+        this.healBaseInventoryItem(item);
     }
 
     public validateBaseInventoryItem({
@@ -236,7 +282,7 @@ export class CS2Inventory {
             Object.entries(items)
                 .filter(([, { id }]) => this.economy.items.has(id))
                 .map(([key, value]) => {
-                    this.removeInvalidItemReferences(value);
+                    this.healBaseInventoryItem(value);
                     const uid = parseInt(key, 10);
                     return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
                 })
@@ -634,7 +680,7 @@ export class CS2InventoryItem
                 Object.entries(storage)
                     .filter(([, { id }]) => this.economy.items.has(id))
                     .map(([key, value]) => {
-                        this.inventory.removeInvalidItemReferences(value);
+                        this.inventory.healBaseInventoryItem(value);
                         const economyItem = this.economy.getById(value.id);
                         assert(value.storage === undefined);
                         const uid = parseInt(key, 10);
@@ -657,6 +703,11 @@ export class CS2InventoryItem
     }
 
     edit(...sources: Partial<CS2BaseInventoryItem>[]): void {
+        const merged: CS2BaseInventoryItem = this.asBase();
+        for (const source of sources) {
+            Object.assign(merged, source);
+        }
+        this.inventory.validateBaseInventoryItem(merged);
         for (const source of sources) {
             Object.assign(this, source);
             this.assign(source);
