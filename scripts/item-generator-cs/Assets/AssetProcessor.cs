@@ -96,7 +96,7 @@ public static partial class AssetProcessor
             if (!File.Exists(glbPath)) continue;
 
             PatchGlbAssets(ctx, glbPath);
-            OptimizeModelGlb(glbPath);
+            StubModelTextures(glbPath);
 
             var modelDataPath = Path.Combine(Config.OutputDir, model.ModelData.TrimStart('/'));
             var dependencyHash = GetDependencyHash([
@@ -478,28 +478,39 @@ public static partial class AssetProcessor
         return Task.CompletedTask;
     }
 
-    private static void OptimizeModelGlb(string glbPath)
+    // Exported models must not carry real textures. Downscale every embedded image to a tiny
+    // 4x4 WebP stub while leaving geometry, the material graph, and all texture/sampler wiring
+    // intact. Each stub keeps its source's representative color, so material slots still point
+    // at a plausible placeholder. This drops a weapon model from ~77 MB to ~1 MB.
+    private static void StubModelTextures(string glbPath)
     {
         var model = ModelRoot.Load(glbPath);
-        var anyWebp = false;
+        if (model.LogicalImages.Count == 0) return;
 
         foreach (var image in model.LogicalImages)
         {
-            var content = image.Content;
-            if (!content.IsPng && !content.IsJpg) continue;
-
-            var bytes = content.Content.ToArray();
-            using var bitmap = SKBitmap.Decode(bytes);
-            if (bitmap == null) continue;
-            using var skImage = SKImage.FromBitmap(bitmap);
-            using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
-            if (encoded == null) continue;
-
-            image.Content = new SharpGLTF.Memory.MemoryImage(encoded.ToArray());
-            anyWebp = true;
+            var stub = DownscaleToPlaceholderWebp(image.Content.Content.ToArray());
+            if (stub != null)
+                image.Content = new SharpGLTF.Memory.MemoryImage(stub);
         }
 
-        if (anyWebp) model.SaveGLB(glbPath);
+        model.SaveGLB(glbPath);
+    }
+
+    private static byte[]? DownscaleToPlaceholderWebp(byte[] source)
+    {
+        using var bitmap = SKBitmap.Decode(source);
+        if (bitmap == null) return null;
+
+        // Opaque target so the encoder emits a plain RGB (lossy VP8) WebP, like the reference.
+        var info = new SKImageInfo(4, 4, SKColorType.Rgba8888, SKAlphaType.Opaque);
+        using var resized = new SKBitmap(info);
+        if (!bitmap.ScalePixels(resized, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)))
+            return null;
+
+        using var image = SKImage.FromBitmap(resized);
+        using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
+        return data?.ToArray();
     }
 
     private static void PatchGlbAssets(ItemGeneratorContext ctx, string glbPath)
