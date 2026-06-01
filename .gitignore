@@ -2,6 +2,6 @@
 .env
 /dist
 /node_modules
+/scripts/item-generator/bin
+/scripts/item-generator/obj
 /scripts/workdir
-/scripts/item-generator-cs/bin
-/scripts/item-generator-cs/obj
