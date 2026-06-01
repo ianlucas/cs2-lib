@@ -103,7 +103,9 @@ public static class CatalogBuilder
 
             var prefabData = GetPrefab(ctx, prefab);
             var prefabRarity = KvHelper.GetString(prefabData, "item_rarity") ?? "default";
+            var modelPlayer = KvHelper.GetString(item, "model_player");
 
+            var modelInfo = CatalogAssets.GetModel(ctx, modelPlayer, id);
             AddItem(ctx, new CS2Item
             {
                 Base = true,
@@ -115,6 +117,8 @@ public static class CatalogBuilder
                 Image = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = baseitem == "1" ? null : 0,
                 Model = name.Replace("weapon_", ""),
+                ModelData = modelInfo?.ModelData,
+                ModelPlayer = modelInfo?.ModelPlayer,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
                 Teams = (int)teams,
