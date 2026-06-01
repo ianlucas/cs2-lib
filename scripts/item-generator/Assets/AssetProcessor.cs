@@ -88,6 +88,8 @@ public static partial class AssetProcessor
         ExtractModelData(ctx);
         PreProcessMaterials(ctx);
 
+        // Pass 1: patch + stub each model, collecting the GLBs to compress.
+        var stubbed = new List<(string VpkPath, PendingModelTask Model, string GlbPath)>();
         foreach (var (vpkPath, model) in ctx.ModelsToProcess)
         {
             var modelDir = Path.Combine(Config.DecompiledDir, Path.GetDirectoryName(vpkPath)!);
@@ -98,7 +100,16 @@ public static partial class AssetProcessor
 
             PatchGlbAssets(ctx, glbPath);
             StubModelTextures(glbPath);
+            stubbed.Add((vpkPath, model, glbPath));
+        }
 
+        // Compress geometry with EXT_meshopt_compression before hashing, so the version hash
+        // reflects the compressed bytes.
+        await OptimizeGlbsMeshopt(stubbed.Select(s => s.GlbPath).ToList());
+
+        // Pass 2: hash, version, and move each compressed GLB into the output tree.
+        foreach (var (vpkPath, model, glbPath) in stubbed)
+        {
             var modelDataPath = Path.Combine(Config.OutputDir, model.ModelData.TrimStart('/'));
             var dependencyHash = GetDependencyHash([
                 await GetFileSha256(glbPath),
@@ -481,6 +492,62 @@ public static partial class AssetProcessor
         p.WaitForExit();
         if (p.ExitCode != 0)
             throw new InvalidOperationException($"cwebp failed for {srcPng} (exit {p.ExitCode}): {err}");
+    }
+
+    // Geometry is exported uncompressed. We shell out to scripts/optimize-glb.ts (gltf-transform
+    // + the meshoptimizer codec) to add EXT_meshopt_compression. The codec is fully reversible, so
+    // this only shrinks the file — meshes, nodes, skins, accessors, and float precision are left
+    // bit-identical. One tsx process handles each model; they run in parallel.
+    private static readonly Lazy<bool> NodeAvailable = new(() =>
+    {
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo("node")
+            {
+                ArgumentList = { "--version" },
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            });
+            p!.WaitForExit();
+            return p.ExitCode == 0;
+        }
+        catch { return false; }
+    });
+
+    private static async Task OptimizeGlbsMeshopt(IReadOnlyList<string> glbPaths)
+    {
+        if (glbPaths.Count == 0) return;
+        if (!NodeAvailable.Value)
+            throw new InvalidOperationException(
+                "node not found. GLB geometry is compressed with EXT_meshopt_compression via " +
+                "scripts/optimize-glb.ts (gltf-transform + meshoptimizer). Install Node.js 20+ " +
+                "and run `npm install`.");
+
+        Log($"Compressing {FormatCount(glbPaths.Count, "model")} with EXT_meshopt_compression...");
+        var script = Path.Combine(Config.ScriptsDir, "optimize-glb.ts");
+        var semaphore = new SemaphoreSlim(Config.ExternalConcurrency);
+        await Task.WhenAll(glbPaths.Select(async glbPath =>
+        {
+            await semaphore.WaitAsync();
+            try { await OptimizeGlbMeshopt(script, glbPath); }
+            finally { semaphore.Release(); }
+        }));
+    }
+
+    private static async Task OptimizeGlbMeshopt(string script, string glbPath)
+    {
+        using var p = Process.Start(new ProcessStartInfo("node")
+        {
+            ArgumentList = { "--import", "tsx", script, glbPath },
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        });
+        var err = await p!.StandardError.ReadToEndAsync();
+        await p.WaitForExitAsync();
+        if (p.ExitCode != 0)
+            throw new InvalidOperationException($"optimize-glb.ts failed for {glbPath} (exit {p.ExitCode}): {err}");
     }
 
     private static Task ConvertToWebp(string srcPath, string destFilename)
