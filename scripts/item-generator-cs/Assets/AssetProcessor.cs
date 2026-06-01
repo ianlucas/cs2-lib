@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -303,15 +304,8 @@ public static partial class AssetProcessor
                 var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, vpkEntry.Crc, ".webp");
                 var outPath = Path.Combine(Config.OutputDir, "textures", filename);
                 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                using var bitmap = SKBitmap.Decode(pngPath);
-                if (bitmap != null)
-                {
-                    using var image = SKImage.FromBitmap(bitmap);
-                    using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
-                    using var stream = File.Create(outPath);
-                    data.SaveTo(stream);
-                    textureFilename = $"/textures/{filename}";
-                }
+                EncodeTextureWebpExact(pngPath, outPath);
+                textureFilename = $"/textures/{filename}";
             }
             else if (File.Exists(exrPath))
             {
@@ -445,6 +439,48 @@ public static partial class AssetProcessor
 
         await File.WriteAllTextAsync(Config.TempPakFileListPath, string.Join("\n", vpks));
         await Depot.DepotDownloaderService.DownloadFileList(Config.TempPakFileListPath, Config.WorkdirDir);
+    }
+
+    // Material textures can carry meaningful RGB under fully-transparent (alpha=0) pixels,
+    // which shader logic reads. SkiaSharp's WebP encoder doesn't expose libwebp's `exact`
+    // flag, so it discards that hidden RGB. We shell out to cwebp -exact for textures to
+    // preserve it, mirroring the legacy sharp pipeline's { quality: 95, exact: true }.
+    private static readonly Lazy<bool> CwebpAvailable = new(() =>
+    {
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo("cwebp")
+            {
+                ArgumentList = { "-version" },
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            });
+            p!.WaitForExit();
+            return p.ExitCode == 0;
+        }
+        catch { return false; }
+    });
+
+    private static void EncodeTextureWebpExact(string srcPng, string outPath)
+    {
+        if (!CwebpAvailable.Value)
+            throw new InvalidOperationException(
+                "cwebp not found. Texture WebP encoding needs libwebp's `exact` flag to " +
+                "preserve RGB under transparent pixels (read by shader logic); SkiaSharp " +
+                "cannot. Install it locally with `sudo apt install webp`.");
+
+        using var p = Process.Start(new ProcessStartInfo("cwebp")
+        {
+            ArgumentList = { "-quiet", "-q", Config.WebpQuality.ToString(), "-exact", srcPng, "-o", outPath },
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        });
+        var err = p!.StandardError.ReadToEnd();
+        p.WaitForExit();
+        if (p.ExitCode != 0)
+            throw new InvalidOperationException($"cwebp failed for {srcPng} (exit {p.ExitCode}): {err}");
     }
 
     private static Task ConvertToWebp(string srcPath, string destFilename)
