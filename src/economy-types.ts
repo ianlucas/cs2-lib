@@ -79,6 +79,8 @@ export interface CS2Item {
     statTrakless?: boolean | undefined;
     statTrakOnly?: boolean | undefined;
     stickerId?: number | undefined;
+    stickerMask?: string | undefined;
+    stickerMaskForLegacy?: string | undefined;
     stickerMax?: number | undefined;
     stickerMaxForLegacy?: number | undefined;
     teams?: CS2ItemTeam | undefined;

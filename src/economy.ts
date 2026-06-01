@@ -295,6 +295,8 @@ export class CS2EconomyItem implements Interface<
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
+    stickerMask: string | undefined;
+    stickerMaskForLegacy: string | undefined;
     stickerMax: number | undefined;
     stickerMaxForLegacy: number | undefined;
     tint: number | undefined;
@@ -639,6 +641,12 @@ export class CS2EconomyItem implements Interface<
     getModelData(): string {
         const { modelData } = this.parent ?? this;
         return this.economy.resolveUrl(modelData);
+    }
+
+    getStickerMask(): string {
+        const item = this.parent ?? this;
+        const uri = (this.legacy ? item.stickerMaskForLegacy : undefined) ?? item.stickerMask;
+        return this.economy.resolveUrl(uri);
     }
 
     getMinimumWear(): number {

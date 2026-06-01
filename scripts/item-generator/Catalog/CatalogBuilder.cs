@@ -53,6 +53,7 @@ public static class CatalogBuilder
             Translations.AddTranslation(ctx, id, "desc", itemDescription);
 
             var modelInfo = CatalogAssets.GetModel(ctx, modelPlayer, id);
+            var (stickerMask, stickerMaskForLegacy) = CatalogAssets.GetStickerMasks(ctx, modelPlayer, id);
             AddItem(ctx, new CS2Item
             {
                 Base = true,
@@ -69,6 +70,8 @@ public static class CatalogBuilder
                 ModelPlayer = modelInfo?.ModelPlayer,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
+                StickerMask = stickerMask,
+                StickerMaskForLegacy = stickerMaskForLegacy,
                 Teams = (int)teams,
                 Type = CS2ItemType.Weapon
             });
@@ -840,6 +843,8 @@ public static class CatalogBuilder
         item.ModelPlayer ??= previous.ModelPlayer;
         item.StickerMax ??= previous.StickerMax;
         item.StickerMaxForLegacy ??= previous.StickerMaxForLegacy;
+        item.StickerMask ??= previous.StickerMask;
+        item.StickerMaskForLegacy ??= previous.StickerMaskForLegacy;
     }
 
     private static int CreateStub(ItemGeneratorContext ctx, string name, string descToken, string? model = null)

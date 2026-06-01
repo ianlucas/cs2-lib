@@ -109,6 +109,12 @@ public class CS2Item
     [JsonPropertyName("stickerId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerId { get; set; }
 
+    [JsonPropertyName("stickerMask"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StickerMask { get; set; }
+
+    [JsonPropertyName("stickerMaskForLegacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StickerMaskForLegacy { get; set; }
+
     [JsonPropertyName("stickerMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerMax { get; set; }
 
