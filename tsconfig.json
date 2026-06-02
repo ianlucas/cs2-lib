@@ -8,7 +8,8 @@
         "noEmit": true,
         "allowImportingTsExtensions": true,
         "allowJs": false,
-        "isolatedDeclarations": true
+        "isolatedDeclarations": true,
+        "types": ["node"]
     },
     "include": ["src", "scripts"],
     "exclude": ["src/items.ts", "src/translations"]

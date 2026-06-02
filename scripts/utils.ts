@@ -7,7 +7,6 @@ import { type ChildProcessWithoutNullStreams } from "child_process";
 import { createHash } from "crypto";
 import { createReadStream, existsSync, readFileSync } from "fs";
 import { access, readFile, rm, writeFile } from "fs/promises";
-import { decode as htmlEntitiesDecode } from "html-entities";
 import { basename, resolve } from "path";
 import { pipeline } from "stream/promises";
 import { fileURLToPath } from "url";
@@ -42,12 +41,6 @@ export async function read(path: string): Promise<string> {
 
 export async function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export async function fetchText(url: string): Promise<string> {
-    url = htmlEntitiesDecode(url);
-    log(`GET ${url}`);
-    return (await fetch(url)).text();
 }
 
 export function dedupe<T>(array: T[]): T[] {
