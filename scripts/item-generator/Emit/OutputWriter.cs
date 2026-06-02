@@ -43,6 +43,8 @@ public static class OutputWriter
                 StatTrakless = i.StatTrakless,
                 StatTrakOnly = i.StatTrakOnly,
                 StickerId = i.StickerId,
+                StickerMask = i.StickerMask,
+                StickerMaskForLegacy = i.StickerMaskForLegacy,
                 StickerMax = i.StickerMax,
                 StickerMaxForLegacy = i.StickerMaxForLegacy,
                 Teams = i.Teams,
