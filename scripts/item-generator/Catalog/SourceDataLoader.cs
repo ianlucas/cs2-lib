@@ -22,7 +22,7 @@ public static class SourceDataLoader
 
     private static async Task DepotSync(ItemGeneratorContext ctx)
     {
-        await Depot.DepotDownloaderService.SyncAssetsManifest();
+        await Depot.DepotDownloaderService.SyncAssetsManifest(ctx);
         await Depot.DepotDownloaderService.EnsureItemDefinitionPackages(ctx);
     }
 

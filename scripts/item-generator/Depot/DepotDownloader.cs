@@ -28,7 +28,7 @@ public static class DepotDownloaderService
         await session.DownloadDepotFiles(Config.AppId, Config.AssetsDepotId, DefaultBranch, files, outputDir);
     }
 
-    public static async Task SyncAssetsManifest()
+    public static async Task SyncAssetsManifest(ItemGeneratorContext ctx)
     {
         var currentManifest = File.Exists(Config.AssetsManifestPath)
             ? (await File.ReadAllTextAsync(Config.AssetsManifestPath)).Trim()
@@ -38,7 +38,16 @@ public static class DepotDownloaderService
         if (!Config.IsForceMode() && currentManifest == latestManifest)
             throw new InvalidOperationException($"Depot {Config.AssetsDepotId} is already up to date.");
 
-        await File.WriteAllTextAsync(Config.AssetsManifestPath, latestManifest);
+        // Defer the write until the run finishes successfully (see CommitAssetsManifest)
+        // so a failed download/processing run doesn't mark this depot version as
+        // processed and skip the next download.
+        ctx.AssetsManifestId = latestManifest;
+    }
+
+    public static async Task CommitAssetsManifest(ItemGeneratorContext ctx)
+    {
+        if (ctx.AssetsManifestId == null) return;
+        await File.WriteAllTextAsync(Config.AssetsManifestPath, ctx.AssetsManifestId);
     }
 
     public static async Task EnsureItemDefinitionPackages(ItemGeneratorContext ctx)

@@ -104,6 +104,9 @@ public sealed class SteamSession : IDisposable
                 {
                     var chunkBuffer = new byte[chunk.UncompressedLength];
                     await cdnClient.DownloadDepotChunkAsync(depotId, chunk, server, chunkBuffer, depotKey.DepotKey);
+                    // Chunks are not enumerated in file-offset order, so seek to each
+                    // chunk's offset before writing or the output gets scrambled.
+                    fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
                     fs.Write(chunkBuffer, 0, (int)chunk.UncompressedLength);
                 }
             }

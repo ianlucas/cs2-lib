@@ -196,6 +196,7 @@ public record PendingModelTask
 public class ItemGeneratorContext
 {
     public ItemGeneratorMode Mode { get; set; }
+    public string? AssetsManifestId { get; set; }
     public Package? VpkPackage { get; set; }
     public Dictionary<string, VpkIndexEntry> VpkIndex { get; set; } = [];
     public string GameItemsAsText { get; set; } = "";

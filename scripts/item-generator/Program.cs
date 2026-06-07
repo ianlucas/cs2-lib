@@ -1,5 +1,6 @@
 using ItemGenerator;
 using ItemGenerator.Catalog;
+using ItemGenerator.Depot;
 using ItemGenerator.Emit;
 using ItemGenerator.GameFiles;
 using ItemGenerator.Upload;
@@ -39,5 +40,8 @@ await RunStep("Emitting outputs", () => OutputWriter.EmitOutputs(ctx),
     () => $"{ctx.Items.Count} items, {ctx.ItemTranslationByLanguage.Count} translation files");
 
 await RunStep("Uploading assets", () => CdnUploader.UploadAssets(ctx));
+
+// Only now that the full run succeeded do we record the processed depot version.
+await DepotDownloaderService.CommitAssetsManifest(ctx);
 
 Log("Finished.");
