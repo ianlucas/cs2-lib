@@ -4,6 +4,12 @@ using SteamKit2.CDN;
 
 namespace ItemGenerator.Depot;
 
+/// <summary>
+/// Thrown when the depot already matches the recorded manifest, signalling a
+/// clean no-op so the run can exit successfully instead of failing.
+/// </summary>
+public sealed class DepotUpToDateException(string message) : Exception(message);
+
 public static class DepotDownloaderService
 {
     private const string DefaultBranch = "public";
@@ -41,7 +47,7 @@ public static class DepotDownloaderService
 
         var latestManifest = await FetchLatestManifestId();
         if (!Config.IsForceMode() && currentManifest == latestManifest)
-            throw new InvalidOperationException($"Depot {Config.AssetsDepotId} is already up to date.");
+            throw new DepotUpToDateException($"Depot {Config.AssetsDepotId} is already up to date.");
 
         // Defer the write until the run finishes successfully (see CommitAssetsManifest)
         // so a failed download/processing run doesn't mark this depot version as
