@@ -57,7 +57,6 @@ public static partial class Config
     public static readonly string AssetsManifestPath = Path.Combine(ScriptsDir, "cs2.manifest");
     public static readonly string DepotCsgoPath = Path.Combine(WorkdirDir, "game/csgo");
     public static readonly string CsgoPakDirPath = Path.Combine(DepotCsgoPath, "pak01_dir.vpk");
-    public static readonly string TempPakFileListPath = Path.Combine(WorkdirDir, "cs2_temp_pak.depot");
 
     public const uint AppId = 730;
     public const uint AssetsDepotId = 2347770;

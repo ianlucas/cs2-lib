@@ -447,9 +447,7 @@ public static partial class AssetProcessor
                 vpks.Add($"game/csgo/pak01_{entry.Fnumber.PadLeft(3, '0')}.vpk");
         }
         if (vpks.Count == 0) return;
-
-        await File.WriteAllTextAsync(Config.TempPakFileListPath, string.Join("\n", vpks));
-        await Depot.DepotDownloaderService.DownloadFileList(Config.TempPakFileListPath, Config.WorkdirDir);
+        await Depot.DepotDownloaderService.DownloadFiles([.. vpks], Config.WorkdirDir);
     }
 
     // Material textures can carry meaningful RGB under fully-transparent (alpha=0) pixels,

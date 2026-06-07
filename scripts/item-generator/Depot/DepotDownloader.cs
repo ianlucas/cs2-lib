@@ -16,16 +16,21 @@ public static class DepotDownloaderService
         return manifestId.ToString();
     }
 
+    public static async Task DownloadFiles(List<string> files, string outputDir)
+    {
+        if (files.Count == 0) return;
+        using var session = new SteamSession();
+        await session.ConnectAnonymous();
+        await session.DownloadDepotFiles(Config.AppId, Config.AssetsDepotId, DefaultBranch, files, outputDir);
+    }
+
     public static async Task DownloadFileList(string fileListPath, string outputDir)
     {
         if (!File.Exists(fileListPath)) return;
         var files = (await File.ReadAllLinesAsync(fileListPath))
             .Where(l => !string.IsNullOrWhiteSpace(l))
             .ToList();
-
-        using var session = new SteamSession();
-        await session.ConnectAnonymous();
-        await session.DownloadDepotFiles(Config.AppId, Config.AssetsDepotId, DefaultBranch, files, outputDir);
+        await DownloadFiles(files, outputDir);
     }
 
     public static async Task SyncAssetsManifest(ItemGeneratorContext ctx)
