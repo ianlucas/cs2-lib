@@ -48,6 +48,13 @@ public static partial class Config
     ];
     public const string RemoveKeychainToolIndex = "65";
     public const int WebpQuality = 95;
+    // Lossy WebP (even at q95) quantizes away the ±1 dither in normal maps, collapsing them
+    // into flat DCT plateaus; on metallic skins every plateau mirrors a slightly different
+    // patch of the environment and the surface reads as a faint square mosaic in cs2-3d-viewer.
+    // Normal maps therefore use WebP near-lossless: still the lossless coder (no block
+    // structure), with bounded per-pixel adjustment. Level 60 keeps the max per-channel
+    // error at ±2 (vs ±91 measured at lossy q95 on ak47_normal) for ~2/3 the lossless size.
+    public const int WebpNearLosslessNormals = 60;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 

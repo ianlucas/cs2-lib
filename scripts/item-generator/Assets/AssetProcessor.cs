@@ -280,6 +280,43 @@ public static partial class AssetProcessor
         Log($"Extracted {FormatCount(processed.Count, "material")} and found {FormatCount(ctx.TexturesToProcess.Count, "texture reference")}.");
     }
 
+    // Texture paths bound to a *Normal* material param (g_tNormal, g_tGlitterNormal, ...) in any
+    // parsed vmat, plus a filename fallback ("_normal" in the stem) for normals that reach
+    // TexturesToProcess only through composite-material mutators or model materials. Membership
+    // selects the near-lossless WebP path (see Config.WebpNearLosslessNormals).
+    private static HashSet<string> CollectNormalMapTexturePaths(ItemGeneratorContext ctx)
+    {
+        var result = new HashSet<string>();
+        foreach (var data in ctx.MaterialDataByPath.Values)
+        {
+            if (data is not Dictionary<string, object?> vmat ||
+                !vmat.TryGetValue("m_textureParams", out var paramsObj) ||
+                paramsObj is not List<object?> textureParams)
+                continue;
+            foreach (var entry in textureParams)
+            {
+                if (entry is not Dictionary<string, object?> param ||
+                    param.GetValueOrDefault("m_name") is not string name ||
+                    !name.Contains("Normal", StringComparison.OrdinalIgnoreCase) ||
+                    param.GetValueOrDefault("m_pValue") is not string value)
+                    continue;
+                try
+                {
+                    var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, value);
+                    result.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
+                }
+                catch { }
+            }
+        }
+        foreach (var vtexPath in ctx.TexturesToProcess)
+        {
+            if (Path.GetFileNameWithoutExtension(vtexPath)
+                .Contains("_normal", StringComparison.OrdinalIgnoreCase))
+                result.Add(vtexPath);
+        }
+        return result;
+    }
+
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
     {
         var pending = ctx.TexturesToProcess
@@ -287,6 +324,7 @@ public static partial class AssetProcessor
         if (pending.Count == 0) return;
 
         Log($"Processing {FormatCount(pending.Count, "material texture")}...");
+        var normalMapTextures = CollectNormalMapTexturePaths(ctx);
 
         var compiledPaths = pending.Select(MaterialPaths.ToCompiledMaterialResourcePath).ToList();
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
@@ -315,7 +353,9 @@ public static partial class AssetProcessor
                 var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, vpkEntry.Crc, ".webp");
                 var outPath = Path.Combine(Config.OutputDir, "textures", filename);
                 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                EncodeTextureWebpExact(pngPath, outPath);
+                EncodeTextureWebpExact(pngPath, outPath,
+                    nearLossless: normalMapTextures.Contains(vtexPath) ||
+                        normalMapTextures.Contains(MaterialPaths.NormalizeMaterialResourcePath(resolvedVtexPath)));
                 textureFilename = $"/textures/{filename}";
             }
             else if (File.Exists(exrPath))
@@ -471,7 +511,7 @@ public static partial class AssetProcessor
         catch { return false; }
     });
 
-    private static void EncodeTextureWebpExact(string srcPng, string outPath)
+    private static void EncodeTextureWebpExact(string srcPng, string outPath, bool nearLossless = false)
     {
         if (!CwebpAvailable.Value)
             throw new InvalidOperationException(
@@ -479,13 +519,30 @@ public static partial class AssetProcessor
                 "preserve RGB under transparent pixels (read by shader logic); SkiaSharp " +
                 "cannot. Install it locally with `sudo apt install webp`.");
 
-        using var p = Process.Start(new ProcessStartInfo("cwebp")
+        var info = new ProcessStartInfo("cwebp")
         {
-            ArgumentList = { "-quiet", "-q", Config.WebpQuality.ToString(), "-exact", srcPng, "-o", outPath },
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
-        });
+        };
+        info.ArgumentList.Add("-quiet");
+        if (nearLossless)
+        {
+            // Normal maps: see Config.WebpNearLosslessNormals for why these never go lossy.
+            info.ArgumentList.Add("-near_lossless");
+            info.ArgumentList.Add(Config.WebpNearLosslessNormals.ToString());
+        }
+        else
+        {
+            info.ArgumentList.Add("-q");
+            info.ArgumentList.Add(Config.WebpQuality.ToString());
+        }
+        info.ArgumentList.Add("-exact");
+        info.ArgumentList.Add(srcPng);
+        info.ArgumentList.Add("-o");
+        info.ArgumentList.Add(outPath);
+
+        using var p = Process.Start(info);
         var err = p!.StandardError.ReadToEnd();
         p.WaitForExit();
         if (p.ExitCode != 0)
