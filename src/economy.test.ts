@@ -68,7 +68,14 @@ test("getStickerMask resolves hd/legacy masks with base inheritance", () => {
     const legacy = "/textures/weapon_rif_ak47_sticker_mask_legacy_tga_1bdb00a_def67890.webp";
     const hdOnly = "/textures/weapon_rif_m4a4_sticker_mask_hd_tga_5516e76c_aaaa1111.webp";
     const items: CS2Item[] = [
-        { base: true, id: 1, rarity: CS2RarityColor.Common, stickerMask: hd, stickerMaskForLegacy: legacy, type: "weapon" },
+        {
+            base: true,
+            id: 1,
+            rarity: CS2RarityColor.Common,
+            stickerMask: hd,
+            stickerMaskForLegacy: legacy,
+            type: "weapon"
+        },
         { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" },
         { baseId: 1, id: 3, legacy: true, rarity: CS2RarityColor.Rare, type: "weapon" },
         { base: true, id: 4, rarity: CS2RarityColor.Common, stickerMask: hdOnly, type: "weapon" },
@@ -91,6 +98,26 @@ test("getStickerMask resolves hd/legacy masks with base inheritance", () => {
     expect(CS2Economy.get(3).getStickerMask()).toBe(CS2Economy.resolveUrl(legacy));
     // A legacy skin whose base ships only an hd mask falls back to hd.
     expect(CS2Economy.get(5).getStickerMask()).toBe(CS2Economy.resolveUrl(hdOnly));
+});
+
+test("getModelData derives from modelPlayer (.glb -> .json) with base inheritance", () => {
+    const modelPlayer = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
+    const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
+    const items: CS2Item[] = [
+        { base: true, id: 1, modelPlayer, rarity: CS2RarityColor.Common, type: "weapon" },
+        { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
+    ];
+    CS2Economy.load({
+        items,
+        language: {
+            1: { name: "Bayonet" },
+            2: { name: "Bayonet | Skin" }
+        }
+    });
+    expect(CS2Economy.get(1).getModelPlayer()).toBe(CS2Economy.resolveUrl(modelPlayer));
+    expect(CS2Economy.get(1).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+    // A skin inherits the base model and derives the same data path.
+    expect(CS2Economy.get(2).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
 });
 
 test("nametag validation", () => {

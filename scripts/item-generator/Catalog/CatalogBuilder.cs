@@ -66,8 +66,7 @@ public static class CatalogBuilder
                 Image = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
                 Index = null,
                 Model = name.Replace("weapon_", ""),
-                ModelData = modelInfo?.ModelData,
-                ModelPlayer = modelInfo?.ModelPlayer,
+                ModelPlayer = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
                 StickerMask = stickerMask,
@@ -120,8 +119,7 @@ public static class CatalogBuilder
                 Image = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = baseitem == "1" ? null : 0,
                 Model = name.Replace("weapon_", ""),
-                ModelData = modelInfo?.ModelData,
-                ModelPlayer = modelInfo?.ModelPlayer,
+                ModelPlayer = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
                 Teams = (int)teams,
@@ -839,7 +837,6 @@ public static class CatalogBuilder
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
         item.CompositeMaterial ??= previous.CompositeMaterial;
-        item.ModelData ??= previous.ModelData;
         item.ModelPlayer ??= previous.ModelPlayer;
         item.StickerMax ??= previous.StickerMax;
         item.StickerMaxForLegacy ??= previous.StickerMaxForLegacy;
@@ -857,8 +854,7 @@ public static class CatalogBuilder
         var item = new CS2Item
         {
             Id = id,
-            ModelData = modelInfo?.ModelData,
-            ModelPlayer = modelInfo?.ModelPlayer,
+            ModelPlayer = modelInfo,
             Type = CS2ItemType.Stub
         };
         AddItem(ctx, item);

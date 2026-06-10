@@ -131,14 +131,14 @@ public static class CatalogAssets
         return filename;
     }
 
-    public static (string? ModelData, string? ModelPlayer)? GetModel(ItemGeneratorContext ctx, string? path, int? existingId = null)
+    public static string? GetModel(ItemGeneratorContext ctx, string? path, int? existingId = null)
     {
         if (path == null) return null;
 
         if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
         {
             if (ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing))
-                return (existing.ModelData, existing.ModelPlayer);
+                return existing.ModelPlayer;
             return null;
         }
 
@@ -157,7 +157,7 @@ public static class CatalogAssets
             ModelPlayer = modelPlayer,
             DirectMaterials = []
         };
-        return (modelData, modelPlayer);
+        return modelPlayer;
     }
 
     public static (string? Mask, string? MaskForLegacy) GetStickerMasks(

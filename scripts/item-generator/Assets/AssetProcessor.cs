@@ -159,7 +159,7 @@ public static partial class AssetProcessor
                 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
                 File.WriteAllText(outPath, json);
 
-                var modelDataPath = $"/models/{result.Filename}";
+                var modelPlayerPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
                 if (result.Data is Dictionary<string, object?> dataDict &&
                     dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
                     modelInfoObj is Dictionary<string, object?> modelInfo &&
@@ -176,7 +176,7 @@ public static partial class AssetProcessor
 
                     foreach (var item in ctx.Items.Values)
                     {
-                        if (item.ModelData == modelDataPath)
+                        if (item.ModelPlayer == modelPlayerPath)
                         {
                             item.StickerMax = stickerMax > 0 ? stickerMax : null;
                             item.StickerMaxForLegacy = stickerMaxForLegacy > 0 ? stickerMaxForLegacy : null;
@@ -457,8 +457,6 @@ public static partial class AssetProcessor
         {
             if (item.ModelPlayer == model.ModelPlayer)
                 item.ModelPlayer = modelPlayer;
-            if (item.ModelData == model.ModelData)
-                item.ModelData = modelData;
         }
         model.ModelPlayer = modelPlayer;
         model.ModelData = modelData;

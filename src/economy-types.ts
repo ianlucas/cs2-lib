@@ -71,7 +71,6 @@ export interface CS2Item {
     keys?: number[] | undefined;
     legacy?: boolean | undefined;
     model?: string | undefined;
-    modelData?: string | undefined;
     modelPlayer?: string | undefined;
     rarity?: CS2RarityColor | undefined;
     specials?: number[] | undefined;

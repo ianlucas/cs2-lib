@@ -35,7 +35,6 @@ public static class OutputWriter
                 Keys = i.Keys,
                 Legacy = i.Legacy,
                 Model = i.Model,
-                ModelData = i.ModelData,
                 ModelPlayer = i.ModelPlayer,
                 Rarity = i.Rarity,
                 Specials = i.Specials,

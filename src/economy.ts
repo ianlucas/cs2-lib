@@ -287,7 +287,6 @@ export class CS2EconomyItem implements Interface<
     keys: number[] | undefined;
     legacy: boolean | undefined;
     model: string | undefined;
-    modelData: string | undefined;
     modelPlayer: string | undefined;
     name: string = null!;
     rarity: CS2RarityColor = null!;
@@ -639,8 +638,8 @@ export class CS2EconomyItem implements Interface<
     }
 
     getModelData(): string {
-        const { modelData } = this.parent ?? this;
-        return this.economy.resolveUrl(modelData);
+        const { modelPlayer } = this.parent ?? this;
+        return this.economy.resolveUrl(modelPlayer?.replace(/\.glb$/, ".json"));
     }
 
     getStickerMask(): string {

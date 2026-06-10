@@ -85,9 +85,6 @@ public class CS2Item
     [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; set; }
 
-    [JsonPropertyName("modelData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ModelData { get; set; }
-
     [JsonPropertyName("modelPlayer"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ModelPlayer { get; set; }
 
