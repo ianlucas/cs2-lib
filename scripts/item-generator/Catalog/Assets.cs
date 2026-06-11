@@ -160,14 +160,14 @@ public static class CatalogAssets
         return modelPlayer;
     }
 
-    public static (string? Mask, string? MaskForLegacy) GetStickerMasks(
+    public static (string? Mask, string? LegacyMask) GetStickerMasks(
         ItemGeneratorContext ctx, string? modelPlayerPath, int? existingId = null)
     {
         if (modelPlayerPath == null) return (null, null);
 
         if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
             return ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing)
-                ? (existing.StickerMask, existing.StickerMaskForLegacy)
+                ? (existing.StickerMask, existing.LegacyStickerMask)
                 : (null, null);
 
         var normalized = modelPlayerPath.Replace('\\', '/').ToLowerInvariant();

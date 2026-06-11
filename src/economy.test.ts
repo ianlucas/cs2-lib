@@ -71,9 +71,9 @@ test("getStickerMask resolves hd/legacy masks with base inheritance", () => {
         {
             base: true,
             id: 1,
+            legacyStickerMask: legacy,
             rarity: CS2RarityColor.Common,
             stickerMask: hd,
-            stickerMaskForLegacy: legacy,
             type: "weapon"
         },
         { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" },

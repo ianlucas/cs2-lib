@@ -168,18 +168,18 @@ public static partial class AssetProcessor
                     kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
                     stickerMarkupObj is List<object?> stickerMarkup)
                 {
-                    var stickerMax = stickerMarkup.Count(s =>
+                    var stickerSlots = stickerMarkup.Count(s =>
                         s is Dictionary<string, object?> d &&
                         d.TryGetValue("Mesh", out var mesh) &&
                         mesh?.ToString() == "body_hd");
-                    var stickerMaxForLegacy = stickerMarkup.Count - stickerMax;
+                    var legacyStickerSlots = stickerMarkup.Count - stickerSlots;
 
                     foreach (var item in ctx.Items.Values)
                     {
                         if (item.ModelPlayer == modelPlayerPath)
                         {
-                            item.StickerMax = stickerMax > 0 ? stickerMax : null;
-                            item.StickerMaxForLegacy = stickerMaxForLegacy > 0 ? stickerMaxForLegacy : null;
+                            item.StickerSlots = stickerSlots > 0 ? stickerSlots : null;
+                            item.LegacyStickerSlots = legacyStickerSlots > 0 ? legacyStickerSlots : null;
                         }
                     }
                 }

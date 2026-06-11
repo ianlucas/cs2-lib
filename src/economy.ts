@@ -286,6 +286,8 @@ export class CS2EconomyItem implements Interface<
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
+    legacyStickerMask: string | undefined;
+    legacyStickerSlots: number | undefined;
     model: string | undefined;
     modelPlayer: string | undefined;
     name: string = null!;
@@ -295,9 +297,7 @@ export class CS2EconomyItem implements Interface<
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
     stickerMask: string | undefined;
-    stickerMaskForLegacy: string | undefined;
-    stickerMax: number | undefined;
-    stickerMaxForLegacy: number | undefined;
+    stickerSlots: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemType = null!;
@@ -644,7 +644,7 @@ export class CS2EconomyItem implements Interface<
 
     getStickerMask(): string {
         const item = this.parent ?? this;
-        const uri = (this.legacy ? item.stickerMaskForLegacy : undefined) ?? item.stickerMask;
+        const uri = (this.legacy ? item.legacyStickerMask : undefined) ?? item.stickerMask;
         return this.economy.resolveUrl(uri);
     }
 
@@ -665,7 +665,9 @@ export class CS2EconomyItem implements Interface<
     }
 
     getMaximumStickers(): number {
-        return this.parent?.[this.legacy ? "stickerMaxForLegacy" : "stickerMax"] ?? CS2_MAX_STICKERS;
+        const item = this.parent ?? this;
+        const slots = (this.legacy ? item.legacyStickerSlots : undefined) ?? item.stickerSlots;
+        return slots ?? CS2_MAX_STICKERS;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

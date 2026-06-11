@@ -82,6 +82,12 @@ public class CS2Item
     [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Legacy { get; set; }
 
+    [JsonPropertyName("legacyStickerMask"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyStickerMask { get; set; }
+
+    [JsonPropertyName("legacyStickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LegacyStickerSlots { get; set; }
+
     [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; set; }
 
@@ -109,14 +115,8 @@ public class CS2Item
     [JsonPropertyName("stickerMask"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StickerMask { get; set; }
 
-    [JsonPropertyName("stickerMaskForLegacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? StickerMaskForLegacy { get; set; }
-
-    [JsonPropertyName("stickerMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? StickerMax { get; set; }
-
-    [JsonPropertyName("stickerMaxForLegacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? StickerMaxForLegacy { get; set; }
+    [JsonPropertyName("stickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? StickerSlots { get; set; }
 
     [JsonPropertyName("teams"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Teams { get; set; }
