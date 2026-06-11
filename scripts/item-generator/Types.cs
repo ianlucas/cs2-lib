@@ -79,9 +79,6 @@ public class CS2Item
     [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Legacy { get; set; }
 
-    [JsonPropertyName("legacyStickerMask"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? LegacyStickerMask { get; set; }
-
     [JsonPropertyName("legacyStickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyStickerSlots { get; set; }
 
@@ -111,9 +108,6 @@ public class CS2Item
 
     [JsonPropertyName("stickerId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerId { get; set; }
-
-    [JsonPropertyName("stickerMask"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? StickerMask { get; set; }
 
     [JsonPropertyName("stickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerSlots { get; set; }

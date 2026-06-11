@@ -69,7 +69,6 @@ export interface CS2Item {
     index?: number | undefined;
     keys?: number[] | undefined;
     legacy?: boolean | undefined;
-    legacyStickerMask?: string | undefined;
     legacyStickerSlots?: number | undefined;
     model?: string | undefined;
     paintMaterial?: string | undefined;
@@ -80,7 +79,6 @@ export interface CS2Item {
     statTrakless?: boolean | undefined;
     statTrakOnly?: boolean | undefined;
     stickerId?: number | undefined;
-    stickerMask?: string | undefined;
     stickerSlots?: number | undefined;
     teams?: CS2ItemTeam | undefined;
     tint?: number | undefined;

@@ -53,7 +53,6 @@ public static class CatalogBuilder
             Translations.AddTranslation(ctx, id, "desc", itemDescription);
 
             var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
-            var (stickerMask, legacyStickerMask) = CatalogAssets.GetStickerMasks(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
                 Base = true,
@@ -69,8 +68,6 @@ public static class CatalogBuilder
                 PlayerModel = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
-                LegacyStickerMask = legacyStickerMask,
-                StickerMask = stickerMask,
                 Teams = (int)teams,
                 Type = CS2ItemType.Weapon
             });
@@ -838,9 +835,7 @@ public static class CatalogBuilder
 
         item.PaintMaterial ??= previous.PaintMaterial;
         item.PlayerModel ??= previous.PlayerModel;
-        item.LegacyStickerMask ??= previous.LegacyStickerMask;
         item.LegacyStickerSlots ??= previous.LegacyStickerSlots;
-        item.StickerMask ??= previous.StickerMask;
         item.StickerSlots ??= previous.StickerSlots;
     }
 

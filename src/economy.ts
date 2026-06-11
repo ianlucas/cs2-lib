@@ -285,7 +285,6 @@ export class CS2EconomyItem implements Interface<
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
-    legacyStickerMask: string | undefined;
     legacyStickerSlots: number | undefined;
     model: string | undefined;
     name: string = null!;
@@ -296,7 +295,6 @@ export class CS2EconomyItem implements Interface<
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
-    stickerMask: string | undefined;
     stickerSlots: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
@@ -640,12 +638,6 @@ export class CS2EconomyItem implements Interface<
     getModelData(): string {
         const { playerModel } = this.parent ?? this;
         return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
-    }
-
-    getStickerMask(): string {
-        const item = this.parent ?? this;
-        const uri = (this.legacy ? item.legacyStickerMask : undefined) ?? item.stickerMask;
-        return this.economy.resolveUrl(uri);
     }
 
     getMinimumWear(): number {

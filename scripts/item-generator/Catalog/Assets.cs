@@ -160,53 +160,6 @@ public static class CatalogAssets
         return playerModel;
     }
 
-    public static (string? Mask, string? LegacyMask) GetStickerMasks(
-        ItemGeneratorContext ctx, string? playerModelPath, int? existingId = null)
-    {
-        if (playerModelPath == null) return (null, null);
-
-        if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
-            return ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing)
-                ? (existing.StickerMask, existing.LegacyStickerMask)
-                : (null, null);
-
-        var normalized = playerModelPath.Replace('\\', '/').ToLowerInvariant();
-        var slash = normalized.LastIndexOf('/');
-        if (slash < 0) return (null, null);
-        var prefix = $"{normalized[..slash]}/materials/stickers/";
-
-        var masks = ctx.VpkIndex.Keys.Where(k =>
-            k.StartsWith(prefix, StringComparison.Ordinal) &&
-            k.EndsWith(".vtex_c", StringComparison.Ordinal) &&
-            k.Contains("sticker_mask", StringComparison.Ordinal)).ToList();
-
-        string? Pick(Func<string, bool> match)
-        {
-            var found = masks.Where(match).ToList();
-            if (found.Count == 0) return null;
-            if (found.Count > 1)
-                throw new InvalidOperationException(
-                    $"Ambiguous sticker mask in '{prefix}': {string.Join(", ", found)}");
-            return RegisterStickerMaskTexture(ctx, found[0]);
-        }
-
-        // "legacy" matches files containing "sticker_mask_legacy"; the hd slot takes
-        // everything else (an explicit "_hd" mask or a plain "sticker_mask", e.g. taser).
-        var legacy = Pick(k => k.Contains("sticker_mask_legacy", StringComparison.Ordinal));
-        var hd = Pick(k => !k.Contains("sticker_mask_legacy", StringComparison.Ordinal));
-        return (hd, legacy);
-    }
-
-    private static string? RegisterStickerMaskTexture(ItemGeneratorContext ctx, string vtexCPath)
-    {
-        if (!ctx.VpkIndex.TryGetValue(vtexCPath, out var entry)) return null;
-        // Strip the "_c" so the source .vtex rides the existing texture pipeline; the
-        // CRC-based filename is deterministic, so it matches ProcessMaterialTextures' output.
-        var src = MaterialPaths.NormalizeMaterialResourcePath(vtexCPath[..^2]);
-        ctx.TexturesToProcess.Add(src);
-        return $"/textures/{MaterialPaths.GetTextureFilename(src, entry.Crc, ".webp")}";
-    }
-
     public static string? GetCollectionImage(ItemGeneratorContext ctx, string name)
     {
         var pngVpkPath = $"panorama/images/econ/set_icons/{name}_png.png";

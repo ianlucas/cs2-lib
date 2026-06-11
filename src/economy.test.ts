@@ -63,43 +63,6 @@ describe("CS2Economy", () => {
     });
 });
 
-test("getStickerMask resolves hd/legacy masks with base inheritance", () => {
-    const hd = "/textures/weapon_rif_ak47_sticker_mask_hd_tga_8e7a83c3_abc12345.webp";
-    const legacy = "/textures/weapon_rif_ak47_sticker_mask_legacy_tga_1bdb00a_def67890.webp";
-    const hdOnly = "/textures/weapon_rif_m4a4_sticker_mask_hd_tga_5516e76c_aaaa1111.webp";
-    const items: CS2Item[] = [
-        {
-            base: true,
-            id: 1,
-            legacyStickerMask: legacy,
-            rarity: CS2RarityColor.Common,
-            stickerMask: hd,
-            type: "weapon"
-        },
-        { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" },
-        { baseId: 1, id: 3, legacy: true, rarity: CS2RarityColor.Rare, type: "weapon" },
-        { base: true, id: 4, rarity: CS2RarityColor.Common, stickerMask: hdOnly, type: "weapon" },
-        { baseId: 4, id: 5, legacy: true, rarity: CS2RarityColor.Rare, type: "weapon" }
-    ];
-    CS2Economy.load({
-        items,
-        language: {
-            1: { name: "AK-47" },
-            2: { name: "AK-47 | Skin" },
-            3: { name: "AK-47 | Legacy Skin" },
-            4: { name: "M4A4" },
-            5: { name: "M4A4 | Legacy Skin" }
-        }
-    });
-    // Base weapon and a non-legacy skin resolve the hd mask.
-    expect(CS2Economy.get(1).getStickerMask()).toBe(CS2Economy.resolveUrl(hd));
-    expect(CS2Economy.get(2).getStickerMask()).toBe(CS2Economy.resolveUrl(hd));
-    // A legacy skin resolves the base's legacy mask.
-    expect(CS2Economy.get(3).getStickerMask()).toBe(CS2Economy.resolveUrl(legacy));
-    // A legacy skin whose base ships only an hd mask falls back to hd.
-    expect(CS2Economy.get(5).getStickerMask()).toBe(CS2Economy.resolveUrl(hdOnly));
-});
-
 test("getModelData derives from playerModel (.glb -> .json) with base inheritance", () => {
     const playerModel = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
     const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
