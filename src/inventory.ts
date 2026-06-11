@@ -18,10 +18,10 @@ import {
     CS2_MIN_WEAR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
-import { CS2ItemType, type CS2ItemTypeValues, type CS2UnlockedItem } from "./economy-types.ts";
+import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
 import { resolveInventoryData } from "./inventory-upgrader.ts";
-import { CS2Team, type CS2TeamValues } from "./teams.ts";
+import { CS2Team } from "./teams.ts";
 import { type Interface, type MapValue, type RecordValue, assert, ensure, float } from "./utils.ts";
 
 export interface CS2BaseInventoryItem {
@@ -78,7 +78,7 @@ export interface CS2InventorySpec extends CS2InventoryOptions {
 export const CS2_INVENTORY_VERSION = 1;
 export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
 // prettier-ignore
-export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemTypeValues[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Weapon];
+export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Weapon];
 
 export function getTimestamp(): number {
     return Math.ceil((Date.now() - CS2_INVENTORY_TIMESTAMP) / 1000);
@@ -147,7 +147,7 @@ export class CS2Inventory {
             }
             if (schema !== undefined) {
                 assert(Number.isInteger(schema));
-                assert(schema >= 0 && schema < (item?.getStickerSlotCount() ?? CS2_MAX_STICKERS));
+                assert(schema >= 0 && schema < (item?.getMaximumStickers() ?? CS2_MAX_STICKERS));
             }
         }
     }
@@ -269,7 +269,7 @@ export class CS2Inventory {
         const item = this.economy.getById(id);
         this.economy.validateWear(wear, item);
         this.economy.validateSeed(seed, item);
-        this.economy.validateNametag(nameTag, item);
+        this.economy.validateNameTag(nameTag, item);
         this.economy.validateStatTrak(statTrak, item);
         this.validateAddable(item);
         this.validatePatches(patches, item);
@@ -335,9 +335,9 @@ export class CS2Inventory {
         return this;
     }
 
-    addWithNametag(nameTagUid: number, id: number, nameTag: string): this {
+    addWithNameTag(nameTagUid: number, id: number, nameTag: string): this {
         this.get(nameTagUid).expectNameTag();
-        this.economy.requireNametag(nameTag);
+        this.economy.requireNameTag(nameTag);
         this.items.delete(nameTagUid);
         this.add({ id, nameTag });
         return this;
@@ -360,7 +360,7 @@ export class CS2Inventory {
         return this;
     }
 
-    equip(itemUid: number, team?: CS2TeamValues): this {
+    equip(itemUid: number, team?: CS2Team): this {
         const item = this.get(itemUid);
         assert(item.equipped === undefined);
         assert(team !== CS2Team.CT || item.equippedCT === undefined);
@@ -384,7 +384,7 @@ export class CS2Inventory {
         return this;
     }
 
-    unequip(uid: number, team?: CS2TeamValues): this {
+    unequip(uid: number, team?: CS2Team): this {
         const item = this.get(uid);
         item.equipped = team === undefined ? undefined : item.equipped;
         item.equippedCT = team === CS2Team.CT ? undefined : item.equippedCT;
@@ -394,7 +394,7 @@ export class CS2Inventory {
 
     unlockContainer(unlockedItem: CS2UnlockedItem, containerUid: number, keyUid?: number): this {
         const containerItem = this.get(containerUid);
-        this.economy.validateUnlockedItem(containerItem, unlockedItem);
+        this.economy.expectUnlockedItem(containerItem, unlockedItem);
         const keyItem = keyUid !== undefined ? this.get(keyUid) : undefined;
         this.economy.validateContainerAndKey(containerItem, keyItem);
         this.items.delete(containerUid);
@@ -410,10 +410,10 @@ export class CS2Inventory {
     }
 
     renameItem(nameTagUid: number, renameableUid: number, nameTag?: string): this {
-        nameTag = this.economy.trimNametag(nameTag);
+        nameTag = this.economy.trimNameTag(nameTag);
         this.get(nameTagUid).expectNameTag();
         const renameable = this.get(renameableUid);
-        this.economy.validateNametag(nameTag, renameable);
+        this.economy.validateNameTag(nameTag, renameable);
         renameable.nameTag = nameTag;
         renameable.updatedAt = getTimestamp();
         this.items.delete(nameTagUid);
@@ -421,10 +421,10 @@ export class CS2Inventory {
     }
 
     renameStorageUnit(storageUid: number, nameTag: string): this {
-        const trimmed = this.economy.trimNametag(nameTag);
+        const trimmed = this.economy.trimNameTag(nameTag);
         const storageUnit = this.get(storageUid);
         storageUnit.expectStorageUnit();
-        this.economy.requireNametag(trimmed);
+        this.economy.requireNameTag(trimmed);
         storageUnit.nameTag = trimmed;
         storageUnit.updatedAt = getTimestamp();
         return this;

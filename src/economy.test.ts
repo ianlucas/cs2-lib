@@ -17,7 +17,7 @@ describe("CS2Economy", () => {
             { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
             { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
         ];
-        CS2Economy.use({
+        CS2Economy.load({
             items,
             language: {
                 1: { name: "Item 1" },
@@ -34,7 +34,7 @@ describe("CS2Economy", () => {
     test("getById should return the item with the given id", () => {
         const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
-        CS2Economy.use({
+        CS2Economy.load({
             items: [item],
             language: {
                 1: { name: "Item 1" }
@@ -48,7 +48,7 @@ describe("CS2Economy", () => {
         const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
 
-        CS2Economy.use({
+        CS2Economy.load({
             items: [item],
             language: {
                 1: { name: "Item 1" }
@@ -63,17 +63,37 @@ describe("CS2Economy", () => {
     });
 });
 
+test("getModelData derives from playerModel (.glb -> .json) with base inheritance", () => {
+    const playerModel = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
+    const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
+    const items: CS2Item[] = [
+        { base: true, id: 1, playerModel, rarity: CS2RarityColor.Common, type: "weapon" },
+        { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
+    ];
+    CS2Economy.load({
+        items,
+        language: {
+            1: { name: "Bayonet" },
+            2: { name: "Bayonet | Skin" }
+        }
+    });
+    expect(CS2Economy.get(1).getPlayerModel()).toBe(CS2Economy.resolveUrl(playerModel));
+    expect(CS2Economy.get(1).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+    // A skin inherits the base model and derives the same data path.
+    expect(CS2Economy.get(2).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+});
+
 test("nametag validation", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
-    expect(CS2Economy.safeValidateNametag(" fail")).toBeFalsy();
-    expect(CS2Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
-    expect(CS2Economy.safeValidateNametag("孔子")).toBeTruthy();
-    expect(CS2Economy.safeValidateNametag("bo$$u")).toBeTruthy();
-    expect(CS2Economy.safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    expect(CS2Economy.safeValidateNameTag(" fail")).toBeFalsy();
+    expect(CS2Economy.safeValidateNameTag("小島 秀夫")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("孔子")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("bo$$u")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("toolongnametagtoolongnametag")).toBeFalsy();
 });
 
 test("wear validation", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     expect(CS2Economy.safeValidateWear(0.1)).toBeTruthy();
     expect(CS2Economy.safeValidateWear(0.5)).toBeTruthy();
     expect(CS2Economy.safeValidateWear(1)).toBeTruthy();
@@ -96,7 +116,7 @@ test("wear validation", () => {
 });
 
 test("has seed", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     const baseGloves = CS2Economy.getById(56);
     const skinGloves = CS2Economy.getById(1707);
     expect(baseGloves.hasSeed()).toBe(false);
@@ -104,7 +124,7 @@ test("has seed", () => {
 });
 
 test("default cdn url", () => {
-    CS2Economy.use({ items: CS2_ITEMS, language: english });
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
     const dragonLore = CS2Economy.getById(307);
     assert(dragonLore.getImage().endsWith(".webp"));
     assert(dragonLore.getImage(1 / 3 - 0.1).endsWith("_light.webp"));

@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { stringify } from "javascript-stringify";
-import { CS2Item } from "../src/economy-types";
-import { CS2_ITEMS } from "../src/items";
-import { ensure } from "../src/utils";
-import { readJson, shouldRun, write } from "./utils";
+import { type CS2Item } from "../src/economy-types.ts";
+import { CS2_ITEMS } from "../src/items.ts";
+import { ensure } from "../src/utils.ts";
+import { readJson, shouldRun, write } from "./utils.ts";
 
 const repoBaseUrl = "https://raw.githubusercontent.com/ianlucas/cs2-lib/main";
 
@@ -44,22 +44,80 @@ function isDifferent(a: any, b: any) {
     return a !== b;
 }
 
-function getPropChanges(title: string, localItem: any, repoItem: any) {
+function isPrimitiveArray(value: any): value is (string | number)[] {
+    return Array.isArray(value) && value.every((item) => typeof item === "string" || typeof item === "number");
+}
+
+function getArrayDelta(localArr: (string | number)[], repoArr: (string | number)[]) {
+    const repoSet = new Set(repoArr);
+    const localSet = new Set(localArr);
+    return {
+        added: localArr.filter((value) => !repoSet.has(value)),
+        removed: repoArr.filter((value) => !localSet.has(value))
+    };
+}
+
+function formatList(values: (string | number)[]) {
+    return values.map((value) => (typeof value === "string" ? `"${value}"` : String(value))).join(", ");
+}
+
+function getPropChanges(
+    title: string,
+    localItem: any,
+    repoItem: any,
+    localNames?: Record<string, { name?: string }>,
+    repoNames?: Record<string, { name?: string }>
+) {
     let changes = "";
     const addedProperties = Object.keys(localItem).filter((key) => !Object.keys(repoItem).includes(key));
     const repoProperties = Object.keys(repoItem);
     const before: any = {};
     const after: any = {};
+    const arrayChanges: string[] = [];
+
+    // Properties like `contents`/`specials`/`keys` hold item ids. Diff them by the referenced
+    // item's name so that an internal id change for the same item (e.g. a different Doppler
+    // phase id that still exists in items.json) isn't reported as removed + added.
+    const resolveRefs = (values: (string | number)[], names?: Record<string, { name?: string }>) =>
+        names !== undefined && values.every((value) => typeof value === "number")
+            ? values.map((id) => names[id]?.name ?? id)
+            : values;
+
+    // Render array properties as added/removed deltas instead of dumping the whole
+    // before/after arrays (e.g. container `specials`/`contents` can hold hundreds of ids).
+    const addArrayDelta = (property: string, localValue: any, repoValue: any) => {
+        const { added, removed } = getArrayDelta(
+            resolveRefs(Array.isArray(localValue) ? localValue : [], localNames),
+            resolveRefs(Array.isArray(repoValue) ? repoValue : [], repoNames)
+        );
+        if (added.length === 0 && removed.length === 0) return;
+        let block = `**${property}**\n\n`;
+        if (added.length > 0) block += `- Added (${added.length}): ${formatList(added)}\n`;
+        if (removed.length > 0) block += `- Removed (${removed.length}): ${formatList(removed)}\n`;
+        arrayChanges.push(block);
+    };
+
     for (const property of addedProperties) {
-        after[property] = localItem[property];
-    }
-    for (const property of repoProperties) {
-        if (isDifferent(repoItem[property], localItem[property])) {
-            before[property] = repoItem[property];
-            after[property] = localItem[property];
+        const value = localItem[property];
+        if (isPrimitiveArray(value)) {
+            addArrayDelta(property, value, []);
+        } else {
+            after[property] = value;
         }
     }
-    if (Object.keys(before).length > 0 || Object.keys(after).length > 0) {
+    for (const property of repoProperties) {
+        if (!isDifferent(repoItem[property], localItem[property])) continue;
+        const localValue = localItem[property];
+        const repoValue = repoItem[property];
+        if (isPrimitiveArray(localValue) || isPrimitiveArray(repoValue)) {
+            addArrayDelta(property, localValue, repoValue);
+        } else {
+            before[property] = repoValue;
+            after[property] = localValue;
+        }
+    }
+
+    if (Object.keys(before).length > 0 || Object.keys(after).length > 0 || arrayChanges.length > 0) {
         changes += `### ${title}\n\n`;
         if (Object.keys(before).length > 0) {
             changes += "#### Before\n\n";
@@ -72,6 +130,9 @@ function getPropChanges(title: string, localItem: any, repoItem: any) {
             changes += "```javascript\n";
             changes += stringify(after, replacer, 2);
             changes += "\n```\n";
+        }
+        for (const block of arrayChanges) {
+            changes += "\n" + block;
         }
     }
     return changes;
@@ -113,7 +174,7 @@ async function main() {
         const repoTranslation = ensure(repoEnglish[key]);
         const localTranslation = ensure(localEnglish[key]);
         const name = `${repoTranslation.name || localTranslation.name} (id: ${key})`;
-        let itemChanges = getPropChanges("Item Changes", localItem, repoItem);
+        let itemChanges = getPropChanges("Item Changes", localItem, repoItem, localEnglish, repoEnglish);
         let translationChanges = getPropChanges("Translation Changes", localTranslation, repoTranslation);
         if (itemChanges || translationChanges) {
             itemDiffs.push(`## ${name}\n\n${itemChanges}\n${translationChanges}`);

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { CS2RarityColorValues, CS2RaritySoundNameValues } from "./economy-container.ts";
+import type { CS2RarityColor, CS2RaritySoundName } from "./economy-container.ts";
 import type { EnumValues } from "./utils.ts";
 
 export const CS2ItemTeam = {
@@ -12,7 +12,7 @@ export const CS2ItemTeam = {
     Both: 2
 } as const;
 
-export type CS2ItemTeamValues = EnumValues<typeof CS2ItemTeam>;
+export type CS2ItemTeam = EnumValues<typeof CS2ItemTeam>;
 
 export const CS2ItemType = {
     Agent: "agent",
@@ -32,7 +32,7 @@ export const CS2ItemType = {
     Weapon: "weapon"
 } as const;
 
-export type CS2ItemTypeValues = EnumValues<typeof CS2ItemType>;
+export type CS2ItemType = EnumValues<typeof CS2ItemType>;
 
 export const CS2ItemWear = {
     FactoryNew: "FN",
@@ -42,7 +42,7 @@ export const CS2ItemWear = {
     BattleScarred: "BS"
 } as const;
 
-export type CS2ItemWearValues = EnumValues<typeof CS2ItemWear>;
+export type CS2ItemWear = EnumValues<typeof CS2ItemWear>;
 
 export const CS2ContainerType = {
     WeaponCase: 0,
@@ -51,7 +51,7 @@ export const CS2ContainerType = {
     SouvenirCase: 3
 } as const;
 
-export type CS2ContainerTypeValues = EnumValues<typeof CS2ContainerType>;
+export type CS2ContainerType = EnumValues<typeof CS2ContainerType>;
 
 export interface CS2Item {
     altName?: string | undefined;
@@ -60,7 +60,7 @@ export interface CS2Item {
     category?: string | undefined;
     collection?: string | undefined;
     collectionImage?: string | undefined;
-    containerType?: CS2ContainerTypeValues | undefined;
+    containerType?: CS2ContainerType | undefined;
     contents?: number[] | undefined;
     def?: number | undefined;
     free?: boolean | undefined;
@@ -71,22 +71,18 @@ export interface CS2Item {
     legacy?: boolean | undefined;
     legacyStickerSlots?: number | undefined;
     model?: string | undefined;
-    modelBinary?: string | undefined;
-    rarity?: CS2RarityColorValues | undefined;
+    paintMaterial?: string | undefined;
+    playerModel?: string | undefined;
+    rarity?: CS2RarityColor | undefined;
     specials?: number[] | undefined;
     specialsImage?: string | undefined;
     statTrakless?: boolean | undefined;
     statTrakOnly?: boolean | undefined;
     stickerId?: number | undefined;
-    stickerIndex?: number | undefined;
     stickerSlots?: number | undefined;
-    teams?: CS2ItemTeamValues | undefined;
-    textureImage?: string | undefined;
+    teams?: CS2ItemTeam | undefined;
     tint?: number | undefined;
-    type: CS2ItemTypeValues;
-    voFallback?: boolean | undefined;
-    voFemale?: boolean | undefined;
-    voPrefix?: string | undefined;
+    type: CS2ItemType;
     wearMax?: number | undefined;
     wearMin?: number | undefined;
 }
@@ -103,11 +99,6 @@ export interface CS2ItemTranslation {
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
 export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
-export type CS2StickerMarkup = Record<
-    string,
-    { slot: number; offsets: number[]; scale: number; rotation: number; legacy?: boolean }[] | undefined
->;
-
 export interface CS2UnlockedItem {
     attributes: {
         containerId: number;
@@ -116,6 +107,6 @@ export interface CS2UnlockedItem {
         wear: number | undefined;
     };
     id: number;
-    rarity: CS2RaritySoundNameValues;
+    rarity: CS2RaritySoundName;
     special: boolean;
 }

@@ -1,4 +1,7 @@
+.codex
 .env
 /dist
 /node_modules
+/scripts/item-generator/bin
+/scripts/item-generator/obj
 /scripts/workdir

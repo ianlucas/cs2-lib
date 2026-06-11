@@ -44,9 +44,9 @@ import {
     CS2_WEAR_FACTOR
 } from "./economy-constants.ts";
 import {
+    type CS2RarityColor,
     CS2RarityColorName,
     CS2RarityColorOrder,
-    type CS2RarityColorValues,
     CS2RaritySoundName,
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
@@ -57,22 +57,18 @@ import {
 } from "./economy-container.ts";
 import {
     CS2ContainerType,
-    type CS2ContainerTypeValues,
     type CS2Item,
     CS2ItemTeam,
-    type CS2ItemTeamValues,
     type CS2ItemTranslation,
     type CS2ItemTranslationMap,
     CS2ItemType,
-    type CS2ItemTypeValues,
     CS2ItemWear,
-    type CS2ItemWearValues,
     type CS2UnlockedItem
 } from "./economy-types.ts";
-import { type CS2TeamValues } from "./teams.ts";
+import { type CS2Team } from "./teams.ts";
 import { type Interface, assert, compare, ensure, safe } from "./utils.ts";
 
-type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2TeamValues };
+type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2Team };
 
 function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem) => boolean {
     return function filter(item: CS2EconomyItem) {
@@ -94,7 +90,7 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
-    use({
+    load({
         assetsBaseUrl,
         items,
         language
@@ -171,30 +167,30 @@ export class CS2EconomyInstance {
         return safe(() => this.validateSeed(seed, item));
     }
 
-    trimNametag(nameTag?: string): string | undefined {
+    trimNameTag(nameTag?: string): string | undefined {
         const trimmed = nameTag?.trim();
         return trimmed === "" ? undefined : trimmed;
     }
 
-    validateNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+    validateNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
         if (nameTag !== undefined) {
-            assert(item === undefined || item.hasNametag());
+            assert(item === undefined || item.hasNameTag());
             assert(nameTag[0] !== " " && CS2_NAMETAG_RE.test(nameTag));
         }
         return true;
     }
 
-    safeValidateNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
-        return safe(() => this.validateNametag(nameTag, item));
+    safeValidateNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateNameTag(nameTag, item));
     }
 
-    requireNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+    requireNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
         assert(nameTag === undefined || nameTag.trim().length > 0);
-        return this.validateNametag(nameTag, item);
+        return this.validateNameTag(nameTag, item);
     }
 
-    safeRequireNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
-        return safe(() => this.requireNametag(nameTag, item));
+    safeRequireNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        return safe(() => this.requireNameTag(nameTag, item));
     }
 
     validateStatTrak(statTrak?: number, item?: CS2EconomyItem): boolean {
@@ -211,7 +207,7 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
-    getWearFromValue(value: number): CS2ItemWearValues {
+    getWearFromValue(value: number): CS2ItemWear {
         switch (true) {
             case value <= CS2_MAX_FACTORY_NEW_WEAR:
                 return CS2ItemWear.FactoryNew;
@@ -252,12 +248,16 @@ export class CS2EconomyInstance {
         return safe(() => this.validateContainerAndKey(containerItem, keyItem));
     }
 
-    validateUnlockedItem(
+    expectUnlockedItem(
         item: number | CS2EconomyItem,
         { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlockContainer"]>
     ): void {
         item = this.get(item).expectContainer();
         assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
+    }
+
+    resolveUrl(uri?: string): string {
+        return `${this.baseUrl}${uri}`;
     }
 }
 
@@ -265,7 +265,7 @@ export class CS2EconomyItem implements Interface<
     Omit<CS2Item, "contents" | "specials" | "teams"> &
         CS2ItemTranslation & {
             contents: CS2EconomyItem[] | undefined;
-            teams: CS2TeamValues[] | undefined;
+            teams: CS2Team[] | undefined;
         }
 > {
     altName: string | undefined;
@@ -276,7 +276,7 @@ export class CS2EconomyItem implements Interface<
     collectionDesc: string | undefined;
     collectionImage: string | undefined;
     collectionName: string | undefined;
-    containerType: CS2ContainerTypeValues | undefined;
+    containerType: CS2ContainerType | undefined;
     def: number | undefined;
     desc: string | undefined;
     free: boolean | undefined;
@@ -287,28 +287,24 @@ export class CS2EconomyItem implements Interface<
     legacy: boolean | undefined;
     legacyStickerSlots: number | undefined;
     model: string | undefined;
-    modelBinary: string | undefined;
     name: string = null!;
-    rarity: CS2RarityColorValues = null!;
+    paintMaterial: string | undefined;
+    playerModel: string | undefined;
+    rarity: CS2RarityColor = null!;
     specialsImage: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
-    stickerIndex: number | undefined;
     stickerSlots: number | undefined;
-    textureImage: string | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
-    type: CS2ItemTypeValues = null!;
-    voFallback: boolean | undefined;
-    voFemale: boolean | undefined;
-    voPrefix: string | undefined;
+    type: CS2ItemType = null!;
     wearMax: number | undefined;
     wearMin: number | undefined;
 
     private _contents: number[] | undefined;
     private _specials: number[] | undefined;
-    private _teams: CS2ItemTeamValues | undefined;
+    private _teams: CS2ItemTeam | undefined;
 
     constructor(
         public economy: CS2EconomyInstance,
@@ -357,11 +353,11 @@ export class CS2EconomyItem implements Interface<
         return this._specials?.map((id) => this.economy.get(id));
     }
 
-    set teams(value: CS2ItemTeamValues) {
+    set teams(value: CS2ItemTeam) {
         this._teams = value;
     }
 
-    get teams(): CS2TeamValues[] | undefined {
+    get teams(): CS2Team[] | undefined {
         switch (this._teams) {
             case CS2ItemTeam.Both:
                 return CS2_TEAMS_BOTH;
@@ -559,7 +555,7 @@ export class CS2EconomyItem implements Interface<
         return CS2_PATCHABLE_ITEMS.includes(this.type);
     }
 
-    hasNametag(): boolean {
+    hasNameTag(): boolean {
         return CS2_NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit();
     }
 
@@ -605,8 +601,8 @@ export class CS2EconomyItem implements Interface<
 
     getImage(wear?: number): string {
         assert(this.image);
+        const url = this.economy.resolveUrl(this.image);
         if (this.hasWear() && wear !== undefined) {
-            const url = `${this.economy.baseUrl}${this.image}`;
             switch (true) {
                 case wear < 1 / 3:
                     return url.replace(".webp", "_light.webp");
@@ -616,27 +612,32 @@ export class CS2EconomyItem implements Interface<
                     return url.replace(".webp", "_heavy.webp");
             }
         }
-        return `${this.economy.baseUrl}${this.image}`;
+        return url;
     }
 
     getCollectionImage(): string {
-        return `${this.economy.baseUrl}${this.collectionImage}`;
+        return this.economy.resolveUrl(this.collectionImage);
     }
 
     getSpecialsImage(): string {
         this.expectContainer();
         assert(this.rawSpecials);
         assert(this.specialsImage);
-        return `${this.economy.baseUrl}${this.specialsImage}`;
+        return this.economy.resolveUrl(this.specialsImage);
     }
 
-    getTextureImage(): string {
-        return `${this.economy.baseUrl}${ensure(this.textureImage)}`;
+    getPaintMaterial(): string {
+        return this.economy.resolveUrl(this.paintMaterial);
     }
 
-    getModelBinary(): string {
-        const { modelBinary } = this.parent ?? this;
-        return `${this.economy.baseUrl}${ensure(modelBinary)}`;
+    getPlayerModel(): string {
+        const { playerModel } = this.parent ?? this;
+        return this.economy.resolveUrl(playerModel);
+    }
+
+    getModelData(): string {
+        const { playerModel } = this.parent ?? this;
+        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
     }
 
     getMinimumWear(): number {
@@ -655,8 +656,10 @@ export class CS2EconomyItem implements Interface<
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
-    getStickerSlotCount(): number {
-        return this.parent?.[this.legacy ? "legacyStickerSlots" : "stickerSlots"] ?? CS2_MAX_STICKERS;
+    getMaximumStickers(): number {
+        const item = this.parent ?? this;
+        const slots = (this.legacy ? item.legacyStickerSlots : undefined) ?? item.stickerSlots;
+        return slots ?? CS2_MAX_STICKERS;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {
