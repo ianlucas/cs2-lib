@@ -276,7 +276,6 @@ export class CS2EconomyItem implements Interface<
     collectionDesc: string | undefined;
     collectionImage: string | undefined;
     collectionName: string | undefined;
-    compositeMaterial: string | undefined;
     containerType: CS2ContainerType | undefined;
     def: number | undefined;
     desc: string | undefined;
@@ -290,6 +289,7 @@ export class CS2EconomyItem implements Interface<
     legacyStickerSlots: number | undefined;
     model: string | undefined;
     name: string = null!;
+    paintMaterial: string | undefined;
     playerModel: string | undefined;
     rarity: CS2RarityColor = null!;
     specialsImage: string | undefined;
@@ -628,8 +628,8 @@ export class CS2EconomyItem implements Interface<
         return this.economy.resolveUrl(this.specialsImage);
     }
 
-    getCompositeMaterial(): string {
-        return this.economy.resolveUrl(this.compositeMaterial);
+    getPaintMaterial(): string {
+        return this.economy.resolveUrl(this.paintMaterial);
     }
 
     getPlayerModel(): string {

@@ -60,7 +60,6 @@ export interface CS2Item {
     category?: string | undefined;
     collection?: string | undefined;
     collectionImage?: string | undefined;
-    compositeMaterial?: string | undefined;
     containerType?: CS2ContainerType | undefined;
     contents?: number[] | undefined;
     def?: number | undefined;
@@ -73,6 +72,7 @@ export interface CS2Item {
     legacyStickerMask?: string | undefined;
     legacyStickerSlots?: number | undefined;
     model?: string | undefined;
+    paintMaterial?: string | undefined;
     playerModel?: string | undefined;
     rarity?: CS2RarityColor | undefined;
     specials?: number[] | undefined;

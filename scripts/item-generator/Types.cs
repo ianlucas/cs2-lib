@@ -52,9 +52,6 @@ public class CS2Item
     [JsonPropertyName("collectionImage"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CollectionImage { get; set; }
 
-    [JsonPropertyName("compositeMaterial"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? CompositeMaterial { get; set; }
-
     [JsonPropertyName("containerType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? ContainerType { get; set; }
 
@@ -90,6 +87,9 @@ public class CS2Item
 
     [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; set; }
+
+    [JsonPropertyName("paintMaterial"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PaintMaterial { get; set; }
 
     [JsonPropertyName("playerModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PlayerModel { get; set; }

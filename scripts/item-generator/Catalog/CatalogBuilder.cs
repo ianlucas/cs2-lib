@@ -235,13 +235,13 @@ public static class CatalogBuilder
 
                 var compositeMaterialPath = MaterialPaths.GetPaintCompositeMaterialPath(
                     paintKit.ClassName, paintKit.CompositeMaterialPath);
-                string? compositeMaterial = null;
+                string? paintMaterial = null;
                 if (ctx.Mode == ItemGeneratorMode.Full)
                 {
                     try
                     {
                         var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, compositeMaterialPath);
-                        compositeMaterial = $"/materials/{MaterialPaths.GetIndexedCompositeMaterialFilename(ctx, resolved)}";
+                        paintMaterial = $"/materials/{MaterialPaths.GetIndexedCompositeMaterialFilename(ctx, resolved)}";
                         ctx.CompositeMaterialsToProcess.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
                     }
                     catch { }
@@ -260,7 +260,6 @@ public static class CatalogBuilder
                     ClassName = baseItem.ClassName,
                     Collection = collection,
                     CollectionImage = collectionImage,
-                    CompositeMaterial = compositeMaterial,
                     Def = baseItem.Def,
                     Id = id,
                     Image = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
@@ -268,6 +267,7 @@ public static class CatalogBuilder
                     Legacy = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
                     Model = baseItem.Model,
                     NameToken = baseItem.NameToken,
+                    PaintMaterial = paintMaterial,
                     Rarity = rarity,
                     Teams = baseItem.Teams,
                     Type = baseItem.Type,
@@ -373,7 +373,7 @@ public static class CatalogBuilder
             var id = GetItemId(ctx, $"sticker_{index}");
             var itemKey = $"[{name}]sticker";
             var rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]);
-            var compositeMaterial = GetStickerCompositeMaterial(ctx, stickerMaterial);
+            var paintMaterial = GetStickerCompositeMaterial(ctx, stickerMaterial);
 
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Tool_Sticker", " | ", itemName);
@@ -387,11 +387,11 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = baseId,
-                CompositeMaterial = compositeMaterial,
                 Def = 1209,
                 Id = id,
                 Image = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
                 Index = int.Parse(index),
+                PaintMaterial = paintMaterial,
                 Rarity = rarity,
                 Type = CS2ItemType.Sticker
             });
@@ -836,7 +836,7 @@ public static class CatalogBuilder
         if (ctx.Mode != ItemGeneratorMode.Limited) return;
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
-        item.CompositeMaterial ??= previous.CompositeMaterial;
+        item.PaintMaterial ??= previous.PaintMaterial;
         item.PlayerModel ??= previous.PlayerModel;
         item.LegacyStickerMask ??= previous.LegacyStickerMask;
         item.LegacyStickerSlots ??= previous.LegacyStickerSlots;
