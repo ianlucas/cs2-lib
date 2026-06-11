@@ -167,30 +167,30 @@ export class CS2EconomyInstance {
         return safe(() => this.validateSeed(seed, item));
     }
 
-    trimNametag(nameTag?: string): string | undefined {
+    trimNameTag(nameTag?: string): string | undefined {
         const trimmed = nameTag?.trim();
         return trimmed === "" ? undefined : trimmed;
     }
 
-    validateNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+    validateNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
         if (nameTag !== undefined) {
-            assert(item === undefined || item.hasNametag());
+            assert(item === undefined || item.hasNameTag());
             assert(nameTag[0] !== " " && CS2_NAMETAG_RE.test(nameTag));
         }
         return true;
     }
 
-    safeValidateNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
-        return safe(() => this.validateNametag(nameTag, item));
+    safeValidateNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateNameTag(nameTag, item));
     }
 
-    requireNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
+    requireNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
         assert(nameTag === undefined || nameTag.trim().length > 0);
-        return this.validateNametag(nameTag, item);
+        return this.validateNameTag(nameTag, item);
     }
 
-    safeRequireNametag(nameTag?: string, item?: CS2EconomyItem): boolean {
-        return safe(() => this.requireNametag(nameTag, item));
+    safeRequireNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
+        return safe(() => this.requireNameTag(nameTag, item));
     }
 
     validateStatTrak(statTrak?: number, item?: CS2EconomyItem): boolean {
@@ -248,7 +248,7 @@ export class CS2EconomyInstance {
         return safe(() => this.validateContainerAndKey(containerItem, keyItem));
     }
 
-    validateUnlockedItem(
+    expectUnlockedItem(
         item: number | CS2EconomyItem,
         { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlockContainer"]>
     ): void {
@@ -289,8 +289,8 @@ export class CS2EconomyItem implements Interface<
     legacyStickerMask: string | undefined;
     legacyStickerSlots: number | undefined;
     model: string | undefined;
-    modelPlayer: string | undefined;
     name: string = null!;
+    playerModel: string | undefined;
     rarity: CS2RarityColor = null!;
     specialsImage: string | undefined;
     statTrakless: boolean | undefined;
@@ -557,7 +557,7 @@ export class CS2EconomyItem implements Interface<
         return CS2_PATCHABLE_ITEMS.includes(this.type);
     }
 
-    hasNametag(): boolean {
+    hasNameTag(): boolean {
         return CS2_NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit();
     }
 
@@ -632,14 +632,14 @@ export class CS2EconomyItem implements Interface<
         return this.economy.resolveUrl(this.compositeMaterial);
     }
 
-    getModelPlayer(): string {
-        const { modelPlayer } = this.parent ?? this;
-        return this.economy.resolveUrl(modelPlayer);
+    getPlayerModel(): string {
+        const { playerModel } = this.parent ?? this;
+        return this.economy.resolveUrl(playerModel);
     }
 
     getModelData(): string {
-        const { modelPlayer } = this.parent ?? this;
-        return this.economy.resolveUrl(modelPlayer?.replace(/\.glb$/, ".json"));
+        const { playerModel } = this.parent ?? this;
+        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
     }
 
     getStickerMask(): string {

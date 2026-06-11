@@ -47,13 +47,13 @@ public static class CatalogBuilder
             var id = GetItemId(ctx, $"weapon_{GetTeamsString(usedByClasses)}_{itemDef}");
             var itemName = KvHelper.GetString(prefabData, "item_name");
             var itemDescription = KvHelper.GetString(prefabData, "item_description");
-            var modelPlayer = KvHelper.GetString(prefabData, "model_player");
+            var playerModel = KvHelper.GetString(prefabData, "model_player");
 
             Translations.AddTranslation(ctx, id, "name", itemName);
             Translations.AddTranslation(ctx, id, "desc", itemDescription);
 
-            var modelInfo = CatalogAssets.GetModel(ctx, modelPlayer, id);
-            var (stickerMask, legacyStickerMask) = CatalogAssets.GetStickerMasks(ctx, modelPlayer, id);
+            var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
+            var (stickerMask, legacyStickerMask) = CatalogAssets.GetStickerMasks(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
                 Base = true,
@@ -66,7 +66,7 @@ public static class CatalogBuilder
                 Image = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
                 Index = null,
                 Model = name.Replace("weapon_", ""),
-                ModelPlayer = modelInfo,
+                PlayerModel = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
                 LegacyStickerMask = legacyStickerMask,
@@ -105,9 +105,9 @@ public static class CatalogBuilder
 
             var prefabData = GetPrefab(ctx, prefab);
             var prefabRarity = KvHelper.GetString(prefabData, "item_rarity") ?? "default";
-            var modelPlayer = KvHelper.GetString(item, "model_player");
+            var playerModel = KvHelper.GetString(item, "model_player");
 
-            var modelInfo = CatalogAssets.GetModel(ctx, modelPlayer, id);
+            var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
                 Base = true,
@@ -119,7 +119,7 @@ public static class CatalogBuilder
                 Image = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = baseitem == "1" ? null : 0,
                 Model = name.Replace("weapon_", ""),
-                ModelPlayer = modelInfo,
+                PlayerModel = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
                 Teams = (int)teams,
@@ -540,18 +540,18 @@ public static class CatalogBuilder
             var itemName = KvHelper.GetString(item, "item_name");
             var usedByClasses = KvHelper.GetChild(item, "used_by_classes");
             var imageInventory = KvHelper.GetString(item, "image_inventory");
-            var modelPlayer = KvHelper.GetString(item, "model_player");
+            var playerModel = KvHelper.GetString(item, "model_player");
             var itemRarity = KvHelper.GetString(item, "item_rarity") ?? "";
             var prefab = KvHelper.GetString(item, "prefab");
             var itemDescription = KvHelper.GetString(item, "item_description");
 
             if (itemName == null || usedByClasses == null || imageInventory == null ||
-                modelPlayer == null || prefab != "customplayertradable")
+                playerModel == null || prefab != "customplayertradable")
                 continue;
 
             var teams = GetTeams(usedByClasses);
             var id = GetItemId(ctx, $"agent_{GetTeamsString(usedByClasses)}_{index}");
-            var model = modelPlayer.Replace("characters/models/", "").Replace(".vmdl", "");
+            var model = playerModel.Replace("characters/models/", "").Replace(".vmdl", "");
 
             Translations.AddTranslation(ctx, id, "name", "#Type_CustomPlayer", " | ", itemName);
             Translations.AddTranslation(ctx, id, "desc", itemDescription);
@@ -837,7 +837,7 @@ public static class CatalogBuilder
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
         item.CompositeMaterial ??= previous.CompositeMaterial;
-        item.ModelPlayer ??= previous.ModelPlayer;
+        item.PlayerModel ??= previous.PlayerModel;
         item.LegacyStickerMask ??= previous.LegacyStickerMask;
         item.LegacyStickerSlots ??= previous.LegacyStickerSlots;
         item.StickerMask ??= previous.StickerMask;
@@ -854,7 +854,7 @@ public static class CatalogBuilder
         var item = new CS2Item
         {
             Id = id,
-            ModelPlayer = modelInfo,
+            PlayerModel = modelInfo,
             Type = CS2ItemType.Stub
         };
         AddItem(ctx, item);

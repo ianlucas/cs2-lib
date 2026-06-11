@@ -269,7 +269,7 @@ export class CS2Inventory {
         const item = this.economy.getById(id);
         this.economy.validateWear(wear, item);
         this.economy.validateSeed(seed, item);
-        this.economy.validateNametag(nameTag, item);
+        this.economy.validateNameTag(nameTag, item);
         this.economy.validateStatTrak(statTrak, item);
         this.validateAddable(item);
         this.validatePatches(patches, item);
@@ -335,9 +335,9 @@ export class CS2Inventory {
         return this;
     }
 
-    addWithNametag(nameTagUid: number, id: number, nameTag: string): this {
+    addWithNameTag(nameTagUid: number, id: number, nameTag: string): this {
         this.get(nameTagUid).expectNameTag();
-        this.economy.requireNametag(nameTag);
+        this.economy.requireNameTag(nameTag);
         this.items.delete(nameTagUid);
         this.add({ id, nameTag });
         return this;
@@ -394,7 +394,7 @@ export class CS2Inventory {
 
     unlockContainer(unlockedItem: CS2UnlockedItem, containerUid: number, keyUid?: number): this {
         const containerItem = this.get(containerUid);
-        this.economy.validateUnlockedItem(containerItem, unlockedItem);
+        this.economy.expectUnlockedItem(containerItem, unlockedItem);
         const keyItem = keyUid !== undefined ? this.get(keyUid) : undefined;
         this.economy.validateContainerAndKey(containerItem, keyItem);
         this.items.delete(containerUid);
@@ -410,10 +410,10 @@ export class CS2Inventory {
     }
 
     renameItem(nameTagUid: number, renameableUid: number, nameTag?: string): this {
-        nameTag = this.economy.trimNametag(nameTag);
+        nameTag = this.economy.trimNameTag(nameTag);
         this.get(nameTagUid).expectNameTag();
         const renameable = this.get(renameableUid);
-        this.economy.validateNametag(nameTag, renameable);
+        this.economy.validateNameTag(nameTag, renameable);
         renameable.nameTag = nameTag;
         renameable.updatedAt = getTimestamp();
         this.items.delete(nameTagUid);
@@ -421,10 +421,10 @@ export class CS2Inventory {
     }
 
     renameStorageUnit(storageUid: number, nameTag: string): this {
-        const trimmed = this.economy.trimNametag(nameTag);
+        const trimmed = this.economy.trimNameTag(nameTag);
         const storageUnit = this.get(storageUid);
         storageUnit.expectStorageUnit();
-        this.economy.requireNametag(trimmed);
+        this.economy.requireNameTag(trimmed);
         storageUnit.nameTag = trimmed;
         storageUnit.updatedAt = getTimestamp();
         return this;

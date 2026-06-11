@@ -100,11 +100,11 @@ test("getStickerMask resolves hd/legacy masks with base inheritance", () => {
     expect(CS2Economy.get(5).getStickerMask()).toBe(CS2Economy.resolveUrl(hdOnly));
 });
 
-test("getModelData derives from modelPlayer (.glb -> .json) with base inheritance", () => {
-    const modelPlayer = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
+test("getModelData derives from playerModel (.glb -> .json) with base inheritance", () => {
+    const playerModel = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
     const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
     const items: CS2Item[] = [
-        { base: true, id: 1, modelPlayer, rarity: CS2RarityColor.Common, type: "weapon" },
+        { base: true, id: 1, playerModel, rarity: CS2RarityColor.Common, type: "weapon" },
         { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
     ];
     CS2Economy.load({
@@ -114,7 +114,7 @@ test("getModelData derives from modelPlayer (.glb -> .json) with base inheritanc
             2: { name: "Bayonet | Skin" }
         }
     });
-    expect(CS2Economy.get(1).getModelPlayer()).toBe(CS2Economy.resolveUrl(modelPlayer));
+    expect(CS2Economy.get(1).getPlayerModel()).toBe(CS2Economy.resolveUrl(playerModel));
     expect(CS2Economy.get(1).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
     // A skin inherits the base model and derives the same data path.
     expect(CS2Economy.get(2).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
@@ -122,11 +122,11 @@ test("getModelData derives from modelPlayer (.glb -> .json) with base inheritanc
 
 test("nametag validation", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
-    expect(CS2Economy.safeValidateNametag(" fail")).toBeFalsy();
-    expect(CS2Economy.safeValidateNametag("小島 秀夫")).toBeTruthy();
-    expect(CS2Economy.safeValidateNametag("孔子")).toBeTruthy();
-    expect(CS2Economy.safeValidateNametag("bo$$u")).toBeTruthy();
-    expect(CS2Economy.safeValidateNametag("toolongnametagtoolongnametag")).toBeFalsy();
+    expect(CS2Economy.safeValidateNameTag(" fail")).toBeFalsy();
+    expect(CS2Economy.safeValidateNameTag("小島 秀夫")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("孔子")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("bo$$u")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("toolongnametagtoolongnametag")).toBeFalsy();
 });
 
 test("wear validation", () => {

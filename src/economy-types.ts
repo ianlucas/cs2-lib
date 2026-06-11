@@ -73,7 +73,7 @@ export interface CS2Item {
     legacyStickerMask?: string | undefined;
     legacyStickerSlots?: number | undefined;
     model?: string | undefined;
-    modelPlayer?: string | undefined;
+    playerModel?: string | undefined;
     rarity?: CS2RarityColor | undefined;
     specials?: number[] | undefined;
     specialsImage?: string | undefined;

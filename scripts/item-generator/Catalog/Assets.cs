@@ -138,7 +138,7 @@ public static class CatalogAssets
         if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
         {
             if (ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing))
-                return existing.ModelPlayer;
+                return existing.PlayerModel;
             return null;
         }
 
@@ -147,30 +147,30 @@ public static class CatalogAssets
             return null;
 
         var baseName = Path.GetFileNameWithoutExtension(path);
-        var modelPlayer = $"/models/{baseName}_{entry.Crc}.glb";
+        var playerModel = $"/models/{baseName}_{entry.Crc}.glb";
         var modelData = $"/models/{baseName}_{entry.Crc}.json";
         ctx.ModelsToProcess[vpkPath] = new PendingModelTask
         {
             Base = baseName,
             Crc = entry.Crc,
             ModelData = modelData,
-            ModelPlayer = modelPlayer,
+            PlayerModel = playerModel,
             DirectMaterials = []
         };
-        return modelPlayer;
+        return playerModel;
     }
 
     public static (string? Mask, string? LegacyMask) GetStickerMasks(
-        ItemGeneratorContext ctx, string? modelPlayerPath, int? existingId = null)
+        ItemGeneratorContext ctx, string? playerModelPath, int? existingId = null)
     {
-        if (modelPlayerPath == null) return (null, null);
+        if (playerModelPath == null) return (null, null);
 
         if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
             return ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing)
                 ? (existing.StickerMask, existing.LegacyStickerMask)
                 : (null, null);
 
-        var normalized = modelPlayerPath.Replace('\\', '/').ToLowerInvariant();
+        var normalized = playerModelPath.Replace('\\', '/').ToLowerInvariant();
         var slash = normalized.LastIndexOf('/');
         if (slash < 0) return (null, null);
         var prefix = $"{normalized[..slash]}/materials/stickers/";

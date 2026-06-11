@@ -116,10 +116,10 @@ describe("CS2Inventory methods", () => {
         expect(result.wear).toBe(item.wear);
     });
 
-    test("addWithNametag should add items with nametags to the inventory", () => {
+    test("addWithNameTag should add items with nametags to the inventory", () => {
         inventory.add({ id: NAMETAG_ID }); // uid:0
         const args = [AK47_ID, "My Nametag"] as const;
-        inventory.addWithNametag(0, ...args); // uid:0
+        inventory.addWithNameTag(0, ...args); // uid:0
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
         expect(result.id).toBe(AK47_ID);

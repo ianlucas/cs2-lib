@@ -91,8 +91,8 @@ public class CS2Item
     [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; set; }
 
-    [JsonPropertyName("modelPlayer"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ModelPlayer { get; set; }
+    [JsonPropertyName("playerModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PlayerModel { get; set; }
 
     [JsonPropertyName("rarity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Rarity { get; set; }
@@ -186,7 +186,7 @@ public record PendingModelTask
     public string Base { get; init; } = "";
     public string Crc { get; init; } = "";
     public string ModelData { get; set; } = "";
-    public string ModelPlayer { get; set; } = "";
+    public string PlayerModel { get; set; } = "";
     public HashSet<string> DirectMaterials { get; init; } = [];
 }
 

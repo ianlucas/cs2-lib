@@ -117,17 +117,17 @@ public static partial class AssetProcessor
             ]);
 
             var versionedBase = $"{model.Base}_{model.Crc}_{dependencyHash}";
-            var versionedModelPlayer = $"/models/{versionedBase}.glb";
+            var versionedPlayerModel = $"/models/{versionedBase}.glb";
             var versionedModelData = $"/models/{versionedBase}.json";
 
-            var destGlb = Path.Combine(Config.OutputDir, versionedModelPlayer.TrimStart('/'));
+            var destGlb = Path.Combine(Config.OutputDir, versionedPlayerModel.TrimStart('/'));
             var destData = Path.Combine(Config.OutputDir, versionedModelData.TrimStart('/'));
             Directory.CreateDirectory(Path.GetDirectoryName(destGlb)!);
             File.Move(glbPath, destGlb, true);
             if (File.Exists(modelDataPath))
                 File.Move(modelDataPath, destData, true);
 
-            UpdateModelAssetReferences(ctx, model, versionedModelPlayer, versionedModelData);
+            UpdateModelAssetReferences(ctx, model, versionedPlayerModel, versionedModelData);
         }
 
         Log($"Processed {FormatCount(ctx.ModelsToProcess.Count, "model")}.");
@@ -136,7 +136,7 @@ public static partial class AssetProcessor
     private static void ExtractModelData(ItemGeneratorContext ctx)
     {
         var entries = ctx.ModelsToProcess.Select(kv =>
-            (VpkPath: kv.Key, TargetFilename: kv.Value.ModelPlayer)).ToList();
+            (VpkPath: kv.Key, TargetFilename: kv.Value.PlayerModel)).ToList();
         var results = MetadataExtractor.ExtractModelMetadata(ctx, entries);
 
         for (int i = 0; i < results.Count; i++)
@@ -159,7 +159,7 @@ public static partial class AssetProcessor
                 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
                 File.WriteAllText(outPath, json);
 
-                var modelPlayerPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
+                var playerModelPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
                 if (result.Data is Dictionary<string, object?> dataDict &&
                     dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
                     modelInfoObj is Dictionary<string, object?> modelInfo &&
@@ -176,7 +176,7 @@ public static partial class AssetProcessor
 
                     foreach (var item in ctx.Items.Values)
                     {
-                        if (item.ModelPlayer == modelPlayerPath)
+                        if (item.PlayerModel == playerModelPath)
                         {
                             item.StickerSlots = stickerSlots > 0 ? stickerSlots : null;
                             item.LegacyStickerSlots = legacyStickerSlots > 0 ? legacyStickerSlots : null;
@@ -451,14 +451,14 @@ public static partial class AssetProcessor
     }
 
     private static void UpdateModelAssetReferences(ItemGeneratorContext ctx,
-        PendingModelTask model, string modelPlayer, string modelData)
+        PendingModelTask model, string playerModel, string modelData)
     {
         foreach (var item in ctx.Items.Values)
         {
-            if (item.ModelPlayer == model.ModelPlayer)
-                item.ModelPlayer = modelPlayer;
+            if (item.PlayerModel == model.PlayerModel)
+                item.PlayerModel = playerModel;
         }
-        model.ModelPlayer = modelPlayer;
+        model.PlayerModel = playerModel;
         model.ModelData = modelData;
     }
 

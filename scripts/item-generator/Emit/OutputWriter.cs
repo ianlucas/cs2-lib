@@ -37,7 +37,7 @@ public static class OutputWriter
                 LegacyStickerMask = i.LegacyStickerMask,
                 LegacyStickerSlots = i.LegacyStickerSlots,
                 Model = i.Model,
-                ModelPlayer = i.ModelPlayer,
+                PlayerModel = i.PlayerModel,
                 Rarity = i.Rarity,
                 Specials = i.Specials,
                 SpecialsImage = i.SpecialsImage,
