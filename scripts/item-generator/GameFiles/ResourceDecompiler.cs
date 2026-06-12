@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using SteamDatabase.ValvePak;
 using ValveResourceFormat;
 using ValveResourceFormat.IO;
 using static ItemGenerator.Logging;
@@ -7,37 +8,60 @@ namespace ItemGenerator.GameFiles;
 
 public static class ResourceDecompiler
 {
-    public static void DecompileItemDefinitionResources(ItemGeneratorContext ctx)
-    {
-        if (ctx.VpkPackage == null) return;
-        var prefixes = new[] { "scripts/items/items_game.txt", "resource/csgo_" };
+    private static readonly string[] ItemDefinitionPrefixes =
+        ["scripts/items/items_game.txt", "resource/csgo_"];
 
-        foreach (var (_, entries) in ctx.VpkPackage.Entries!)
-        {
+    private static IEnumerable<PackageEntry> GetItemDefinitionEntries(Package package)
+    {
+        foreach (var (_, entries) in package.Entries!)
             foreach (var entry in entries)
             {
                 var path = entry.GetFullPath();
-                if (!prefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-                    continue;
+                if (ItemDefinitionPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                    yield return entry;
+            }
+    }
 
-                var outPath = Path.Combine(Config.DecompiledDir, path);
-                if (File.Exists(outPath)) continue;
+    /// <summary>
+    /// Depot paths of the split pak01_NNN.vpk archives holding item definition entries
+    /// that still need extraction. Item definitions are not guaranteed to be inlined in
+    /// pak01_dir.vpk — CS2 updates can move them into split archives, which Limited mode
+    /// must download before DecompileItemDefinitionResources can read them.
+    /// </summary>
+    public static List<string> GetItemDefinitionArchiveFiles(ItemGeneratorContext ctx)
+    {
+        if (ctx.VpkPackage == null) return [];
+        return [.. GetItemDefinitionEntries(ctx.VpkPackage)
+            .Where(e => e.ArchiveIndex != 0x7FFF
+                && !File.Exists(Path.Combine(Config.DecompiledDir, e.GetFullPath())))
+            .Select(e => Config.GetArchiveDepotPath(e.ArchiveIndex))
+            .Distinct()];
+    }
 
-                ctx.VpkPackage.ReadEntry(entry, out var data);
-                Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+    public static void DecompileItemDefinitionResources(ItemGeneratorContext ctx)
+    {
+        if (ctx.VpkPackage == null) return;
 
-                if (path.EndsWith("_c", StringComparison.Ordinal))
-                {
-                    using var resource = new Resource();
-                    resource.Read(new MemoryStream(data));
-                    var extracted = FileExtract.Extract(resource, null!);
-                    var outputPath = outPath[..^2]; // strip _c
-                    File.WriteAllBytes(outputPath, extracted.Data!);
-                }
-                else
-                {
-                    File.WriteAllBytes(outPath, data);
-                }
+        foreach (var entry in GetItemDefinitionEntries(ctx.VpkPackage))
+        {
+            var path = entry.GetFullPath();
+            var outPath = Path.Combine(Config.DecompiledDir, path);
+            if (File.Exists(outPath)) continue;
+
+            ctx.VpkPackage.ReadEntry(entry, out var data);
+            Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+
+            if (path.EndsWith("_c", StringComparison.Ordinal))
+            {
+                using var resource = new Resource();
+                resource.Read(new MemoryStream(data));
+                var extracted = FileExtract.Extract(resource, null!);
+                var outputPath = outPath[..^2]; // strip _c
+                File.WriteAllBytes(outputPath, extracted.Data!);
+            }
+            else
+            {
+                File.WriteAllBytes(outPath, data);
             }
         }
     }

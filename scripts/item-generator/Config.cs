@@ -66,6 +66,9 @@ public static partial class Config
     public static readonly string DepotCsgoPath = Path.Combine(WorkdirDir, "game/csgo");
     public static readonly string CsgoPakDirPath = Path.Combine(DepotCsgoPath, "pak01_dir.vpk");
 
+    public static string GetArchiveDepotPath(int archiveIndex) =>
+        $"game/csgo/pak01_{archiveIndex:D3}.vpk";
+
     public const uint AppId = 730;
     public const uint AssetsDepotId = 2347770;
 

@@ -782,8 +782,10 @@ public static partial class AssetProcessor
         var vpks = new HashSet<string>();
         foreach (var vpkPath in vpkPaths)
         {
-            if (ctx.VpkIndex.TryGetValue(vpkPath, out var entry))
-                vpks.Add($"game/csgo/pak01_{entry.Fnumber.PadLeft(3, '0')}.vpk");
+            // 0x7FFF marks entries inlined in pak01_dir.vpk; there is no archive to fetch.
+            if (ctx.VpkIndex.TryGetValue(vpkPath, out var entry)
+                && int.TryParse(entry.Fnumber, out var fnumber) && fnumber != 0x7FFF)
+                vpks.Add(Config.GetArchiveDepotPath(fnumber));
         }
         if (vpks.Count == 0) return;
         await Depot.DepotDownloaderService.DownloadFiles([.. vpks], Config.WorkdirDir);

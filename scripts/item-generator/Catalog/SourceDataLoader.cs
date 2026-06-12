@@ -15,6 +15,9 @@ public static class SourceDataLoader
             await DepotSync(ctx);
 
         VpkIndexBuilder.BuildVpkIndex(ctx);
+        if (ctx.Mode == ItemGeneratorMode.Limited)
+            await Depot.DepotDownloaderService.DownloadFiles(
+                ResourceDecompiler.GetItemDefinitionArchiveFiles(ctx), Config.WorkdirDir);
         ResourceDecompiler.DecompileItemDefinitionResources(ctx);
         ReadCsgoLanguageFiles(ctx);
         ReadItemsGameFile(ctx);
