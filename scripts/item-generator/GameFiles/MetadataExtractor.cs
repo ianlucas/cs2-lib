@@ -8,10 +8,10 @@ namespace ItemGenerator.GameFiles;
 
 public record ModelMetadataResult(object? Data, string Filename, List<string> Materials);
 public record CompositeMaterialMetadataResult(
-    List<string> CompositeMaterialRefs, object? Data, string Filename,
+    List<string> CompositeMaterialRefs, object? Data,
     string VcompmatPath, List<string> VmatRefs, List<string> VtexRefs);
 public record MaterialMetadataResult(
-    object? Data, string Filename, string VmatPath,
+    object? Data, string VmatPath,
     List<string> VmatRefs, List<string> VtexRefs);
 
 public static partial class MetadataExtractor
@@ -82,9 +82,7 @@ public static partial class MetadataExtractor
 
             if (entry == null)
             {
-                results.Add(new CompositeMaterialMetadataResult([], null,
-                    MaterialPaths.GetCompositeMaterialFilename(resolvedPath, "00000000"),
-                    resolvedPath, [], []));
+                results.Add(new CompositeMaterialMetadataResult([], null, resolvedPath, [], []));
                 continue;
             }
 
@@ -107,11 +105,8 @@ public static partial class MetadataExtractor
                 CollectResourceRefs(dataText, ".vtex", vtexRefs);
             }
 
-            var crc = entry.CRC32.ToString("x8");
-            var filename = MaterialPaths.GetCompositeMaterialFilename(resolvedPath, crc);
-
             results.Add(new CompositeMaterialMetadataResult(
-                compositeMaterialRefs, parsedData, filename, resolvedPath, vmatRefs, vtexRefs));
+                compositeMaterialRefs, parsedData, resolvedPath, vmatRefs, vtexRefs));
         }
 
         return results;
@@ -156,9 +151,7 @@ public static partial class MetadataExtractor
                 CollectResourceRefs(dataText, ".vtex", vtexRefs);
             }
 
-            var crc = entry.CRC32.ToString("x8");
-            var filename = MaterialPaths.GetVmatFilename(resolvedPath, crc);
-            results.Add(new MaterialMetadataResult(parsedData, filename, resolvedPath, vmatRefs, vtexRefs));
+            results.Add(new MaterialMetadataResult(parsedData, resolvedPath, vmatRefs, vtexRefs));
         }
 
         return results;

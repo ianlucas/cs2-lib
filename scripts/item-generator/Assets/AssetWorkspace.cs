@@ -1,14 +1,17 @@
 using System.Text.Json;
-using SkiaSharp;
 
 namespace ItemGenerator;
 
 public static class AssetWorkspace
 {
-    public static async Task PrepareWorkspace(ItemGeneratorContext ctx)
+    public static Task PrepareWorkspace(ItemGeneratorContext ctx)
     {
         Directory.CreateDirectory(Config.ItemGeneratorWorkdirDir);
         Directory.CreateDirectory(Config.ItemGeneratorCacheDir);
+
+        // Build dir holds per-run staging output (pre-hash encodes); never carry state across runs.
+        if (Directory.Exists(Config.ItemGeneratorBuildDir))
+            Directory.Delete(Config.ItemGeneratorBuildDir, true);
         Directory.CreateDirectory(Config.ItemGeneratorBuildDir);
 
         if (Directory.Exists(Config.OutputDir))
@@ -25,8 +28,7 @@ public static class AssetWorkspace
             if (filename.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
             {
                 var key = $"/images/{filename}";
-                var value = await CopyAndOptimizeImage(file, "/images/{sha256}.webp");
-                ctx.StaticAssets[key] = value;
+                ctx.StaticAssets[key] = Catalog.CatalogAssets.CopyAndOptimizeImage(file);
             }
             else
             {
@@ -37,12 +39,9 @@ public static class AssetWorkspace
         var existingItems = LoadExistingItems();
         ctx.ExistingItemsById = [];
         foreach (var item in existingItems)
-        {
             ctx.ExistingItemsById[item.Id] = item;
-            if (item.Image != null) ctx.ExistingImages.Add(item.Image);
-            if (item.CollectionImage != null) ctx.ExistingImages.Add(item.CollectionImage);
-            if (item.SpecialsImage != null) ctx.ExistingImages.Add(item.SpecialsImage);
-        }
+
+        return Task.CompletedTask;
     }
 
     private static List<CS2Item> LoadExistingItems()
@@ -51,24 +50,5 @@ public static class AssetWorkspace
         if (!File.Exists(path)) return [];
         var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<List<CS2Item>>(json) ?? [];
-    }
-
-    private static async Task<string> CopyAndOptimizeImage(string src, string dest)
-    {
-        if (dest.Contains("{sha256}"))
-        {
-            var hash = await Catalog.CatalogAssets.ComputeFileSha256(src);
-            dest = dest.Replace("{sha256}", hash);
-        }
-
-        using var bitmap = SKBitmap.Decode(src);
-        if (bitmap == null) return dest;
-        using var image = SKImage.FromBitmap(bitmap);
-        using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
-        var outPath = Path.Combine(Config.OutputDir, dest.TrimStart('/'));
-        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-        await using var stream = File.Create(outPath);
-        data.SaveTo(stream);
-        return dest;
     }
 }

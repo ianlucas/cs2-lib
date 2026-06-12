@@ -22,6 +22,16 @@ public static class Logging
         Log($"{name} done{(summary != null ? $" ({summary})" : "")} in {duration}.");
     }
 
+    public static void LogProgress(ref int processed, ref int lastMilestone, int total)
+    {
+        var current = Interlocked.Increment(ref processed);
+        var pct = current * 100 / total;
+        var milestone = pct / 5 * 5;
+        if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
+            Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
+            Log($"  {milestone}% ({current}/{total})");
+    }
+
     public static string FormatCount(int count, string singular, string? plural = null)
     {
         plural ??= $"{singular}s";

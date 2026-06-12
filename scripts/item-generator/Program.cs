@@ -28,7 +28,7 @@ Log($"Starting item generator in {mode} mode.");
 try
 {
     await RunStep("Preparing workspace", () => AssetWorkspace.PrepareWorkspace(ctx),
-        () => $"{ctx.StaticAssets.Count} static images, {ctx.ExistingImages.Count} reusable images");
+        () => $"{ctx.StaticAssets.Count} static images");
 
     await RunStep("Loading CS2 source data", () => SourceDataLoader.LoadSourceData(ctx),
         () => $"{ctx.CsgoTranslationByLanguage.Count} languages, {ctx.PaintKits.Count} paint kits, {ctx.GraffitiTints.Count} graffiti tints");

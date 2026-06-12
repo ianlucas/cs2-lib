@@ -61,6 +61,7 @@
         "rolldown": "^1.0.2",
         "rolldown-plugin-dts": "^0.25.2",
         "rollup-plugin-delete": "^3.0.2",
+        "sharp": "0.35.1",
         "tsx": "^4.22.4",
         "typedoc": "^0.28.19",
         "typescript": "^6.0.3",
