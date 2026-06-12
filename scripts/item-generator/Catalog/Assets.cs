@@ -21,13 +21,21 @@ public static class CatalogAssets
         return $"panorama/images/econ/default_generated/{className}_{paintClassName}_{suffix}_png.png".ToLowerInvariant();
     }
 
+    // Provisional image name: unique and computable at catalog time (items reference it before
+    // any bytes exist). ProcessImages renames to `{base}_{contentHash8}` via ctx.AssetRenames.
     private static string VpkCrcFilename(string vpkPath, string crc, string? suffix = null)
     {
-        var baseName = Path.GetFileNameWithoutExtension(vpkPath);
-        if (baseName.EndsWith("_png")) baseName = baseName[..^4];
+        var baseName = VpkImageBaseName(vpkPath);
         return suffix != null
             ? $"/images/{baseName}_{crc}_{suffix}.webp"
             : $"/images/{baseName}_{crc}.webp";
+    }
+
+    private static string VpkImageBaseName(string vpkPath)
+    {
+        var baseName = Path.GetFileNameWithoutExtension(vpkPath);
+        if (baseName.EndsWith("_png")) baseName = baseName[..^4];
+        return baseName;
     }
 
     public static bool IsImageValid(ItemGeneratorContext ctx, string path)
@@ -53,12 +61,10 @@ public static class CatalogAssets
             throw new FileNotFoundException($"VPK entry not found: {vpkPath}");
 
         var filename = VpkCrcFilename(vpkPath, entry.Crc);
-        if (!ctx.ExistingImages.Contains(filename))
-        {
-            ctx.NeededVpkPaths.Add(entry.EntryPath);
-            var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
-            ctx.ImagesToProcess[entry.EntryPath] = new RegularImageTask(localPath, filename);
-        }
+        ctx.NeededVpkPaths.Add(entry.EntryPath);
+        var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
+        ctx.ImagesToProcess[entry.EntryPath] = new RegularImageTask(
+            localPath, filename, $"/images/{VpkImageBaseName(vpkPath)}");
         return filename;
     }
 
@@ -70,26 +76,22 @@ public static class CatalogAssets
         if (!ctx.VpkIndex.TryGetValue(lightVpkPath, out var entry))
             throw new FileNotFoundException($"VPK entry not found: {lightVpkPath}");
 
-        var baseName = $"{cn}_{pcn}_{entry.Crc}";
-        var baseFilename = $"/images/{baseName}.webp";
-        if (!ctx.ExistingImages.Contains(baseFilename))
+        var baseFilename = $"/images/{cn}_{pcn}_{entry.Crc}.webp";
+        var localPaths = Config.PaintImageSuffixes.Select(suffix =>
         {
-            var localPaths = Config.PaintImageSuffixes.Select(suffix =>
-            {
-                var paintImagePath = Path.Combine(Config.GameImagesDir,
-                    $"econ/default_generated/{cn}_{pcn}_{suffix}_png.png".ToLowerInvariant());
-                return (paintImagePath, suffix);
-            }).ToList();
+            var paintImagePath = Path.Combine(Config.GameImagesDir,
+                $"econ/default_generated/{cn}_{pcn}_{suffix}_png.png".ToLowerInvariant());
+            return (paintImagePath, suffix);
+        }).ToList();
 
-            foreach (var suffix in Config.PaintImageSuffixes)
-            {
-                var suffixVpkPath = GetVpkPaintImagePath(cn, pcn, suffix);
-                if (ctx.VpkIndex.TryGetValue(suffixVpkPath, out var suffixEntry))
-                    ctx.NeededVpkPaths.Add(suffixEntry.EntryPath);
-            }
-
-            ctx.ImagesToProcess[entry.EntryPath] = new PaintImageTask(localPaths, baseName, baseFilename);
+        foreach (var suffix in Config.PaintImageSuffixes)
+        {
+            var suffixVpkPath = GetVpkPaintImagePath(cn, pcn, suffix);
+            if (ctx.VpkIndex.TryGetValue(suffixVpkPath, out var suffixEntry))
+                ctx.NeededVpkPaths.Add(suffixEntry.EntryPath);
         }
+
+        ctx.ImagesToProcess[entry.EntryPath] = new PaintImageTask(localPaths, baseFilename, $"/images/{cn}_{pcn}");
         return baseFilename;
     }
 
@@ -102,12 +104,10 @@ public static class CatalogAssets
         var materialBase = stickerMaterial.Split('/').Last();
         var colorNoHash = hexColor.Replace("#", "");
         var filename = $"/images/{materialBase}_{colorNoHash}_{entry.Crc}.webp";
-        if (!ctx.ExistingImages.Contains(filename))
-        {
-            ctx.NeededVpkPaths.Add(entry.EntryPath);
-            var localPath = Path.Combine(Config.GameImagesDir, $"econ/stickers/{stickerMaterial}_png.png".ToLowerInvariant());
-            ctx.ImagesToProcess[$"{entry.EntryPath}:{hexColor}"] = new GraffitiImageTask(localPath, hexColor, filename);
-        }
+        ctx.NeededVpkPaths.Add(entry.EntryPath);
+        var localPath = Path.Combine(Config.GameImagesDir, $"econ/stickers/{stickerMaterial}_png.png".ToLowerInvariant());
+        ctx.ImagesToProcess[$"{entry.EntryPath}:{hexColor}"] = new GraffitiImageTask(
+            localPath, hexColor, filename, $"/images/{materialBase}_{colorNoHash}");
         return filename;
     }
 
@@ -122,12 +122,10 @@ public static class CatalogAssets
 
         var entry = ctx.VpkIndex[vpkPath];
         var filename = VpkCrcFilename(vpkPath, entry.Crc, "rare");
-        if (!ctx.ExistingImages.Contains(filename))
-        {
-            ctx.NeededVpkPaths.Add(entry.EntryPath);
-            var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
-            ctx.ImagesToProcess[$"{entry.EntryPath}:rare"] = new RegularImageTask(localPath, filename);
-        }
+        ctx.NeededVpkPaths.Add(entry.EntryPath);
+        var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
+        ctx.ImagesToProcess[$"{entry.EntryPath}:rare"] = new RegularImageTask(
+            localPath, filename, $"/images/{VpkImageBaseName(vpkPath)}", "rare");
         return filename;
     }
 
@@ -171,24 +169,19 @@ public static class CatalogAssets
             return null;
 
         var filename = $"/images/{name}_{entry.Crc}.webp";
-        if (!ctx.ExistingImages.Contains(filename))
-        {
-            var ext = isSvg ? ".svg" : "_png.png";
-            var localPath = Path.Combine(Config.GameImagesDir, $"econ/set_icons/{name}{ext}");
-            ctx.NeededVpkPaths.Add(entry.EntryPath);
-            ctx.ImagesToProcess[entry.EntryPath] = isSvg
-                ? new SvgImageTask(localPath, filename)
-                : new RegularImageTask(localPath, filename);
-        }
+        var ext = isSvg ? ".svg" : "_png.png";
+        var localPath = Path.Combine(Config.GameImagesDir, $"econ/set_icons/{name}{ext}");
+        ctx.NeededVpkPaths.Add(entry.EntryPath);
+        var finalBase = $"/images/{name}";
+        ctx.ImagesToProcess[entry.EntryPath] = isSvg
+            ? new SvgImageTask(localPath, filename, finalBase)
+            : new RegularImageTask(localPath, filename, finalBase);
         return filename;
     }
 
     public static async Task<string?> TryGetFallbackImage(
-        ItemGeneratorContext ctx, string source, string imagePath, int existingId)
+        ItemGeneratorContext ctx, string source, string imagePath)
     {
-        if (ctx.ExistingItemsById.TryGetValue(existingId, out var existing) && existing.Image != null)
-            return existing.Image;
-
         var staticKey = $"/images/{Path.GetFileName(imagePath)}.png";
         if (ctx.StaticAssets.TryGetValue(staticKey, out var staticValue) && staticValue != null)
             return staticValue;
@@ -200,33 +193,24 @@ public static class CatalogAssets
             if (fallback == null) return null;
         }
 
-        var filename = await CopyAndOptimizeImage(localPath, "/images/{sha256}.webp");
+        var filename = CopyAndOptimizeImage(localPath);
         ctx.StaticAssets[staticKey] = filename;
         return filename;
     }
 
-    public static async Task<string> CopyAndOptimizeImage(string src, string dest)
+    // Encodes a static/fallback PNG and names it by the hash of the encoded output. Final from
+    // the start (no provisional/rename step): these run before the catalog references them.
+    public static string CopyAndOptimizeImage(string src)
     {
-        if (dest.Contains("{sha256}"))
-        {
-            var hash = await ComputeFileSha256(src);
-            dest = dest.Replace("{sha256}", hash);
-        }
-
-        using var bitmap = SKBitmap.Decode(src);
+        using var bitmap = SKBitmap.Decode(src)
+            ?? throw new InvalidOperationException($"Unable to decode image: {src}");
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
+        var bytes = data.ToArray();
+        var dest = $"/images/{Path.GetFileNameWithoutExtension(src)}_{ContentVersion.HashBytes(bytes)}.webp";
         var outPath = Path.Combine(Config.OutputDir, dest.TrimStart('/'));
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-        using var stream = File.OpenWrite(outPath);
-        data.SaveTo(stream);
+        File.WriteAllBytes(outPath, bytes);
         return dest;
-    }
-
-    public static async Task<string> ComputeFileSha256(string filePath)
-    {
-        using var stream = File.OpenRead(filePath);
-        var hash = await System.Security.Cryptography.SHA256.HashDataAsync(stream);
-        return Convert.ToHexStringLower(hash);
     }
 }

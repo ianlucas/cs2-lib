@@ -169,11 +169,18 @@ public record PaintKitRecord(
 
 public record GraffitiTintRecord(string HexColor, int Id, string Name, string NameToken);
 
-public abstract record PendingImageTask(string Filename);
-public record RegularImageTask(string LocalPath, string Filename) : PendingImageTask(Filename);
-public record PaintImageTask(List<(string Src, string Suffix)> LocalPaths, string BaseName, string BaseFilename) : PendingImageTask(BaseFilename);
-public record GraffitiImageTask(string LocalPath, string HexColor, string Filename) : PendingImageTask(Filename);
-public record SvgImageTask(string LocalPath, string Filename) : PendingImageTask(Filename);
+// Image tasks carry a Provisional name (the CRC-derived name items reference at catalog time,
+// before any bytes exist) and a FinalBase; the final CDN name is computed after encoding as
+// `{FinalBase}_{contentHash8}{_FinalSuffix?}.webp` and recorded in ctx.AssetRenames.
+public abstract record PendingImageTask(string Provisional, string FinalBase, string? FinalSuffix = null);
+public record RegularImageTask(string LocalPath, string Provisional, string FinalBase, string? FinalSuffix = null)
+    : PendingImageTask(Provisional, FinalBase, FinalSuffix);
+public record PaintImageTask(List<(string Src, string Suffix)> LocalPaths, string Provisional, string FinalBase)
+    : PendingImageTask(Provisional, FinalBase);
+public record GraffitiImageTask(string LocalPath, string HexColor, string Provisional, string FinalBase)
+    : PendingImageTask(Provisional, FinalBase);
+public record SvgImageTask(string LocalPath, string Provisional, string FinalBase)
+    : PendingImageTask(Provisional, FinalBase);
 
 public record PendingModelTask
 {
@@ -200,7 +207,6 @@ public class ItemGeneratorContext
     public Dictionary<string, string?> PaintKitsRaritiesColorHex { get; set; } = [];
     public Dictionary<string, string?> RaritiesColorHex { get; set; } = [];
     public Dictionary<string, string?> StaticAssets { get; set; } = [];
-    public HashSet<string> ExistingImages { get; set; } = [];
     public HashSet<string> NeededVpkPaths { get; set; } = [];
     public Dictionary<string, PendingImageTask> ImagesToProcess { get; set; } = [];
     public Dictionary<string, PendingModelTask> ModelsToProcess { get; set; } = [];
@@ -209,11 +215,11 @@ public class ItemGeneratorContext
     public HashSet<string> TexturesToProcess { get; set; } = [];
     public Dictionary<string, object?> CompositeMaterialDataByPath { get; set; } = [];
     public Dictionary<string, string> CompositeMaterialFilenameByPath { get; set; } = [];
-    public Dictionary<string, List<string>> CompositeMaterialRefsByPath { get; set; } = [];
     public Dictionary<string, object?> MaterialDataByPath { get; set; } = [];
     public Dictionary<string, string> MaterialFilenameByPath { get; set; } = [];
-    public Dictionary<string, List<string>> MaterialRefsByPath { get; set; } = [];
     public Dictionary<string, string> TextureFilenameByPath { get; set; } = [];
+    // Provisional asset path → final content-hashed path; applied to item fields after processing.
+    public Dictionary<string, string> AssetRenames { get; set; } = [];
     public List<CS2Item> BaseItems { get; set; } = [];
     public Dictionary<string, int> ContainerItems { get; set; } = [];
     public Dictionary<int, CS2Item> Items { get; set; } = [];

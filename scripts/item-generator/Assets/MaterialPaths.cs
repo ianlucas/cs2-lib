@@ -55,27 +55,30 @@ public static class MaterialPaths
         throw new FileNotFoundException($"VPK entry not found: {compiledPath}");
     }
 
-    public static string GetCompositeMaterialFilename(string vcompmatPath, string crc)
+    public static string GetCompositeMaterialFilename(string vcompmatPath, string version)
     {
         var baseName = Path.GetFileNameWithoutExtension(NormalizeMaterialResourcePath(vcompmatPath));
         if (baseName.EndsWith(".vcompmat")) baseName = baseName[..^9];
-        return $"{baseName}_{crc}.vcompmat.json";
+        return $"{baseName}_{version}.vcompmat.json";
     }
 
-    public static string GetVmatFilename(string vmatPath, string crc)
+    public static string GetVmatFilename(string vmatPath, string version)
     {
         var baseName = Path.GetFileNameWithoutExtension(NormalizeMaterialResourcePath(vmatPath));
         if (baseName.EndsWith(".vmat")) baseName = baseName[..^5];
-        return $"{baseName}_{crc}.vmat.json";
+        return $"{baseName}_{version}.vmat.json";
     }
 
-    public static string GetTextureFilename(string vtexPath, string crc, string extension)
+    public static string GetTextureFilename(string vtexPath, string version, string extension)
     {
         var baseName = Path.GetFileNameWithoutExtension(NormalizeMaterialResourcePath(vtexPath));
         if (baseName.EndsWith(".vtex")) baseName = baseName[..^5];
-        return $"{baseName}_{crc}{extension}";
+        return $"{baseName}_{version}{extension}";
     }
 
+    // GetIndexed*Filename produce *provisional* CRC-based names: unique, computable before any
+    // bytes are generated, referenced from items at catalog time. WriteMaterialMetadata replaces
+    // them with content-hashed names and records the mapping in ctx.AssetRenames.
     public static string GetIndexedCompositeMaterialFilename(ItemGeneratorContext ctx, string vcompmatPath)
     {
         var resolvedPath = ResolveMaterialResourcePath(ctx, vcompmatPath);

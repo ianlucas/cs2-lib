@@ -54,6 +54,7 @@ public static partial class Config
     // Normal maps therefore use WebP near-lossless: still the lossless coder (no block
     // structure), with bounded per-pixel adjustment. Level 60 keeps the max per-channel
     // error at ±2 (vs ±91 measured at lossy q95 on ak47_normal) for ~2/3 the lossless size.
+    // Passed to scripts/encode-webp.ts as the near-lossless level (sharp reuses `quality`).
     public const int WebpNearLosslessNormals = 60;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);

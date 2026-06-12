@@ -400,7 +400,7 @@ public static class CatalogBuilder
             if (CatalogAssets.IsImageValid(ctx, keychainInventoryImage))
                 keychainImage = CatalogAssets.GetImage(ctx, keychainInventoryImage);
             else
-                keychainImage = await CatalogAssets.TryGetFallbackImage(ctx, "keychain", keychainInventoryImage, keychainId);
+                keychainImage = await CatalogAssets.TryGetFallbackImage(ctx, "keychain", keychainInventoryImage);
             if (keychainImage == null) continue;
 
             Translations.AddTranslation(ctx, keychainId, "name", "#keychain_kc_sticker_display_case", " | ", itemName);
@@ -598,7 +598,7 @@ public static class CatalogBuilder
             if (CatalogAssets.IsImageValid(ctx, imageInventory))
                 image = CatalogAssets.GetImage(ctx, imageInventory);
             else
-                image = await CatalogAssets.TryGetFallbackImage(ctx, "collectible", imageInventory, id);
+                image = await CatalogAssets.TryGetFallbackImage(ctx, "collectible", imageInventory);
             if (image == null) continue;
 
             Collections.AddContainerItem(ctx, name, id);
@@ -768,7 +768,7 @@ public static class CatalogBuilder
             if (CatalogAssets.IsImageValid(ctx, imageInventory))
                 containerImage = CatalogAssets.GetImage(ctx, imageInventory);
             else
-                containerImage = await CatalogAssets.TryGetFallbackImage(ctx, "container", imageInventory, id);
+                containerImage = await CatalogAssets.TryGetFallbackImage(ctx, "container", imageInventory);
             if (containerImage == null) continue;
 
             var containerName = Translations.RequireTranslation(ctx, itemName);
