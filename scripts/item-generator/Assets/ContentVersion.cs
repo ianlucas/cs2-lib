@@ -12,7 +12,12 @@ public static class ContentVersion
 {
     public static string HashBytes(ReadOnlySpan<byte> bytes)
     {
-        return Convert.ToHexStringLower(SHA256.HashData(bytes))[..8];
+        return HashBytesFull(bytes)[..8];
+    }
+
+    public static string HashBytesFull(ReadOnlySpan<byte> bytes)
+    {
+        return Convert.ToHexStringLower(SHA256.HashData(bytes));
     }
 
     public static string HashFile(string path)

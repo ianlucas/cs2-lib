@@ -518,22 +518,30 @@ public static partial class AssetProcessor
 
     private static void WriteMaterialMetadata(ItemGeneratorContext ctx)
     {
-        string? ResolveCompositeMaterial(string path)
+        // When cycleMembers is given (canonical pass over a cyclic group), references into the
+        // group resolve to a stable placeholder derived from the source path instead of the final
+        // filename, which doesn't exist yet. The placeholder never reaches an output file: it
+        // only feeds the group's hash, and the final pass resolves every name for real.
+        string? ResolveCompositeMaterial(string path, HashSet<string>? cycleMembers = null)
         {
             try
             {
                 var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, path);
+                if (cycleMembers != null && cycleMembers.Contains(resolved))
+                    return $"cycle:{resolved}";
                 return ctx.CompositeMaterialFilenameByPath.TryGetValue(resolved, out var filename)
                     ? $"/materials/{filename}" : null;
             }
             catch { return null; }
         }
 
-        string? ResolveVmat(string path)
+        string? ResolveVmat(string path, HashSet<string>? cycleMembers = null)
         {
             try
             {
                 var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, path);
+                if (cycleMembers != null && cycleMembers.Contains(resolved))
+                    return $"cycle:{resolved}";
                 return ctx.MaterialFilenameByPath.TryGetValue(resolved, out var filename)
                     ? $"/materials/{filename}" : null;
             }
@@ -548,6 +556,35 @@ public static partial class AssetProcessor
                 return ctx.TextureFilenameByPath.TryGetValue(resolved, out var value) ? value : null;
             }
             catch { return null; }
+        }
+
+        byte[] SerializeMaterial(object data, HashSet<string>? cycleMembers)
+        {
+            var patched = MaterialPaths.PatchMaterialResourceReferences(
+                data,
+                path => ResolveCompositeMaterial(path, cycleMembers),
+                path => ResolveVmat(path, cycleMembers),
+                ResolveTexture);
+            return JsonSerializer.SerializeToUtf8Bytes(patched);
+        }
+
+        string GetMaterialFilename(string path, bool isComposite, string version) => isComposite
+            ? MaterialPaths.GetCompositeMaterialFilename(path, version)
+            : MaterialPaths.GetVmatFilename(path, version);
+
+        void AssignFilename(string path, bool isComposite, string filename)
+        {
+            if (isComposite) ctx.CompositeMaterialFilenameByPath[path] = filename;
+            else ctx.MaterialFilenameByPath[path] = filename;
+            RecordMaterialRename(ctx, path, isComposite, filename);
+        }
+
+        void WriteMaterialFile(string filename, byte[] jsonBytes)
+        {
+            AssertMaterialReferencesRewritten(System.Text.Encoding.UTF8.GetString(jsonBytes), filename);
+            var outPath = Path.Combine(Config.OutputDir, "materials", filename);
+            Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+            File.WriteAllBytes(outPath, jsonBytes);
         }
 
         // Material JSONs embed the filenames of the materials they reference, so content-hashed
@@ -567,7 +604,7 @@ public static partial class AssetProcessor
                 try
                 {
                     var resolvedRef = MaterialPaths.ResolveMaterialResourcePath(ctx, reference);
-                    if (resolvedRef != path && dataByPath.ContainsKey(resolvedRef))
+                    if (dataByPath.ContainsKey(resolvedRef))
                         resolved.Add(resolvedRef);
                 }
                 catch { }
@@ -575,39 +612,58 @@ public static partial class AssetProcessor
             dependencies[path] = resolved;
         }
 
-        foreach (var path in TopologicalSort(dataByPath.Keys, dependencies))
+        foreach (var component in StronglyConnectedComponents(dataByPath.Keys.ToList(), dependencies))
         {
-            var isComposite = ctx.CompositeMaterialDataByPath.ContainsKey(path);
-            var data = dataByPath[path];
+            if (component.Count == 1 && !dependencies[component[0]].Contains(component[0]))
+            {
+                var path = component[0];
+                var isComposite = ctx.CompositeMaterialDataByPath.ContainsKey(path);
+                var data = dataByPath[path];
 
-            string filename;
-            if (data == null)
-            {
-                // No extractable content (missing or unparseable VPK entry): keep a deterministic
-                // sentinel name so references remain rewritable; no file is written (same
-                // dangling-reference behavior as the CRC-named pipeline).
-                filename = isComposite
-                    ? MaterialPaths.GetCompositeMaterialFilename(path, "00000000")
-                    : MaterialPaths.GetVmatFilename(path, "00000000");
-            }
-            else
-            {
-                var patched = MaterialPaths.PatchMaterialResourceReferences(
-                    data, ResolveCompositeMaterial, ResolveVmat, ResolveTexture);
-                var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(patched);
-                var hash = ContentVersion.HashBytes(jsonBytes);
-                filename = isComposite
-                    ? MaterialPaths.GetCompositeMaterialFilename(path, hash)
-                    : MaterialPaths.GetVmatFilename(path, hash);
-                AssertMaterialReferencesRewritten(System.Text.Encoding.UTF8.GetString(jsonBytes), filename);
-                var outPath = Path.Combine(Config.OutputDir, "materials", filename);
-                Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                File.WriteAllBytes(outPath, jsonBytes);
+                if (data == null)
+                {
+                    // No extractable content (missing or unparseable VPK entry): keep a
+                    // deterministic sentinel name so references remain rewritable; no file is
+                    // written (same dangling-reference behavior as the CRC-named pipeline).
+                    AssignFilename(path, isComposite, GetMaterialFilename(path, isComposite, "00000000"));
+                    continue;
+                }
+
+                var jsonBytes = SerializeMaterial(data, null);
+                var filename = GetMaterialFilename(path, isComposite, ContentVersion.HashBytes(jsonBytes));
+                AssignFilename(path, isComposite, filename);
+                WriteMaterialFile(filename, jsonBytes);
+                continue;
             }
 
-            if (isComposite) ctx.CompositeMaterialFilenameByPath[path] = filename;
-            else ctx.MaterialFilenameByPath[path] = filename;
-            RecordMaterialRename(ctx, path, isComposite, filename);
+            // Cyclic group (e.g. smg_mp9.vmat <-> smg_mp9_composite_inputs.vmat in CS2 data):
+            // members embed each other's filenames, so no member can be named from its final
+            // bytes. Instead the group shares one token — like paint wear sets and model pairs —
+            // hashed from each member's canonical form. Any change to any member (or to an
+            // external dependency's name) changes the token and renames the whole group.
+            var members = new HashSet<string>(component);
+            var token = ContentVersion.Combine(component.Select(path =>
+                ContentVersion.HashBytesFull(SerializeMaterial(dataByPath[path]!, members))));
+
+            var assigned = new HashSet<string>();
+            foreach (var path in component)
+            {
+                var isComposite = ctx.CompositeMaterialDataByPath.ContainsKey(path);
+                var filename = GetMaterialFilename(path, isComposite, token);
+                if (!assigned.Add(filename))
+                    throw new InvalidOperationException(
+                        $"Filename collision inside material cycle: '{filename}' ({string.Join(", ", component)})");
+                AssignFilename(path, isComposite, filename);
+            }
+
+            foreach (var path in component)
+            {
+                var isComposite = ctx.CompositeMaterialDataByPath.ContainsKey(path);
+                var filename = isComposite
+                    ? ctx.CompositeMaterialFilenameByPath[path]
+                    : ctx.MaterialFilenameByPath[path];
+                WriteMaterialFile(filename, SerializeMaterial(dataByPath[path]!, null));
+            }
         }
     }
 
@@ -646,30 +702,56 @@ public static partial class AssetProcessor
         }
     }
 
-    private static List<string> TopologicalSort(IEnumerable<string> nodes, Dictionary<string, List<string>> dependencies)
+    // Tarjan's algorithm. Emits strongly connected components dependencies-first (each component
+    // is emitted only after every component it depends on), which is exactly the order
+    // WriteMaterialMetadata needs to assign names bottom-up.
+    private static List<List<string>> StronglyConnectedComponents(
+        IReadOnlyCollection<string> nodes, Dictionary<string, List<string>> dependencies)
     {
-        var result = new List<string>();
-        var state = new Dictionary<string, int>(); // 1 = visiting, 2 = done
-        var stack = new List<string>();
+        var index = 0;
+        var indices = new Dictionary<string, int>();
+        var lowlinks = new Dictionary<string, int>();
+        var onStack = new HashSet<string>();
+        var stack = new Stack<string>();
+        var result = new List<List<string>>();
 
-        void Visit(string node)
+        void StrongConnect(string node)
         {
-            if (state.TryGetValue(node, out var s))
+            indices[node] = lowlinks[node] = index++;
+            stack.Push(node);
+            onStack.Add(node);
+
+            foreach (var dep in dependencies[node])
             {
-                if (s == 2) return;
-                var cycle = string.Join(" -> ", stack.SkipWhile(n => n != node).Append(node));
-                throw new InvalidOperationException(
-                    $"Material reference cycle detected (content-hashed names require acyclic references): {cycle}");
+                if (!indices.ContainsKey(dep))
+                {
+                    StrongConnect(dep);
+                    lowlinks[node] = Math.Min(lowlinks[node], lowlinks[dep]);
+                }
+                else if (onStack.Contains(dep))
+                {
+                    lowlinks[node] = Math.Min(lowlinks[node], indices[dep]);
+                }
             }
-            state[node] = 1;
-            stack.Add(node);
-            foreach (var dep in dependencies[node]) Visit(dep);
-            stack.RemoveAt(stack.Count - 1);
-            state[node] = 2;
-            result.Add(node);
+
+            if (lowlinks[node] == indices[node])
+            {
+                var component = new List<string>();
+                string member;
+                do
+                {
+                    member = stack.Pop();
+                    onStack.Remove(member);
+                    component.Add(member);
+                } while (member != node);
+                result.Add(component);
+            }
         }
 
-        foreach (var node in nodes) Visit(node);
+        foreach (var node in nodes)
+            if (!indices.ContainsKey(node))
+                StrongConnect(node);
+
         return result;
     }
 
