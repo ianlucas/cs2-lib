@@ -68,15 +68,27 @@ public sealed class SteamSession : IDisposable
             throw new InvalidOperationException($"Failed to get depot key: {depotKey.Result}");
 
         var servers = await _content.GetServersForSteamPipe();
-        if (servers == null || servers.Count == 0)
+        // The server list can include caches that only resolve on certain networks
+        // (e.g. cache*.valve.org), so filter to eligible content servers and fall
+        // back across them instead of trusting the first entry.
+        var cdnServers = servers?
+            .Where(s => s.Type is "SteamCache" or "CDN")
+            .Where(s => s.AllowedAppIds.Length == 0 || s.AllowedAppIds.Contains(appId))
+            .OrderBy(s => s.WeightedLoad)
+            .ToList() ?? [];
+        if (cdnServers.Count == 0)
             throw new InvalidOperationException("No CDN servers available.");
 
-        var server = servers.First();
         var cdnClient = new Client(_client);
 
         var manifestRequestCode = await _content.GetManifestRequestCode(depotId, appId, manifestId, branch);
-        var manifest = await cdnClient.DownloadManifestAsync(depotId, manifestId,
-            manifestRequestCode, server, depotKey.DepotKey);
+        var (manifestServer, manifest) = await TryEachServer(cdnServers, server =>
+            cdnClient.DownloadManifestAsync(depotId, manifestId,
+                manifestRequestCode, server, depotKey.DepotKey));
+
+        // Chunk downloads start with the server that just served the manifest.
+        var orderedServers = new List<Server>(cdnServers.Count) { manifestServer };
+        orderedServers.AddRange(cdnServers.Where(s => s != manifestServer));
 
         var normalizedFilter = fileFilter
             .Select(f => f.Replace('\\', '/'))
@@ -123,7 +135,8 @@ public sealed class SteamSession : IDisposable
                 foreach (var chunk in file.Chunks)
                 {
                     var chunkBuffer = new byte[chunk.UncompressedLength];
-                    await cdnClient.DownloadDepotChunkAsync(depotId, chunk, server, chunkBuffer, depotKey.DepotKey);
+                    await TryEachServer(orderedServers, server =>
+                        cdnClient.DownloadDepotChunkAsync(depotId, chunk, server, chunkBuffer, depotKey.DepotKey));
                     // Chunks are not enumerated in file-offset order, so seek to each
                     // chunk's offset before writing or the output gets scrambled.
                     fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
@@ -138,6 +151,25 @@ public sealed class SteamSession : IDisposable
         });
 
         await Task.WhenAll(tasks);
+    }
+
+    private static async Task<(Server Server, T Result)> TryEachServer<T>(
+        IReadOnlyList<Server> servers, Func<Server, Task<T>> action)
+    {
+        Exception? lastError = null;
+        foreach (var server in servers)
+        {
+            try
+            {
+                return (server, await action(server));
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
+            {
+                lastError = ex;
+            }
+        }
+        throw new InvalidOperationException(
+            $"All {servers.Count} CDN servers failed; last error: {lastError?.Message}", lastError);
     }
 
     private async Task WaitFor(Func<bool> condition, int timeoutMs = 30000)

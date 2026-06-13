@@ -31,12 +31,12 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('scripts/item-generator/ItemGenerator.csproj') }}
@@ -117,8 +117,7 @@ jobs:
             --base main \
             --head "${{ steps.version.outputs.branch }}" \
             --title "Update items (CS2 v${{ steps.version.outputs.number }})" \
-            --body "Manifest: ${{ steps.commit_main.outputs.manifest }}" \
-            --fill
+            --body "Manifest: ${{ steps.commit_main.outputs.manifest }}"
 
       - name: Clean up work directories
         if: always()
