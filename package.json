@@ -51,8 +51,8 @@
         "item-generator": "dotnet run --project scripts/item-generator"
     },
     "devDependencies": {
-        "@gltf-transform/core": "^4.3.0",
-        "@gltf-transform/extensions": "^4.3.0",
+        "@gltf-transform/core": "^4.4.0",
+        "@gltf-transform/extensions": "^4.4.0",
         "@total-typescript/tsconfig": "^1.0.4",
         "@types/node": "^22.19.20",
         "javascript-stringify": "^2.1.0",
