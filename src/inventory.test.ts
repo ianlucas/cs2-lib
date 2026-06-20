@@ -752,4 +752,108 @@ describe("CS2Inventory methods", () => {
         inventory.edit(glovesUid, { wear: 0.5 });
         expect(inventory.get(glovesUid).wear).toBe(0.5);
     });
+
+    test("converts legacy 0-359 sticker rotation to the in-game -180-180 range on load", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: AWP_DRAGON_LORE_ID,
+                        stickers: {
+                            0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 },
+                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: 359 },
+                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: 181 },
+                            3: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 },
+                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 90 }
+                        }
+                    },
+                    1: {
+                        id: AWP_DRAGON_LORE_ID,
+                        stickers: {
+                            0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
+                            // Already within the new range: must stay untouched (idempotent).
+                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        // The upper half wraps to the equivalent negative angle (same visual rotation).
+        const first = ensure(inventory.get(0).stickers);
+        expect(first.get(0)?.rotation).toBe(-90);
+        expect(first.get(1)?.rotation).toBe(-1);
+        expect(first.get(2)?.rotation).toBe(-179);
+        expect(first.get(3)?.rotation).toBe(180);
+        expect(first.get(4)?.rotation).toBe(90);
+        // Conversion preserves sticker identity.
+        expect(first.get(0)?.id).toBe(FALLEN_COLOGNE_2015_ID);
+        const second = ensure(inventory.get(1).stickers);
+        expect(second.get(0)?.rotation).toBe(0);
+        expect(second.get(1)?.rotation).toBe(-90);
+    });
+
+    test("drops unrecoverable sticker rotation on load without bricking the inventory", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: AWP_DRAGON_LORE_ID,
+                        stickers: {
+                            0: { id: FALLEN_COLOGNE_2015_ID, rotation: NaN },
+                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: 90.5 },
+                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: 1000 },
+                            3: { id: FALLEN_COLOGNE_2015_ID, rotation: -300 },
+                            // A valid neighbor must survive intact.
+                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 45 }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        expect(inventory.size()).toBe(1);
+        const stickers = ensure(inventory.get(0).stickers);
+        for (const slot of [0, 1, 2, 3]) {
+            expect(stickers.get(slot)?.id).toBe(FALLEN_COLOGNE_2015_ID);
+            expect(stickers.get(slot)?.rotation).toBe(undefined);
+        }
+        expect(stickers.get(4)?.rotation).toBe(45);
+    });
+
+    test("heals legacy sticker rotation nested inside storage units", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: STORAGE_UNIT_ID,
+                        storage: {
+                            0: {
+                                id: AWP_DRAGON_LORE_ID,
+                                stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } }
+                            }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        expect(inventory.get(0).storage?.get(0)?.stickers?.get(0)?.rotation).toBe(-90);
+    });
+
+    test("add and edit enforce the -180-180 sticker rotation range", () => {
+        const addRotation = (rotation: number) => () =>
+            inventory.add({ id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation } } });
+        for (const rotation of [-180, -90, 0, 90, 180]) {
+            expect(addRotation(rotation)).not.toThrow();
+        }
+        for (const rotation of [181, -181, 270, 359, NaN, 90.5]) {
+            expect(addRotation(rotation)).toThrow();
+        }
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        const uid = inventory.size() - 1;
+        expect(() => inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } } })).toThrow();
+        inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 } } });
+        expect(inventory.get(uid).stickers?.get(0)?.rotation).toBe(-90);
+    });
 });

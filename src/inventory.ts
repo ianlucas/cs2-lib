@@ -216,6 +216,22 @@ export class CS2Inventory {
                 for (const [slot, sticker] of Object.entries(item.stickers)) {
                     if (!this.economy.items.has(sticker.id)) {
                         delete item.stickers[slot];
+                        continue;
+                    }
+                    // Legacy inventories stored sticker rotation as 0–359; the in-game range
+                    // is -180–180. Convert the upper half (e.g. 270 → -90) to preserve the
+                    // visual rotation, dropping anything that still doesn't fit.
+                    if (sticker.rotation !== undefined) {
+                        if (Number.isInteger(sticker.rotation) && sticker.rotation > CS2_MAX_STICKER_ROTATION) {
+                            sticker.rotation -= 360;
+                        }
+                        if (
+                            !Number.isInteger(sticker.rotation) ||
+                            sticker.rotation < CS2_MIN_STICKER_ROTATION ||
+                            sticker.rotation > CS2_MAX_STICKER_ROTATION
+                        ) {
+                            sticker.rotation = undefined;
+                        }
                     }
                 }
             }
