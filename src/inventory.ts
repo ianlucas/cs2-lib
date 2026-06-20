@@ -11,7 +11,6 @@ import {
     CS2_MAX_STICKERS,
     CS2_MAX_STICKER_ROTATION,
     CS2_MAX_STICKER_WEAR,
-    CS2_MAX_WEAR,
     CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
@@ -94,6 +93,20 @@ export function getNextUid(map: Map<number, unknown>): number {
     }
 }
 
+function stickerMapToArray(
+    stickers: Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined
+): RecordValue<CS2BaseInventoryItem["stickers"]>[] {
+    return CS2InventoryItem.stickersToArray(stickers !== undefined ? Object.fromEntries(stickers) : undefined);
+}
+
+function toStickerMap(
+    stickers: CS2BaseInventoryItem["stickers"]
+): Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined {
+    return stickers !== undefined
+        ? new Map(Object.entries(stickers).map(([key, value]) => [parseInt(key, 10), value]))
+        : undefined;
+}
+
 export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
@@ -122,13 +135,11 @@ export class CS2Inventory {
         if (stickers === undefined) {
             return;
         }
-        const entries = Object.entries(stickers);
+        const entries = Object.values(stickers);
         assert(entries.length <= CS2_MAX_STICKERS);
         assert(item === undefined || item.hasStickers());
         // @todo: validate x and y offsets, for now apps must implement it on their own.
-        for (const [key, { id: stickerId, wear, rotation, x, y, schema }] of entries) {
-            const slot = parseInt(key, 10);
-            assert(slot >= 0 && slot < CS2_MAX_STICKERS);
+        for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
             this.economy.getById(stickerId).expectSticker();
             if (wear !== undefined) {
                 assert(Number.isFinite(wear));
@@ -234,6 +245,11 @@ export class CS2Inventory {
                         }
                     }
                 }
+                // Legacy inventories keyed stickers by their in-game markup slot. Re-key them
+                // into a contiguous 0-based array (stack order) and pin each one's `schema` to
+                // its original slot, so dynamic-positioned stickers keep their anchor after the
+                // keys (and any gap left by a dropped sticker) collapse.
+                item.stickers = CS2InventoryItem.stickersFromArray(CS2InventoryItem.stickersToArray(item.stickers));
             }
         }
         if (item.keychains !== undefined) {
@@ -359,12 +375,12 @@ export class CS2Inventory {
         return this;
     }
 
-    addWithSticker(stickerUid: number, id: number, slot: number): this {
+    addWithSticker(stickerUid: number, id: number, schema?: number): this {
         const sticker = this.get(stickerUid).expectSticker();
         this.items.delete(stickerUid);
         this.add({
             id,
-            stickers: { [slot]: { id: sticker.id } }
+            stickers: { 0: { id: sticker.id, schema } }
         });
         return this;
     }
@@ -520,34 +536,81 @@ export class CS2Inventory {
         return this;
     }
 
-    applyItemSticker(targetUid: number, stickerUid: number, slot: number): this {
-        assert(slot >= 0 && slot <= CS2_MAX_STICKERS - 1);
+    applyItemSticker(targetUid: number, stickerUid: number, schema?: number): this {
         const target = this.get(targetUid);
-        const sticker = this.get(stickerUid);
+        const sticker = this.get(stickerUid).expectSticker();
         assert(target.hasStickers());
-        sticker.expectSticker();
-        target.stickers ??= new Map();
-        assert(target.stickers.get(slot) === undefined);
-        target.stickers.set(slot, { id: sticker.id });
+        const stickers = stickerMapToArray(target.stickers);
+        assert(stickers.length < CS2_MAX_STICKERS);
+        stickers.push({
+            id: sticker.id,
+            schema: schema ?? CS2InventoryItem.getNextStickerSchema(stickers, target.getMaximumStickers())
+        });
+        const record = CS2InventoryItem.stickersFromArray(stickers);
+        this.validateStickers(record, target);
+        target.stickers = toStickerMap(record);
         target.updatedAt = getTimestamp();
         this.items.delete(stickerUid);
         return this;
     }
 
-    scrapeItemSticker(targetUid: number, slot: number): this {
+    removeItemSticker(targetUid: number, index: number): this {
         const target = this.get(targetUid);
-        assert(target.stickers !== undefined);
-        const sticker = ensure(target.stickers.get(slot));
-        const wear = sticker.wear ?? 0;
-        const nextWear = float(wear + CS2_STICKER_WEAR_FACTOR);
-        if (nextWear > CS2_MAX_WEAR) {
-            target.stickers.delete(slot);
-            if (target.stickers.size === 0) {
-                target.stickers = undefined;
-            }
-            return this;
+        const stickers = stickerMapToArray(target.stickers);
+        assert(stickers[index] !== undefined);
+        stickers.splice(index, 1);
+        target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    moveItemSticker(targetUid: number, fromIndex: number, toIndex: number): this {
+        const target = this.get(targetUid);
+        const stickers = stickerMapToArray(target.stickers);
+        const sticker = ensure(stickers[fromIndex]);
+        assert(Number.isInteger(toIndex) && toIndex >= 0 && toIndex < stickers.length);
+        stickers.splice(fromIndex, 1);
+        stickers.splice(toIndex, 0, sticker);
+        target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    editItemSticker(
+        targetUid: number,
+        index: number,
+        patch: Partial<RecordValue<CS2BaseInventoryItem["stickers"]>>
+    ): this {
+        const target = this.get(targetUid);
+        const stickers = stickerMapToArray(target.stickers);
+        assert(stickers[index] !== undefined);
+        stickers[index] = { ...stickers[index], ...patch };
+        const record = CS2InventoryItem.stickersFromArray(stickers);
+        this.validateStickers(record, target);
+        target.stickers = toStickerMap(record);
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    scrapeItemSticker(targetUid: number, index: number, wear?: number): this {
+        const target = this.get(targetUid);
+        const stickers = stickerMapToArray(target.stickers);
+        const sticker = ensure(stickers[index]);
+        const currentWear = sticker.wear ?? CS2_MIN_STICKER_WEAR;
+        let nextWear: number;
+        if (wear !== undefined) {
+            assert(Number.isFinite(wear));
+            assert(wear > currentWear && wear <= CS2_MAX_STICKER_WEAR);
+            nextWear = float(wear);
+        } else {
+            nextWear = float(currentWear + CS2_STICKER_WEAR_FACTOR);
         }
-        sticker.wear = nextWear;
+        if (nextWear >= CS2_MAX_STICKER_WEAR) {
+            stickers.splice(index, 1);
+        } else {
+            stickers[index] = { ...sticker, wear: nextWear };
+        }
+        target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
         target.updatedAt = getTimestamp();
         return this;
     }
@@ -677,10 +740,10 @@ export class CS2InventoryItem
             );
         }
         if (stickers !== undefined) {
-            this.stickers = new Map(
-                Object.entries(stickers)
-                    .filter(([, { id }]) => this.economy.items.has(id))
-                    .map(([slot, sticker]) => [parseInt(slot, 10), sticker])
+            this.stickers = toStickerMap(
+                CS2InventoryItem.stickersFromArray(
+                    CS2InventoryItem.stickersToArray(stickers).filter(({ id }) => this.economy.items.has(id))
+                )
             );
         }
         if (keychains !== undefined) {
@@ -730,19 +793,66 @@ export class CS2InventoryItem
         }
     }
 
-    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]> | undefined][] {
-        const entries: [number, MapValue<CS2InventoryItem["stickers"]> | undefined][] = [];
-        for (let slot = 0; slot < CS2_MAX_STICKERS; slot++) {
-            const sticker = this.stickers?.get(slot);
-            entries.push([slot, sticker]);
+    // Normalizes a sticker record into a contiguous, ordered array (stack order). Sorts by the
+    // stored key, caps at CS2_MAX_STICKERS, and materializes each `schema` from its key when
+    // absent — so legacy slot-keyed data (and the editor) resolve onto a markup anchor.
+    static stickersToArray(
+        stickers: CS2BaseInventoryItem["stickers"]
+    ): RecordValue<CS2BaseInventoryItem["stickers"]>[] {
+        if (stickers === undefined) {
+            return [];
         }
-        return entries;
+        return Object.entries(stickers)
+            .map(([key, sticker]) => [parseInt(key, 10), sticker] as const)
+            .sort(([a], [b]) => a - b)
+            .slice(0, CS2_MAX_STICKERS)
+            .map(([key, sticker]) => ({ ...sticker, schema: sticker.schema ?? key }));
+    }
+
+    // Serializes an ordered sticker array back into a record with contiguous 0-based keys,
+    // always keeping `schema` (defaulting it to the index) and dropping default wear/offsets.
+    static stickersFromArray(
+        stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[]
+    ): CS2BaseInventoryItem["stickers"] {
+        if (stickers.length === 0) {
+            return undefined;
+        }
+        return Object.fromEntries(
+            stickers.slice(0, CS2_MAX_STICKERS).map((sticker, index) => [
+                index,
+                {
+                    id: sticker.id,
+                    schema: sticker.schema ?? index,
+                    wear: sticker.wear || undefined,
+                    rotation: sticker.rotation || undefined,
+                    x: sticker.x || undefined,
+                    y: sticker.y || undefined
+                }
+            ])
+        );
+    }
+
+    // The markup slot a freshly applied sticker should anchor to: the first position the weapon
+    // defines that no current sticker occupies, falling back to 0 once every position is taken.
+    static getNextStickerSchema(
+        stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[],
+        maxStickers: number
+    ): number {
+        const used = new Set(stickers.map(({ schema }) => schema));
+        for (let schema = 0; schema < maxStickers; schema++) {
+            if (!used.has(schema)) {
+                return schema;
+            }
+        }
+        return 0;
+    }
+
+    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
+        return stickerMapToArray(this.stickers).map((sticker, index) => [index, sticker]);
     }
 
     someStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
-        return this.allStickers().filter(
-            (value): value is [number, MapValue<CS2InventoryItem["stickers"]>] => value[1] !== undefined
-        );
+        return this.allStickers();
     }
 
     getStickersCount(): number {

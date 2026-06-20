@@ -93,10 +93,10 @@ describe("CS2Inventory methods", () => {
             seed: 500,
             statTrak: 200,
             stickers: {
-                0: { id: FALLEN_COLOGNE_2015_ID, wear: 0.1 },
-                1: { id: FALLEN_COLOGNE_2015_ID, wear: 0.2 },
-                2: { id: FALLEN_COLOGNE_2015_ID, wear: 0.3 },
-                3: { id: FALLEN_COLOGNE_2015_ID, wear: 0.4 }
+                0: { id: FALLEN_COLOGNE_2015_ID, schema: 0, wear: 0.1 },
+                1: { id: FALLEN_COLOGNE_2015_ID, schema: 1, wear: 0.2 },
+                2: { id: FALLEN_COLOGNE_2015_ID, schema: 2, wear: 0.3 },
+                3: { id: FALLEN_COLOGNE_2015_ID, schema: 3, wear: 0.4 }
             },
             updatedAt: 100,
             wear: 0.5
@@ -134,7 +134,7 @@ describe("CS2Inventory methods", () => {
 
     test("addWithSticker should add items with stickers to the inventory", () => {
         inventory.add({ id: FALLEN_COLOGNE_2015_ID }); // uid:0
-        const args = [AK47_ID, 2] as const;
+        const args = [AK47_ID, 2] as const; // the sticker anchors to markup schema 2
         inventory.addWithSticker(0, ...args); // uid:0
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
@@ -143,7 +143,7 @@ describe("CS2Inventory methods", () => {
         expect(result.equippedCT).toBe(undefined);
         expect(result.equippedT).toBe(undefined);
         expect(result.id).toBe(args[0]);
-        expect(Object.fromEntries(ensure(result.stickers))).toEqual({ 2: { id: FALLEN_COLOGNE_2015_ID } });
+        expect(Object.fromEntries(ensure(result.stickers))).toEqual({ 0: { id: FALLEN_COLOGNE_2015_ID, schema: 2 } });
         expect(result.uid).toBe(0);
         expect(result.updatedAt).not.toBe(undefined);
     });
@@ -178,7 +178,11 @@ describe("CS2Inventory methods", () => {
         expect(result.nameTag).toBe(editedItem.nameTag);
         expect(result.seed).toBe(editedItem.seed);
         expect(result.statTrak).toBe(editedItem.statTrak);
-        expect(Object.fromEntries(ensure(result.stickers))).toEqual(editedItem.stickers);
+        // The sparse {0,2} edit reflows to contiguous {0,1}, pinning each schema to its old key.
+        expect(Object.fromEntries(ensure(result.stickers))).toEqual({
+            0: { id: ALLU_COLOGNE_2015_ID, schema: 0, wear: 0.5 },
+            1: { id: ALLU_COLOGNE_2015_ID, schema: 2, wear: 0.7 }
+        });
         expect(result.wear).toBe(editedItem.wear);
     });
 
@@ -356,22 +360,29 @@ describe("CS2Inventory methods", () => {
         inventory.add({ id: ZZ_NATION_RIO_2022_GOLD_ID }); // uid:2
         inventory.add({ id: O00_THIEVES_2020_RMR_FOIL_ID }); // uid:3
         inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:4
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:5
+        // Can't apply a sticker onto a non-stickerable item (uid:0 is itself a sticker).
+        expect(() => inventory.applyItemSticker(0, 1)).toThrow();
         expect(inventory.get(4).stickers).toBe(undefined);
-        expect(() => inventory.applyItemSticker(0, 1, 0)).toThrow();
-        for (let stickerIndex = 0; stickerIndex < 4; stickerIndex++) {
-            const expectedId = inventory.get(stickerIndex).id;
-            inventory.applyItemSticker(4, stickerIndex, stickerIndex);
-            expect(() => inventory.applyItemSticker(4, stickerIndex + 1, stickerIndex)).toThrow();
-            expect(inventory.size()).toBe(6 - (stickerIndex + 1));
-            expect(inventory.get(4).stickers).not.toBe(undefined);
-            expect(inventory.get(4).stickers?.get(stickerIndex)?.id).toBe(expectedId);
+        // Each application appends the sticker and auto-assigns the next free markup schema.
+        for (let index = 0; index < 4; index++) {
+            const expectedId = inventory.get(index).id;
+            inventory.applyItemSticker(4, index);
+            expect(inventory.size()).toBe(4 - index);
+            expect(inventory.get(4).stickers?.get(index)?.id).toBe(expectedId);
+            expect(inventory.get(4).stickers?.get(index)?.schema).toBe(index);
         }
-        inventory.add({ id: O00_THIEVES_2020_RMR_FOIL_ID }); // uid: 0
+        inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID }); // uid:0
+        // Schemas outside the weapon's markup range are rejected (legacy AWP defines 5 slots).
         expect(() => inventory.applyItemSticker(4, 0, 5)).toThrow();
         expect(() => inventory.applyItemSticker(4, 0, -1)).toThrow();
         expect(() => inventory.applyItemSticker(4, 0, NaN)).toThrow();
-        expect(inventory.size()).toBe(3);
+        // A fifth sticker is allowed (cap is CS2_MAX_STICKERS) and may double up a schema.
+        inventory.applyItemSticker(4, 0, 1);
+        expect(inventory.get(4).stickers?.get(4)?.schema).toBe(1);
+        expect(inventory.get(4).getStickersCount()).toBe(5);
+        // A sixth exceeds the cap.
+        inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID }); // uid:0
+        expect(() => inventory.applyItemSticker(4, 0)).toThrow();
     });
 
     test("scrapeItemSticker should scrape a sticker from the item with the given id", () => {
@@ -379,25 +390,83 @@ describe("CS2Inventory methods", () => {
             id: AWP_DRAGON_LORE_ID,
             stickers: {
                 0: { id: ZZ_NATION_RIO_2022_GLITTER_ID },
-                1: { id: ZZ_NATION_RIO_2022_GLITTER_ID }
+                1: { id: ZZ_NATION_RIO_2022_HOLO_ID }
             }
         });
         expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
         expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
-        inventory.scrapeItemSticker(0, 0);
-        expect(inventory.get(0).stickers?.get(0)?.wear).toBe(0.1);
-        for (let scrape = 1; scrape < 10; scrape++) {
+        // Default scrape steps wear by CS2_STICKER_WEAR_FACTOR (0.01).
+        for (let scrape = 1; scrape <= 9; scrape++) {
             inventory.scrapeItemSticker(0, 0);
-            expect(inventory.get(0).stickers?.get(0)?.wear).toBe(float(0.1 + 0.1 * scrape));
+            expect(inventory.get(0).stickers?.get(0)?.wear).toBe(float(0.01 * scrape));
         }
+        // The explicit-wear slider must move strictly above the current wear.
+        expect(() => inventory.scrapeItemSticker(0, 0, 0.05)).toThrow();
+        inventory.scrapeItemSticker(0, 0, 0.5);
+        expect(inventory.get(0).stickers?.get(0)?.wear).toBe(0.5);
+        // Reaching wear 1 removes the sticker; the one below reflows to index 0.
+        inventory.scrapeItemSticker(0, 0, 1);
+        expect(inventory.get(0).stickers?.get(0)?.id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
+        expect(inventory.get(0).stickers?.get(1)).toBe(undefined);
+        // Default-scraping the last sticker past 1 clears the map entirely.
+        inventory.edit(0, { stickers: { 0: { id: ZZ_NATION_RIO_2022_HOLO_ID, wear: 0.99 } } });
         inventory.scrapeItemSticker(0, 0);
-        expect(inventory.get(0).stickers?.get(0)).toBe(undefined);
-        for (let scrape = 0; scrape < 10; scrape++) {
-            inventory.scrapeItemSticker(0, 1);
-            expect(inventory.get(0).stickers?.get(1)?.wear).toBe(float(0.1 + 0.1 * scrape));
-        }
-        inventory.scrapeItemSticker(0, 1);
         expect(inventory.get(0).stickers).toBe(undefined);
+    });
+
+    test("removeItemSticker removes a sticker and reflows the indices", () => {
+        inventory.add({
+            id: AWP_DRAGON_LORE_ID,
+            stickers: {
+                0: { id: ZZ_NATION_RIO_2022_ID },
+                1: { id: ZZ_NATION_RIO_2022_HOLO_ID },
+                2: { id: ZZ_NATION_RIO_2022_GOLD_ID }
+            }
+        });
+        expect(() => inventory.removeItemSticker(0, 3)).toThrow();
+        inventory.removeItemSticker(0, 1);
+        const stickers = ensure(inventory.get(0).stickers);
+        expect(stickers.size).toBe(2);
+        expect(stickers.get(0)).toMatchObject({ id: ZZ_NATION_RIO_2022_ID, schema: 0 });
+        // The survivor from index 2 reflows to index 1 but keeps its markup schema (2).
+        expect(stickers.get(1)).toMatchObject({ id: ZZ_NATION_RIO_2022_GOLD_ID, schema: 2 });
+    });
+
+    test("moveItemSticker reorders draw order while preserving each schema", () => {
+        inventory.add({
+            id: AWP_DRAGON_LORE_ID,
+            stickers: {
+                0: { id: ZZ_NATION_RIO_2022_ID },
+                1: { id: ZZ_NATION_RIO_2022_HOLO_ID },
+                2: { id: ZZ_NATION_RIO_2022_GOLD_ID }
+            }
+        });
+        inventory.moveItemSticker(0, 2, 0); // send the top sticker to the back
+        const stickers = ensure(inventory.get(0).stickers);
+        expect(stickers.get(0)).toMatchObject({ id: ZZ_NATION_RIO_2022_GOLD_ID, schema: 2 });
+        expect(stickers.get(1)).toMatchObject({ id: ZZ_NATION_RIO_2022_ID, schema: 0 });
+        expect(stickers.get(2)).toMatchObject({ id: ZZ_NATION_RIO_2022_HOLO_ID, schema: 1 });
+        expect(() => inventory.moveItemSticker(0, 0, 3)).toThrow();
+    });
+
+    test("editItemSticker updates a sticker in place and validates it", () => {
+        inventory.add({
+            id: AWP_DRAGON_LORE_ID,
+            stickers: { 0: { id: ZZ_NATION_RIO_2022_ID } }
+        });
+        inventory.editItemSticker(0, 0, { schema: 3, wear: 0.5, x: 0.1, y: -0.2, rotation: 90 });
+        expect(inventory.get(0).stickers?.get(0)).toMatchObject({
+            id: ZZ_NATION_RIO_2022_ID,
+            schema: 3,
+            wear: 0.5,
+            x: 0.1,
+            y: -0.2,
+            rotation: 90
+        });
+        // Out-of-range schema (legacy AWP defines 5 slots) is rejected.
+        expect(() => inventory.editItemSticker(0, 0, { schema: 5 })).toThrow();
+        // Swapping in a non-sticker id is rejected.
+        expect(() => inventory.editItemSticker(0, 0, { id: AWP_DRAGON_LORE_ID })).toThrow();
     });
 
     test("incrementItemStatTrak should increment the StatTrak count of the item with the given id", () => {
@@ -603,9 +672,10 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(1).patches?.get(0)).toBe(undefined);
         expect(inventory.get(1).patches?.get(1)).toBe(8559);
         expect(inventory.get(1).patches?.get(2)).toBe(8561);
-        expect(inventory.get(2).stickers?.get(0)).toMatchObject({ id: 1943, wear: 0.1 });
-        expect(inventory.get(2).stickers?.get(1)).toBe(undefined);
-        expect(inventory.get(2).stickers?.get(2)).toMatchObject({ id: 1947, wear: 0.1 });
+        // The invalid sticker at slot 1 is dropped; slot 2 reflows to index 1 but keeps schema 2.
+        expect(inventory.get(2).stickers?.get(0)).toMatchObject({ id: 1943, schema: 0, wear: 0.1 });
+        expect(inventory.get(2).stickers?.get(1)).toMatchObject({ id: 1947, schema: 2, wear: 0.1 });
+        expect(inventory.get(2).stickers?.get(2)).toBe(undefined);
     });
 
     test("add keychain", () => {
@@ -789,7 +859,8 @@ describe("CS2Inventory methods", () => {
         // Conversion preserves sticker identity.
         expect(first.get(0)?.id).toBe(FALLEN_COLOGNE_2015_ID);
         const second = ensure(inventory.get(1).stickers);
-        expect(second.get(0)?.rotation).toBe(0);
+        // A default rotation of 0 is compacted away (omitted) on normalize.
+        expect(second.get(0)?.rotation).toBe(undefined);
         expect(second.get(1)?.rotation).toBe(-90);
     });
 
