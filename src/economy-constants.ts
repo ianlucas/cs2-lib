@@ -35,7 +35,7 @@ export const CS2_MAX_STICKERS = 5;
 export const CS2_MAX_PATCHES = 5;
 export const CS2_MAX_KEYCHAINS = 1;
 
-export const CS2_STICKER_WEAR_FACTOR = 0.1;
+export const CS2_STICKER_WEAR_FACTOR = 0.01;
 export const CS2_WEAR_FACTOR = 0.000001;
 
 export const CS2_NAMETAG_RE: RegExp = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
