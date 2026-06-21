@@ -79,6 +79,18 @@ public class CS2Item
     [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Legacy { get; set; }
 
+    [JsonPropertyName("legacyStickerOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyStickerOffsetXMax { get; set; }
+
+    [JsonPropertyName("legacyStickerOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyStickerOffsetXMin { get; set; }
+
+    [JsonPropertyName("legacyStickerOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyStickerOffsetYMax { get; set; }
+
+    [JsonPropertyName("legacyStickerOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyStickerOffsetYMin { get; set; }
+
     [JsonPropertyName("legacyStickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyStickerSlots { get; set; }
 
@@ -108,6 +120,18 @@ public class CS2Item
 
     [JsonPropertyName("stickerId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerId { get; set; }
+
+    [JsonPropertyName("stickerOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? StickerOffsetXMax { get; set; }
+
+    [JsonPropertyName("stickerOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? StickerOffsetXMin { get; set; }
+
+    [JsonPropertyName("stickerOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? StickerOffsetYMax { get; set; }
+
+    [JsonPropertyName("stickerOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? StickerOffsetYMin { get; set; }
 
     [JsonPropertyName("stickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerSlots { get; set; }

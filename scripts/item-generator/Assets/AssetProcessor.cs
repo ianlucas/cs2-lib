@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -187,6 +188,7 @@ public static partial class AssetProcessor
 
             if (!File.Exists(glbPath)) continue;
 
+            EnsureGlbSatelliteTextures(glbPath);
             PatchGlbAssets(ctx, glbPath);
             StubModelTextures(glbPath);
             stubbed.Add((vpkPath, model, glbPath));
@@ -263,6 +265,8 @@ public static partial class AssetProcessor
                         d.TryGetValue("Mesh", out var mesh) &&
                         mesh?.ToString() == "body_hd");
                     var legacyStickerSlots = stickerMarkup.Count - stickerSlots;
+                    var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
+                    var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
 
                     foreach (var item in ctx.Items.Values)
                     {
@@ -270,11 +274,105 @@ public static partial class AssetProcessor
                         {
                             item.StickerSlots = stickerSlots > 0 ? stickerSlots : null;
                             item.LegacyStickerSlots = legacyStickerSlots > 0 ? legacyStickerSlots : null;
+                            if (hdOffsetBounds is { } hd)
+                            {
+                                item.StickerOffsetXMin = hd.XMin;
+                                item.StickerOffsetXMax = hd.XMax;
+                                item.StickerOffsetYMin = hd.YMin;
+                                item.StickerOffsetYMax = hd.YMax;
+                            }
+                            if (legacyOffsetBounds is { } legacy)
+                            {
+                                item.LegacyStickerOffsetXMin = legacy.XMin;
+                                item.LegacyStickerOffsetXMax = legacy.XMax;
+                                item.LegacyStickerOffsetYMin = legacy.YMin;
+                                item.LegacyStickerOffsetYMax = legacy.YMax;
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // Mirrors CS2_STICKER_OFFSET_FACTOR in src/economy-constants.ts: the quantization step for the
+    // emitted sticker-offset bounds. 4 decimals matches the StickerMarkup offset authoring precision.
+    private const double StickerOffsetFactor = 0.0001;
+
+    // Per-LOD bounds for how far a sticker's x/y can be nudged from its slot default and still land
+    // on the body's stickerable surface. The stored x/y are deltas from each slot's StickerMarkup
+    // `Offset`, and the engine bakes the placeable surface as `Polygons.Vertices` in the same
+    // engine sticker-UV space (shared across a mesh's slots). The widest valid delta for any slot is
+    // therefore the placeable bounding box shifted by the slot-offset extremes: an app rules out
+    // anything outside [Min, Max]; inside, it may still miss the (non-rectangular) surface and simply
+    // not render. Mins are floored and maxes ceiled outward so rounding never rejects a valid nudge.
+    private static (double XMin, double XMax, double YMin, double YMax)? ComputeStickerOffsetBounds(
+        List<object?> stickerMarkup, bool hd)
+    {
+        double polyXMin = double.PositiveInfinity, polyXMax = double.NegativeInfinity;
+        double polyYMin = double.PositiveInfinity, polyYMax = double.NegativeInfinity;
+        double offXMin = double.PositiveInfinity, offXMax = double.NegativeInfinity;
+        double offYMin = double.PositiveInfinity, offYMax = double.NegativeInfinity;
+        var hasPolygon = false;
+        var hasOffset = false;
+
+        foreach (var entry in stickerMarkup)
+        {
+            if (entry is not Dictionary<string, object?> markup) continue;
+            var isHd = markup.TryGetValue("Mesh", out var mesh) && mesh?.ToString() == "body_hd";
+            if (isHd != hd) continue;
+
+            if (markup.TryGetValue("Offset", out var offsetObj) && offsetObj is List<object?> offset &&
+                offset.Count >= 2 && TryParseDouble(offset[0], out var ox) && TryParseDouble(offset[1], out var oy))
+            {
+                offXMin = Math.Min(offXMin, ox);
+                offXMax = Math.Max(offXMax, ox);
+                offYMin = Math.Min(offYMin, oy);
+                offYMax = Math.Max(offYMax, oy);
+                hasOffset = true;
+            }
+
+            if (markup.TryGetValue("Polygons", out var polygonsObj) && polygonsObj is List<object?> polygons)
+            {
+                foreach (var polygonObj in polygons)
+                {
+                    if (polygonObj is not Dictionary<string, object?> polygon) continue;
+                    if (!polygon.TryGetValue("Vertices", out var verticesObj) ||
+                        verticesObj is not List<object?> vertices) continue;
+                    for (var i = 0; i + 1 < vertices.Count; i += 2)
+                    {
+                        if (!TryParseDouble(vertices[i], out var vx) ||
+                            !TryParseDouble(vertices[i + 1], out var vy)) continue;
+                        polyXMin = Math.Min(polyXMin, vx);
+                        polyXMax = Math.Max(polyXMax, vx);
+                        polyYMin = Math.Min(polyYMin, vy);
+                        polyYMax = Math.Max(polyYMax, vy);
+                        hasPolygon = true;
+                    }
+                }
+            }
+        }
+
+        if (!hasPolygon || !hasOffset) return null;
+        return (
+            QuantizeOutward(polyXMin - offXMax, up: false),
+            QuantizeOutward(polyXMax - offXMin, up: true),
+            QuantizeOutward(polyYMin - offYMax, up: false),
+            QuantizeOutward(polyYMax - offYMin, up: true)
+        );
+    }
+
+    private static bool TryParseDouble(object? value, out double result)
+    {
+        result = 0;
+        return value is string s &&
+            double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
+    }
+
+    private static double QuantizeOutward(double value, bool up)
+    {
+        var steps = up ? Math.Ceiling(value / StickerOffsetFactor) : Math.Floor(value / StickerOffsetFactor);
+        return Math.Round(steps * StickerOffsetFactor, 4);
     }
 
     private static void PreProcessCompositeMaterials(ItemGeneratorContext ctx)
@@ -286,6 +384,11 @@ public static partial class AssetProcessor
         Log($"Extracting {FormatCount(pending.Count, "composite material")}...");
         var processed = new HashSet<string>(ctx.CompositeMaterialDataByPath.Keys);
         var queue = new HashSet<string>(pending);
+        // BFS discovers more refs as it goes, so report progress against the initial pending
+        // count (the bulk) and cap at it; the discovered tail finishes under the closing summary.
+        var reportProgress = pending.Count >= 100;
+        var reported = 0;
+        var lastMilestone = 0;
 
         while (queue.Count > 0)
         {
@@ -320,6 +423,9 @@ public static partial class AssetProcessor
                     }
                     catch { }
                 }
+
+                if (reportProgress && reported < pending.Count)
+                    LogProgress(ref reported, ref lastMilestone, pending.Count);
             }
         }
 
@@ -335,6 +441,11 @@ public static partial class AssetProcessor
         Log($"Extracting {FormatCount(pending.Count, "material")}...");
         var processed = new HashSet<string>(ctx.MaterialDataByPath.Keys);
         var queue = new HashSet<string>(pending);
+        // BFS discovers more refs as it goes, so report progress against the initial pending
+        // count (the bulk) and cap at it; the discovered tail finishes under the closing summary.
+        var reportProgress = pending.Count >= 100;
+        var reported = 0;
+        var lastMilestone = 0;
 
         while (queue.Count > 0)
         {
@@ -360,6 +471,9 @@ public static partial class AssetProcessor
                     }
                     catch { }
                 }
+
+                if (reportProgress && reported < pending.Count)
+                    LogProgress(ref reported, ref lastMilestone, pending.Count);
             }
         }
 
@@ -824,11 +938,17 @@ public static partial class AssetProcessor
         Log($"Compressing {FormatCount(glbPaths.Count, "model")} with EXT_meshopt_compression...");
         var script = Path.Combine(Config.ScriptsDir, "optimize-glb.ts");
         var semaphore = new SemaphoreSlim(Config.ExternalConcurrency);
+        var compressed = 0;
+        var lastMilestone = 0;
         await Task.WhenAll(glbPaths.Select(async glbPath =>
         {
             await semaphore.WaitAsync();
             try { await OptimizeGlbMeshopt(script, glbPath); }
-            finally { semaphore.Release(); }
+            finally
+            {
+                semaphore.Release();
+                LogProgress(ref compressed, ref lastMilestone, glbPaths.Count);
+            }
         }));
     }
 
@@ -909,6 +1029,46 @@ public static partial class AssetProcessor
         using var image = SKImage.FromBitmap(resized);
         using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
         return data?.ToArray();
+    }
+
+    private static readonly Lazy<byte[]> PlaceholderTexturePng = new(() =>
+    {
+        using var bitmap = new SKBitmap(4, 4, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    });
+
+    // VRF's GltfModelExporter occasionally references a satellite texture in the exported GLB JSON
+    // (seen with TGA-sourced ORM packs) without writing the .png file. Those images are downscaled
+    // to 4x4 stubs in StubModelTextures anyway — the real textures ship via the material pipeline —
+    // so a missing one must not abort ModelRoot.Load. Write a placeholder for any referenced-but-
+    // missing satellite so the GLB resolves; it gets stubbed like every other embedded image.
+    private static void EnsureGlbSatelliteTextures(string glbPath)
+    {
+        var dir = Path.GetDirectoryName(glbPath)!;
+        var bytes = File.ReadAllBytes(glbPath);
+        // GLB: 12-byte header, then chunks [length u32][type u32][data]; the first chunk is JSON.
+        if (bytes.Length < 20) return;
+        var jsonLength = (int)BitConverter.ToUInt32(bytes, 12);
+        if (20 + jsonLength > bytes.Length) return;
+
+        var json = System.Text.Encoding.UTF8.GetString(bytes, 20, jsonLength);
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("images", out var images)) return;
+
+        foreach (var image in images.EnumerateArray())
+        {
+            if (!image.TryGetProperty("uri", out var uriProp)) continue;
+            var uri = uriProp.GetString();
+            if (string.IsNullOrEmpty(uri) || uri.StartsWith("data:", StringComparison.Ordinal)) continue;
+
+            var path = Path.Combine(dir, Uri.UnescapeDataString(uri));
+            if (File.Exists(path)) continue;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, PlaceholderTexturePng.Value);
+            Log($"  wrote placeholder for missing satellite texture {uri}");
+        }
     }
 
     private static void PatchGlbAssets(ItemGeneratorContext ctx, string glbPath)

@@ -285,6 +285,10 @@ export class CS2EconomyItem implements Interface<
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
+    legacyStickerOffsetXMax: number | undefined;
+    legacyStickerOffsetXMin: number | undefined;
+    legacyStickerOffsetYMax: number | undefined;
+    legacyStickerOffsetYMin: number | undefined;
     legacyStickerSlots: number | undefined;
     model: string | undefined;
     name: string = null!;
@@ -295,6 +299,10 @@ export class CS2EconomyItem implements Interface<
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
+    stickerOffsetXMax: number | undefined;
+    stickerOffsetXMin: number | undefined;
+    stickerOffsetYMax: number | undefined;
+    stickerOffsetYMin: number | undefined;
     stickerSlots: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
