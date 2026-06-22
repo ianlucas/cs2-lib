@@ -385,7 +385,7 @@ describe("CS2Inventory methods", () => {
         expect(() => inventory.applyItemSticker(4, 0)).toThrow();
     });
 
-    test("scrapeItemSticker should scrape a sticker from the item with the given id", () => {
+    test("scrapeItemSticker default scrape steps wear by 0.1 and removes the sticker on the click past 1", () => {
         inventory.add({
             id: AWP_DRAGON_LORE_ID,
             stickers: {
@@ -395,16 +395,35 @@ describe("CS2Inventory methods", () => {
         });
         expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
         expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
-        // Default scrape steps wear by CS2_STICKER_WEAR_FACTOR (0.01).
+        // Each default scrape steps wear by CS2_STICKER_SCRAPE_FACTOR (0.1), matching the ~10-click
+        // CS:GO behavior.
         for (let scrape = 1; scrape <= 9; scrape++) {
             inventory.scrapeItemSticker(0, 0);
-            expect(inventory.get(0).stickers?.get(0)?.wear).toBe(float(0.01 * scrape));
+            expect(inventory.get(0).stickers?.get(0)?.wear).toBe(float(0.1 * scrape));
         }
+        // The 10th click rests wear at the maximum; the sticker is still present.
+        inventory.scrapeItemSticker(0, 0);
+        expect(inventory.get(0).stickers?.get(0)?.wear).toBe(1);
+        // The 11th click clears it; the one below reflows to index 0.
+        inventory.scrapeItemSticker(0, 0);
+        expect(inventory.get(0).stickers?.get(0)?.id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
+        expect(inventory.get(0).stickers?.get(1)).toBe(undefined);
+    });
+
+    test("scrapeItemSticker with an explicit wear acts as a slider and removes at wear 1", () => {
+        inventory.add({
+            id: AWP_DRAGON_LORE_ID,
+            stickers: {
+                0: { id: ZZ_NATION_RIO_2022_GLITTER_ID },
+                1: { id: ZZ_NATION_RIO_2022_HOLO_ID }
+            }
+        });
+        inventory.scrapeItemSticker(0, 0); // step current wear up to 0.1
         // The explicit-wear slider must move strictly above the current wear.
         expect(() => inventory.scrapeItemSticker(0, 0, 0.05)).toThrow();
         inventory.scrapeItemSticker(0, 0, 0.5);
         expect(inventory.get(0).stickers?.get(0)?.wear).toBe(0.5);
-        // Reaching wear 1 removes the sticker; the one below reflows to index 0.
+        // Reaching wear 1 via the slider removes the sticker; the one below reflows to index 0.
         inventory.scrapeItemSticker(0, 0, 1);
         expect(inventory.get(0).stickers?.get(0)?.id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
         expect(inventory.get(0).stickers?.get(1)).toBe(undefined);

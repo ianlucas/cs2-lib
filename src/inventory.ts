@@ -16,6 +16,7 @@ import {
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
     CS2_STICKER_OFFSET_FACTOR,
+    CS2_STICKER_SCRAPE_FACTOR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
@@ -654,9 +655,13 @@ export class CS2Inventory {
             assert(wear > currentWear && wear <= CS2_MAX_STICKER_WEAR);
             nextWear = roundToFactor(wear, CS2_STICKER_WEAR_FACTOR);
         } else {
-            nextWear = roundToFactor(currentWear + CS2_STICKER_WEAR_FACTOR, CS2_STICKER_WEAR_FACTOR);
+            nextWear = roundToFactor(currentWear + CS2_STICKER_SCRAPE_FACTOR, CS2_STICKER_WEAR_FACTOR);
         }
-        if (nextWear >= CS2_MAX_STICKER_WEAR) {
+        // The default per-click scrape mirrors CS2/CS:GO: wear rests at the maximum and a further
+        // click clears it (strict >), whereas the explicit-wear slider removes once it reaches the
+        // maximum (>=).
+        const gone = wear === undefined ? nextWear > CS2_MAX_STICKER_WEAR : nextWear >= CS2_MAX_STICKER_WEAR;
+        if (gone) {
             stickers.splice(index, 1);
         } else {
             stickers[index] = { ...sticker, wear: nextWear };
