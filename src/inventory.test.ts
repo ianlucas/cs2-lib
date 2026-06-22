@@ -454,19 +454,23 @@ describe("CS2Inventory methods", () => {
             id: AWP_DRAGON_LORE_ID,
             stickers: { 0: { id: ZZ_NATION_RIO_2022_ID } }
         });
-        inventory.editItemSticker(0, 0, { schema: 3, wear: 0.5, x: 0.1, y: -0.2, rotation: 90 });
+        inventory.editItemSticker(0, 0, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90 });
         expect(inventory.get(0).stickers?.get(0)).toMatchObject({
             id: ZZ_NATION_RIO_2022_ID,
             schema: 3,
             wear: 0.5,
             x: 0.1,
-            y: -0.2,
+            y: -0.05,
             rotation: 90
         });
         // Out-of-range schema (legacy AWP defines 5 slots) is rejected.
         expect(() => inventory.editItemSticker(0, 0, { schema: 5 })).toThrow();
         // Swapping in a non-sticker id is rejected.
         expect(() => inventory.editItemSticker(0, 0, { id: AWP_DRAGON_LORE_ID })).toThrow();
+        // An offset outside the model's published envelope is rejected (AWP legacy Y max ≈ 0.1415).
+        expect(() => inventory.editItemSticker(0, 0, { y: -0.2 })).toThrow();
+        // An over-precise offset (more than the factor's 4 decimals) is rejected.
+        expect(() => inventory.editItemSticker(0, 0, { x: 0.12345 })).toThrow();
     });
 
     test("incrementItemStatTrak should increment the StatTrak count of the item with the given id", () => {
@@ -926,5 +930,59 @@ describe("CS2Inventory methods", () => {
         expect(() => inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } } })).toThrow();
         inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 } } });
         expect(inventory.get(uid).stickers?.get(0)?.rotation).toBe(-90);
+    });
+
+    test("clamps and snaps out-of-envelope sticker offsets to the model bounds on load", () => {
+        // AWP Dragon Lore is legacy, so it resolves to the legacy envelope: X [-0.4323, 0.4206],
+        // Y [-0.0921, 0.1415].
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: AWP_DRAGON_LORE_ID,
+                        stickers: {
+                            0: { id: FALLEN_COLOGNE_2015_ID, x: 0.9, y: 0.05 },
+                            1: { id: FALLEN_COLOGNE_2015_ID, x: -0.9, y: -0.5 },
+                            2: { id: FALLEN_COLOGNE_2015_ID, x: 0.1, y: 0.12345 },
+                            3: { id: FALLEN_COLOGNE_2015_ID, x: NaN, y: 0.05 }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        const stickers = ensure(inventory.get(0).stickers);
+        // Out-of-range values clamp to the nearest published bound.
+        expect(stickers.get(0)).toMatchObject({ x: 0.4206, y: 0.05 });
+        expect(stickers.get(1)).toMatchObject({ x: -0.4323, y: -0.0921 });
+        // Over-precise values snap (truncate) to the 4-decimal offset grid.
+        expect(stickers.get(2)).toMatchObject({ x: 0.1, y: 0.1234 });
+        // Non-finite offsets are dropped; the surviving axis is untouched.
+        expect(stickers.get(3)?.x).toBe(undefined);
+        expect(stickers.get(3)?.y).toBe(0.05);
+        // Healed data round-trips through validation cleanly.
+        expect(() => inventory.get(0)).not.toThrow();
+    });
+
+    test("add and edit enforce the model's sticker offset envelope", () => {
+        const addOffset = (x: number, y: number) => () =>
+            inventory.add({ id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, x, y } } });
+        // On-grid values inside the legacy envelope (including the exact bounds) are accepted.
+        for (const [x, y] of [
+            [0, 0],
+            [0.4206, 0.1415],
+            [-0.4323, -0.0921]
+        ] as const) {
+            expect(addOffset(x, y)).not.toThrow();
+        }
+        // Outside the envelope, or finer than the factor's 4 decimals, is rejected.
+        for (const [x, y] of [
+            [0.4207, 0],
+            [0, -0.0922],
+            [0.12345, 0],
+            [0, NaN]
+        ] as const) {
+            expect(addOffset(x, y)).toThrow();
+        }
     });
 });

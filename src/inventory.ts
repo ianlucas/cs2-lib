@@ -15,6 +15,7 @@ import {
     CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
+    CS2_STICKER_OFFSET_FACTOR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
@@ -107,6 +108,45 @@ function toStickerMap(
         : undefined;
 }
 
+// Sticker offsets are stored as deltas (in engine sticker-UV space) from each markup slot's
+// default. The generator publishes the per-model union envelope of valid deltas, quantized to
+// CS2_STICKER_OFFSET_FACTOR; these helpers keep stored offsets on that same grid.
+const CS2_STICKER_OFFSET_DECIMALS = (CS2_STICKER_OFFSET_FACTOR.toString().split(".")[1] ?? "").length;
+
+function stickerOffsetDecimals(value: number): number {
+    return value.toString().split(".")[1]?.length ?? 0;
+}
+
+// Truncates toward zero to the factor's precision. Operates on `toString()` (JS' shortest
+// round-trip form) so float noise like 0.29 * 1e4 = 2899.999… never leaks in, and anchors the cut
+// on the decimal point so sign and integer digits don't shift how many decimals are kept.
+function truncateStickerOffset(value: number): number {
+    const text = value.toString();
+    const dot = text.indexOf(".");
+    return dot === -1 ? value : Number(text.slice(0, dot + 1 + CS2_STICKER_OFFSET_DECIMALS));
+}
+
+// Normalizes a stored offset so healed data always passes validation: drops non-finite values,
+// truncates to the offset grid, then clamps into the model's [min, max] (each bound skipped when
+// the model doesn't publish it).
+function healStickerOffset(
+    value: number | undefined,
+    min: number | undefined,
+    max: number | undefined
+): number | undefined {
+    if (value === undefined || !Number.isFinite(value)) {
+        return undefined;
+    }
+    value = truncateStickerOffset(value);
+    if (min !== undefined && value < min) {
+        return min;
+    }
+    if (max !== undefined && value > max) {
+        return max;
+    }
+    return value;
+}
+
 export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
@@ -138,7 +178,6 @@ export class CS2Inventory {
         const entries = Object.values(stickers);
         assert(entries.length <= CS2_MAX_STICKERS);
         assert(item === undefined || item.hasStickers());
-        // @todo: validate x and y offsets, for now apps must implement it on their own.
         for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
             this.economy.getById(stickerId).expectSticker();
             if (wear !== undefined) {
@@ -152,9 +191,23 @@ export class CS2Inventory {
             }
             if (x !== undefined) {
                 assert(Number.isFinite(x));
+                assert(stickerOffsetDecimals(x) <= CS2_STICKER_OFFSET_DECIMALS);
+                if (item !== undefined) {
+                    const min = item.getMinimumStickerOffsetX();
+                    const max = item.getMaximumStickerOffsetX();
+                    assert(min === undefined || x >= min);
+                    assert(max === undefined || x <= max);
+                }
             }
             if (y !== undefined) {
                 assert(Number.isFinite(y));
+                assert(stickerOffsetDecimals(y) <= CS2_STICKER_OFFSET_DECIMALS);
+                if (item !== undefined) {
+                    const min = item.getMinimumStickerOffsetY();
+                    const max = item.getMaximumStickerOffsetY();
+                    assert(min === undefined || y >= min);
+                    assert(max === undefined || y <= max);
+                }
             }
             if (schema !== undefined) {
                 assert(Number.isInteger(schema));
@@ -244,6 +297,19 @@ export class CS2Inventory {
                             sticker.rotation = undefined;
                         }
                     }
+                    // Offsets are deltas from the markup default; clamp out-of-envelope values to
+                    // the model's published bounds (and snap to the offset grid) so positions a
+                    // model no longer allows survive as the nearest valid placement.
+                    sticker.x = healStickerOffset(
+                        sticker.x,
+                        economyItem.getMinimumStickerOffsetX(),
+                        economyItem.getMaximumStickerOffsetX()
+                    );
+                    sticker.y = healStickerOffset(
+                        sticker.y,
+                        economyItem.getMinimumStickerOffsetY(),
+                        economyItem.getMaximumStickerOffsetY()
+                    );
                 }
                 // Legacy inventories keyed stickers by their in-game markup slot. Re-key them
                 // into a contiguous 0-based array (stack order) and pin each one's `schema` to

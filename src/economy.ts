@@ -670,6 +670,26 @@ export class CS2EconomyItem implements Interface<
         return slots ?? CS2_MAX_STICKERS;
     }
 
+    getMinimumStickerOffsetX(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetXMin : undefined) ?? item.stickerOffsetXMin;
+    }
+
+    getMaximumStickerOffsetX(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetXMax : undefined) ?? item.stickerOffsetXMax;
+    }
+
+    getMinimumStickerOffsetY(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetYMin : undefined) ?? item.stickerOffsetYMin;
+    }
+
+    getMaximumStickerOffsetY(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
+    }
+
     groupContents(): Record<string, CS2EconomyItem[]> {
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
