@@ -22,7 +22,17 @@ import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
 import { resolveInventoryData } from "./inventory-upgrader.ts";
 import { CS2Team } from "./teams.ts";
-import { type Interface, type MapValue, type RecordValue, assert, ensure, float } from "./utils.ts";
+import {
+    type Interface,
+    type MapValue,
+    type RecordValue,
+    assert,
+    clamp,
+    ensure,
+    isFactorPrecise,
+    roundToFactor,
+    truncateToFactor
+} from "./utils.ts";
 
 export interface CS2BaseInventoryItem {
     containerId?: number;
@@ -108,27 +118,11 @@ function toStickerMap(
         : undefined;
 }
 
-// Sticker offsets are stored as deltas (in engine sticker-UV space) from each markup slot's
-// default. The generator publishes the per-model union envelope of valid deltas, quantized to
-// CS2_STICKER_OFFSET_FACTOR; these helpers keep stored offsets on that same grid.
-const CS2_STICKER_OFFSET_DECIMALS = (CS2_STICKER_OFFSET_FACTOR.toString().split(".")[1] ?? "").length;
-
-function stickerOffsetDecimals(value: number): number {
-    return value.toString().split(".")[1]?.length ?? 0;
-}
-
-// Truncates toward zero to the factor's precision. Operates on `toString()` (JS' shortest
-// round-trip form) so float noise like 0.29 * 1e4 = 2899.999… never leaks in, and anchors the cut
-// on the decimal point so sign and integer digits don't shift how many decimals are kept.
-function truncateStickerOffset(value: number): number {
-    const text = value.toString();
-    const dot = text.indexOf(".");
-    return dot === -1 ? value : Number(text.slice(0, dot + 1 + CS2_STICKER_OFFSET_DECIMALS));
-}
-
-// Normalizes a stored offset so healed data always passes validation: drops non-finite values,
-// truncates to the offset grid, then clamps into the model's [min, max] (each bound skipped when
-// the model doesn't publish it).
+// Sticker offsets are stored as deltas (in engine sticker-UV space) from each markup slot's default.
+// The generator publishes the per-model union envelope of valid deltas, quantized to
+// CS2_STICKER_OFFSET_FACTOR. Normalizes a stored offset so healed data always passes validation:
+// drops non-finite values, truncates onto the offset grid, then clamps into the model's [min, max]
+// (each bound skipped when the model doesn't publish it).
 function healStickerOffset(
     value: number | undefined,
     min: number | undefined,
@@ -137,7 +131,7 @@ function healStickerOffset(
     if (value === undefined || !Number.isFinite(value)) {
         return undefined;
     }
-    value = truncateStickerOffset(value);
+    value = truncateToFactor(value, CS2_STICKER_OFFSET_FACTOR);
     if (min !== undefined && value < min) {
         return min;
     }
@@ -181,8 +175,7 @@ export class CS2Inventory {
         for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
             this.economy.getById(stickerId).expectSticker();
             if (wear !== undefined) {
-                assert(Number.isFinite(wear));
-                assert(String(wear).length <= String(CS2_STICKER_WEAR_FACTOR).length);
+                assert(isFactorPrecise(wear, CS2_STICKER_WEAR_FACTOR));
                 assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
             }
             if (rotation !== undefined) {
@@ -190,8 +183,7 @@ export class CS2Inventory {
                 assert(rotation >= CS2_MIN_STICKER_ROTATION && rotation <= CS2_MAX_STICKER_ROTATION);
             }
             if (x !== undefined) {
-                assert(Number.isFinite(x));
-                assert(stickerOffsetDecimals(x) <= CS2_STICKER_OFFSET_DECIMALS);
+                assert(isFactorPrecise(x, CS2_STICKER_OFFSET_FACTOR));
                 if (item !== undefined) {
                     const min = item.getMinimumStickerOffsetX();
                     const max = item.getMaximumStickerOffsetX();
@@ -200,8 +192,7 @@ export class CS2Inventory {
                 }
             }
             if (y !== undefined) {
-                assert(Number.isFinite(y));
-                assert(stickerOffsetDecimals(y) <= CS2_STICKER_OFFSET_DECIMALS);
+                assert(isFactorPrecise(y, CS2_STICKER_OFFSET_FACTOR));
                 if (item !== undefined) {
                     const min = item.getMinimumStickerOffsetY();
                     const max = item.getMaximumStickerOffsetY();
@@ -333,13 +324,7 @@ export class CS2Inventory {
             if (!economyItem.hasWear()) {
                 item.wear = undefined;
             } else {
-                const minimumWear = economyItem.getMinimumWear();
-                const maximumWear = economyItem.getMaximumWear();
-                if (item.wear < minimumWear) {
-                    item.wear = minimumWear;
-                } else if (item.wear > maximumWear) {
-                    item.wear = maximumWear;
-                }
+                item.wear = clamp(item.wear, economyItem.getMinimumWear(), economyItem.getMaximumWear());
                 if (!this.economy.safeValidateWear(item.wear, economyItem)) {
                     item.wear = undefined;
                 }
@@ -667,9 +652,9 @@ export class CS2Inventory {
         if (wear !== undefined) {
             assert(Number.isFinite(wear));
             assert(wear > currentWear && wear <= CS2_MAX_STICKER_WEAR);
-            nextWear = float(wear);
+            nextWear = roundToFactor(wear, CS2_STICKER_WEAR_FACTOR);
         } else {
-            nextWear = float(currentWear + CS2_STICKER_WEAR_FACTOR);
+            nextWear = roundToFactor(currentWear + CS2_STICKER_WEAR_FACTOR, CS2_STICKER_WEAR_FACTOR);
         }
         if (nextWear >= CS2_MAX_STICKER_WEAR) {
             stickers.splice(index, 1);

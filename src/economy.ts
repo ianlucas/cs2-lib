@@ -66,7 +66,7 @@ import {
     type CS2UnlockedItem
 } from "./economy-types.ts";
 import { type CS2Team } from "./teams.ts";
-import { type Interface, assert, compare, ensure, safe } from "./utils.ts";
+import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
 
 type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2Team };
 
@@ -137,8 +137,7 @@ export class CS2EconomyInstance {
         if (wear === undefined) {
             return true;
         }
-        assert(Number.isFinite(wear));
-        assert(String(wear).length <= String(CS2_WEAR_FACTOR).length);
+        assert(isFactorPrecise(wear, CS2_WEAR_FACTOR));
         assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR);
         if (item !== undefined) {
             assert(item.hasWear());
@@ -759,10 +758,9 @@ export class CS2EconomyItem implements Interface<
                         : undefined
                     : undefined,
                 wear: unlocked.hasWear()
-                    ? Number(
-                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR)
-                              .toString()
-                              .substring(0, CS2_WEAR_FACTOR.toString().length)
+                    ? truncateToFactor(
+                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR),
+                          CS2_WEAR_FACTOR
                       )
                     : undefined
             },
