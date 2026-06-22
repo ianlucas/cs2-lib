@@ -66,7 +66,7 @@ import {
     type CS2UnlockedItem
 } from "./economy-types.ts";
 import { type CS2Team } from "./teams.ts";
-import { type Interface, assert, compare, ensure, safe } from "./utils.ts";
+import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
 
 type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2Team };
 
@@ -137,8 +137,7 @@ export class CS2EconomyInstance {
         if (wear === undefined) {
             return true;
         }
-        assert(Number.isFinite(wear));
-        assert(String(wear).length <= String(CS2_WEAR_FACTOR).length);
+        assert(isFactorPrecise(wear, CS2_WEAR_FACTOR));
         assert(wear >= CS2_MIN_WEAR && wear <= CS2_MAX_WEAR);
         if (item !== undefined) {
             assert(item.hasWear());
@@ -285,6 +284,10 @@ export class CS2EconomyItem implements Interface<
     index: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
+    legacyStickerOffsetXMax: number | undefined;
+    legacyStickerOffsetXMin: number | undefined;
+    legacyStickerOffsetYMax: number | undefined;
+    legacyStickerOffsetYMin: number | undefined;
     legacyStickerSlots: number | undefined;
     model: string | undefined;
     name: string = null!;
@@ -295,6 +298,10 @@ export class CS2EconomyItem implements Interface<
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
+    stickerOffsetXMax: number | undefined;
+    stickerOffsetXMin: number | undefined;
+    stickerOffsetYMax: number | undefined;
+    stickerOffsetYMin: number | undefined;
     stickerSlots: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
@@ -662,6 +669,26 @@ export class CS2EconomyItem implements Interface<
         return slots ?? CS2_MAX_STICKERS;
     }
 
+    getMinimumStickerOffsetX(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetXMin : undefined) ?? item.stickerOffsetXMin;
+    }
+
+    getMaximumStickerOffsetX(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetXMax : undefined) ?? item.stickerOffsetXMax;
+    }
+
+    getMinimumStickerOffsetY(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetYMin : undefined) ?? item.stickerOffsetYMin;
+    }
+
+    getMaximumStickerOffsetY(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
+    }
+
     groupContents(): Record<string, CS2EconomyItem[]> {
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
@@ -731,10 +758,9 @@ export class CS2EconomyItem implements Interface<
                         : undefined
                     : undefined,
                 wear: unlocked.hasWear()
-                    ? Number(
-                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR)
-                              .toString()
-                              .substring(0, CS2_WEAR_FACTOR.toString().length)
+                    ? truncateToFactor(
+                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR),
+                          CS2_WEAR_FACTOR
                       )
                     : undefined
             },

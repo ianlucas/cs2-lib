@@ -134,3 +134,24 @@ test("default cdn url", () => {
     const baseGloves = CS2Economy.getById(56);
     expect(baseGloves.getImage().startsWith("https://cdn.cstrike.app/images"));
 });
+
+test("sticker offset bounds getters", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    // HD weapon (no legacy flag) resolves to the HD envelope on its own item.
+    const ak47 = CS2Economy.getById(4);
+    expect(ak47.getMinimumStickerOffsetX()).toBe(-0.3662);
+    expect(ak47.getMaximumStickerOffsetX()).toBe(0.6392);
+    expect(ak47.getMinimumStickerOffsetY()).toBe(-0.0298);
+    expect(ak47.getMaximumStickerOffsetY()).toBe(0.2157);
+    // A legacy skin reads the legacy envelope from its base item via `parent`.
+    const dragonLore = CS2Economy.getById(307);
+    expect(dragonLore.legacy).toBe(true);
+    expect(dragonLore.getMinimumStickerOffsetX()).toBe(-0.4323);
+    expect(dragonLore.getMaximumStickerOffsetX()).toBe(0.4206);
+    expect(dragonLore.getMinimumStickerOffsetY()).toBe(-0.0921);
+    expect(dragonLore.getMaximumStickerOffsetY()).toBe(0.1415);
+    // Items without published bounds expose no constraint.
+    const gloves = CS2Economy.getById(56);
+    expect(gloves.getMinimumStickerOffsetX()).toBe(undefined);
+    expect(gloves.getMaximumStickerOffsetY()).toBe(undefined);
+});

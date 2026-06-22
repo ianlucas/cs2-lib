@@ -1,5 +1,6 @@
 using SteamKit2;
 using SteamKit2.CDN;
+using static ItemGenerator.Logging;
 
 namespace ItemGenerator.Depot;
 
@@ -101,24 +102,10 @@ public sealed class SteamSession : IDisposable
             .ToList();
 
         var totalFiles = filesToDownload.Count;
+        if (totalFiles > 0)
+            Log($"Downloading {FormatCount(totalFiles, "file")}...");
         var completedFiles = 0;
-        var lastReportedStep = -1;
-        var progressLock = new object();
-
-        void ReportProgress(int completed)
-        {
-            if (totalFiles == 0) return;
-            var percent = (int)(completed * 100L / totalFiles);
-            var step = percent / 5;
-            lock (progressLock)
-            {
-                if (step <= lastReportedStep) return;
-                lastReportedStep = step;
-                Console.WriteLine($"Downloaded {completed} of {totalFiles} files ({percent}%)");
-            }
-        }
-
-        ReportProgress(0);
+        var lastMilestone = 0;
 
         var semaphore = new SemaphoreSlim(8);
         var tasks = filesToDownload.Select(async file =>
@@ -146,7 +133,7 @@ public sealed class SteamSession : IDisposable
             finally
             {
                 semaphore.Release();
-                ReportProgress(Interlocked.Increment(ref completedFiles));
+                LogProgress(ref completedFiles, ref lastMilestone, totalFiles);
             }
         });
 

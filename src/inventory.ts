@@ -15,13 +15,25 @@ import {
     CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
+    CS2_STICKER_OFFSET_FACTOR,
+    CS2_STICKER_SCRAPE_FACTOR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
 import { resolveInventoryData } from "./inventory-upgrader.ts";
 import { CS2Team } from "./teams.ts";
-import { type Interface, type MapValue, type RecordValue, assert, ensure, float } from "./utils.ts";
+import {
+    type Interface,
+    type MapValue,
+    type RecordValue,
+    assert,
+    clamp,
+    ensure,
+    isFactorPrecise,
+    roundToFactor,
+    truncateToFactor
+} from "./utils.ts";
 
 export interface CS2BaseInventoryItem {
     containerId?: number;
@@ -107,6 +119,29 @@ function toStickerMap(
         : undefined;
 }
 
+// Sticker offsets are stored as deltas (in engine sticker-UV space) from each markup slot's default.
+// The generator publishes the per-model union envelope of valid deltas, quantized to
+// CS2_STICKER_OFFSET_FACTOR. Normalizes a stored offset so healed data always passes validation:
+// drops non-finite values, truncates onto the offset grid, then clamps into the model's [min, max]
+// (each bound skipped when the model doesn't publish it).
+function healStickerOffset(
+    value: number | undefined,
+    min: number | undefined,
+    max: number | undefined
+): number | undefined {
+    if (value === undefined || !Number.isFinite(value)) {
+        return undefined;
+    }
+    value = truncateToFactor(value, CS2_STICKER_OFFSET_FACTOR);
+    if (min !== undefined && value < min) {
+        return min;
+    }
+    if (max !== undefined && value > max) {
+        return max;
+    }
+    return value;
+}
+
 export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
@@ -138,12 +173,10 @@ export class CS2Inventory {
         const entries = Object.values(stickers);
         assert(entries.length <= CS2_MAX_STICKERS);
         assert(item === undefined || item.hasStickers());
-        // @todo: validate x and y offsets, for now apps must implement it on their own.
         for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
             this.economy.getById(stickerId).expectSticker();
             if (wear !== undefined) {
-                assert(Number.isFinite(wear));
-                assert(String(wear).length <= String(CS2_STICKER_WEAR_FACTOR).length);
+                assert(isFactorPrecise(wear, CS2_STICKER_WEAR_FACTOR));
                 assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
             }
             if (rotation !== undefined) {
@@ -151,10 +184,22 @@ export class CS2Inventory {
                 assert(rotation >= CS2_MIN_STICKER_ROTATION && rotation <= CS2_MAX_STICKER_ROTATION);
             }
             if (x !== undefined) {
-                assert(Number.isFinite(x));
+                assert(isFactorPrecise(x, CS2_STICKER_OFFSET_FACTOR));
+                if (item !== undefined) {
+                    const min = item.getMinimumStickerOffsetX();
+                    const max = item.getMaximumStickerOffsetX();
+                    assert(min === undefined || x >= min);
+                    assert(max === undefined || x <= max);
+                }
             }
             if (y !== undefined) {
-                assert(Number.isFinite(y));
+                assert(isFactorPrecise(y, CS2_STICKER_OFFSET_FACTOR));
+                if (item !== undefined) {
+                    const min = item.getMinimumStickerOffsetY();
+                    const max = item.getMaximumStickerOffsetY();
+                    assert(min === undefined || y >= min);
+                    assert(max === undefined || y <= max);
+                }
             }
             if (schema !== undefined) {
                 assert(Number.isInteger(schema));
@@ -244,6 +289,19 @@ export class CS2Inventory {
                             sticker.rotation = undefined;
                         }
                     }
+                    // Offsets are deltas from the markup default; clamp out-of-envelope values to
+                    // the model's published bounds (and snap to the offset grid) so positions a
+                    // model no longer allows survive as the nearest valid placement.
+                    sticker.x = healStickerOffset(
+                        sticker.x,
+                        economyItem.getMinimumStickerOffsetX(),
+                        economyItem.getMaximumStickerOffsetX()
+                    );
+                    sticker.y = healStickerOffset(
+                        sticker.y,
+                        economyItem.getMinimumStickerOffsetY(),
+                        economyItem.getMaximumStickerOffsetY()
+                    );
                 }
                 // Legacy inventories keyed stickers by their in-game markup slot. Re-key them
                 // into a contiguous 0-based array (stack order) and pin each one's `schema` to
@@ -267,13 +325,7 @@ export class CS2Inventory {
             if (!economyItem.hasWear()) {
                 item.wear = undefined;
             } else {
-                const minimumWear = economyItem.getMinimumWear();
-                const maximumWear = economyItem.getMaximumWear();
-                if (item.wear < minimumWear) {
-                    item.wear = minimumWear;
-                } else if (item.wear > maximumWear) {
-                    item.wear = maximumWear;
-                }
+                item.wear = clamp(item.wear, economyItem.getMinimumWear(), economyItem.getMaximumWear());
                 if (!this.economy.safeValidateWear(item.wear, economyItem)) {
                     item.wear = undefined;
                 }
@@ -601,11 +653,15 @@ export class CS2Inventory {
         if (wear !== undefined) {
             assert(Number.isFinite(wear));
             assert(wear > currentWear && wear <= CS2_MAX_STICKER_WEAR);
-            nextWear = float(wear);
+            nextWear = roundToFactor(wear, CS2_STICKER_WEAR_FACTOR);
         } else {
-            nextWear = float(currentWear + CS2_STICKER_WEAR_FACTOR);
+            nextWear = roundToFactor(currentWear + CS2_STICKER_SCRAPE_FACTOR, CS2_STICKER_WEAR_FACTOR);
         }
-        if (nextWear >= CS2_MAX_STICKER_WEAR) {
+        // The default per-click scrape mirrors CS2/CS:GO: wear rests at the maximum and a further
+        // click clears it (strict >), whereas the explicit-wear slider removes once it reaches the
+        // maximum (>=).
+        const gone = wear === undefined ? nextWear > CS2_MAX_STICKER_WEAR : nextWear >= CS2_MAX_STICKER_WEAR;
+        if (gone) {
             stickers.splice(index, 1);
         } else {
             stickers[index] = { ...sticker, wear: nextWear };
