@@ -134,18 +134,46 @@ describe("CS2Inventory methods", () => {
 
     test("addWithSticker should add items with stickers to the inventory", () => {
         inventory.add({ id: FALLEN_COLOGNE_2015_ID }); // uid:0
-        const args = [AK47_ID, 2] as const; // the sticker anchors to markup schema 2
-        inventory.addWithSticker(0, ...args); // uid:0
+        inventory.addWithSticker(0, AK47_ID, { schema: 2 }); // uid:0; the sticker anchors to markup schema 2
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
         expect(result.id).toBe(AK47_ID);
         expect(result.equipped).toBe(undefined);
         expect(result.equippedCT).toBe(undefined);
         expect(result.equippedT).toBe(undefined);
-        expect(result.id).toBe(args[0]);
         expect(Object.fromEntries(ensure(result.stickers))).toEqual({ 0: { id: FALLEN_COLOGNE_2015_ID, schema: 2 } });
         expect(result.uid).toBe(0);
         expect(result.updatedAt).not.toBe(undefined);
+    });
+
+    test("addWithSticker validates attributes and rejects invalid ones without consuming the sticker", () => {
+        inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:0 (sticker)
+        // Valid attributes are validated and stored on the new item's first sticker; the sticker is consumed.
+        inventory.addWithSticker(0, AWP_DRAGON_LORE_ID, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90 }); // uid:0
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).stickers?.get(0)).toMatchObject({
+            id: ZZ_NATION_RIO_2022_ID,
+            schema: 3,
+            wear: 0.5,
+            x: 0.1,
+            y: -0.05,
+            rotation: 90
+        });
+        // Each invalid attribute throws before any mutation: the sticker stays unconsumed.
+        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID }); // uid:1 (fresh sticker)
+        for (const attributes of [
+            { x: 0.12345 }, // offset more precise than the 0.0001 grid
+            { y: -0.2 }, // outside the model's offset envelope (AWP legacy Y max ≈ 0.1415)
+            { rotation: 90.5 }, // non-integer rotation
+            { rotation: 200 }, // rotation outside [-180, 180]
+            { wear: 2 }, // wear outside [0, 1]
+            { wear: 0.005 }, // wear more precise than the 0.01 grid
+            { schema: 5 } // schema outside the model's markup range
+        ]) {
+            expect(() => inventory.addWithSticker(1, AWP_DRAGON_LORE_ID, attributes)).toThrow();
+        }
+        expect(inventory.size()).toBe(2);
+        expect(inventory.get(1).id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
     });
 
     test("edit should edit the item with the given id", () => {
