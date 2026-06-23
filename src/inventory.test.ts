@@ -373,16 +373,56 @@ describe("CS2Inventory methods", () => {
         }
         inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID }); // uid:0
         // Schemas outside the weapon's markup range are rejected (legacy AWP defines 5 slots).
-        expect(() => inventory.applyItemSticker(4, 0, 5)).toThrow();
-        expect(() => inventory.applyItemSticker(4, 0, -1)).toThrow();
-        expect(() => inventory.applyItemSticker(4, 0, NaN)).toThrow();
+        expect(() => inventory.applyItemSticker(4, 0, { schema: 5 })).toThrow();
+        expect(() => inventory.applyItemSticker(4, 0, { schema: -1 })).toThrow();
+        expect(() => inventory.applyItemSticker(4, 0, { schema: NaN })).toThrow();
         // A fifth sticker is allowed (cap is CS2_MAX_STICKERS) and may double up a schema.
-        inventory.applyItemSticker(4, 0, 1);
+        inventory.applyItemSticker(4, 0, { schema: 1 });
         expect(inventory.get(4).stickers?.get(4)?.schema).toBe(1);
         expect(inventory.get(4).getStickersCount()).toBe(5);
         // A sixth exceeds the cap.
         inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID }); // uid:0
         expect(() => inventory.applyItemSticker(4, 0)).toThrow();
+    });
+
+    test("applyItemSticker validates and stores attributes, rejecting invalid ones without consuming the sticker", () => {
+        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:0 (target)
+        inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:1 (sticker)
+        // Valid attributes are validated and stored on the applied sticker, and the sticker is consumed.
+        inventory.applyItemSticker(0, 1, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90 });
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).stickers?.get(0)).toMatchObject({
+            id: ZZ_NATION_RIO_2022_ID,
+            schema: 3,
+            wear: 0.5,
+            x: 0.1,
+            y: -0.05,
+            rotation: 90
+        });
+        // Each invalid attribute throws before any mutation: the sticker stays unconsumed and the
+        // target's stack is left untouched.
+        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID }); // uid:1 (fresh sticker)
+        for (const attributes of [
+            { x: 0.12345 }, // offset more precise than the 0.0001 grid
+            { y: -0.2 }, // outside the model's offset envelope (AWP legacy Y max ≈ 0.1415)
+            { rotation: 90.5 }, // non-integer rotation
+            { rotation: 200 }, // rotation outside [-180, 180]
+            { wear: 2 }, // wear outside [0, 1]
+            { wear: 0.005 }, // wear more precise than the 0.01 grid
+            { schema: 5 } // schema outside the model's markup range
+        ]) {
+            expect(() => inventory.applyItemSticker(0, 1, attributes)).toThrow();
+        }
+        expect(inventory.size()).toBe(2);
+        expect(inventory.get(1).id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
+        expect(inventory.get(0).getStickersCount()).toBe(1);
+        expect(inventory.get(0).stickers?.get(0)).toMatchObject({
+            schema: 3,
+            wear: 0.5,
+            x: 0.1,
+            y: -0.05,
+            rotation: 90
+        });
     });
 
     test("scrapeItemSticker default scrape steps wear by 0.1 and removes the sticker on the click past 1", () => {
