@@ -260,11 +260,11 @@ public static partial class AssetProcessor
                     kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
                     stickerMarkupObj is List<object?> stickerMarkup)
                 {
-                    var stickerSlots = stickerMarkup.Count(s =>
+                    var stickerSchemaCount = stickerMarkup.Count(s =>
                         s is Dictionary<string, object?> d &&
                         d.TryGetValue("Mesh", out var mesh) &&
                         mesh?.ToString() == "body_hd");
-                    var legacyStickerSlots = stickerMarkup.Count - stickerSlots;
+                    var legacyStickerSchemaCount = stickerMarkup.Count - stickerSchemaCount;
                     var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
                     var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
 
@@ -272,8 +272,8 @@ public static partial class AssetProcessor
                     {
                         if (item.PlayerModel == playerModelPath)
                         {
-                            item.StickerSlots = stickerSlots > 0 ? stickerSlots : null;
-                            item.LegacyStickerSlots = legacyStickerSlots > 0 ? legacyStickerSlots : null;
+                            item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
+                            item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
                             if (hdOffsetBounds is { } hd)
                             {
                                 item.StickerOffsetXMin = hd.XMin;

@@ -11,7 +11,7 @@ import {
     CS2_MIN_KEYCHAIN_SEED
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
-import { CS2Inventory } from "./inventory.ts";
+import { CS2Inventory, getNextStickerSchema, healStickerOffset } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
 import { english } from "./translations/english.ts";
@@ -1003,5 +1003,100 @@ describe("CS2Inventory methods", () => {
         ] as const) {
             expect(addOffset(x, y)).toThrow();
         }
+    });
+});
+
+describe("sticker schema materialization", () => {
+    // The AK-47 HD body defines only 4 StickerMarkup anchors, while the stack always holds up to
+    // CS2_MAX_STICKERS (5) — so a schema materialized from a slot/index can outrun the anchor range.
+    const STICKER_ID = FALLEN_COLOGNE_2015_ID;
+    const fiveStickers = {
+        0: { id: STICKER_ID },
+        1: { id: STICKER_ID },
+        2: { id: STICKER_ID },
+        3: { id: STICKER_ID },
+        4: { id: STICKER_ID }
+    };
+
+    test("getStickerSchemaCount reflects the model's anchor count", () => {
+        const inventory = new CS2Inventory();
+        inventory.add({ id: AK47_ID });
+        expect(inventory.get(0).getStickerSchemaCount()).toBe(4);
+    });
+
+    test("a schema-less 5th sticker materializes a valid anchor, not the out-of-range index", () => {
+        const inventory = new CS2Inventory();
+        inventory.add({ id: AK47_ID, stickers: fiveStickers });
+        const stickers = ensure(inventory.get(0).stickers);
+        expect(stickers.size).toBe(5);
+        // Slots 0-3 keep their index as schema; the 5th (index 4, out of range) reuses anchor 0.
+        expect([0, 1, 2, 3, 4].map((slot) => stickers.get(slot)?.schema)).toEqual([0, 1, 2, 3, 0]);
+        for (const [, sticker] of stickers) {
+            expect(sticker.schema).toBeLessThan(4);
+        }
+    });
+
+    test("editing the materialized item no longer throws — materializer and validator now agree", () => {
+        const inventory = new CS2Inventory();
+        inventory.add({ id: AK47_ID, stickers: fiveStickers });
+        expect(() => inventory.editItemSticker(0, 4, { wear: 0.5 })).not.toThrow();
+    });
+
+    test("heal repairs an explicit out-of-range schema so a legacy inventory loads", () => {
+        const inventory = new CS2Inventory({
+            data: {
+                items: { 0: { id: AK47_ID, stickers: { 0: { id: STICKER_ID, schema: 4 } } } },
+                version: 1
+            }
+        });
+        expect(inventory.get(0).stickers?.get(0)?.schema).toBe(0);
+    });
+
+    test("valid in-range schemas (including duplicates) survive; only out-of-range ones are repaired", () => {
+        const inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: AK47_ID,
+                        stickers: {
+                            0: { id: STICKER_ID, schema: 2 },
+                            1: { id: STICKER_ID, schema: 2 },
+                            2: { id: STICKER_ID, schema: 7 }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        const stickers = ensure(inventory.get(0).stickers);
+        expect(stickers.get(0)?.schema).toBe(2);
+        expect(stickers.get(1)?.schema).toBe(2);
+        expect(stickers.get(2)?.schema).toBe(0);
+    });
+
+    test("getNextStickerSchema returns the first free anchor, falling back to 0 when full", () => {
+        expect(getNextStickerSchema([], 4)).toBe(0);
+        expect(
+            getNextStickerSchema(
+                [
+                    { id: STICKER_ID, schema: 0 },
+                    { id: STICKER_ID, schema: 1 }
+                ],
+                4
+            )
+        ).toBe(2);
+        expect(
+            getNextStickerSchema(
+                [0, 1, 2, 3].map((schema) => ({ id: STICKER_ID, schema })),
+                4
+            )
+        ).toBe(0);
+    });
+
+    test("healStickerOffset clamps into the model bounds and drops non-finite values", () => {
+        expect(healStickerOffset(undefined, 0, 1)).toBe(undefined);
+        expect(healStickerOffset(NaN, 0, 1)).toBe(undefined);
+        expect(healStickerOffset(5, undefined, 1)).toBe(1);
+        expect(healStickerOffset(-5, -1, undefined)).toBe(-1);
     });
 });

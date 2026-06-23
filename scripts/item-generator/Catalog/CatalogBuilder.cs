@@ -835,8 +835,8 @@ public static class CatalogBuilder
 
         item.PaintMaterial ??= previous.PaintMaterial;
         item.PlayerModel ??= previous.PlayerModel;
-        item.LegacyStickerSlots ??= previous.LegacyStickerSlots;
-        item.StickerSlots ??= previous.StickerSlots;
+        item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
+        item.StickerSchemaCount ??= previous.StickerSchemaCount;
     }
 
     private static int CreateStub(ItemGeneratorContext ctx, string name, string descToken, string? model = null)

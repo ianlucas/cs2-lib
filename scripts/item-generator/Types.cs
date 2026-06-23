@@ -91,8 +91,8 @@ public class CS2Item
     [JsonPropertyName("legacyStickerOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? LegacyStickerOffsetYMin { get; set; }
 
-    [JsonPropertyName("legacyStickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? LegacyStickerSlots { get; set; }
+    [JsonPropertyName("legacyStickerSchemaCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LegacyStickerSchemaCount { get; set; }
 
     [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; set; }
@@ -133,8 +133,8 @@ public class CS2Item
     [JsonPropertyName("stickerOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? StickerOffsetYMin { get; set; }
 
-    [JsonPropertyName("stickerSlots"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? StickerSlots { get; set; }
+    [JsonPropertyName("stickerSchemaCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? StickerSchemaCount { get; set; }
 
     [JsonPropertyName("teams"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Teams { get; set; }

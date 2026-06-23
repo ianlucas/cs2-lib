@@ -288,7 +288,7 @@ export class CS2EconomyItem implements Interface<
     legacyStickerOffsetXMin: number | undefined;
     legacyStickerOffsetYMax: number | undefined;
     legacyStickerOffsetYMin: number | undefined;
-    legacyStickerSlots: number | undefined;
+    legacyStickerSchemaCount: number | undefined;
     model: string | undefined;
     name: string = null!;
     paintMaterial: string | undefined;
@@ -302,7 +302,7 @@ export class CS2EconomyItem implements Interface<
     stickerOffsetXMin: number | undefined;
     stickerOffsetYMax: number | undefined;
     stickerOffsetYMin: number | undefined;
-    stickerSlots: number | undefined;
+    stickerSchemaCount: number | undefined;
     tint: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemType = null!;
@@ -663,10 +663,15 @@ export class CS2EconomyItem implements Interface<
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
-    getMaximumStickers(): number {
+    /**
+     * Count of sticker schemas (StickerMarkup anchors) the model defines; valid `schema` is
+     * `[0, count)`. Independent of the 5-deep stack ({@link CS2_MAX_STICKERS}), so a model with
+     * fewer schemas than stickers shares anchors.
+     */
+    getStickerSchemaCount(): number {
         const item = this.parent ?? this;
-        const slots = (this.legacy ? item.legacyStickerSlots : undefined) ?? item.stickerSlots;
-        return slots ?? CS2_MAX_STICKERS;
+        const count = (this.legacy ? item.legacyStickerSchemaCount : undefined) ?? item.stickerSchemaCount;
+        return count ?? CS2_MAX_STICKERS;
     }
 
     getMinimumStickerOffsetX(): number | undefined {
