@@ -616,15 +616,31 @@ export class CS2Inventory {
         return this;
     }
 
-    applyItemSticker(targetUid: number, stickerUid: number, schema?: number): this {
+    /**
+     * Applies the sticker item `stickerUid` onto `targetUid`, appending it to the stack. The optional
+     * `attributes` set the new sticker's `schema` (its physical {@link CS2EconomyItem.getStickerSchemaCount}
+     * anchor — defaults to the next free anchor), `x`/`y` offset, `rotation`, and `wear`. All are
+     * validated against the target before anything mutates, so an invalid value throws without
+     * consuming the sticker.
+     */
+    applyItemSticker(
+        targetUid: number,
+        stickerUid: number,
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["stickers"]>, "id"> = {}
+    ): this {
         const target = this.get(targetUid);
         const sticker = this.get(stickerUid).expectSticker();
         assert(target.hasStickers());
         const stickers = stickerMapToArray(target.stickers);
         assert(stickers.length < CS2_MAX_STICKERS);
+        const { schema, x, y, rotation, wear } = attributes;
         stickers.push({
             id: sticker.id,
-            schema: schema ?? getNextStickerSchema(stickers, target.getStickerSchemaCount())
+            schema: schema ?? getNextStickerSchema(stickers, target.getStickerSchemaCount()),
+            x,
+            y,
+            rotation,
+            wear
         });
         const record = CS2InventoryItem.stickersFromArray(stickers);
         this.validateStickers(record, target);
