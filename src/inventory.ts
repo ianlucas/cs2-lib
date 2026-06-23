@@ -55,11 +55,19 @@ export interface CS2BaseInventoryItem {
     patches?: Record<string, number>;
     seed?: number;
     statTrak?: number;
+    /**
+     * Stickers on the item — a stack of up to {@link CS2_MAX_STICKERS}. The record key is the
+     * **slot/index**: the 0-based stack (draw) position. Each sticker's **`schema`** is its physical
+     * anchor — an index into the model's `StickerMarkup`, valid in
+     * `[0, CS2EconomyItem.getStickerSchemaCount())`. The stack can outnumber a model's schemas, so
+     * stickers may share an anchor.
+     */
     stickers?: Record<
         string,
         {
             id: number;
             rotation?: number;
+            /** Physical anchor: a `StickerMarkup` index in `[0, CS2EconomyItem.getStickerSchemaCount())`. */
             schema?: number;
             wear?: number;
             x?: number;
@@ -105,13 +113,13 @@ export function getNextUid(map: Map<number, unknown>): number {
     }
 }
 
-function stickerMapToArray(
+export function stickerMapToArray(
     stickers: Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined
 ): RecordValue<CS2BaseInventoryItem["stickers"]>[] {
     return CS2InventoryItem.stickersToArray(stickers !== undefined ? Object.fromEntries(stickers) : undefined);
 }
 
-function toStickerMap(
+export function toStickerMap(
     stickers: CS2BaseInventoryItem["stickers"]
 ): Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined {
     return stickers !== undefined
@@ -119,12 +127,12 @@ function toStickerMap(
         : undefined;
 }
 
-// Sticker offsets are stored as deltas (in engine sticker-UV space) from each markup slot's default.
-// The generator publishes the per-model union envelope of valid deltas, quantized to
-// CS2_STICKER_OFFSET_FACTOR. Normalizes a stored offset so healed data always passes validation:
-// drops non-finite values, truncates onto the offset grid, then clamps into the model's [min, max]
-// (each bound skipped when the model doesn't publish it).
-function healStickerOffset(
+/**
+ * Normalizes a stored sticker offset so healed data passes validation: drops non-finite values,
+ * truncates onto the {@link CS2_STICKER_OFFSET_FACTOR} grid, then clamps into the model's
+ * `[min, max]` (pass the item's `getMinimum/MaximumStickerOffsetX/Y()`; each bound skipped when undefined).
+ */
+export function healStickerOffset(
     value: number | undefined,
     min: number | undefined,
     max: number | undefined
@@ -140,6 +148,24 @@ function healStickerOffset(
         return max;
     }
     return value;
+}
+
+/**
+ * The schema (StickerMarkup anchor) a freshly applied sticker should occupy: the first anchor in
+ * `[0, schemaCount)` no current sticker uses, falling back to `0` once every anchor is taken (so the
+ * stack can exceed the schema count). Pass the target's {@link CS2EconomyItem.getStickerSchemaCount}.
+ */
+export function getNextStickerSchema(
+    stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[],
+    schemaCount: number
+): number {
+    const used = new Set(stickers.map(({ schema }) => schema));
+    for (let schema = 0; schema < schemaCount; schema++) {
+        if (!used.has(schema)) {
+            return schema;
+        }
+    }
+    return 0;
 }
 
 export class CS2Inventory {
@@ -203,7 +229,7 @@ export class CS2Inventory {
             }
             if (schema !== undefined) {
                 assert(Number.isInteger(schema));
-                assert(schema >= 0 && schema < (item?.getMaximumStickers() ?? CS2_MAX_STICKERS));
+                assert(schema >= 0 && schema < (item?.getStickerSchemaCount() ?? CS2_MAX_STICKERS));
             }
         }
     }
@@ -307,7 +333,9 @@ export class CS2Inventory {
                 // into a contiguous 0-based array (stack order) and pin each one's `schema` to
                 // its original slot, so dynamic-positioned stickers keep their anchor after the
                 // keys (and any gap left by a dropped sticker) collapse.
-                item.stickers = CS2InventoryItem.stickersFromArray(CS2InventoryItem.stickersToArray(item.stickers));
+                item.stickers = CS2InventoryItem.stickersFromArray(
+                    CS2InventoryItem.stickersToArray(item.stickers, economyItem.getStickerSchemaCount())
+                );
             }
         }
         if (item.keychains !== undefined) {
@@ -596,7 +624,7 @@ export class CS2Inventory {
         assert(stickers.length < CS2_MAX_STICKERS);
         stickers.push({
             id: sticker.id,
-            schema: schema ?? CS2InventoryItem.getNextStickerSchema(stickers, target.getMaximumStickers())
+            schema: schema ?? getNextStickerSchema(stickers, target.getStickerSchemaCount())
         });
         const record = CS2InventoryItem.stickersFromArray(stickers);
         this.validateStickers(record, target);
@@ -798,7 +826,9 @@ export class CS2InventoryItem
         if (stickers !== undefined) {
             this.stickers = toStickerMap(
                 CS2InventoryItem.stickersFromArray(
-                    CS2InventoryItem.stickersToArray(stickers).filter(({ id }) => this.economy.items.has(id))
+                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount()).filter(({ id }) =>
+                        this.economy.items.has(id)
+                    )
                 )
             );
         }
@@ -849,20 +879,31 @@ export class CS2InventoryItem
         }
     }
 
-    // Normalizes a sticker record into a contiguous, ordered array (stack order). Sorts by the
-    // stored key, caps at CS2_MAX_STICKERS, and materializes each `schema` from its key when
-    // absent — so legacy slot-keyed data (and the editor) resolve onto a markup anchor.
+    // Normalizes a sticker record into a contiguous, ordered array (stack order): sorts by the
+    // stored key, caps at CS2_MAX_STICKERS, and materializes each `schema` from its key when absent
+    // — so legacy slot-keyed data (and the editor) resolve onto a markup anchor. When `schemaCount`
+    // is given (heal/construction), a schema landing outside `[0, schemaCount)` is repaired onto a
+    // real anchor via getNextStickerSchema, so materialized data always satisfies the validator.
     static stickersToArray(
-        stickers: CS2BaseInventoryItem["stickers"]
+        stickers: CS2BaseInventoryItem["stickers"],
+        schemaCount?: number
     ): RecordValue<CS2BaseInventoryItem["stickers"]>[] {
         if (stickers === undefined) {
             return [];
         }
-        return Object.entries(stickers)
+        const sorted = Object.entries(stickers)
             .map(([key, sticker]) => [parseInt(key, 10), sticker] as const)
             .sort(([a], [b]) => a - b)
-            .slice(0, CS2_MAX_STICKERS)
-            .map(([key, sticker]) => ({ ...sticker, schema: sticker.schema ?? key }));
+            .slice(0, CS2_MAX_STICKERS);
+        const result: RecordValue<CS2BaseInventoryItem["stickers"]>[] = [];
+        for (const [key, sticker] of sorted) {
+            let schema = sticker.schema ?? key;
+            if (schemaCount !== undefined && (!Number.isInteger(schema) || schema < 0 || schema >= schemaCount)) {
+                schema = getNextStickerSchema(result, schemaCount);
+            }
+            result.push({ ...sticker, schema });
+        }
+        return result;
     }
 
     // Serializes an ordered sticker array back into a record with contiguous 0-based keys,
@@ -886,21 +927,6 @@ export class CS2InventoryItem
                 }
             ])
         );
-    }
-
-    // The markup slot a freshly applied sticker should anchor to: the first position the weapon
-    // defines that no current sticker occupies, falling back to 0 once every position is taken.
-    static getNextStickerSchema(
-        stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[],
-        maxStickers: number
-    ): number {
-        const used = new Set(stickers.map(({ schema }) => schema));
-        for (let schema = 0; schema < maxStickers; schema++) {
-            if (!used.has(schema)) {
-                return schema;
-            }
-        }
-        return 0;
     }
 
     allStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
