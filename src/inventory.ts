@@ -455,13 +455,24 @@ export class CS2Inventory {
         return this;
     }
 
-    addWithSticker(stickerUid: number, id: number, schema?: number): this {
+    /**
+     * Adds a new item `id` to the inventory with the sticker item `stickerUid` applied to its first
+     * slot, consuming the sticker. The optional `attributes` set that sticker's `schema` (its physical
+     * {@link CS2EconomyItem.getStickerSchemaCount} anchor), `x`/`y` offset, `rotation`, and `wear`. All
+     * are validated against the new item before anything mutates, so an invalid value throws without
+     * consuming the sticker.
+     */
+    addWithSticker(
+        stickerUid: number,
+        id: number,
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["stickers"]>, "id"> = {}
+    ): this {
         const sticker = this.get(stickerUid).expectSticker();
+        const { schema, x, y, rotation, wear } = attributes;
+        const stickers = { 0: { id: sticker.id, schema, x, y, rotation, wear } };
+        this.validateStickers(stickers, this.economy.getById(id));
         this.items.delete(stickerUid);
-        this.add({
-            id,
-            stickers: { 0: { id: sticker.id, schema } }
-        });
+        this.add({ id, stickers });
         return this;
     }
 
