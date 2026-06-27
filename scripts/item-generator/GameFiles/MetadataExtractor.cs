@@ -59,6 +59,34 @@ public static partial class MetadataExtractor
                 {
                     modelInfo["m_keyValueText"] = ConvertKV3ToObject(model.KeyValues);
                 }
+
+                // Surface the applied-module anchors (StatTrak module, name tag, charm) from the
+                // weapon's MDAT block so the viewer can parent those models at the game-correct
+                // transform. These live in Model.Attachments, not model.Data, so they're emitted as
+                // a top-level sibling of m_modelInfo. Values are raw model space (inches +
+                // quaternion), influence[0] verbatim — no axis-swap/scale; the consumer's .glb root
+                // node handles the conversion. Kept as float[] (not stringified KV) to match the
+                // numeric JSON the viewer reads.
+                if (parsedData is Dictionary<string, object?> root)
+                {
+                    string[] wantedAttachments =
+                        ["stattrak", "stattrak_legacy", "nametag", "nametag_legacy", "keychain", "keychain_legacy"];
+                    var attachments = new Dictionary<string, object?>();
+                    foreach (var key in wantedAttachments)
+                    {
+                        if (!model.Attachments.TryGetValue(key, out var attachment) || attachment.Length == 0)
+                            continue;
+                        var influence = attachment[0];
+                        attachments[key] = new Dictionary<string, object?>
+                        {
+                            ["bone"] = influence.Name,
+                            ["offset"] = new[] { influence.Offset.X, influence.Offset.Y, influence.Offset.Z },
+                            ["rotation"] = new[] { influence.Rotation.X, influence.Rotation.Y, influence.Rotation.Z, influence.Rotation.W },
+                        };
+                    }
+                    if (attachments.Count > 0)
+                        root["attachments"] = attachments;
+                }
             }
 
             var filename = Path.GetFileNameWithoutExtension(targetFilename).Replace(".glb", "") + ".json";
