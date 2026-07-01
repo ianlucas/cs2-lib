@@ -837,6 +837,14 @@ public static class CatalogBuilder
         item.PlayerModel ??= previous.PlayerModel;
         item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
         item.StickerSchemaCount ??= previous.StickerSchemaCount;
+        item.StickerOffsetXMin ??= previous.StickerOffsetXMin;
+        item.StickerOffsetXMax ??= previous.StickerOffsetXMax;
+        item.StickerOffsetYMin ??= previous.StickerOffsetYMin;
+        item.StickerOffsetYMax ??= previous.StickerOffsetYMax;
+        item.LegacyStickerOffsetXMin ??= previous.LegacyStickerOffsetXMin;
+        item.LegacyStickerOffsetXMax ??= previous.LegacyStickerOffsetXMax;
+        item.LegacyStickerOffsetYMin ??= previous.LegacyStickerOffsetYMin;
+        item.LegacyStickerOffsetYMax ??= previous.LegacyStickerOffsetYMax;
     }
 
     private static int CreateStub(ItemGeneratorContext ctx, string name, string descToken, string? model = null)
