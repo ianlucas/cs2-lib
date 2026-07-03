@@ -517,6 +517,94 @@ public static partial class AssetProcessor
         return result;
     }
 
+    // Params the weapon compositor reads as DATA, not color: paint zone/coverage masks
+    // (g_tMasks, g_tPaintByNumberMasks) and cavity/AO (g_tAmbientOcclusion,
+    // g_tFinalAmbientOcclusion). Deliberately excludes sticker sfx masks (g_tSfxMaskSticker*)
+    // and pearlescence/layer masks — different pipelines, unmeasured benefit.
+    private static bool IsDataSelectorParamName(string name) =>
+        name.EndsWith("Masks", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("AmbientOcclusion", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasDataSelectorFilename(string vtexPath)
+    {
+        var stem = Path.GetFileNameWithoutExtension(vtexPath);
+        return stem.Contains("_masks", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("paintmask", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("_ao_", StringComparison.OrdinalIgnoreCase) ||
+            stem.EndsWith("_ao", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("paintao", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("ambient_occlusion", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("cavity", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Texture paths the customweapon compositor samples as data selectors — masks and AO —
+    // collected from vmat texture params, composite-material loose variables (per-skin masks/AO
+    // bind through m_strName + m_strTextureRuntimeResourcePath, not m_textureParams), plus a
+    // filename fallback for the ones that reach TexturesToProcess through model materials only.
+    // Membership selects fully-lossless WebP (see Config.WebpLosslessQuality): lossy VP8 (even
+    // q95) dips flat macroblocks by 1-8/255 on a sparse 16px lattice and rings far deeper (to
+    // ±238) along mask-zone borders. The shaders amplify that: (1 - g_tMasks.x) directly blends
+    // bare-metal g_tColor into the paint, so each dipped block renders as a pixelated square on
+    // dark skins (Desert Eagle | Blaze body), and AO error shifts wear chip edges inside the
+    // 0.58..0.68 reveal band (AK-47 Asiimov). Near-binary masks also compress far BETTER
+    // lossless (pist_deagle_masks: 16 KB lossy VP8 → 1.6 KB VP8L).
+    private static HashSet<string> CollectDataSelectorTexturePaths(ItemGeneratorContext ctx)
+    {
+        var result = new HashSet<string>();
+
+        void AddResolved(string value)
+        {
+            try
+            {
+                var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, value);
+                result.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
+            }
+            catch { }
+        }
+
+        foreach (var data in ctx.MaterialDataByPath.Values)
+        {
+            if (data is not Dictionary<string, object?> vmat ||
+                !vmat.TryGetValue("m_textureParams", out var paramsObj) ||
+                paramsObj is not List<object?> textureParams)
+                continue;
+            foreach (var entry in textureParams)
+            {
+                if (entry is not Dictionary<string, object?> param ||
+                    param.GetValueOrDefault("m_name") is not string name ||
+                    !IsDataSelectorParamName(name) ||
+                    param.GetValueOrDefault("m_pValue") is not string value)
+                    continue;
+                AddResolved(value);
+            }
+        }
+
+        void WalkLooseVariables(object? node)
+        {
+            if (node is Dictionary<string, object?> dict)
+            {
+                if (dict.GetValueOrDefault("m_strName") is string name &&
+                    IsDataSelectorParamName(name) &&
+                    dict.GetValueOrDefault("m_strTextureRuntimeResourcePath") is string path &&
+                    path.Length > 0)
+                    AddResolved(path);
+                foreach (var value in dict.Values) WalkLooseVariables(value);
+            }
+            else if (node is List<object?> list)
+            {
+                foreach (var value in list) WalkLooseVariables(value);
+            }
+        }
+        foreach (var data in ctx.CompositeMaterialDataByPath.Values) WalkLooseVariables(data);
+
+        foreach (var vtexPath in ctx.TexturesToProcess)
+        {
+            if (HasDataSelectorFilename(vtexPath))
+                result.Add(vtexPath);
+        }
+        return result;
+    }
+
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
     {
         var pending = ctx.TexturesToProcess
@@ -525,6 +613,7 @@ public static partial class AssetProcessor
 
         Log($"Processing {FormatCount(pending.Count, "material texture")}...");
         var normalMapTextures = CollectNormalMapTexturePaths(ctx);
+        var dataSelectorTextures = CollectDataSelectorTexturePaths(ctx);
 
         var compiledPaths = pending.Select(MaterialPaths.ToCompiledMaterialResourcePath).ToList();
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
@@ -550,15 +639,23 @@ public static partial class AssetProcessor
             if (File.Exists(pngPath))
             {
                 var stagedPath = Path.Combine(stagingDir, $"{encodeJobs.Count}.webp");
-                var nearLossless = normalMapTextures.Contains(vtexPath) ||
-                    normalMapTextures.Contains(MaterialPaths.NormalizeMaterialResourcePath(resolvedVtexPath));
+                var normalizedResolved = MaterialPaths.NormalizeMaterialResourcePath(resolvedVtexPath);
+                // Lossless (data selectors) wins over near-lossless (normals) when both match.
+                var lossless = dataSelectorTextures.Contains(vtexPath) ||
+                    dataSelectorTextures.Contains(normalizedResolved);
+                var nearLossless = !lossless && (normalMapTextures.Contains(vtexPath) ||
+                    normalMapTextures.Contains(normalizedResolved));
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
                     dest = stagedPath,
-                    // For near-lossless encodes, quality is libwebp's near-lossless level.
-                    quality = nearLossless ? Config.WebpNearLosslessNormals : Config.WebpQuality,
-                    nearLossless
+                    // For near-lossless encodes, quality is libwebp's near-lossless level; for
+                    // lossless it's VP8L's compression effort (not a fidelity knob).
+                    quality = lossless ? Config.WebpLosslessQuality
+                        : nearLossless ? Config.WebpNearLosslessNormals
+                        : Config.WebpQuality,
+                    nearLossless,
+                    lossless
                 }));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }

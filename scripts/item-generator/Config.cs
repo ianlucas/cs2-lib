@@ -56,6 +56,11 @@ public static partial class Config
     // error at ±2 (vs ±91 measured at lossy q95 on ak47_normal) for ~2/3 the lossless size.
     // Passed to scripts/encode-webp.ts as the near-lossless level (sharp reuses `quality`).
     public const int WebpNearLosslessNormals = 60;
+    // Data-selector composite inputs (paint masks, AO/cavity — see
+    // AssetProcessor.CollectDataSelectorTexturePaths) are sampled as data, not color, so
+    // they encode fully lossless (VP8L). In lossless mode libwebp's quality knob trades
+    // encode time for size with zero fidelity impact; 100 = smallest files.
+    public const int WebpLosslessQuality = 100;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 
