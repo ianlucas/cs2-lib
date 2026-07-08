@@ -154,7 +154,7 @@ jobs:
             '```' \
             "cat cs2-assets-v${VERSION}.tar.part* | tar -xf -" \
             '```' > release-notes.md
-          # Idempotent for re-runs: drop any prior release + tag for this version first.
+          # Re-run idempotency: drop this version's release + tag if it already exists.
           gh release delete "$TAG" --repo ianlucas/cs2-lib-assets --cleanup-tag --yes 2>/dev/null || true
           gh release create "$TAG" \
             --repo ianlucas/cs2-lib-assets \
@@ -162,4 +162,10 @@ jobs:
             --notes-file release-notes.md \
             --latest \
             assets-release/*
+          # Host only one asset set at a time: now that the new release is up, delete every
+          # other release (and its tag) so old ~10 GB sets don't accumulate on GitHub.
+          mapfile -t OLD_TAGS < <(gh release list --repo ianlucas/cs2-lib-assets --limit 1000 --json tagName --jq '.[].tagName')
+          for t in "${OLD_TAGS[@]}"; do
+            [ -n "$t" ] && [ "$t" != "$TAG" ] && gh release delete "$t" --repo ianlucas/cs2-lib-assets --cleanup-tag --yes || true
+          done
           echo "Published assets release ${TAG} to ianlucas/cs2-lib-assets" >> "$GITHUB_STEP_SUMMARY"
