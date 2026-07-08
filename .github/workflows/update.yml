@@ -131,7 +131,7 @@ jobs:
         run: rm -rf scripts/workdir/decompiled scripts/workdir/game
 
       - name: Package assets
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true' && inputs.skip_upload != true
+        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
         run: |
           mkdir -p assets-release
           # Release assets are capped at 2 GiB each, so stream the output tree into
@@ -141,7 +141,7 @@ jobs:
           ls -lh assets-release
 
       - name: Publish assets release
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true' && inputs.skip_upload != true
+        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ secrets.ASSETS_TOKEN }}
           VERSION: ${{ steps.version.outputs.number }}
