@@ -79,14 +79,19 @@ public static partial class Config
 
     public static ItemGeneratorMode DetectMode()
     {
+        // Full is triggered either by a local installed game (CS2_CSGO_PATH) or by the
+        // workflow input (INPUT_FULL) that runs Full against the downloaded depot in CI.
         return Environment.GetEnvironmentVariable("CS2_CSGO_PATH") != null
+            || Environment.GetEnvironmentVariable("INPUT_FULL") == "true"
             ? ItemGeneratorMode.Full
             : ItemGeneratorMode.Limited;
     }
 
     public static Cs2SourceMode DetectSourceMode()
     {
-        return DetectMode() == ItemGeneratorMode.Full
+        // Source is independent of Mode: only a local installed game reads from disk.
+        // Full-in-CI has no CS2_CSGO_PATH and sources everything from the depot download.
+        return Environment.GetEnvironmentVariable("CS2_CSGO_PATH") != null
             ? Cs2SourceMode.InstalledGame
             : Cs2SourceMode.WorkspaceDepot;
     }
@@ -109,6 +114,11 @@ public static partial class Config
     public static bool IsForceMode()
     {
         return Environment.GetEnvironmentVariable("INPUT_FORCE") == "true";
+    }
+
+    public static bool IsUploadSkipped()
+    {
+        return Environment.GetEnvironmentVariable("INPUT_SKIP_UPLOAD") == "true";
     }
 
     [GeneratedRegex(@"%s(\d+)")]

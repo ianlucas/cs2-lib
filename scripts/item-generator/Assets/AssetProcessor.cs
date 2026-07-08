@@ -25,7 +25,7 @@ public static partial class AssetProcessor
         {
             var vpkPaths = ctx.NeededVpkPaths.ToList();
             Log($"Resolving {FormatCount(vpkPaths.Count, "VPK asset")}...");
-            if (ctx.Mode == ItemGeneratorMode.Limited)
+            if (ctx.SourceMode == Cs2SourceMode.WorkspaceDepot)
                 await EnsureAssetPackages(ctx, vpkPaths);
             ResourceDecompiler.DecompileAssets(ctx, vpkPaths);
         }
