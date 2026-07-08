@@ -7,19 +7,24 @@ on:
         description: "Force update?"
         type: boolean
         default: false
+      full:
+        description: "Full generation (download full depot, regenerate all assets)?"
+        type: boolean
+        default: false
+      skip_upload:
+        description: "Skip CDN upload?"
+        type: boolean
+        default: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - name: Maximize build space
-        uses: easimon/maximize-build-space@master
+        uses: justinthelaw/maximize-github-runner-space@v0.10.0
         with:
-          remove-dotnet: "true"
-          remove-android: "true"
-          remove-haskell: "true"
-          remove-codeql: "true"
-          remove-docker-images: "true"
+          cleanup-profile: max
+          skip-components: gh-cli
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -54,6 +59,8 @@ jobs:
         run: npm run update
         env:
           INPUT_FORCE: ${{ inputs.force }}
+          INPUT_FULL: ${{ inputs.full }}
+          INPUT_SKIP_UPLOAD: ${{ inputs.skip_upload }}
           STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
 

@@ -64,8 +64,15 @@ public static class DepotDownloaderService
     public static async Task EnsureItemDefinitionPackages(ItemGeneratorContext ctx)
     {
         Directory.CreateDirectory(Config.WorkdirDir);
-        if (ctx.Mode == ItemGeneratorMode.Full) return;
+        if (ctx.SourceMode == Cs2SourceMode.InstalledGame) return;
 
         await DownloadFileList(Config.DepotFileListPath, Config.WorkdirDir);
+
+        // Full regenerates every model/material/texture. Their archives are discovered
+        // chicken-and-egg (a model's archive must be read to learn its materials, whose
+        // archives reveal textures, ...), so the needed set can't be computed up front.
+        // Bulk-fetch the whole pak set; DownloadFiles skips archives already on disk.
+        if (ctx.Mode == ItemGeneratorMode.Full)
+            await DownloadFiles(["game/csgo/pak01_"], Config.WorkdirDir);
     }
 }

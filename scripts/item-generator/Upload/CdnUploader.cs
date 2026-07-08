@@ -9,6 +9,12 @@ public static class CdnUploader
 
     public static async Task UploadAssets(ItemGeneratorContext ctx)
     {
+        if (Config.IsUploadSkipped())
+        {
+            Log("Upload skipped by workflow input (INPUT_SKIP_UPLOAD).");
+            return;
+        }
+
         var storageZone = Environment.GetEnvironmentVariable("STORAGE_ZONE");
         var accessKey = Environment.GetEnvironmentVariable("STORAGE_ACCESS_KEY");
 

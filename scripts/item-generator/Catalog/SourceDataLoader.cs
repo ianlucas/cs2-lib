@@ -11,11 +11,11 @@ public static class SourceDataLoader
     {
         Directory.CreateDirectory(Config.StaticImagesDir);
 
-        if (ctx.Mode == ItemGeneratorMode.Limited)
+        if (ctx.SourceMode == Cs2SourceMode.WorkspaceDepot)
             await DepotSync(ctx);
 
         VpkIndexBuilder.BuildVpkIndex(ctx);
-        if (ctx.Mode == ItemGeneratorMode.Limited)
+        if (ctx.SourceMode == Cs2SourceMode.WorkspaceDepot)
             await Depot.DepotDownloaderService.DownloadFiles(
                 ResourceDecompiler.GetItemDefinitionArchiveFiles(ctx), Config.WorkdirDir);
         ResourceDecompiler.DecompileItemDefinitionResources(ctx);

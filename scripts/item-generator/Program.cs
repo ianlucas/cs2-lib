@@ -22,8 +22,9 @@ if (File.Exists(envPath))
 }
 
 var mode = Config.DetectMode();
-var ctx = new ItemGeneratorContext { Mode = mode };
-Log($"Starting item generator in {mode} mode.");
+var sourceMode = Config.DetectSourceMode();
+var ctx = new ItemGeneratorContext { Mode = mode, SourceMode = sourceMode };
+Log($"Starting item generator in {mode} mode ({sourceMode} source).");
 
 try
 {
