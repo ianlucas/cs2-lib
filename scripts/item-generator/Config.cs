@@ -79,12 +79,12 @@ public static partial class Config
 
     public static ItemGeneratorMode DetectMode()
     {
-        // Full is triggered either by a local installed game (CS2_CSGO_PATH) or by the
-        // workflow input (INPUT_FULL) that runs Full against the downloaded depot in CI.
-        return Environment.GetEnvironmentVariable("CS2_CSGO_PATH") != null
-            || Environment.GetEnvironmentVariable("INPUT_FULL") == "true"
-            ? ItemGeneratorMode.Full
-            : ItemGeneratorMode.Limited;
+        // Full is the default (regenerate every asset from the depot). Limited is an
+        // opt-in fallback via the workflow input (INPUT_LIMITED) for when Full breaks:
+        // it refreshes item defs/images and inherits heavy 3D assets from items.json.
+        return Environment.GetEnvironmentVariable("INPUT_LIMITED") == "true"
+            ? ItemGeneratorMode.Limited
+            : ItemGeneratorMode.Full;
     }
 
     public static Cs2SourceMode DetectSourceMode()
