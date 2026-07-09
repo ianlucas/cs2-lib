@@ -7,8 +7,8 @@ on:
         description: "Force update?"
         type: boolean
         default: false
-      full:
-        description: "Full generation (download full depot, regenerate all assets)?"
+      limited:
+        description: "Limited generation?"
         type: boolean
         default: false
       skip_upload:
@@ -59,7 +59,7 @@ jobs:
         run: npm run update
         env:
           INPUT_FORCE: ${{ inputs.force }}
-          INPUT_FULL: ${{ inputs.full }}
+          INPUT_LIMITED: ${{ inputs.limited }}
           INPUT_SKIP_UPLOAD: ${{ inputs.skip_upload }}
           STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
@@ -131,45 +131,42 @@ jobs:
         if: always()
         run: rm -rf scripts/workdir/decompiled scripts/workdir/game
 
-      - name: Checkout assets repository
+      - name: Package assets
         if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
-        uses: actions/checkout@v6
-        with:
-          repository: ianlucas/cs2-lib-assets
-          path: cs2-lib-assets
-          token: ${{ secrets.ASSETS_TOKEN }}
-
-      - name: Sync assets to repository
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
-        run: rsync -av scripts/workdir/output/ cs2-lib-assets/
-
-      - name: Commit and push asset changes
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
-        id: commit_assets
-        working-directory: ./cs2-lib-assets
         run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No asset changes detected"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          mkdir -p assets-release
+          # Release assets are capped at 2 GiB each, so stream the output tree into
+          # ~1.9 GiB parts. Reassemble with: cat cs2-assets-v<version>.tar.part* | tar -xf -
+          tar -cf - -C scripts/workdir/output . \
+            | split -b 1900M -d -a 3 - "assets-release/cs2-assets-v${{ steps.version.outputs.number }}.tar.part"
+          ls -lh assets-release
 
-          git checkout -b "${{ steps.version.outputs.branch }}"
-          git add .
-          git commit -m "Update assets (CS2 v${{ steps.version.outputs.number }})"
-          git push origin "${{ steps.version.outputs.branch }}"
-
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "Committed asset changes to branch ${{ steps.version.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Create pull request for assets repository
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true' && steps.commit_assets.outputs.has_changes == 'true'
-        working-directory: ./cs2-lib-assets
+      - name: Publish assets release
+        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ secrets.ASSETS_TOKEN }}
+          VERSION: ${{ steps.version.outputs.number }}
         run: |
-          gh pr create \
-            --base main \
-            --head "${{ steps.version.outputs.branch }}" \
-            --title "Update assets (CS2 v${{ steps.version.outputs.number }})" \
-            --body "Automated asset update for CS2 v${{ steps.version.outputs.number }}"
+          TAG="cs2-v${VERSION}"
+          printf '%s\n' \
+            "Generated assets for CS2 v${VERSION}." \
+            "" \
+            "Download every .tar.part* file, then reassemble and extract:" \
+            '```' \
+            "cat cs2-assets-v${VERSION}.tar.part* | tar -xf -" \
+            '```' > release-notes.md
+          # Re-run idempotency: drop this version's release + tag if it already exists.
+          gh release delete "$TAG" --repo ianlucas/cs2-lib-assets --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$TAG" \
+            --repo ianlucas/cs2-lib-assets \
+            --title "CS2 v${VERSION}" \
+            --notes-file release-notes.md \
+            --latest \
+            assets-release/*
+          # Host only one asset set at a time: now that the new release is up, delete every
+          # other release (and its tag) so old ~10 GB sets don't accumulate on GitHub.
+          mapfile -t OLD_TAGS < <(gh release list --repo ianlucas/cs2-lib-assets --limit 1000 --json tagName --jq '.[].tagName')
+          for t in "${OLD_TAGS[@]}"; do
+            [ -n "$t" ] && [ "$t" != "$TAG" ] && gh release delete "$t" --repo ianlucas/cs2-lib-assets --cleanup-tag --yes || true
+          done
+          echo "Published assets release ${TAG} to ianlucas/cs2-lib-assets" >> "$GITHUB_STEP_SUMMARY"
