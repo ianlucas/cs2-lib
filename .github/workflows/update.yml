@@ -7,8 +7,8 @@ on:
         description: "Force update?"
         type: boolean
         default: false
-      full:
-        description: "Full generation (download full depot, regenerate all assets)?"
+      limited:
+        description: "Limited generation?"
         type: boolean
         default: false
       skip_upload:
@@ -59,7 +59,7 @@ jobs:
         run: npm run update
         env:
           INPUT_FORCE: ${{ inputs.force }}
-          INPUT_FULL: ${{ inputs.full }}
+          INPUT_LIMITED: ${{ inputs.limited }}
           INPUT_SKIP_UPLOAD: ${{ inputs.skip_upload }}
           STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
