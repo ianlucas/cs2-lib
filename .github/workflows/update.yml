@@ -63,6 +63,7 @@ jobs:
           INPUT_SKIP_UPLOAD: ${{ inputs.skip_upload }}
           STORAGE_ZONE: ${{ secrets.STORAGE_ZONE }}
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Detect changes
         id: changes
