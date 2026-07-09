@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,12 +11,20 @@ public static class External
     // External JSON uses lowercase keys (e.g. "contains", "original"); match them
     // case-insensitively so records without explicit [JsonPropertyName] still bind.
     private static readonly JsonSerializerOptions ExternalJsonOptions = new() { PropertyNameCaseInsensitive = true };
+    // Fetch source JSON through the authenticated GitHub Contents API instead of
+    // raw.githubusercontent.com: the raw CDN rate-limits by runner IP (429s in CI and
+    // ignores auth for public content), while the API applies a generous per-token limit
+    // and conditional 304 responses don't count against it. `?ref=main` pins the branch.
     private static readonly Dictionary<string, string> ExternalUrls = new()
     {
-        ["collectible"] = "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/collectibles.json",
-        ["container"] = "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/crates.json",
-        ["keychain"] = "https://raw.githubusercontent.com/ByMykel/CSGO-API/refs/heads/main/public/api/en/sticker_slabs.json"
+        ["collectible"] = "https://api.github.com/repos/ByMykel/CSGO-API/contents/public/api/en/collectibles.json?ref=main",
+        ["container"] = "https://api.github.com/repos/ByMykel/CSGO-API/contents/public/api/en/crates.json?ref=main",
+        ["keychain"] = "https://api.github.com/repos/ByMykel/CSGO-API/contents/public/api/en/sticker_slabs.json?ref=main"
     };
+    // Each source file is fetched at most once per process and the parsed result shared
+    // across the hundreds of per-container callers; without this the same file was
+    // re-requested twice per container, which is what tripped the CDN rate limit.
+    private static readonly ConcurrentDictionary<string, Lazy<Task<object>>> MemoCache = new();
 
     private record CacheMetadata(string? Etag, string? LastModified, string Url);
     private record SourceEntry(string Image, SourceEntryOriginal Original);
@@ -27,7 +36,15 @@ public static class External
     private record CrateItem(string Name, string Id);
     private record CrateOriginal([property: JsonPropertyName("item_name")] string ItemName);
 
-    private static async Task<T> FetchCachedExternalJson<T>(string key)
+    private static Task<T> FetchCachedExternalJson<T>(string key)
+    {
+        var lazy = MemoCache.GetOrAdd(key, k => new Lazy<Task<object>>(() => FetchExternalJsonUncached<T>(k)));
+        return AwaitAs<T>(lazy.Value);
+    }
+
+    private static async Task<T> AwaitAs<T>(Task<object> task) => (T)await task;
+
+    private static async Task<object> FetchExternalJsonUncached<T>(string key)
     {
         var url = ExternalUrls[key];
         var dataPath = Path.Combine(Config.ItemGeneratorCacheDir, $"{key}.json");
@@ -42,6 +59,15 @@ public static class External
         }
 
         var request = new HttpRequestMessage(HttpMethod.Get, url);
+        // Raw media type returns the file bytes directly (up to 100 MB), so the body
+        // handling below is identical to the old raw.githubusercontent.com flow. The API
+        // also requires a User-Agent, and a token (when present) lifts the rate limit.
+        request.Headers.TryAddWithoutValidation("Accept", "application/vnd.github.raw");
+        request.Headers.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
+        request.Headers.TryAddWithoutValidation("User-Agent", "cs2-lib-item-generator");
+        var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+        if (!string.IsNullOrEmpty(token))
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
         if (metadata?.Etag != null)
             request.Headers.TryAddWithoutValidation("If-None-Match", metadata.Etag);
         if (metadata?.LastModified != null)
