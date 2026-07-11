@@ -16,6 +16,7 @@ import {
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
     CS2_STICKER_OFFSET_FACTOR,
+    CS2_STICKER_ROTATION_STEP,
     CS2_STICKER_SCRAPE_FACTOR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
@@ -151,6 +152,29 @@ export function healStickerOffset(
 }
 
 /**
+ * True when `rotation` is a valid sticker rotation: on the {@link CS2_STICKER_ROTATION_STEP}
+ * half-degree grid (…, -0.5, 0, 0.5, 1, …) and within
+ * [{@link CS2_MIN_STICKER_ROTATION}, {@link CS2_MAX_STICKER_ROTATION}]. `undefined` (unset) is valid.
+ */
+export function validateStickerRotation(rotation?: number): boolean {
+    return (
+        rotation === undefined ||
+        (Number.isInteger(rotation / CS2_STICKER_ROTATION_STEP) &&
+            rotation >= CS2_MIN_STICKER_ROTATION &&
+            rotation <= CS2_MAX_STICKER_ROTATION)
+    );
+}
+
+/**
+ * Snaps a rotation in degrees to the nearest {@link CS2_STICKER_ROTATION_STEP} grid value
+ * (2.4 → 2.5, 2.7 → 2.5). Exact - half-degree values are binary-representable, so no float noise.
+ * Does NOT range-wrap; pair with {@link validateStickerRotation}.
+ */
+export function snapStickerRotation(rotation: number): number {
+    return Math.round(rotation / CS2_STICKER_ROTATION_STEP) * CS2_STICKER_ROTATION_STEP;
+}
+
+/**
  * The schema (StickerMarkup anchor) a freshly applied sticker should occupy: the first anchor in
  * `[0, schemaCount)` no current sticker uses, falling back to `0` once every anchor is taken (so the
  * stack can exceed the schema count). Pass the target's {@link CS2EconomyItem.getStickerSchemaCount}.
@@ -206,8 +230,7 @@ export class CS2Inventory {
                 assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
             }
             if (rotation !== undefined) {
-                assert(Number.isInteger(rotation));
-                assert(rotation >= CS2_MIN_STICKER_ROTATION && rotation <= CS2_MAX_STICKER_ROTATION);
+                assert(validateStickerRotation(rotation));
             }
             if (x !== undefined) {
                 assert(isFactorPrecise(x, CS2_STICKER_OFFSET_FACTOR));
@@ -300,20 +323,16 @@ export class CS2Inventory {
                         delete item.stickers[slot];
                         continue;
                     }
-                    // Legacy inventories stored sticker rotation as 0–359; the in-game range
-                    // is -180–180. Convert the upper half (e.g. 270 → -90) to preserve the
-                    // visual rotation, dropping anything that still doesn't fit.
+                    // Snap stored rotations onto the half-degree grid (2.7 heals to 2.5 instead of
+                    // being dropped). Legacy inventories stored 0–359 where the in-game range is
+                    // -180–180; convert the upper half (e.g. 270 → -90) to preserve the visual
+                    // rotation, dropping anything that still doesn't fit.
                     if (sticker.rotation !== undefined) {
-                        if (Number.isInteger(sticker.rotation) && sticker.rotation > CS2_MAX_STICKER_ROTATION) {
-                            sticker.rotation -= 360;
+                        let rotation = snapStickerRotation(sticker.rotation);
+                        if (rotation > CS2_MAX_STICKER_ROTATION) {
+                            rotation -= 360;
                         }
-                        if (
-                            !Number.isInteger(sticker.rotation) ||
-                            sticker.rotation < CS2_MIN_STICKER_ROTATION ||
-                            sticker.rotation > CS2_MAX_STICKER_ROTATION
-                        ) {
-                            sticker.rotation = undefined;
-                        }
+                        sticker.rotation = validateStickerRotation(rotation) ? rotation : undefined;
                     }
                     // Offsets are deltas from the markup default; clamp out-of-envelope values to
                     // the model's published bounds (and snap to the offset grid) so positions a
