@@ -97,7 +97,7 @@ export class CS2EconomyInstance {
     }: {
         assetsBaseUrl?: string;
         items: CS2Item[];
-        language: CS2ItemTranslationMap;
+        language?: CS2ItemTranslationMap;
     }): void {
         this.baseUrl = assetsBaseUrl ?? this.baseUrl;
         this.categories.clear();
@@ -105,11 +105,17 @@ export class CS2EconomyInstance {
         this.stickers.clear();
         this.itemsAsArray = [];
         for (const item of items) {
-            const economyItem = new CS2EconomyItem(this, item, ensure(language[item.id]));
+            const economyItem = new CS2EconomyItem(
+                this,
+                item,
+                language !== undefined ? ensure(language[item.id]) : { name: String(item.id) }
+            );
             this.items.set(item.id, economyItem);
             if (economyItem.isSticker()) {
                 this.stickers.add(economyItem);
-                this.categories.add(ensure(economyItem.category));
+                if (language !== undefined) {
+                    this.categories.add(ensure(economyItem.category));
+                }
             }
             this.itemsAsArray.push(economyItem);
         }
