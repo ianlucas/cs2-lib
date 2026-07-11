@@ -11,7 +11,13 @@ import {
     CS2_MIN_KEYCHAIN_SEED
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
-import { CS2Inventory, getNextStickerSchema, healStickerOffset } from "./inventory.ts";
+import {
+    CS2Inventory,
+    getNextStickerSchema,
+    healStickerOffset,
+    snapStickerRotation,
+    validateStickerRotation
+} from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
 import { english } from "./translations/english.ts";
@@ -149,7 +155,7 @@ describe("CS2Inventory methods", () => {
     test("addWithSticker validates attributes and rejects invalid ones without consuming the sticker", () => {
         inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:0 (sticker)
         // Valid attributes are validated and stored on the new item's first sticker; the sticker is consumed.
-        inventory.addWithSticker(0, AWP_DRAGON_LORE_ID, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90 }); // uid:0
+        inventory.addWithSticker(0, AWP_DRAGON_LORE_ID, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90.5 }); // uid:0
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).stickers?.get(0)).toMatchObject({
             id: ZZ_NATION_RIO_2022_ID,
@@ -157,14 +163,14 @@ describe("CS2Inventory methods", () => {
             wear: 0.5,
             x: 0.1,
             y: -0.05,
-            rotation: 90
+            rotation: 90.5
         });
         // Each invalid attribute throws before any mutation: the sticker stays unconsumed.
         inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID }); // uid:1 (fresh sticker)
         for (const attributes of [
             { x: 0.12345 }, // offset more precise than the 0.0001 grid
             { y: -0.2 }, // outside the model's offset envelope (AWP legacy Y max ≈ 0.1415)
-            { rotation: 90.5 }, // non-integer rotation
+            { rotation: 90.7 }, // off the half-degree grid
             { rotation: 200 }, // rotation outside [-180, 180]
             { wear: 2 }, // wear outside [0, 1]
             { wear: 0.005 }, // wear more precise than the 0.01 grid
@@ -417,7 +423,7 @@ describe("CS2Inventory methods", () => {
         inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:0 (target)
         inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:1 (sticker)
         // Valid attributes are validated and stored on the applied sticker, and the sticker is consumed.
-        inventory.applyItemSticker(0, 1, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90 });
+        inventory.applyItemSticker(0, 1, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: -90.5 });
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).stickers?.get(0)).toMatchObject({
             id: ZZ_NATION_RIO_2022_ID,
@@ -425,7 +431,7 @@ describe("CS2Inventory methods", () => {
             wear: 0.5,
             x: 0.1,
             y: -0.05,
-            rotation: 90
+            rotation: -90.5
         });
         // Each invalid attribute throws before any mutation: the sticker stays unconsumed and the
         // target's stack is left untouched.
@@ -433,7 +439,7 @@ describe("CS2Inventory methods", () => {
         for (const attributes of [
             { x: 0.12345 }, // offset more precise than the 0.0001 grid
             { y: -0.2 }, // outside the model's offset envelope (AWP legacy Y max ≈ 0.1415)
-            { rotation: 90.5 }, // non-integer rotation
+            { rotation: 90.7 }, // off the half-degree grid
             { rotation: 200 }, // rotation outside [-180, 180]
             { wear: 2 }, // wear outside [0, 1]
             { wear: 0.005 }, // wear more precise than the 0.01 grid
@@ -449,7 +455,7 @@ describe("CS2Inventory methods", () => {
             wear: 0.5,
             x: 0.1,
             y: -0.05,
-            rotation: 90
+            rotation: -90.5
         });
     });
 
@@ -925,7 +931,7 @@ describe("CS2Inventory methods", () => {
                             1: { id: FALLEN_COLOGNE_2015_ID, rotation: 359 },
                             2: { id: FALLEN_COLOGNE_2015_ID, rotation: 181 },
                             3: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 },
-                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 90 }
+                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 359.5 }
                         }
                     },
                     1: {
@@ -933,7 +939,8 @@ describe("CS2Inventory methods", () => {
                         stickers: {
                             0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
                             // Already within the new range: must stay untouched (idempotent).
-                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 }
+                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 },
+                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: -90.5 }
                         }
                     }
                 },
@@ -946,13 +953,39 @@ describe("CS2Inventory methods", () => {
         expect(first.get(1)?.rotation).toBe(-1);
         expect(first.get(2)?.rotation).toBe(-179);
         expect(first.get(3)?.rotation).toBe(180);
-        expect(first.get(4)?.rotation).toBe(90);
+        expect(first.get(4)?.rotation).toBe(-0.5);
         // Conversion preserves sticker identity.
         expect(first.get(0)?.id).toBe(FALLEN_COLOGNE_2015_ID);
         const second = ensure(inventory.get(1).stickers);
         // A default rotation of 0 is compacted away (omitted) on normalize.
         expect(second.get(0)?.rotation).toBe(undefined);
         expect(second.get(1)?.rotation).toBe(-90);
+        expect(second.get(2)?.rotation).toBe(-90.5);
+    });
+
+    test("snaps off-grid sticker rotation to the nearest half degree on load", () => {
+        inventory = new CS2Inventory({
+            data: {
+                items: {
+                    0: {
+                        id: AWP_DRAGON_LORE_ID,
+                        stickers: {
+                            0: { id: FALLEN_COLOGNE_2015_ID, rotation: 2.4 },
+                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: 2.7 },
+                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: -2.4 },
+                            // Snap happens before the legacy wrap, so an off-grid legacy angle heals too.
+                            3: { id: FALLEN_COLOGNE_2015_ID, rotation: 270.7 }
+                        }
+                    }
+                },
+                version: 1
+            }
+        });
+        const stickers = ensure(inventory.get(0).stickers);
+        expect(stickers.get(0)?.rotation).toBe(2.5);
+        expect(stickers.get(1)?.rotation).toBe(2.5);
+        expect(stickers.get(2)?.rotation).toBe(-2.5);
+        expect(stickers.get(3)?.rotation).toBe(-89.5);
     });
 
     test("drops unrecoverable sticker rotation on load without bricking the inventory", () => {
@@ -963,11 +996,11 @@ describe("CS2Inventory methods", () => {
                         id: AWP_DRAGON_LORE_ID,
                         stickers: {
                             0: { id: FALLEN_COLOGNE_2015_ID, rotation: NaN },
-                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: 90.5 },
+                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: Infinity },
                             2: { id: FALLEN_COLOGNE_2015_ID, rotation: 1000 },
                             3: { id: FALLEN_COLOGNE_2015_ID, rotation: -300 },
                             // A valid neighbor must survive intact.
-                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 45 }
+                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 45.5 }
                         }
                     }
                 },
@@ -980,7 +1013,7 @@ describe("CS2Inventory methods", () => {
             expect(stickers.get(slot)?.id).toBe(FALLEN_COLOGNE_2015_ID);
             expect(stickers.get(slot)?.rotation).toBe(undefined);
         }
-        expect(stickers.get(4)?.rotation).toBe(45);
+        expect(stickers.get(4)?.rotation).toBe(45.5);
     });
 
     test("heals legacy sticker rotation nested inside storage units", () => {
@@ -1003,20 +1036,20 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(0).storage?.get(0)?.stickers?.get(0)?.rotation).toBe(-90);
     });
 
-    test("add and edit enforce the -180-180 sticker rotation range", () => {
+    test("add and edit enforce the -180-180 half-degree sticker rotation grid", () => {
         const addRotation = (rotation: number) => () =>
             inventory.add({ id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation } } });
-        for (const rotation of [-180, -90, 0, 90, 180]) {
+        for (const rotation of [-180, -179.5, -90, 0, 0.5, 90.5, 179.5, 180]) {
             expect(addRotation(rotation)).not.toThrow();
         }
-        for (const rotation of [181, -181, 270, 359, NaN, 90.5]) {
+        for (const rotation of [181, -181, -180.5, 180.5, 270, 359, NaN, 90.7, 2.1]) {
             expect(addRotation(rotation)).toThrow();
         }
         inventory.add({ id: AWP_DRAGON_LORE_ID });
         const uid = inventory.size() - 1;
         expect(() => inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } } })).toThrow();
-        inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 } } });
-        expect(inventory.get(uid).stickers?.get(0)?.rotation).toBe(-90);
+        inventory.edit(uid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: -90.5 } } });
+        expect(inventory.get(uid).stickers?.get(0)?.rotation).toBe(-90.5);
     });
 
     test("clamps and snaps out-of-envelope sticker offsets to the model bounds on load", () => {
@@ -1166,5 +1199,22 @@ describe("sticker schema materialization", () => {
         expect(healStickerOffset(NaN, 0, 1)).toBe(undefined);
         expect(healStickerOffset(5, undefined, 1)).toBe(1);
         expect(healStickerOffset(-5, -1, undefined)).toBe(-1);
+    });
+
+    test("validateStickerRotation accepts the half-degree grid within -180-180", () => {
+        for (const rotation of [undefined, -180, -179.5, -0.5, 0, 0.5, 90, 90.5, 180]) {
+            expect(validateStickerRotation(rotation)).toBe(true);
+        }
+        for (const rotation of [-180.5, 180.5, 200, 2.1, 2.6, 90.7, NaN, Infinity, -Infinity]) {
+            expect(validateStickerRotation(rotation)).toBe(false);
+        }
+    });
+
+    test("snapStickerRotation rounds to the nearest half degree", () => {
+        expect(snapStickerRotation(2.4)).toBe(2.5);
+        expect(snapStickerRotation(2.7)).toBe(2.5);
+        expect(snapStickerRotation(-2.4)).toBe(-2.5);
+        expect(snapStickerRotation(2.5)).toBe(2.5);
+        expect(snapStickerRotation(90)).toBe(90);
     });
 });
