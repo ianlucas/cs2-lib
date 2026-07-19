@@ -88,6 +88,8 @@ test("nametag validation", () => {
     expect(CS2Economy.safeValidateNameTag(" fail")).toBeFalsy();
     expect(CS2Economy.safeValidateNameTag("小島 秀夫")).toBeTruthy();
     expect(CS2Economy.safeValidateNameTag("孔子")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("千古风流今在此，万里功名莫放休")).toBeTruthy();
+    expect(CS2Economy.safeValidateNameTag("中文，句号。分号；感叹！")).toBeTruthy();
     expect(CS2Economy.safeValidateNameTag("bo$$u")).toBeTruthy();
     expect(CS2Economy.safeValidateNameTag("toolongnametagtoolongnametag")).toBeFalsy();
 });
