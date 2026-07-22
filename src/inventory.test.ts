@@ -183,6 +183,54 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(1).id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
     });
 
+    test("addWithKeychain should add items with keychains to the inventory", () => {
+        inventory.add({ id: LIL_AVA_ID }); // uid:0
+        inventory.addWithKeychain(0, AK47_ID); // uid:0
+        expect(inventory.size()).toBe(1);
+        const result = inventory.get(0);
+        expect(result.id).toBe(AK47_ID);
+        expect(result.equipped).toBe(undefined);
+        expect(result.equippedCT).toBe(undefined);
+        expect(result.equippedT).toBe(undefined);
+        expect(Object.fromEntries(ensure(result.keychains))).toEqual({ 0: { id: LIL_AVA_ID } });
+        expect(result.uid).toBe(0);
+        expect(result.updatedAt).not.toBe(undefined);
+    });
+
+    test("addWithKeychain validates attributes and rejects invalid ones without consuming the keychain", () => {
+        inventory.add({ id: LIL_AVA_ID }); // uid:0 (keychain)
+        // Positions are absolute markup-space coordinates; large in-bounds values are fine.
+        inventory.addWithKeychain(0, AWP_DRAGON_LORE_ID, { seed: 1234, x: 40, y: 1.3, z: 11 }); // uid:0
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).keychains?.get(0)).toMatchObject({
+            id: LIL_AVA_ID,
+            seed: 1234,
+            x: 40,
+            y: 1.3,
+            z: 11
+        });
+        // Each invalid attribute throws before any mutation: the keychain stays unconsumed.
+        inventory.add({ id: LIL_AVA_ID }); // uid:1 (fresh keychain)
+        for (const attributes of [
+            { seed: CS2_MIN_KEYCHAIN_SEED - 1 }, // seed below the valid range
+            { seed: CS2_MAX_KEYCHAIN_SEED + 1 }, // seed above the valid range
+            { seed: 1.5 }, // seed must be an integer
+            { x: 0.123456 }, // offset more precise than the 0.0001 grid
+            { x: NaN }, // non-finite offset
+            { y: NaN },
+            { z: NaN }
+        ]) {
+            expect(() => inventory.addWithKeychain(1, AWP_DRAGON_LORE_ID, attributes)).toThrow();
+        }
+        expect(inventory.size()).toBe(2);
+        expect(inventory.get(1).id).toBe(LIL_AVA_ID);
+        // A non-keychain item cannot be consumed, and an item without keychain support cannot hold one.
+        inventory.add({ id: FALLEN_COLOGNE_2015_ID }); // uid:2 (sticker)
+        expect(() => inventory.addWithKeychain(2, AWP_DRAGON_LORE_ID)).toThrow();
+        expect(() => inventory.addWithKeychain(1, KARAMBIT_BOREAL_FOREST_ID)).toThrow();
+        expect(inventory.size()).toBe(3);
+    });
+
     test("edit should edit the item with the given id", () => {
         const originalItem = {
             id: AWP_DRAGON_LORE_ID,

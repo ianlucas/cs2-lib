@@ -557,6 +557,26 @@ export class CS2Inventory {
         return this;
     }
 
+    /**
+     * Adds a new item `id` to the inventory with the keychain item `keychainUid` applied to its first
+     * slot, consuming the keychain. The optional `attributes` set that keychain's `seed` and its
+     * `x`/`y`/`z` position in markup space. All are validated against the new item before anything
+     * mutates, so an invalid value throws without consuming the keychain.
+     */
+    addWithKeychain(
+        keychainUid: number,
+        id: number,
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id"> = {}
+    ): this {
+        const keychain = this.get(keychainUid).expectKeychain();
+        const { seed, x, y, z } = attributes;
+        const keychains = { 0: { id: keychain.id, seed, x, y, z } };
+        this.validateKeychains(keychains, this.economy.getById(id));
+        this.items.delete(keychainUid);
+        this.add({ id, keychains });
+        return this;
+    }
+
     edit(itemUid: number, properties: Partial<CS2BaseInventoryItem>): this {
         const item = this.get(itemUid);
         assert(properties.id === undefined || properties.id === item.id);

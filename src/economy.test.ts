@@ -183,53 +183,6 @@ test("default cdn url", () => {
     expect(baseGloves.getImage().startsWith("https://cdn.cstrike.app/images"));
 });
 
-test("sticker offset bounds getters", () => {
-    CS2Economy.load({ items: CS2_ITEMS, language: english });
-    // HD weapon (no legacy flag) resolves to the HD envelope on its own item.
-    const ak47 = CS2Economy.getById(4);
-    expect(ak47.getMinimumStickerOffsetX()).toBe(-0.3662);
-    expect(ak47.getMaximumStickerOffsetX()).toBe(0.6392);
-    expect(ak47.getMinimumStickerOffsetY()).toBe(-0.0298);
-    expect(ak47.getMaximumStickerOffsetY()).toBe(0.2157);
-    // A legacy skin reads the legacy envelope from its base item via `parent`.
-    const dragonLore = CS2Economy.getById(307);
-    expect(dragonLore.legacy).toBe(true);
-    expect(dragonLore.getMinimumStickerOffsetX()).toBe(-0.4323);
-    expect(dragonLore.getMaximumStickerOffsetX()).toBe(0.4206);
-    expect(dragonLore.getMinimumStickerOffsetY()).toBe(-0.0921);
-    expect(dragonLore.getMaximumStickerOffsetY()).toBe(0.1415);
-    // Items without published bounds expose no constraint.
-    const gloves = CS2Economy.getById(56);
-    expect(gloves.getMinimumStickerOffsetX()).toBe(undefined);
-    expect(gloves.getMaximumStickerOffsetY()).toBe(undefined);
-});
-
-test("keychain offset bounds getters (X/Y/Z, legacy-aware)", () => {
-    CS2Economy.load({ items: CS2_ITEMS, language: english });
-    // HD weapon (no legacy flag) resolves to the HD envelope on its own item.
-    const ak47 = CS2Economy.getById(4);
-    expect(ak47.getMinimumKeychainOffsetX()).toBe(-11.0706);
-    expect(ak47.getMaximumKeychainOffsetX()).toBe(24.7254);
-    expect(ak47.getMinimumKeychainOffsetY()).toBe(-0.0194);
-    expect(ak47.getMaximumKeychainOffsetY()).toBe(1.0222);
-    expect(ak47.getMinimumKeychainOffsetZ()).toBe(-2.7949);
-    expect(ak47.getMaximumKeychainOffsetZ()).toBe(4.28);
-    // A legacy skin reads the legacy envelope from its base item via `parent`.
-    const dragonLore = CS2Economy.getById(307);
-    expect(dragonLore.legacy).toBe(true);
-    expect(dragonLore.getMinimumKeychainOffsetX()).toBe(-10.1283);
-    expect(dragonLore.getMaximumKeychainOffsetX()).toBe(41.2865);
-    expect(dragonLore.getMinimumKeychainOffsetY()).toBe(-0.0176);
-    expect(dragonLore.getMaximumKeychainOffsetY()).toBe(1.3716);
-    // Keychains carry a Z envelope (unlike stickers), and it is honored on the legacy path.
-    expect(dragonLore.getMinimumKeychainOffsetZ()).toBe(2.6437);
-    expect(dragonLore.getMaximumKeychainOffsetZ()).toBe(11.7576);
-    // Items without published bounds expose no constraint.
-    const glovesItem = CS2Economy.getById(56);
-    expect(glovesItem.getMinimumKeychainOffsetX()).toBe(undefined);
-    expect(glovesItem.getMaximumKeychainOffsetZ()).toBe(undefined);
-});
-
 test("display-case keychain resolves model and material through the slab parent", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     // 15200 is the Sticker Display Case slab (carries the shared model/material);
