@@ -284,12 +284,25 @@ export class CS2EconomyItem implements Interface<
     containerType: CS2ContainerType | undefined;
     def: number | undefined;
     desc: string | undefined;
+    displaySeed: number | undefined;
     free: boolean | undefined;
     id: number = null!;
     image: string | undefined;
     index: number | undefined;
+    keychainOffsetXMax: number | undefined;
+    keychainOffsetXMin: number | undefined;
+    keychainOffsetYMax: number | undefined;
+    keychainOffsetYMin: number | undefined;
+    keychainOffsetZMax: number | undefined;
+    keychainOffsetZMin: number | undefined;
     keys: number[] | undefined;
     legacy: boolean | undefined;
+    legacyKeychainOffsetXMax: number | undefined;
+    legacyKeychainOffsetXMin: number | undefined;
+    legacyKeychainOffsetYMax: number | undefined;
+    legacyKeychainOffsetYMin: number | undefined;
+    legacyKeychainOffsetZMax: number | undefined;
+    legacyKeychainOffsetZMin: number | undefined;
     legacyStickerOffsetXMax: number | undefined;
     legacyStickerOffsetXMin: number | undefined;
     legacyStickerOffsetYMax: number | undefined;
@@ -640,16 +653,16 @@ export class CS2EconomyItem implements Interface<
     }
 
     getPaintMaterial(): string {
-        return this.economy.resolveUrl(this.paintMaterial);
+        return this.economy.resolveUrl(this.paintMaterial ?? this.parent?.paintMaterial);
     }
 
     getPlayerModel(): string {
-        const { playerModel } = this.parent ?? this;
+        const playerModel = this.playerModel ?? this.parent?.playerModel;
         return this.economy.resolveUrl(playerModel);
     }
 
     getModelData(): string {
-        const { playerModel } = this.parent ?? this;
+        const playerModel = this.playerModel ?? this.parent?.playerModel;
         return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
     }
 
@@ -698,6 +711,36 @@ export class CS2EconomyItem implements Interface<
     getMaximumStickerOffsetY(): number | undefined {
         const item = this.parent ?? this;
         return (this.legacy ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
+    }
+
+    getMinimumKeychainOffsetX(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyKeychainOffsetXMin : undefined) ?? item.keychainOffsetXMin;
+    }
+
+    getMaximumKeychainOffsetX(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyKeychainOffsetXMax : undefined) ?? item.keychainOffsetXMax;
+    }
+
+    getMinimumKeychainOffsetY(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyKeychainOffsetYMin : undefined) ?? item.keychainOffsetYMin;
+    }
+
+    getMaximumKeychainOffsetY(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyKeychainOffsetYMax : undefined) ?? item.keychainOffsetYMax;
+    }
+
+    getMinimumKeychainOffsetZ(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyKeychainOffsetZMin : undefined) ?? item.keychainOffsetZMin;
+    }
+
+    getMaximumKeychainOffsetZ(): number | undefined {
+        const item = this.parent ?? this;
+        return (this.legacy ? item.legacyKeychainOffsetZMax : undefined) ?? item.keychainOffsetZMax;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

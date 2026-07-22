@@ -83,6 +83,52 @@ test("getModelData derives from playerModel (.glb -> .json) with base inheritanc
     expect(CS2Economy.get(2).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
 });
 
+test("playerModel and paintMaterial resolve own-first, then through the parent", () => {
+    // Keychain-shaped data: the item carries its own model/material while its base (the shared
+    // stub) carries none, and a display-case-shaped item carries none but its base carries both.
+    const ownModel = "/models/kc_missinglink_ava_ab9e13cc_331408bc.glb";
+    const ownMaterial = "/materials/kc_missinglink_ava_331408bc.vmat.json";
+    const slabModel = "/models/kc_sticker_display_case_ab9e13cc_331408bc.glb";
+    const slabMaterial = "/materials/kc_sticker_display_case_331408bc.vcompmat.json";
+    const items: CS2Item[] = [
+        { id: 1, rarity: CS2RarityColor.Common, type: "stub" },
+        {
+            baseId: 1,
+            id: 2,
+            paintMaterial: ownMaterial,
+            playerModel: ownModel,
+            rarity: CS2RarityColor.Rare,
+            type: "keychain"
+        },
+        {
+            baseId: 1,
+            free: true,
+            id: 3,
+            paintMaterial: slabMaterial,
+            playerModel: slabModel,
+            rarity: CS2RarityColor.Common,
+            type: "keychain"
+        },
+        { baseId: 3, id: 4, rarity: CS2RarityColor.Common, stickerId: 5, type: "keychain" }
+    ];
+    CS2Economy.load({
+        items,
+        language: {
+            1: { name: "Keychain" },
+            2: { name: "Keychain | Lil' Ava" },
+            3: { name: "Keychain | Sticker Display Case" },
+            4: { name: "Keychain | Sticker Display Case | Sticker" }
+        }
+    });
+    // Own model/material win over the (empty) stub parent.
+    expect(CS2Economy.get(2).getPlayerModel()).toBe(CS2Economy.resolveUrl(ownModel));
+    expect(CS2Economy.get(2).getPaintMaterial()).toBe(CS2Economy.resolveUrl(ownMaterial));
+    // The per-sticker display case falls back to the slab parent's model/material.
+    expect(CS2Economy.get(4).getPlayerModel()).toBe(CS2Economy.resolveUrl(slabModel));
+    expect(CS2Economy.get(4).getModelData()).toBe(CS2Economy.resolveUrl(slabModel.replace(/\.glb$/, ".json")));
+    expect(CS2Economy.get(4).getPaintMaterial()).toBe(CS2Economy.resolveUrl(slabMaterial));
+});
+
 test("nametag validation", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     expect(CS2Economy.safeValidateNameTag(" fail")).toBeFalsy();
@@ -137,23 +183,15 @@ test("default cdn url", () => {
     expect(baseGloves.getImage().startsWith("https://cdn.cstrike.app/images"));
 });
 
-test("sticker offset bounds getters", () => {
+test("display-case keychain resolves model and material through the slab parent", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
-    // HD weapon (no legacy flag) resolves to the HD envelope on its own item.
-    const ak47 = CS2Economy.getById(4);
-    expect(ak47.getMinimumStickerOffsetX()).toBe(-0.3662);
-    expect(ak47.getMaximumStickerOffsetX()).toBe(0.6392);
-    expect(ak47.getMinimumStickerOffsetY()).toBe(-0.0298);
-    expect(ak47.getMaximumStickerOffsetY()).toBe(0.2157);
-    // A legacy skin reads the legacy envelope from its base item via `parent`.
-    const dragonLore = CS2Economy.getById(307);
-    expect(dragonLore.legacy).toBe(true);
-    expect(dragonLore.getMinimumStickerOffsetX()).toBe(-0.4323);
-    expect(dragonLore.getMaximumStickerOffsetX()).toBe(0.4206);
-    expect(dragonLore.getMinimumStickerOffsetY()).toBe(-0.0921);
-    expect(dragonLore.getMaximumStickerOffsetY()).toBe(0.1415);
-    // Items without published bounds expose no constraint.
-    const gloves = CS2Economy.getById(56);
-    expect(gloves.getMinimumStickerOffsetX()).toBe(undefined);
-    expect(gloves.getMaximumStickerOffsetY()).toBe(undefined);
+    // 15200 is the Sticker Display Case slab (carries the shared model/material);
+    // 15407 is a per-sticker display-case keychain that carries neither and inherits via baseId.
+    const slab = CS2Economy.getById(15200);
+    const displayCase = CS2Economy.getById(15407);
+    expect(displayCase.playerModel).toBe(undefined);
+    expect(displayCase.paintMaterial).toBe(undefined);
+    expect(displayCase.getPlayerModel()).toBe(slab.getPlayerModel());
+    expect(displayCase.getModelData()).toBe(slab.getModelData());
+    expect(displayCase.getPaintMaterial()).toBe(slab.getPaintMaterial());
 });

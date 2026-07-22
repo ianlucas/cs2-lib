@@ -256,39 +256,72 @@ public static partial class AssetProcessor
                     dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
                     modelInfoObj is Dictionary<string, object?> modelInfo &&
                     modelInfo.TryGetValue("m_keyValueText", out var kvTextObj) &&
-                    kvTextObj is Dictionary<string, object?> kvText &&
-                    kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
-                    stickerMarkupObj is List<object?> stickerMarkup)
+                    kvTextObj is Dictionary<string, object?> kvText)
                 {
-                    var stickerSchemaCount = stickerMarkup.Count(s =>
-                        s is Dictionary<string, object?> d &&
-                        d.TryGetValue("Mesh", out var mesh) &&
-                        mesh?.ToString() == "body_hd");
-                    var legacyStickerSchemaCount = stickerMarkup.Count - stickerSchemaCount;
-                    var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
-                    var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
-
-                    foreach (var item in ctx.Items.Values)
+                    if (kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
+                        stickerMarkupObj is List<object?> stickerMarkup)
                     {
-                        if (item.PlayerModel == playerModelPath)
+                        var stickerSchemaCount = stickerMarkup.Count(s =>
+                            s is Dictionary<string, object?> d &&
+                            d.TryGetValue("Mesh", out var mesh) &&
+                            mesh?.ToString() == "body_hd");
+                        var legacyStickerSchemaCount = stickerMarkup.Count - stickerSchemaCount;
+                        var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
+                        var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
+
+                        foreach (var item in ctx.Items.Values)
                         {
-                            item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
-                            item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
-                            if (hdOffsetBounds is { } hd)
+                            if (item.PlayerModel == playerModelPath)
                             {
-                                item.StickerOffsetXMin = hd.XMin;
-                                item.StickerOffsetXMax = hd.XMax;
-                                item.StickerOffsetYMin = hd.YMin;
-                                item.StickerOffsetYMax = hd.YMax;
-                            }
-                            if (legacyOffsetBounds is { } legacy)
-                            {
-                                item.LegacyStickerOffsetXMin = legacy.XMin;
-                                item.LegacyStickerOffsetXMax = legacy.XMax;
-                                item.LegacyStickerOffsetYMin = legacy.YMin;
-                                item.LegacyStickerOffsetYMax = legacy.YMax;
+                                item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
+                                item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
+                                if (hdOffsetBounds is { } hd)
+                                {
+                                    item.StickerOffsetXMin = hd.XMin;
+                                    item.StickerOffsetXMax = hd.XMax;
+                                    item.StickerOffsetYMin = hd.YMin;
+                                    item.StickerOffsetYMax = hd.YMax;
+                                }
+                                if (legacyOffsetBounds is { } legacy)
+                                {
+                                    item.LegacyStickerOffsetXMin = legacy.XMin;
+                                    item.LegacyStickerOffsetXMax = legacy.XMax;
+                                    item.LegacyStickerOffsetYMin = legacy.YMin;
+                                    item.LegacyStickerOffsetYMax = legacy.YMax;
+                                }
                             }
                         }
+                    }
+
+                    if (kvText.TryGetValue("KeychainMarkup", out var keychainMarkupObj) &&
+                        keychainMarkupObj is List<object?> keychainMarkup)
+                    {
+                        var hdKeychainBounds = ComputeKeychainOffsetBounds(keychainMarkup, legacyModel: false);
+                        var legacyKeychainBounds = ComputeKeychainOffsetBounds(keychainMarkup, legacyModel: true);
+
+                        if (hdKeychainBounds != null || legacyKeychainBounds != null)
+                            foreach (var item in ctx.Items.Values)
+                            {
+                                if (item.PlayerModel != playerModelPath) continue;
+                                if (hdKeychainBounds is { } hd)
+                                {
+                                    item.KeychainOffsetXMin = hd.XMin;
+                                    item.KeychainOffsetXMax = hd.XMax;
+                                    item.KeychainOffsetYMin = hd.YMin;
+                                    item.KeychainOffsetYMax = hd.YMax;
+                                    item.KeychainOffsetZMin = hd.ZMin;
+                                    item.KeychainOffsetZMax = hd.ZMax;
+                                }
+                                if (legacyKeychainBounds is { } legacy)
+                                {
+                                    item.LegacyKeychainOffsetXMin = legacy.XMin;
+                                    item.LegacyKeychainOffsetXMax = legacy.XMax;
+                                    item.LegacyKeychainOffsetYMin = legacy.YMin;
+                                    item.LegacyKeychainOffsetYMax = legacy.YMax;
+                                    item.LegacyKeychainOffsetZMin = legacy.ZMin;
+                                    item.LegacyKeychainOffsetZMax = legacy.ZMax;
+                                }
+                            }
                     }
                 }
             }
@@ -298,6 +331,10 @@ public static partial class AssetProcessor
     // Mirrors CS2_STICKER_OFFSET_FACTOR in src/economy-constants.ts: the quantization step for the
     // emitted sticker-offset bounds. 4 decimals matches the StickerMarkup offset authoring precision.
     private const double StickerOffsetFactor = 0.0001;
+
+    // Mirrors CS2_KEYCHAIN_OFFSET_FACTOR in src/economy-constants.ts: the quantization step for the
+    // emitted keychain-offset bounds.
+    private const double KeychainOffsetFactor = 0.0001;
 
     // Per-LOD bounds for how far a sticker's x/y can be nudged from its slot default and still land
     // on the body's stickerable surface. The stored x/y are deltas from each slot's StickerMarkup
@@ -362,6 +399,57 @@ public static partial class AssetProcessor
         );
     }
 
+    // Per-LOD bounds for where a keychain can sit on the body. KeychainMarkup quads (Corners:
+    // 4 corners x XYZ, bone space) are the placeable surfaces, and the stored keychain x/y/z are
+    // absolute coordinates in that same space, so the bounds are the corners' axis-aligned
+    // bounding box across every quad of the LOD (LegacyModel selects the legacy or HD set). An
+    // app rules out anything outside [Min, Max]; inside, it may still miss a (non-rectangular)
+    // surface and simply not render. Mins are floored and maxes ceiled outward so rounding never
+    // rejects a valid placement.
+    private static (double XMin, double XMax, double YMin, double YMax, double ZMin, double ZMax)?
+        ComputeKeychainOffsetBounds(List<object?> keychainMarkup, bool legacyModel)
+    {
+        double xMin = double.PositiveInfinity, xMax = double.NegativeInfinity;
+        double yMin = double.PositiveInfinity, yMax = double.NegativeInfinity;
+        double zMin = double.PositiveInfinity, zMax = double.NegativeInfinity;
+        var hasCorner = false;
+
+        foreach (var entry in keychainMarkup)
+        {
+            if (entry is not Dictionary<string, object?> markup) continue;
+            var isLegacy = markup.TryGetValue("LegacyModel", out var legacyObj) &&
+                legacyObj?.ToString() is { } legacyText &&
+                (legacyText.Equals("true", StringComparison.OrdinalIgnoreCase) || legacyText == "1");
+            if (isLegacy != legacyModel) continue;
+
+            if (!markup.TryGetValue("Corners", out var cornersObj) ||
+                cornersObj is not List<object?> corners) continue;
+            for (var i = 0; i + 2 < corners.Count; i += 3)
+            {
+                if (!TryParseDouble(corners[i], out var x) ||
+                    !TryParseDouble(corners[i + 1], out var y) ||
+                    !TryParseDouble(corners[i + 2], out var z)) continue;
+                xMin = Math.Min(xMin, x);
+                xMax = Math.Max(xMax, x);
+                yMin = Math.Min(yMin, y);
+                yMax = Math.Max(yMax, y);
+                zMin = Math.Min(zMin, z);
+                zMax = Math.Max(zMax, z);
+                hasCorner = true;
+            }
+        }
+
+        if (!hasCorner) return null;
+        return (
+            QuantizeOutward(xMin, up: false, KeychainOffsetFactor),
+            QuantizeOutward(xMax, up: true, KeychainOffsetFactor),
+            QuantizeOutward(yMin, up: false, KeychainOffsetFactor),
+            QuantizeOutward(yMax, up: true, KeychainOffsetFactor),
+            QuantizeOutward(zMin, up: false, KeychainOffsetFactor),
+            QuantizeOutward(zMax, up: true, KeychainOffsetFactor)
+        );
+    }
+
     private static bool TryParseDouble(object? value, out double result)
     {
         result = 0;
@@ -369,10 +457,10 @@ public static partial class AssetProcessor
             double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
     }
 
-    private static double QuantizeOutward(double value, bool up)
+    private static double QuantizeOutward(double value, bool up, double factor = StickerOffsetFactor)
     {
-        var steps = up ? Math.Ceiling(value / StickerOffsetFactor) : Math.Floor(value / StickerOffsetFactor);
-        return Math.Round(steps * StickerOffsetFactor, 4);
+        var steps = up ? Math.Ceiling(value / factor) : Math.Floor(value / factor);
+        return Math.Round(steps * factor, 4);
     }
 
     private static void PreProcessCompositeMaterials(ItemGeneratorContext ctx)

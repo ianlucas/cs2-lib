@@ -61,6 +61,9 @@ public class CS2Item
     [JsonPropertyName("def"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Def { get; set; }
 
+    [JsonPropertyName("displaySeed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DisplaySeed { get; set; }
+
     [JsonPropertyName("free"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Free { get; set; }
 
@@ -73,11 +76,47 @@ public class CS2Item
     [JsonPropertyName("index"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Index { get; set; }
 
+    [JsonPropertyName("keychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainOffsetXMax { get; set; }
+
+    [JsonPropertyName("keychainOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainOffsetXMin { get; set; }
+
+    [JsonPropertyName("keychainOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainOffsetYMax { get; set; }
+
+    [JsonPropertyName("keychainOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainOffsetYMin { get; set; }
+
+    [JsonPropertyName("keychainOffsetZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainOffsetZMax { get; set; }
+
+    [JsonPropertyName("keychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainOffsetZMin { get; set; }
+
     [JsonPropertyName("keys"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? Keys { get; set; }
 
     [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Legacy { get; set; }
+
+    [JsonPropertyName("legacyKeychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainOffsetXMax { get; set; }
+
+    [JsonPropertyName("legacyKeychainOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainOffsetXMin { get; set; }
+
+    [JsonPropertyName("legacyKeychainOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainOffsetYMax { get; set; }
+
+    [JsonPropertyName("legacyKeychainOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainOffsetYMin { get; set; }
+
+    [JsonPropertyName("legacyKeychainOffsetZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainOffsetZMax { get; set; }
+
+    [JsonPropertyName("legacyKeychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainOffsetZMin { get; set; }
 
     [JsonPropertyName("legacyStickerOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? LegacyStickerOffsetXMax { get; set; }
@@ -251,6 +290,9 @@ public class ItemGeneratorContext
     public List<PaintKitRecord> PaintKits { get; set; } = [];
     public List<GraffitiTintRecord> GraffitiTints { get; set; } = [];
     public int? KeychainBaseId { get; set; }
+    // The "keychain_37" (sticker display case slab) item id: the base the per-sticker
+    // display-case keychains resolve their playerModel/paintMaterial through.
+    public int? StickerDisplayCaseKeychainId { get; set; }
     public List<string> AllIdentifiers { get; set; } = [];
     public List<string> UniqueIdentifiers { get; set; } = [];
     public Dictionary<int, CS2Item> ExistingItemsById { get; set; } = [];

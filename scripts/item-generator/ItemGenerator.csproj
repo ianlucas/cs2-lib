@@ -10,6 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="SteamKit2" Version="3.3.1" />
-    <PackageReference Include="ValveResourceFormat" Version="19.1.6199" />
+    <PackageReference Include="ValveResourceFormat" Version="19.2.6339" />
   </ItemGroup>
 </Project>

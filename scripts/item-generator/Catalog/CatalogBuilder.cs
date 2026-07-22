@@ -323,6 +323,16 @@ public static class CatalogBuilder
             var locDescription = KvHelper.GetString(entry.Value, "loc_description");
             var itemRarity = KvHelper.GetString(entry.Value, "item_rarity") ?? "";
             var imageInventory = KvHelper.GetString(entry.Value, "image_inventory");
+            var pedestalDisplayModel = KvHelper.GetString(entry.Value, "pedestal_display_model");
+            // A community charm hangs the shared blank pedestal model and swaps its look through this
+            // vmat; a first-gen charm omits it (its own model bakes the material in). See
+            // GetKeychainMaterial.
+            var keychainMaterial = KvHelper.GetString(entry.Value, "keychain_material");
+            // Per-kit default seed for the charm's "hero"/preview look, used when an instance carries
+            // no seed of its own. Absent for most kits; the client falls back to 50000 when unset.
+            int? displaySeed = int.TryParse(KvHelper.GetString(entry.Value, "display_seed"), out var parsedDisplaySeed)
+                ? parsedDisplaySeed
+                : null;
 
             if (!Translations.HasTranslation(ctx, locName)) continue;
             if (imageInventory == null || !CatalogAssets.IsImageValid(ctx, imageInventory)) continue;
@@ -338,12 +348,18 @@ public static class CatalogBuilder
                 BaseId = ctx.KeychainBaseId,
                 Free = index == "37" ? true : null,
                 Def = 1355,
+                DisplaySeed = displaySeed,
                 Id = id,
                 Image = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = int.Parse(index),
+                PaintMaterial = GetKeychainMaterial(ctx, name, keychainMaterial),
+                PlayerModel = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
                 Type = CS2ItemType.Keychain
             });
+
+            if (index == "37")
+                ctx.StickerDisplayCaseKeychainId = id;
         }
     }
 
@@ -408,7 +424,10 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                BaseId = ctx.KeychainBaseId,
+                // The slab item (keychain_37) is the parent so getPlayerModel/getPaintMaterial
+                // resolve the shared display-case model and compositing recipe through baseId
+                // instead of duplicating them on every per-sticker item.
+                BaseId = ctx.StickerDisplayCaseKeychainId ?? ctx.KeychainBaseId,
                 Def = 1355,
                 Id = keychainId,
                 Image = keychainImage,
@@ -833,18 +852,31 @@ public static class CatalogBuilder
         if (ctx.Mode != ItemGeneratorMode.Limited) return;
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
+        item.DisplaySeed ??= previous.DisplaySeed;
+        item.KeychainOffsetXMax ??= previous.KeychainOffsetXMax;
+        item.KeychainOffsetXMin ??= previous.KeychainOffsetXMin;
+        item.KeychainOffsetYMax ??= previous.KeychainOffsetYMax;
+        item.KeychainOffsetYMin ??= previous.KeychainOffsetYMin;
+        item.KeychainOffsetZMax ??= previous.KeychainOffsetZMax;
+        item.KeychainOffsetZMin ??= previous.KeychainOffsetZMin;
+        item.LegacyKeychainOffsetXMax ??= previous.LegacyKeychainOffsetXMax;
+        item.LegacyKeychainOffsetXMin ??= previous.LegacyKeychainOffsetXMin;
+        item.LegacyKeychainOffsetYMax ??= previous.LegacyKeychainOffsetYMax;
+        item.LegacyKeychainOffsetYMin ??= previous.LegacyKeychainOffsetYMin;
+        item.LegacyKeychainOffsetZMax ??= previous.LegacyKeychainOffsetZMax;
+        item.LegacyKeychainOffsetZMin ??= previous.LegacyKeychainOffsetZMin;
+        item.LegacyStickerOffsetXMax ??= previous.LegacyStickerOffsetXMax;
+        item.LegacyStickerOffsetXMin ??= previous.LegacyStickerOffsetXMin;
+        item.LegacyStickerOffsetYMax ??= previous.LegacyStickerOffsetYMax;
+        item.LegacyStickerOffsetYMin ??= previous.LegacyStickerOffsetYMin;
+        item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
         item.PaintMaterial ??= previous.PaintMaterial;
         item.PlayerModel ??= previous.PlayerModel;
-        item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
-        item.StickerSchemaCount ??= previous.StickerSchemaCount;
-        item.StickerOffsetXMin ??= previous.StickerOffsetXMin;
         item.StickerOffsetXMax ??= previous.StickerOffsetXMax;
-        item.StickerOffsetYMin ??= previous.StickerOffsetYMin;
+        item.StickerOffsetXMin ??= previous.StickerOffsetXMin;
         item.StickerOffsetYMax ??= previous.StickerOffsetYMax;
-        item.LegacyStickerOffsetXMin ??= previous.LegacyStickerOffsetXMin;
-        item.LegacyStickerOffsetXMax ??= previous.LegacyStickerOffsetXMax;
-        item.LegacyStickerOffsetYMin ??= previous.LegacyStickerOffsetYMin;
-        item.LegacyStickerOffsetYMax ??= previous.LegacyStickerOffsetYMax;
+        item.StickerOffsetYMin ??= previous.StickerOffsetYMin;
+        item.StickerSchemaCount ??= previous.StickerSchemaCount;
     }
 
     private static int CreateStub(ItemGeneratorContext ctx, string name, string descToken, string? model = null)
@@ -982,6 +1014,45 @@ public static class CatalogBuilder
             var normalized = MaterialPaths.NormalizeMaterialResourcePath(resolvedPath);
             ctx.MaterialsToProcess.Add(normalized);
             return $"/materials/{MaterialPaths.GetIndexedVmatFilename(ctx, normalized)}";
+        }
+        catch { return null; }
+    }
+
+    // The keychain's charm material, or null when its model carries the material baked in.
+    //
+    // Three shapes, resolved in this order:
+    //   1. A community charm names a `keychain_material` vmat in items_game.txt: it hangs the shared
+    //      blank pedestal model (workshop_blanks/kc_missinglink_default.vmdl) and swaps only the
+    //      material, so we resolve that authoritative path here for the viewer to override the blank.
+    //   2. The sticker display-case slab composites the chosen sticker into a
+    //      compmatdata/{name}.vcompmat recipe.
+    //   3. A first-gen charm names neither: its per-charm model already bakes the material in, so this
+    //      returns null and the viewer reads the surface straight off the GLB's material slot
+    //      (ExtractModelData still emits that vmat.json from the model's own materials).
+    // The chain-link material is never referenced here either; it likewise reaches the viewer through
+    // the model's material slots.
+    private static string? GetKeychainMaterial(ItemGeneratorContext ctx, string name, string? keychainMaterial)
+    {
+        if (ctx.Mode != ItemGeneratorMode.Full) return null;
+        try
+        {
+            if (!string.IsNullOrEmpty(keychainMaterial))
+            {
+                var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, keychainMaterial);
+                var normalized = MaterialPaths.NormalizeMaterialResourcePath(resolved);
+                ctx.MaterialsToProcess.Add(normalized);
+                return $"/materials/{MaterialPaths.GetIndexedVmatFilename(ctx, normalized)}";
+            }
+
+            var vcompmatPath = $"compmatdata/{name}.vcompmat";
+            if (ctx.VpkIndex.ContainsKey(MaterialPaths.ToCompiledMaterialResourcePath(vcompmatPath)))
+            {
+                var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, vcompmatPath);
+                ctx.CompositeMaterialsToProcess.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
+                return $"/materials/{MaterialPaths.GetIndexedCompositeMaterialFilename(ctx, resolved)}";
+            }
+
+            return null;
         }
         catch { return null; }
     }
