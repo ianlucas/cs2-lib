@@ -14,6 +14,7 @@ import { CS2Economy } from "./economy.ts";
 import {
     CS2Inventory,
     getNextStickerSchema,
+    healKeychainOffset,
     healStickerOffset,
     snapStickerRotation,
     validateStickerRotation
@@ -833,7 +834,7 @@ describe("CS2Inventory methods", () => {
                     seed: 2000,
                     x: 0.2223,
                     y: 0.2211,
-                    z: 0.2211
+                    z: 3
                 }
             }
         });
@@ -842,7 +843,7 @@ describe("CS2Inventory methods", () => {
             seed: 2000,
             x: 0.2223,
             y: 0.2211,
-            z: 0.2211
+            z: 3
         });
     });
 
@@ -852,9 +853,11 @@ describe("CS2Inventory methods", () => {
                 id: AWP_DRAGON_LORE_ID,
                 keychains: { 0: { id: LIL_AVA_ID, ...coords } }
             });
-        expect(keychainWithCoords({ x: 22.078 })).not.toThrow();
-        expect(keychainWithCoords({ y: 22.078 })).not.toThrow();
-        expect(keychainWithCoords({ z: 22.078 })).not.toThrow();
+        // AWP legacy keychain envelope: x[-10.13,41.29] y[-0.02,1.37] z[2.64,11.76].
+        // A large finite offset on any axis (z included) is accepted when in-bounds.
+        expect(keychainWithCoords({ x: 40 })).not.toThrow();
+        expect(keychainWithCoords({ y: 1.3 })).not.toThrow();
+        expect(keychainWithCoords({ z: 11 })).not.toThrow();
         expect(keychainWithCoords({ x: NaN })).toThrow();
         expect(keychainWithCoords({ y: NaN })).toThrow();
         expect(keychainWithCoords({ z: NaN })).toThrow();
@@ -1199,6 +1202,17 @@ describe("sticker schema materialization", () => {
         expect(healStickerOffset(NaN, 0, 1)).toBe(undefined);
         expect(healStickerOffset(5, undefined, 1)).toBe(1);
         expect(healStickerOffset(-5, -1, undefined)).toBe(-1);
+    });
+
+    test("healKeychainOffset snaps onto the grid, clamps into the model bounds, and drops non-finite values", () => {
+        expect(healKeychainOffset(undefined, 0, 1)).toBe(undefined);
+        expect(healKeychainOffset(NaN, 0, 1)).toBe(undefined);
+        expect(healKeychainOffset(Infinity, 0, 1)).toBe(undefined);
+        expect(healKeychainOffset(5, undefined, 1)).toBe(1);
+        expect(healKeychainOffset(-5, -1, undefined)).toBe(-1);
+        // Raw in-game floats carry more precision than the grid; truncate, don't reject.
+        expect(healKeychainOffset(0.123456789, -1, 1)).toBe(0.1234);
+        expect(healKeychainOffset(0.2211, undefined, undefined)).toBe(0.2211);
     });
 
     test("validateStickerRotation accepts the half-degree grid within -180-180", () => {

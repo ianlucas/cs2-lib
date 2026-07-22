@@ -198,10 +198,16 @@ public static class ResourceDecompiler
             Directory.CreateDirectory(d);
 
         var dirVpkLock = new object();
+        // Multiple models can share an output directory (e.g. every keychain variant lives under
+        // weapons/keychains/<name>/vmdl/ and exports the same kc_<name>_*.png satellite textures).
+        // GltfModelExporter writes those siblings alongside the glb, so two concurrent exports in
+        // the same directory race on the shared PNG. Serialize per directory; models in distinct
+        // directories (the common weapon case) still export fully in parallel.
+        var exportDirLocks = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
         var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
         Parallel.ForEach(Partitioner.Create(work, loadBalance: true), po, item =>
         {
-            var (vpkPath, entry, _, glbPath) = item;
+            var (vpkPath, entry, outDir, glbPath) = item;
             byte[] data;
             if (entry!.ArchiveIndex == 0x7FFF)
             {
@@ -222,7 +228,8 @@ public static class ResourceDecompiler
                 ProgressReporter = new Progress<string>(_ => { }),
                 ExportMaterials = true,
             };
-            exporter.Export(resource, glbPath);
+            lock (exportDirLocks.GetOrAdd(outDir, static _ => new object()))
+                exporter.Export(resource, glbPath);
         });
     }
 

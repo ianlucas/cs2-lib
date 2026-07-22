@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
+    CS2_KEYCHAIN_OFFSET_FACTOR,
     CS2_MAX_KEYCHAINS,
     CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_PATCHES,
@@ -128,6 +129,25 @@ export function toStickerMap(
         : undefined;
 }
 
+function healOffset(
+    value: number | undefined,
+    min: number | undefined,
+    max: number | undefined,
+    factor: number
+): number | undefined {
+    if (value === undefined || !Number.isFinite(value)) {
+        return undefined;
+    }
+    value = truncateToFactor(value, factor);
+    if (min !== undefined && value < min) {
+        return min;
+    }
+    if (max !== undefined && value > max) {
+        return max;
+    }
+    return value;
+}
+
 /**
  * Normalizes a stored sticker offset so healed data passes validation: drops non-finite values,
  * truncates onto the {@link CS2_STICKER_OFFSET_FACTOR} grid, then clamps into the model's
@@ -138,17 +158,20 @@ export function healStickerOffset(
     min: number | undefined,
     max: number | undefined
 ): number | undefined {
-    if (value === undefined || !Number.isFinite(value)) {
-        return undefined;
-    }
-    value = truncateToFactor(value, CS2_STICKER_OFFSET_FACTOR);
-    if (min !== undefined && value < min) {
-        return min;
-    }
-    if (max !== undefined && value > max) {
-        return max;
-    }
-    return value;
+    return healOffset(value, min, max, CS2_STICKER_OFFSET_FACTOR);
+}
+
+/**
+ * Normalizes a stored keychain offset so healed data passes validation: drops non-finite values,
+ * truncates onto the {@link CS2_KEYCHAIN_OFFSET_FACTOR} grid, then clamps into the model's
+ * `[min, max]` (pass the item's `getMinimum/MaximumKeychainOffsetX/Y/Z()`; each bound skipped when undefined).
+ */
+export function healKeychainOffset(
+    value: number | undefined,
+    min: number | undefined,
+    max: number | undefined
+): number | undefined {
+    return healOffset(value, min, max, CS2_KEYCHAIN_OFFSET_FACTOR);
 }
 
 /**
@@ -264,7 +287,6 @@ export class CS2Inventory {
         const entries = Object.entries(keychains);
         assert(entries.length <= CS2_MAX_KEYCHAINS);
         assert(item === undefined || item.hasKeychains());
-        // @todo: validate x and y offsets, for now apps must implement it on their own.
         for (const [key, { id: keychainId, seed, x, y, z }] of entries) {
             const slot = parseInt(key, 10);
             assert(slot >= 0 && slot <= CS2_MAX_KEYCHAINS - 1);
@@ -276,12 +298,33 @@ export class CS2Inventory {
             }
             if (x !== undefined) {
                 assert(Number.isFinite(x));
+                assert(isFactorPrecise(x, CS2_KEYCHAIN_OFFSET_FACTOR));
+                if (item !== undefined) {
+                    const min = item.getMinimumKeychainOffsetX();
+                    const max = item.getMaximumKeychainOffsetX();
+                    assert(min === undefined || x >= min);
+                    assert(max === undefined || x <= max);
+                }
             }
             if (y !== undefined) {
                 assert(Number.isFinite(y));
+                assert(isFactorPrecise(y, CS2_KEYCHAIN_OFFSET_FACTOR));
+                if (item !== undefined) {
+                    const min = item.getMinimumKeychainOffsetY();
+                    const max = item.getMaximumKeychainOffsetY();
+                    assert(min === undefined || y >= min);
+                    assert(max === undefined || y <= max);
+                }
             }
             if (z !== undefined) {
                 assert(Number.isFinite(z));
+                assert(isFactorPrecise(z, CS2_KEYCHAIN_OFFSET_FACTOR));
+                if (item !== undefined) {
+                    const min = item.getMinimumKeychainOffsetZ();
+                    const max = item.getMaximumKeychainOffsetZ();
+                    assert(min === undefined || z >= min);
+                    assert(max === undefined || z <= max);
+                }
             }
         }
     }
@@ -364,7 +407,26 @@ export class CS2Inventory {
                 for (const [slot, keychain] of Object.entries(item.keychains)) {
                     if (!this.economy.items.has(keychain.id)) {
                         delete item.keychains[slot];
+                        continue;
                     }
+                    // Positions are absolute markup-space coordinates; clamp out-of-envelope
+                    // values to the model's published bounds (and snap to the offset grid) so
+                    // placements a model no longer allows survive as the nearest valid one.
+                    keychain.x = healKeychainOffset(
+                        keychain.x,
+                        economyItem.getMinimumKeychainOffsetX(),
+                        economyItem.getMaximumKeychainOffsetX()
+                    );
+                    keychain.y = healKeychainOffset(
+                        keychain.y,
+                        economyItem.getMinimumKeychainOffsetY(),
+                        economyItem.getMaximumKeychainOffsetY()
+                    );
+                    keychain.z = healKeychainOffset(
+                        keychain.z,
+                        economyItem.getMinimumKeychainOffsetZ(),
+                        economyItem.getMaximumKeychainOffsetZ()
+                    );
                 }
             }
         }
