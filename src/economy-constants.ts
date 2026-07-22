@@ -42,7 +42,7 @@ export const CS2_STICKER_ROTATION_STEP = 0.5;
 export const CS2_KEYCHAIN_OFFSET_FACTOR = 0.0001;
 export const CS2_WEAR_FACTOR = 0.000001;
 
-export const CS2_NAMETAG_RE: RegExp = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
+export const CS2_NAMETAG_RE: RegExp = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_，。；！\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
 
 export const CS2_CONTRACT_TOOL_DEF = 62;
 export const CS2_NAMETAG_TOOL_DEF = 1200;
