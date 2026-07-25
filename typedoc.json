@@ -1,5 +1,5 @@
 {
     "exclude": ["**/*+.test.ts"],
-    "out": "./docs",
+    "out": "./docs-api",
     "entryPoints": ["src/index.ts"]
 }
