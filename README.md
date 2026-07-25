@@ -4,10 +4,6 @@
 
 This library contains items and data from Counter-Strike 2, including utility functions and classes for interacting with them using TypeScript.
 
-## Documentation
-
-See [docs/](docs/README.md) for how items, inventories, stickers and keychains work.
-
 ## Install
 
 ```sh
