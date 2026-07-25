@@ -22,7 +22,7 @@ which consumes the keychain item and creates the new weapon carrying it in slot 
 
 `x`, `y` and `z` are **absolute coordinates in the model's markup space** — not deltas from a default position, which is how sticker offsets work. That is why the numbers are large: the legacy AWP's envelope is X `[-10.13, 41.29]`, Y `[-0.02, 1.37]`, Z `[2.64, 11.76]`, where a sticker offset on the same weapon lives inside ±0.5.
 
-Bounds come from `getMinimumKeychainOffsetX()` / `getMaximumKeychainOffsetX()` and the `Y` and `Z` pairs, resolved off `parent ?? this` with the `legacy*` fields preferred for a legacy item (see [legacy meshes](economy.md#legacy-meshes)). Any bound may be `undefined`, meaning unbounded on that side.
+Bounds come from `getMinimumKeychainOffsetX()` / `getMaximumKeychainOffsetX()` and the `Y` and `Z` pairs, resolved off `parent ?? this` with the `legacy*` fields preferred for a legacy item. Any bound may be `undefined`, meaning unbounded on that side.
 
 Values must be finite and sit on the `CS2_KEYCHAIN_OFFSET_FACTOR` grid (`0.0001`, four decimals). Validation checks finiteness explicitly, so `NaN` on any axis — `z` included — is rejected rather than silently accepted.
 
@@ -49,4 +49,4 @@ Two different seeds are in play and they are stored in different places:
 
 ## Models and materials
 
-Keychains carry their own `playerModel` and `paintMaterial` when they have one, and otherwise inherit from `parent`. The sticker display case is the case that motivates this: the "slab" item holds the shared model and material, and each per-sticker display-case keychain carries neither, resolving both through `baseId`. `getModelData()` derives the `.json` path from whichever `.glb` won. See [Base and skin inheritance](economy.md#base-and-skin-inheritance).
+Keychains carry their own `playerModel` and `paintMaterial` when they have one, and otherwise inherit from `parent`. The sticker display case is the case that motivates this: the "slab" item holds the shared model and material, and each per-sticker display-case keychain carries neither, resolving both through `baseId`. `getModelData()` derives the `.json` path from whichever `.glb` won.
