@@ -27,12 +27,10 @@ describe("utils", () => {
         expect(countDecimals(0.000001)).toBe(6);
         expect(countDecimals(-0.4323)).toBe(4);
         expect(countDecimals(123.4)).toBe(1);
-        // Magnitudes below 1e-6 print as `e-` yet must still report their true precision.
-        expect(countDecimals(1e-7)).toBe(7);
+        expect(countDecimals(1e-7), "`e-` notation still reports its true precision").toBe(7);
         expect(countDecimals(1.5e-7)).toBe(8);
         expect(countDecimals(5e-7)).toBe(7);
-        // Huge integers print as `e+` and have no fractional part.
-        expect(countDecimals(1e21)).toBe(0);
+        expect(countDecimals(1e21), "`e+` notation has no fractional part").toBe(0);
     });
 
     test("isFactorPrecise accepts on-grid finite values only", () => {
@@ -40,12 +38,9 @@ describe("utils", () => {
         expect(isFactorPrecise(0.1234, 0.0001)).toBe(true);
         expect(isFactorPrecise(-0.4323, 0.0001)).toBe(true);
         expect(isFactorPrecise(0, 0.0001)).toBe(true);
-        // Too many decimals for the grid.
-        expect(isFactorPrecise(0.12345, 0.0001)).toBe(false);
-        // Sub-grid magnitudes are over-precise, not zero.
-        expect(isFactorPrecise(1e-7, 0.0001)).toBe(false);
-        // Non-finite never passes.
-        expect(isFactorPrecise(NaN, 0.0001)).toBe(false);
+        expect(isFactorPrecise(0.12345, 0.0001), "too many decimals for the grid").toBe(false);
+        expect(isFactorPrecise(1e-7, 0.0001), "sub-grid magnitudes are over-precise, not zero").toBe(false);
+        expect(isFactorPrecise(NaN, 0.0001), "non-finite never passes").toBe(false);
         expect(isFactorPrecise(Infinity, 0.0001)).toBe(false);
     });
 
@@ -53,18 +48,14 @@ describe("utils", () => {
         expect(truncateToFactor(0.43235, 0.0001)).toBe(0.4323);
         expect(truncateToFactor(-0.43235, 0.0001)).toBe(-0.4323);
         expect(truncateToFactor(0.12345, 0.0001)).toBe(0.1234);
-        // No float noise (the 0.29 * 1e4 = 2899.999… class) leaks in.
-        expect(truncateToFactor(0.29, 0.0001)).toBe(0.29);
-        // Already on grid / integers pass through.
-        expect(truncateToFactor(0.1, 0.0001)).toBe(0.1);
+        expect(truncateToFactor(0.29, 0.0001), "no float noise leaks in").toBe(0.29);
+        expect(truncateToFactor(0.1, 0.0001), "on-grid values pass through").toBe(0.1);
         expect(truncateToFactor(1, 0.0001)).toBe(1);
         expect(truncateToFactor(0, 0.0001)).toBe(0);
-        // Sub-grid magnitudes collapse to zero; huge integers pass through.
-        expect(truncateToFactor(5e-7, 0.0001)).toBe(0);
+        expect(truncateToFactor(5e-7, 0.0001), "sub-grid magnitudes collapse to zero").toBe(0);
         expect(truncateToFactor(1.5e-7, 0.0001)).toBe(0);
-        expect(truncateToFactor(1e21, 0.0001)).toBe(1e21);
-        // Honors the factor's own precision.
-        expect(truncateToFactor(0.123456, 0.01)).toBe(0.12);
+        expect(truncateToFactor(1e21, 0.0001), "huge integers pass through").toBe(1e21);
+        expect(truncateToFactor(0.123456, 0.01), "the factor's own precision decides the grid").toBe(0.12);
         expect(truncateToFactor(0.123456, 0.000001)).toBe(0.123456);
     });
 
@@ -72,10 +63,9 @@ describe("utils", () => {
         expect(roundToFactor(0.156, 0.01)).toBe(0.16);
         expect(roundToFactor(0.154, 0.01)).toBe(0.15);
         expect(roundToFactor(-0.156, 0.01)).toBe(-0.16);
-        // 0.06 + 0.01 lands at 0.06999999999999999; rounding recovers the step, truncation would not.
-        expect(roundToFactor(0.06 + 0.01, 0.01)).toBe(0.07);
+        expect(roundToFactor(0.06 + 0.01, 0.01), "rounding recovers a step lost to float noise").toBe(0.07);
         expect(roundToFactor(0.09 + 0.01, 0.01)).toBe(0.1);
-        expect(truncateToFactor(0.06 + 0.01, 0.01)).toBe(0.06);
+        expect(truncateToFactor(0.06 + 0.01, 0.01), "truncating cannot recover it").toBe(0.06);
         expect(roundToFactor(0.1234567, 0.000001)).toBe(0.123457);
     });
 

@@ -86,7 +86,6 @@ export interface CS2Item {
     legacyStickerOffsetXMin?: number | undefined;
     legacyStickerOffsetYMax?: number | undefined;
     legacyStickerOffsetYMin?: number | undefined;
-    /** Count of sticker schemas (StickerMarkup anchors) on the legacy mesh; see {@link CS2EconomyItem.getStickerSchemaCount}. */
     legacyStickerSchemaCount?: number | undefined;
     model?: string | undefined;
     paintMaterial?: string | undefined;
@@ -101,7 +100,6 @@ export interface CS2Item {
     stickerOffsetXMin?: number | undefined;
     stickerOffsetYMax?: number | undefined;
     stickerOffsetYMin?: number | undefined;
-    /** Count of sticker schemas (StickerMarkup anchors) on the HD mesh; see {@link CS2EconomyItem.getStickerSchemaCount}. */
     stickerSchemaCount?: number | undefined;
     teams?: CS2ItemTeam | undefined;
     tint?: number | undefined;

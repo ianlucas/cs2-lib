@@ -57,19 +57,11 @@ export interface CS2BaseInventoryItem {
     patches?: Record<string, number>;
     seed?: number;
     statTrak?: number;
-    /**
-     * Stickers on the item — a stack of up to {@link CS2_MAX_STICKERS}. The record key is the
-     * **slot/index**: the 0-based stack (draw) position. Each sticker's **`schema`** is its physical
-     * anchor — an index into the model's `StickerMarkup`, valid in
-     * `[0, CS2EconomyItem.getStickerSchemaCount())`. The stack can outnumber a model's schemas, so
-     * stickers may share an anchor.
-     */
     stickers?: Record<
         string,
         {
             id: number;
             rotation?: number;
-            /** Physical anchor: a `StickerMarkup` index in `[0, CS2EconomyItem.getStickerSchemaCount())`. */
             schema?: number;
             wear?: number;
             x?: number;
@@ -148,11 +140,6 @@ function healOffset(
     return value;
 }
 
-/**
- * Normalizes a stored sticker offset so healed data passes validation: drops non-finite values,
- * truncates onto the {@link CS2_STICKER_OFFSET_FACTOR} grid, then clamps into the model's
- * `[min, max]` (pass the item's `getMinimum/MaximumStickerOffsetX/Y()`; each bound skipped when undefined).
- */
 export function healStickerOffset(
     value: number | undefined,
     min: number | undefined,
@@ -161,11 +148,6 @@ export function healStickerOffset(
     return healOffset(value, min, max, CS2_STICKER_OFFSET_FACTOR);
 }
 
-/**
- * Normalizes a stored keychain offset so healed data passes validation: drops non-finite values,
- * truncates onto the {@link CS2_KEYCHAIN_OFFSET_FACTOR} grid, then clamps into the model's
- * `[min, max]` (pass the item's `getMinimum/MaximumKeychainOffsetX/Y/Z()`; each bound skipped when undefined).
- */
 export function healKeychainOffset(
     value: number | undefined,
     min: number | undefined,
@@ -174,11 +156,6 @@ export function healKeychainOffset(
     return healOffset(value, min, max, CS2_KEYCHAIN_OFFSET_FACTOR);
 }
 
-/**
- * True when `rotation` is a valid sticker rotation: on the {@link CS2_STICKER_ROTATION_STEP}
- * half-degree grid (…, -0.5, 0, 0.5, 1, …) and within
- * [{@link CS2_MIN_STICKER_ROTATION}, {@link CS2_MAX_STICKER_ROTATION}]. `undefined` (unset) is valid.
- */
 export function validateStickerRotation(rotation?: number): boolean {
     return (
         rotation === undefined ||
@@ -188,20 +165,10 @@ export function validateStickerRotation(rotation?: number): boolean {
     );
 }
 
-/**
- * Snaps a rotation in degrees to the nearest {@link CS2_STICKER_ROTATION_STEP} grid value
- * (2.4 → 2.5, 2.7 → 2.5). Exact - half-degree values are binary-representable, so no float noise.
- * Does NOT range-wrap; pair with {@link validateStickerRotation}.
- */
 export function snapStickerRotation(rotation: number): number {
     return Math.round(rotation / CS2_STICKER_ROTATION_STEP) * CS2_STICKER_ROTATION_STEP;
 }
 
-/**
- * The schema (StickerMarkup anchor) a freshly applied sticker should occupy: the first anchor in
- * `[0, schemaCount)` no current sticker uses, falling back to `0` once every anchor is taken (so the
- * stack can exceed the schema count). Pass the target's {@link CS2EconomyItem.getStickerSchemaCount}.
- */
 export function getNextStickerSchema(
     stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[],
     schemaCount: number
@@ -366,10 +333,6 @@ export class CS2Inventory {
                         delete item.stickers[slot];
                         continue;
                     }
-                    // Snap stored rotations onto the half-degree grid (2.7 heals to 2.5 instead of
-                    // being dropped). Legacy inventories stored 0–359 where the in-game range is
-                    // -180–180; convert the upper half (e.g. 270 → -90) to preserve the visual
-                    // rotation, dropping anything that still doesn't fit.
                     if (sticker.rotation !== undefined) {
                         let rotation = snapStickerRotation(sticker.rotation);
                         if (rotation > CS2_MAX_STICKER_ROTATION) {
@@ -377,9 +340,6 @@ export class CS2Inventory {
                         }
                         sticker.rotation = validateStickerRotation(rotation) ? rotation : undefined;
                     }
-                    // Offsets are deltas from the markup default; clamp out-of-envelope values to
-                    // the model's published bounds (and snap to the offset grid) so positions a
-                    // model no longer allows survive as the nearest valid placement.
                     sticker.x = healStickerOffset(
                         sticker.x,
                         economyItem.getMinimumStickerOffsetX(),
@@ -391,10 +351,6 @@ export class CS2Inventory {
                         economyItem.getMaximumStickerOffsetY()
                     );
                 }
-                // Legacy inventories keyed stickers by their in-game markup slot. Re-key them
-                // into a contiguous 0-based array (stack order) and pin each one's `schema` to
-                // its original slot, so dynamic-positioned stickers keep their anchor after the
-                // keys (and any gap left by a dropped sticker) collapse.
                 item.stickers = CS2InventoryItem.stickersFromArray(
                     CS2InventoryItem.stickersToArray(item.stickers, economyItem.getStickerSchemaCount())
                 );
@@ -409,9 +365,6 @@ export class CS2Inventory {
                         delete item.keychains[slot];
                         continue;
                     }
-                    // Positions are absolute markup-space coordinates; clamp out-of-envelope
-                    // values to the model's published bounds (and snap to the offset grid) so
-                    // placements a model no longer allows survive as the nearest valid one.
                     keychain.x = healKeychainOffset(
                         keychain.x,
                         economyItem.getMinimumKeychainOffsetX(),
@@ -442,9 +395,6 @@ export class CS2Inventory {
         }
     }
 
-    /**
-     * @deprecated Use {@link healBaseInventoryItem} instead.
-     */
     public removeInvalidItemReferences(item: CS2BaseInventoryItem): void {
         this.healBaseInventoryItem(item);
     }
@@ -536,13 +486,6 @@ export class CS2Inventory {
         return this;
     }
 
-    /**
-     * Adds a new item `id` to the inventory with the sticker item `stickerUid` applied to its first
-     * slot, consuming the sticker. The optional `attributes` set that sticker's `schema` (its physical
-     * {@link CS2EconomyItem.getStickerSchemaCount} anchor), `x`/`y` offset, `rotation`, and `wear`. All
-     * are validated against the new item before anything mutates, so an invalid value throws without
-     * consuming the sticker.
-     */
     addWithSticker(
         stickerUid: number,
         id: number,
@@ -557,12 +500,6 @@ export class CS2Inventory {
         return this;
     }
 
-    /**
-     * Adds a new item `id` to the inventory with the keychain item `keychainUid` applied to its first
-     * slot, consuming the keychain. The optional `attributes` set that keychain's `seed` and its
-     * `x`/`y`/`z` position in markup space. All are validated against the new item before anything
-     * mutates, so an invalid value throws without consuming the keychain.
-     */
     addWithKeychain(
         keychainUid: number,
         id: number,
@@ -728,13 +665,6 @@ export class CS2Inventory {
         return this;
     }
 
-    /**
-     * Applies the sticker item `stickerUid` onto `targetUid`, appending it to the stack. The optional
-     * `attributes` set the new sticker's `schema` (its physical {@link CS2EconomyItem.getStickerSchemaCount}
-     * anchor — defaults to the next free anchor), `x`/`y` offset, `rotation`, and `wear`. All are
-     * validated against the target before anything mutates, so an invalid value throws without
-     * consuming the sticker.
-     */
     applyItemSticker(
         targetUid: number,
         stickerUid: number,
@@ -813,9 +743,6 @@ export class CS2Inventory {
         } else {
             nextWear = roundToFactor(currentWear + CS2_STICKER_SCRAPE_FACTOR, CS2_STICKER_WEAR_FACTOR);
         }
-        // The default per-click scrape mirrors CS2/CS:GO: wear rests at the maximum and a further
-        // click clears it (strict >), whereas the explicit-wear slider removes once it reaches the
-        // maximum (>=).
         const gone = wear === undefined ? nextWear > CS2_MAX_STICKER_WEAR : nextWear >= CS2_MAX_STICKER_WEAR;
         if (gone) {
             stickers.splice(index, 1);
@@ -1007,11 +934,6 @@ export class CS2InventoryItem
         }
     }
 
-    // Normalizes a sticker record into a contiguous, ordered array (stack order): sorts by the
-    // stored key, caps at CS2_MAX_STICKERS, and materializes each `schema` from its key when absent
-    // — so legacy slot-keyed data (and the editor) resolve onto a markup anchor. When `schemaCount`
-    // is given (heal/construction), a schema landing outside `[0, schemaCount)` is repaired onto a
-    // real anchor via getNextStickerSchema, so materialized data always satisfies the validator.
     static stickersToArray(
         stickers: CS2BaseInventoryItem["stickers"],
         schemaCount?: number
@@ -1034,8 +956,6 @@ export class CS2InventoryItem
         return result;
     }
 
-    // Serializes an ordered sticker array back into a record with contiguous 0-based keys,
-    // always keeping `schema` (defaulting it to the index) and dropping default wear/offsets.
     static stickersFromArray(
         stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[]
     ): CS2BaseInventoryItem["stickers"] {

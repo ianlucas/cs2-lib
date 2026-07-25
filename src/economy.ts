@@ -682,11 +682,6 @@ export class CS2EconomyItem implements Interface<
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
-    /**
-     * Count of sticker schemas (StickerMarkup anchors) the model defines; valid `schema` is
-     * `[0, count)`. Independent of the 5-deep stack ({@link CS2_MAX_STICKERS}), so a model with
-     * fewer schemas than stickers shares anchors.
-     */
     getStickerSchemaCount(): number {
         const item = this.parent ?? this;
         const count = (this.legacy ? item.legacyStickerSchemaCount : undefined) ?? item.stickerSchemaCount;
@@ -776,10 +771,10 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
+    /** @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml */
     unlockContainer(options?: {
         computeOdds?: (rarities: (typeof CS2_RARITY_ORDER)[number][]) => number[] | undefined;
     }): CS2UnlockedItem {
-        // @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml
         const contents = this.groupContents();
         const keys = Object.keys(contents);
         const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
