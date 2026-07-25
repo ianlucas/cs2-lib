@@ -16,7 +16,7 @@ stickers?: Record<
 
 These are independent, and the stack can outnumber the anchors. The AK-47's HD body, for example, publishes 4 anchors while the stack always holds up to 5 — so **two stickers may legitimately share an anchor**. Conversely, reordering the stack does not move any sticker on the model; it only changes draw order.
 
-`getStickerSchemaCount()` reads `stickerSchemaCount` (or `legacyStickerSchemaCount` for a legacy item) off `parent ?? this`, falling back to `CS2_MAX_STICKERS` when the model publishes no count. See [legacy meshes](economy.md#legacy-meshes).
+`getStickerSchemaCount()` reads `stickerSchemaCount` (or `legacyStickerSchemaCount` for a legacy item) off `parent ?? this`, falling back to `CS2_MAX_STICKERS` when the model publishes no count.
 
 ## Materialization
 
@@ -86,7 +86,7 @@ Sticker wear is a float in `[CS2_MIN_STICKER_WEAR, CS2_MAX_STICKER_WEAR]` = `[0,
 - **Default** (`wear` omitted) is a scrape click: wear steps up by `CS2_STICKER_SCRAPE_FACTOR` (`0.1`), so a pristine sticker takes about ten clicks. Removal happens when the next step goes **strictly past** 1 — the 10th click leaves wear resting at exactly 1 with the sticker still on the weapon, and the 11th clears it. This mirrors CS2 and CS:GO.
 - **Explicit** (`wear` supplied) is a slider: the value must be finite and strictly greater than the current wear, and is rounded onto the wear grid. Removal happens when it **reaches** 1.
 
-Both use `roundToFactor` rather than truncation, so accumulated float noise (`0.06 + 0.01 = 0.06999…`) lands back on the grid. See [Numeric precision](numeric-precision.md).
+Both use `roundToFactor` rather than truncation, so accumulated float noise (`0.06 + 0.01 = 0.06999…`) lands back on the grid.
 
 Removing the last sticker sets `stickers` to `undefined` rather than leaving an empty map.
 
