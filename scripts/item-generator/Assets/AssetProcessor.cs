@@ -198,14 +198,18 @@ public static partial class AssetProcessor
         // reflects the compressed bytes.
         await OptimizeGlbsMeshopt(stubbed.Select(s => s.GlbPath).ToList());
 
-        // Pass 2: hash, version, and move each compressed GLB into the output tree. The .glb and
-        // .json pair shares one token over both files' bytes so the pair stays in sync.
+        // Pass 2: hash, version, and move each compressed GLB into the output tree. The .glb, the
+        // .json and the .collider.json share one token over every file's bytes so the set stays in
+        // sync. A model with no cloth collider contributes an empty hash, which Combine drops, so
+        // adding the third member left every existing model URL where it was.
         foreach (var (vpkPath, model, glbPath) in stubbed)
         {
             var modelDataPath = Path.Combine(Config.OutputDir, model.ModelData.TrimStart('/'));
+            var colliderPath = ClothColliderPathOf(modelDataPath);
             var dependencyHash = ContentVersion.Combine([
                 ContentVersion.HashFileFull(glbPath),
-                File.Exists(modelDataPath) ? ContentVersion.HashFileFull(modelDataPath) : ""
+                File.Exists(modelDataPath) ? ContentVersion.HashFileFull(modelDataPath) : "",
+                File.Exists(colliderPath) ? ContentVersion.HashFileFull(colliderPath) : ""
             ]);
 
             var versionedBase = $"{model.Base}_{dependencyHash}";
@@ -218,12 +222,19 @@ public static partial class AssetProcessor
             File.Move(glbPath, destGlb, true);
             if (File.Exists(modelDataPath))
                 File.Move(modelDataPath, destData, true);
+            if (File.Exists(colliderPath))
+                File.Move(colliderPath, ClothColliderPathOf(destData), true);
 
             UpdateModelAssetReferences(ctx, model, versionedPlayerModel, versionedModelData);
         }
 
         Log($"Processed {FormatCount(ctx.ModelsToProcess.Count, "model")}.");
     }
+
+    // A model's cloth collider sits beside its model data under the same stem, so a consumer
+    // derives the URL the same way it derives the model data's (economy.ts getClothCollider).
+    private static string ClothColliderPathOf(string modelDataPath) =>
+        Path.ChangeExtension(modelDataPath, null) + ".collider.json";
 
     private static void ExtractModelData(ItemGeneratorContext ctx)
     {
@@ -323,6 +334,23 @@ public static partial class AssetProcessor
                                 }
                             }
                     }
+                }
+            }
+
+            if (result.ClothCollider != null)
+            {
+                var modelDataPath = Path.Combine(Config.OutputDir, "models", result.Filename);
+                var colliderPath = ClothColliderPathOf(modelDataPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(colliderPath)!);
+                File.WriteAllText(colliderPath, JsonSerializer.Serialize(result.ClothCollider));
+
+                // Flagged on the item so a consumer knows the sibling file is there to fetch.
+                // Most models have no collider — knives carry no FeModel at all — and a keychain
+                // hangs uncollided on those rather than the fetch 404ing.
+                var playerModelPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
+                foreach (var item in ctx.Items.Values)
+                {
+                    if (item.PlayerModel == playerModelPath) item.ClothCollider = true;
                 }
             }
         }

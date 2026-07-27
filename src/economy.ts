@@ -277,6 +277,7 @@ export class CS2EconomyItem implements Interface<
     base: boolean | undefined;
     baseId: number | undefined;
     category: string | undefined;
+    clothCollider: boolean | undefined;
     collection: string | undefined;
     collectionDesc: string | undefined;
     collectionImage: string | undefined;
@@ -664,6 +665,20 @@ export class CS2EconomyItem implements Interface<
     getModelData(): string {
         const playerModel = this.playerModel ?? this.parent?.playerModel;
         return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
+    }
+
+    /**
+     * The model's cloth collider: the shapes CS2 pushes a keychain out of, taken from the model's
+     * own `m_pFeModel` (signed distance fields on a grid, plus boxes, each bound to a weapon bone).
+     * `undefined` when the model publishes none — most do not, knives included, and a keychain
+     * simply hangs uncollided on those.
+     */
+    getClothCollider(): string | undefined {
+        if (!(this.clothCollider ?? this.parent?.clothCollider)) {
+            return undefined;
+        }
+        const playerModel = this.playerModel ?? this.parent?.playerModel;
+        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".collider.json"));
     }
 
     getMinimumWear(): number {

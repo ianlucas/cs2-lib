@@ -22,6 +22,7 @@ public static class OutputWriter
                 Base = i.Base,
                 BaseId = i.BaseId,
                 Category = i.Category,
+                ClothCollider = i.ClothCollider,
                 Collection = i.Collection,
                 CollectionImage = i.CollectionImage,
                 ContainerType = i.ContainerType,

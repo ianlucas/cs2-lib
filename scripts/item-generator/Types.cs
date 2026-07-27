@@ -46,6 +46,11 @@ public class CS2Item
     [JsonPropertyName("category"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Category { get; set; }
 
+    // True when the model publishes a cloth collider beside its model data — the shapes a keychain
+    // is pushed out of. See MetadataExtractor.ExtractClothCollider.
+    [JsonPropertyName("clothCollider"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ClothCollider { get; set; }
+
     [JsonPropertyName("collection"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Collection { get; set; }
 

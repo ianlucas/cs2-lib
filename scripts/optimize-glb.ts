@@ -4,6 +4,12 @@
 // bit-identically and every mesh/node/skin/accessor, float precision, and the embedded
 // EXT_texture_webp stubs are left untouched. We deliberately do NOT quantize or prune (the
 // gltf-transform `meshopt()` wrapper does both, which is lossy and removes skins/accessors).
+//
+// Staying reversible is a CORRECTNESS requirement, not a quality preference. A published GLB is no
+// longer only drawn: a consumer placing a keychain rays the weapon's own triangles to decide where
+// the charm sits, so a vertex moved here moves a stored placement there — and the model's cloth
+// collider (MetadataExtractor.ExtractClothCollider) describes the same surface these triangles do,
+// so the two would disagree about where the metal is.
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
