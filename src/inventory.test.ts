@@ -5,14 +5,20 @@
 
 import { beforeEach, describe, expect, test } from "vitest";
 import {
+    CS2_CHARM_DETACHMENT_PACK_CHARGES,
+    CS2_MAX_CHARM_DETACHMENT_CHARGES,
+    CS2_MAX_GRAFFITI_CHARGES,
     CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_PATCHES,
     CS2_MAX_STATTRAK,
+    CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
 import {
+    type CS2BaseInventoryItem,
     CS2Inventory,
+    CS2_INVENTORY_VERSION,
     getNextStickerSchema,
     healKeychainOffset,
     healStickerOffset,
@@ -57,6 +63,9 @@ const BLOODY_DARRYL_THE_STRAPPED_ID = 8657;
 const BLOODHOUND_ID = 8569;
 const CT_GLOVE_ID = 59;
 const LIL_AVA_ID = 13113;
+const GRAFFITI_ACE_ID = 9543;
+const CHARM_DETACHMENT_ID = 12450;
+const CHARM_DETACHMENT_PACK_ID = 12451;
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
@@ -1278,5 +1287,267 @@ describe("sticker schema materialization", () => {
         expect(snapStickerRotation(-2.4)).toBe(-2.5);
         expect(snapStickerRotation(2.5)).toBe(2.5);
         expect(snapStickerRotation(90)).toBe(90);
+    });
+});
+
+describe("charges", () => {
+    const graffiti = CS2Economy.getById(GRAFFITI_ACE_ID);
+    const detachment = CS2Economy.getById(CHARM_DETACHMENT_ID);
+
+    function makeInventory(items: Record<number, CS2BaseInventoryItem> = {}) {
+        return new CS2Inventory({
+            data: { items, version: CS2_INVENTORY_VERSION },
+            maxItems: 16,
+            storageUnitMaxItems: 3
+        });
+    }
+
+    test("economy classifies which items carry charges", () => {
+        expect(graffiti.hasCharges()).toBe(true);
+        expect(detachment.hasCharges()).toBe(true);
+        expect(CS2Economy.getById(CHARM_DETACHMENT_PACK_ID).hasCharges()).toBe(false);
+        expect(CS2Economy.getById(AK47_ID).hasCharges()).toBe(false);
+        expect(graffiti.getDefaultCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+        expect(graffiti.getMaximumCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+        expect(detachment.getDefaultCharges()).toBe(CS2_MIN_CHARGES);
+        expect(detachment.getMaximumCharges()).toBe(CS2_MAX_CHARM_DETACHMENT_CHARGES);
+        expect(CS2Economy.getCharmDetachment().id).toBe(CHARM_DETACHMENT_ID);
+    });
+
+    test("a newly added graffiti is sealed and reports zero charges", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        expect(inventory.get(0).isSealed()).toBe(true);
+        expect(inventory.get(0).getCharges()).toBe(0);
+        expect(inventory.get(0).charges).toBeUndefined();
+    });
+
+    test("unsealItem grants a full set of charges and is not repeatable", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.unsealItem(0);
+        expect(inventory.get(0).getCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+        expect(inventory.get(0).isSealed()).toBe(false);
+        expect(() => inventory.unsealItem(0)).toThrow();
+        inventory.add({ id: AK47_ID });
+        expect(() => inventory.unsealItem(1)).toThrow();
+    });
+
+    test("consumeItemCharges decrements and removes the item once depleted", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.unsealItem(0);
+        inventory.consumeItemCharges(0);
+        expect(inventory.get(0).getCharges()).toBe(49);
+        inventory.consumeItemCharges(0, 49);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("consumeItemCharges rejects over-consuming, sealed and chargeless items", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        expect(() => inventory.consumeItemCharges(0)).toThrow();
+        inventory.unsealItem(0);
+        expect(() => inventory.consumeItemCharges(0, CS2_MAX_GRAFFITI_CHARGES + 1)).toThrow();
+        expect(() => inventory.consumeItemCharges(0, 0)).toThrow();
+        expect(() => inventory.consumeItemCharges(0, 1.5)).toThrow();
+        inventory.add({ id: AK47_ID });
+        expect(() => inventory.consumeItemCharges(1)).toThrow();
+        expect(inventory.get(0).getCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+    });
+
+    test("unpackItem swaps a pack for three charges and stacks onto an existing instance", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: CHARM_DETACHMENT_PACK_ID });
+        inventory.unpackItem(0);
+        expect(inventory.size()).toBe(1);
+        const uid = inventory.getAll()[0]!.uid;
+        expect(inventory.get(uid).id).toBe(CHARM_DETACHMENT_ID);
+        expect(inventory.get(uid).getCharges()).toBe(CS2_CHARM_DETACHMENT_PACK_CHARGES);
+        inventory.add({ id: CHARM_DETACHMENT_PACK_ID });
+        inventory.unpackItem(inventory.getAll()[1]!.uid);
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(uid).getCharges()).toBe(CS2_CHARM_DETACHMENT_PACK_CHARGES * 2);
+    });
+
+    test("unpackItem rejects anything that is not a pack", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: AK47_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        expect(() => inventory.unpackItem(0)).toThrow();
+        expect(() => inventory.unpackItem(1)).toThrow();
+    });
+
+    test("adding a charm detachment bumps the single instance instead of taking a slot", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).getCharges()).toBe(3);
+    });
+
+    test("a full inventory can still top up an existing detachment stack", () => {
+        const inventory = new CS2Inventory({ maxItems: 2 });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: AK47_ID });
+        expect(inventory.isFull()).toBe(true);
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        expect(inventory.size()).toBe(2);
+        expect(inventory.get(0).getCharges()).toBe(2);
+        expect(() => inventory.add({ id: AWP_ID })).toThrow();
+    });
+
+    test("add and edit refuse caller-supplied charges", () => {
+        const inventory = makeInventory();
+        expect(() => inventory.add({ id: GRAFFITI_ACE_ID, charges: 50 })).toThrow();
+        expect(() => inventory.add({ id: CHARM_DETACHMENT_ID, charges: 99 })).toThrow();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.unsealItem(0);
+        // Refilling, spending and unsealing are all rejected; only a no-op passes through.
+        expect(() => inventory.edit(0, { charges: 10 })).toThrow();
+        expect(() => inventory.edit(1, { charges: 50 })).toThrow();
+        inventory.edit(0, { charges: CS2_MAX_GRAFFITI_CHARGES, nameTag: undefined });
+        expect(inventory.get(0).getCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+        expect(inventory.get(1).isSealed()).toBe(true);
+    });
+
+    test("a sealed graffiti cannot be equipped", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        expect(() => inventory.equip(0)).toThrow();
+        inventory.unsealItem(0);
+        inventory.equip(0);
+        expect(inventory.get(0).equipped).toBe(true);
+    });
+
+    test("heal unseals an equipped legacy graffiti but leaves stored ones sealed", () => {
+        const inventory = makeInventory({
+            0: { id: GRAFFITI_ACE_ID, equipped: true },
+            1: { id: GRAFFITI_ACE_ID }
+        });
+        expect(inventory.get(0).getCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+        expect(inventory.get(0).isSealed()).toBe(false);
+        expect(inventory.get(1).isSealed()).toBe(true);
+    });
+
+    test("heal clamps out-of-range charges and drops them from chargeless items", () => {
+        const inventory = makeInventory({
+            0: { id: GRAFFITI_ACE_ID, charges: 5000 },
+            1: { id: GRAFFITI_ACE_ID, charges: 12.7 },
+            2: { id: AK47_ID, charges: 10 } as CS2BaseInventoryItem
+        });
+        expect(inventory.get(0).getCharges()).toBe(CS2_MAX_GRAFFITI_CHARGES);
+        expect(inventory.get(1).getCharges()).toBe(12);
+        expect(inventory.get(2).charges).toBeUndefined();
+    });
+
+    test("heal folds loose charm detachments into the lowest uid", () => {
+        const inventory = makeInventory({
+            2: { id: CHARM_DETACHMENT_ID },
+            5: { id: CHARM_DETACHMENT_ID, charges: 4 },
+            7: { id: CHARM_DETACHMENT_ID },
+            9: { id: AK47_ID }
+        });
+        expect(inventory.size()).toBe(2);
+        expect(inventory.get(2).getCharges()).toBe(6);
+        expect(() => inventory.get(5)).toThrow();
+        expect(() => inventory.get(7)).toThrow();
+        expect(inventory.get(9).id).toBe(AK47_ID);
+    });
+
+    test("heal wipes charm detachments and packs out of storage units", () => {
+        const inventory = makeInventory({
+            0: {
+                id: STORAGE_UNIT_ID,
+                nameTag: "My Storage Unit",
+                storage: {
+                    0: { id: CHARM_DETACHMENT_ID, charges: 9 },
+                    1: { id: AK47_ID },
+                    2: { id: CHARM_DETACHMENT_PACK_ID }
+                }
+            }
+        });
+        expect(inventory.getStorageUnitSize(0)).toBe(1);
+        expect(inventory.getStorageUnitItems(0)[0]?.id).toBe(AK47_ID);
+        // Wiped, not withdrawn: nothing lands back in the inventory.
+        expect(inventory.size()).toBe(1);
+    });
+
+    test("heal empties a storage unit that held nothing but detachments", () => {
+        const inventory = makeInventory({
+            0: {
+                id: STORAGE_UNIT_ID,
+                nameTag: "My Storage Unit",
+                storage: { 0: { id: CHARM_DETACHMENT_ID } }
+            }
+        });
+        expect(inventory.getStorageUnitSize(0)).toBe(0);
+        expect(inventory.isStorageUnitFilled(0)).toBe(false);
+        expect(inventory.get(0).storage).toBeUndefined();
+    });
+
+    test("heal re-seals a stored graffiti instead of discarding it", () => {
+        const inventory = makeInventory({
+            0: {
+                id: STORAGE_UNIT_ID,
+                nameTag: "My Storage Unit",
+                storage: { 0: { id: GRAFFITI_ACE_ID, charges: 12 } }
+            }
+        });
+        expect(inventory.getStorageUnitSize(0)).toBe(1);
+        const stored = ensure(inventory.getStorageUnitItems(0)[0]);
+        expect(stored.isSealed()).toBe(true);
+        expect(stored.getCharges()).toBe(0);
+    });
+
+    test("heal leaves charm detachment packs alone", () => {
+        const inventory = makeInventory({
+            0: { id: CHARM_DETACHMENT_PACK_ID },
+            1: { id: CHARM_DETACHMENT_PACK_ID }
+        });
+        expect(inventory.size()).toBe(2);
+        expect(inventory.get(0).charges).toBeUndefined();
+        expect(inventory.get(1).charges).toBeUndefined();
+    });
+
+    test("only sealed graffiti may be deposited into a storage unit", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: STORAGE_UNIT_ID });
+        inventory.renameStorageUnit(0, "My Storage Unit");
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_PACK_ID });
+        inventory.unsealItem(2);
+        expect(() => inventory.depositToStorageUnit(0, [2])).toThrow();
+        expect(() => inventory.depositToStorageUnit(0, [3])).toThrow();
+        expect(() => inventory.depositToStorageUnit(0, [4])).toThrow();
+        inventory.depositToStorageUnit(0, [1]);
+        expect(inventory.getStorageUnitSize(0)).toBe(1);
+    });
+
+    test("validation rejects malformed charges", () => {
+        expect(CS2Economy.safeValidateCharges(50, graffiti)).toBe(true);
+        expect(CS2Economy.safeValidateCharges(undefined, graffiti)).toBe(true);
+        expect(CS2Economy.safeValidateCharges(51, graffiti)).toBe(false);
+        expect(CS2Economy.safeValidateCharges(0, graffiti)).toBe(false);
+        expect(CS2Economy.safeValidateCharges(-1, graffiti)).toBe(false);
+        expect(CS2Economy.safeValidateCharges(1.5, graffiti)).toBe(false);
+        expect(CS2Economy.safeValidateCharges(NaN, graffiti)).toBe(false);
+        expect(CS2Economy.safeValidateCharges(1, CS2Economy.getById(AK47_ID))).toBe(false);
+        expect(CS2Economy.safeValidateCharges(1000, detachment)).toBe(true);
+    });
+
+    test("charges survive a stringify round trip", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.unsealItem(1);
+        inventory.consumeItemCharges(1, 8);
+        const restored = new CS2Inventory({ data: ensure(CS2Inventory.parse(inventory.stringify())) });
+        expect(restored.get(0).isSealed()).toBe(true);
+        expect(restored.get(1).getCharges()).toBe(42);
     });
 });

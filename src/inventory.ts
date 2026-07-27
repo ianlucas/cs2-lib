@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
+    CS2_CHARM_DETACHMENT_PACK_CHARGES,
     CS2_KEYCHAIN_OFFSET_FACTOR,
     CS2_MAX_KEYCHAINS,
     CS2_MAX_KEYCHAIN_SEED,
@@ -12,6 +13,7 @@ import {
     CS2_MAX_STICKERS,
     CS2_MAX_STICKER_ROTATION,
     CS2_MAX_STICKER_WEAR,
+    CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
@@ -38,6 +40,7 @@ import {
 } from "./utils.ts";
 
 export interface CS2BaseInventoryItem {
+    charges?: number;
     containerId?: number;
     equipped?: boolean;
     equippedCT?: boolean;
@@ -383,6 +386,18 @@ export class CS2Inventory {
                 }
             }
         }
+        if (!economyItem.hasCharges()) {
+            item.charges = undefined;
+        } else if (item.charges !== undefined) {
+            item.charges = Number.isFinite(item.charges)
+                ? clamp(Math.trunc(item.charges), CS2_MIN_CHARGES, economyItem.getMaximumCharges())
+                : undefined;
+        } else if (
+            economyItem.isGraffiti() &&
+            (item.equipped === true || item.equippedCT === true || item.equippedT === true)
+        ) {
+            item.charges = economyItem.getDefaultCharges();
+        }
         if (item.wear !== undefined) {
             if (!economyItem.hasWear()) {
                 item.wear = undefined;
@@ -400,6 +415,7 @@ export class CS2Inventory {
     }
 
     public validateBaseInventoryItem({
+        charges,
         id,
         keychains,
         nameTag,
@@ -414,18 +430,62 @@ export class CS2Inventory {
         this.economy.validateSeed(seed, item);
         this.economy.validateNameTag(nameTag, item);
         this.economy.validateStatTrak(statTrak, item);
+        this.economy.validateCharges(charges, item);
         this.validateAddable(item);
         this.validatePatches(patches, item);
         this.validateStickers(stickers, item);
         this.validateKeychains(keychains, item);
     }
 
+    private reconcileChargeableItems(items: Record<number, CS2BaseInventoryItem>): void {
+        for (const item of Object.values(items)) {
+            if (item.storage === undefined) {
+                continue;
+            }
+            for (const [slot, stored] of Object.entries(item.storage)) {
+                if (!this.economy.items.has(stored.id)) {
+                    continue;
+                }
+                const economyItem = this.economy.getById(stored.id);
+                if (economyItem.isCharmDetachment() || economyItem.isCharmDetachmentPack()) {
+                    delete item.storage[parseInt(slot, 10)];
+                } else if (economyItem.hasCharges()) {
+                    stored.charges = undefined;
+                }
+            }
+            if (Object.keys(item.storage).length === 0) {
+                item.storage = undefined;
+            }
+        }
+        const entries = Object.entries(items)
+            .map(([key, value]) => [parseInt(key, 10), value] as const)
+            .filter(([, { id }]) => this.economy.items.has(id) && this.economy.getById(id).isCharmDetachment())
+            .sort(([a], [b]) => a - b);
+        if (entries.length <= 1) {
+            return;
+        }
+        const [survivorUid, survivor] = ensure(entries[0]);
+        const economyItem = this.economy.getById(survivor.id);
+        let charges = 0;
+        for (const [uid, item] of entries) {
+            charges += item.charges ?? economyItem.getDefaultCharges();
+            if (uid !== survivorUid) {
+                delete items[uid];
+            }
+        }
+        survivor.charges = Math.min(charges, economyItem.getMaximumCharges());
+        survivor.updatedAt = getTimestamp();
+    }
+
     private toInventoryItems(items: Record<number, CS2BaseInventoryItem>): Map<number, CS2InventoryItem> {
+        for (const value of Object.values(items)) {
+            this.healBaseInventoryItem(value);
+        }
+        this.reconcileChargeableItems(items);
         return new Map(
             Object.entries(items)
                 .filter(([, { id }]) => this.economy.items.has(id))
                 .map(([key, value]) => {
-                    this.healBaseInventoryItem(value);
                     const uid = parseInt(key, 10);
                     return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
                 })
@@ -444,11 +504,49 @@ export class CS2Inventory {
         return this.items.size >= this.options.maxItems;
     }
 
-    add(item: CS2BaseInventoryItem): this {
+    private findChargeableUid(id: number): number | undefined {
+        let found: number | undefined;
+        for (const [uid, item] of this.items) {
+            if (item.id === id && (found === undefined || uid < found)) {
+                found = uid;
+            }
+        }
+        return found;
+    }
+
+    private addCharges(economyItem: CS2EconomyItem, amount: number): this {
+        assert(economyItem.hasCharges());
+        const maximum = economyItem.getMaximumCharges();
+        const uid = this.findChargeableUid(economyItem.id);
+        if (uid !== undefined) {
+            const item = this.get(uid);
+            item.charges = Math.min((item.charges ?? economyItem.getDefaultCharges()) + amount, maximum);
+            item.updatedAt = getTimestamp();
+            return this;
+        }
         assert(!this.isFull());
-        const uid = getNextUid(this.items);
+        const nextUid = getNextUid(this.items);
+        this.items.set(
+            nextUid,
+            new CS2InventoryItem(
+                this,
+                nextUid,
+                { id: economyItem.id, charges: Math.min(amount, maximum), updatedAt: getTimestamp() },
+                economyItem
+            )
+        );
+        return this;
+    }
+
+    add(item: CS2BaseInventoryItem): this {
         const economyItem = this.economy.getById(item.id);
         assert(!economyItem.isStub());
+        assert(item.charges === undefined);
+        if (economyItem.isCharmDetachment()) {
+            return this.addCharges(economyItem, CS2_MIN_CHARGES);
+        }
+        assert(!this.isFull());
+        const uid = getNextUid(this.items);
         this.items.set(
             uid,
             new CS2InventoryItem(
@@ -517,6 +615,7 @@ export class CS2Inventory {
     edit(itemUid: number, properties: Partial<CS2BaseInventoryItem>): this {
         const item = this.get(itemUid);
         assert(properties.id === undefined || properties.id === item.id);
+        assert(properties.charges === undefined || properties.charges === item.charges);
         item.edit(properties, { updatedAt: getTimestamp() });
         return this;
     }
@@ -527,6 +626,7 @@ export class CS2Inventory {
         assert(team !== CS2Team.CT || item.equippedCT === undefined);
         assert(team !== CS2Team.T || item.equippedT === undefined);
         assert(CS2_INVENTORY_EQUIPPABLE_ITEMS.includes(item.type));
+        assert(!item.isSealed());
         assert(team === undefined || item.teams?.includes(team));
         assert(team !== undefined || item.teams === undefined);
         for (const [otherUid, otherItem] of this.items) {
@@ -567,6 +667,36 @@ export class CS2Inventory {
             id: unlockedItem.id,
             updatedAt: getTimestamp()
         });
+        return this;
+    }
+
+    unsealItem(uid: number): this {
+        const item = this.get(uid);
+        assert(item.isSealed());
+        item.charges = item.getDefaultCharges();
+        item.updatedAt = getTimestamp();
+        return this;
+    }
+
+    unpackItem(packUid: number): this {
+        this.get(packUid).expectCharmDetachmentPack();
+        this.items.delete(packUid);
+        return this.addCharges(this.economy.getCharmDetachment(), CS2_CHARM_DETACHMENT_PACK_CHARGES);
+    }
+
+    consumeItemCharges(uid: number, amount = 1): this {
+        const item = this.get(uid);
+        assert(item.hasCharges());
+        assert(!item.isSealed());
+        assert(Number.isInteger(amount) && amount > 0);
+        const remaining = item.getCharges() - amount;
+        assert(remaining >= 0);
+        if (remaining === 0) {
+            this.items.delete(uid);
+            return this;
+        }
+        item.charges = remaining;
+        item.updatedAt = getTimestamp();
         return this;
     }
 
@@ -624,7 +754,10 @@ export class CS2Inventory {
         assert(depositUids.length > 0);
         assert(this.canDepositToStorageUnit(storageUid, depositUids.length));
         for (const sourceUid of depositUids) {
-            assert(!this.get(sourceUid).isStorageUnit());
+            const source = this.get(sourceUid);
+            assert(!source.isStorageUnit());
+            assert(!source.isCharmDetachment() && !source.isCharmDetachmentPack());
+            assert(!source.hasCharges() || source.isSealed());
         }
         const storage = item.storage ?? new Map<number, CS2InventoryItem>();
         for (const sourceUid of depositUids) {
@@ -856,6 +989,7 @@ export class CS2InventoryItem
     extends CS2EconomyItem
     implements Interface<Omit<CS2BaseInventoryItem, "keychains" | "patches" | "stickers" | "storage">>
 {
+    charges: number | undefined;
     containerId: number | undefined;
     equipped: boolean | undefined;
     equippedCT: boolean | undefined;
@@ -1025,6 +1159,14 @@ export class CS2InventoryItem
         return this.patches?.size ?? 0;
     }
 
+    getCharges(): number {
+        return this.charges ?? 0;
+    }
+
+    isSealed(): boolean {
+        return this.hasCharges() && this.charges === undefined;
+    }
+
     getWear(): number {
         return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
     }
@@ -1043,6 +1185,7 @@ export class CS2InventoryItem
 
     asBase(): CS2BaseInventoryItem {
         return {
+            charges: this.charges,
             containerId: this.containerId,
             equipped: this.equipped,
             equippedCT: this.equippedCT,

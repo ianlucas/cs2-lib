@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
+    CS2_CHARM_DETACHMENT_PACK_TOOL_DEF,
+    CS2_CHARM_DETACHMENT_TOOL_DEF,
     CS2_CONTAINER_ITEMS,
     CS2_CONTRACT_TOOL_DEF,
     CS2_DISPLAY_ITEMS,
@@ -11,8 +13,10 @@ import {
     CS2_GRAPHIC_ART_ITEMS,
     CS2_KEYCHAINABLE_ITEMS,
     CS2_MACHINEGUN_MODELS,
+    CS2_MAX_CHARM_DETACHMENT_CHARGES,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
+    CS2_MAX_GRAFFITI_CHARGES,
     CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_MINIMAL_WEAR_WEAR,
     CS2_MAX_SEED,
@@ -21,6 +25,7 @@ import {
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
     CS2_MIDTIER_CATEGORIES,
+    CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
@@ -90,6 +95,8 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
+    private charmDetachment: CS2EconomyItem | undefined;
+
     load({
         assetsBaseUrl,
         items,
@@ -104,6 +111,7 @@ export class CS2EconomyInstance {
         this.items.clear();
         this.stickers.clear();
         this.itemsAsArray = [];
+        this.charmDetachment = undefined;
         for (const item of items) {
             const economyItem = new CS2EconomyItem(
                 this,
@@ -198,6 +206,20 @@ export class CS2EconomyInstance {
         return safe(() => this.requireNameTag(nameTag, item));
     }
 
+    validateCharges(charges?: number, item?: CS2EconomyItem): boolean {
+        if (charges === undefined) {
+            return true;
+        }
+        assert(item === undefined || item.hasCharges());
+        assert(Number.isInteger(charges));
+        assert(charges >= CS2_MIN_CHARGES && charges <= (item?.getMaximumCharges() ?? Number.MAX_SAFE_INTEGER));
+        return true;
+    }
+
+    safeValidateCharges(charges?: number, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateCharges(charges, item));
+    }
+
     validateStatTrak(statTrak?: number, item?: CS2EconomyItem): boolean {
         if (statTrak === undefined) {
             return true;
@@ -233,6 +255,11 @@ export class CS2EconomyInstance {
 
     getStickers(): CS2EconomyItem[] {
         return Array.from(this.stickers);
+    }
+
+    getCharmDetachment(): CS2EconomyItem {
+        this.charmDetachment ??= ensure(this.itemsAsArray.find((item) => item.isCharmDetachment()));
+        return this.charmDetachment;
     }
 
     validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
@@ -517,6 +544,14 @@ export class CS2EconomyItem implements Interface<
         return this.isTool() && this.def === CS2_CONTRACT_TOOL_DEF;
     }
 
+    isCharmDetachment(): boolean {
+        return this.isTool() && this.def === CS2_CHARM_DETACHMENT_TOOL_DEF;
+    }
+
+    isCharmDetachmentPack(): boolean {
+        return this.isTool() && this.def === CS2_CHARM_DETACHMENT_PACK_TOOL_DEF;
+    }
+
     expectAgent(): this {
         assert(this.isAgent());
         return this;
@@ -549,6 +584,11 @@ export class CS2EconomyItem implements Interface<
 
     expectStatTrakSwapTool(): this {
         assert(this.isStatTrakSwapTool());
+        return this;
+    }
+
+    expectCharmDetachmentPack(): this {
+        assert(this.isCharmDetachmentPack());
         return this;
     }
 
@@ -588,6 +628,18 @@ export class CS2EconomyItem implements Interface<
 
     hasStatTrak(): boolean {
         return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.free;
+    }
+
+    hasCharges(): boolean {
+        return this.isGraffiti() || this.isCharmDetachment();
+    }
+
+    getDefaultCharges(): number {
+        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MIN_CHARGES;
+    }
+
+    getMaximumCharges(): number {
+        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MAX_CHARM_DETACHMENT_CHARGES;
     }
 
     isWeaponCase(): boolean {
