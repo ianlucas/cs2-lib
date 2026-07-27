@@ -277,6 +277,7 @@ export class CS2EconomyItem implements Interface<
     base: boolean | undefined;
     baseId: number | undefined;
     category: string | undefined;
+    clothCollider: boolean | undefined;
     collection: string | undefined;
     collectionDesc: string | undefined;
     collectionImage: string | undefined;
@@ -664,6 +665,14 @@ export class CS2EconomyItem implements Interface<
     getModelData(): string {
         const playerModel = this.playerModel ?? this.parent?.playerModel;
         return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
+    }
+
+    getClothCollider(): string | undefined {
+        if (!(this.clothCollider ?? this.parent?.clothCollider)) {
+            return undefined;
+        }
+        const playerModel = this.playerModel ?? this.parent?.playerModel;
+        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".collider.json"));
     }
 
     getMinimumWear(): number {

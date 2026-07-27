@@ -58,6 +58,7 @@ export interface CS2Item {
     base?: boolean | undefined;
     baseId?: number | undefined;
     category?: string | undefined;
+    clothCollider?: boolean | undefined;
     collection?: string | undefined;
     collectionImage?: string | undefined;
     containerType?: CS2ContainerType | undefined;

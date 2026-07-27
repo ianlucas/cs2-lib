@@ -852,6 +852,7 @@ public static class CatalogBuilder
         if (ctx.Mode != ItemGeneratorMode.Limited) return;
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
+        item.ClothCollider ??= previous.ClothCollider;
         item.DisplaySeed ??= previous.DisplaySeed;
         item.KeychainOffsetXMax ??= previous.KeychainOffsetXMax;
         item.KeychainOffsetXMin ??= previous.KeychainOffsetXMin;
