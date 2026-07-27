@@ -46,7 +46,6 @@ public static partial class Config
         "community_mix01", "community02", "danger_zone",
         "standard", "stickers2", "tournament_assets"
     ];
-    public const string RemoveKeychainToolIndex = "65";
     public const int WebpQuality = 95;
     // Lossy WebP (even at q95) quantizes away the ±1 dither in normal maps, collapsing them
     // into flat DCT plateaus; on metallic skins every plateau mirrors a slightly different

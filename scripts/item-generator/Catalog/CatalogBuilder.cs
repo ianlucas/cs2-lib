@@ -677,7 +677,7 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 Def = int.Parse(index),
-                Free = baseitem == "1" && index != Config.RemoveKeychainToolIndex ? true : null,
+                Free = baseitem == "1" ? true : null,
                 Id = id,
                 Image = CatalogAssets.GetImage(ctx, image),
                 Index = null,

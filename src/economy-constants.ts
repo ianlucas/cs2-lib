@@ -34,6 +34,10 @@ export const CS2_MAX_KEYCHAIN_SEED = 100000;
 export const CS2_MAX_STICKERS = 5;
 export const CS2_MAX_PATCHES = 5;
 export const CS2_MAX_KEYCHAINS = 1;
+export const CS2_MIN_CHARGES = 1;
+export const CS2_MAX_GRAFFITI_CHARGES = 50;
+export const CS2_MAX_CHARM_DETACHMENT_CHARGES: number = Number.MAX_SAFE_INTEGER;
+export const CS2_CHARM_DETACHMENT_PACK_CHARGES = 3;
 
 export const CS2_STICKER_WEAR_FACTOR = 0.01;
 export const CS2_STICKER_SCRAPE_FACTOR = 0.1;
@@ -44,6 +48,8 @@ export const CS2_WEAR_FACTOR = 0.000001;
 
 export const CS2_NAMETAG_RE: RegExp = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_，。；！\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
 
+export const CS2_CHARM_DETACHMENT_PACK_TOOL_DEF = 4950;
+export const CS2_CHARM_DETACHMENT_TOOL_DEF = 65;
 export const CS2_CONTRACT_TOOL_DEF = 62;
 export const CS2_NAMETAG_TOOL_DEF = 1200;
 export const CS2_STATTRAK_SWAP_TOOL_DEF = 1324;
