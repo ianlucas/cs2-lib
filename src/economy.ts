@@ -667,12 +667,6 @@ export class CS2EconomyItem implements Interface<
         return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
     }
 
-    /**
-     * The model's cloth collider: the shapes CS2 pushes a keychain out of, taken from the model's
-     * own `m_pFeModel` (signed distance fields on a grid, plus boxes, each bound to a weapon bone).
-     * `undefined` when the model publishes none — most do not, knives included, and a keychain
-     * simply hangs uncollided on those.
-     */
     getClothCollider(): string | undefined {
         if (!(this.clothCollider ?? this.parent?.clothCollider)) {
             return undefined;
