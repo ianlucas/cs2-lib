@@ -68,6 +68,7 @@ import {
     type CS2ItemTranslationMap,
     CS2ItemType,
     CS2ItemWear,
+    CS2StatTrakMode,
     type CS2UnlockedItem
 } from "./economy-types.ts";
 import { type CS2Team } from "./teams.ts";
@@ -268,10 +269,10 @@ export class CS2EconomyInstance {
         keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
         if (keyItem !== undefined) {
             keyItem.expectKey();
-            assert(containerItem.keys !== undefined);
-            assert(containerItem.keys.includes(keyItem.id));
+            assert(containerItem.keyIds !== undefined);
+            assert(containerItem.keyIds.includes(keyItem.id));
         } else {
-            assert(containerItem.keys === undefined);
+            assert(containerItem.keyIds === undefined);
         }
         return true;
     }
@@ -285,7 +286,7 @@ export class CS2EconomyInstance {
         { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlockContainer"]>
     ): void {
         item = this.get(item).expectContainer();
-        assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
+        assert(item.contentIds?.includes(id) || item.specialIds?.includes(id));
     }
 
     resolveUrl(path?: string): string {
@@ -294,7 +295,7 @@ export class CS2EconomyInstance {
 }
 
 export class CS2EconomyItem implements Interface<
-    Omit<CS2Item, "contents" | "specials" | "teams"> &
+    Omit<CS2Item, "teams"> &
         CS2ItemTranslation & {
             contents: CS2EconomyItem[] | undefined;
             teams: CS2Team[] | undefined;
@@ -309,6 +310,7 @@ export class CS2EconomyItem implements Interface<
     collectionImagePath: string | undefined;
     collectionName: string | undefined;
     containerType: CS2ContainerType | undefined;
+    contentIds: number[] | undefined;
     def: number | undefined;
     desc: string | undefined;
     displaySeed: number | undefined;
@@ -323,7 +325,7 @@ export class CS2EconomyItem implements Interface<
     keychainOffsetYMin: number | undefined;
     keychainOffsetZMax: number | undefined;
     keychainOffsetZMin: number | undefined;
-    keys: number[] | undefined;
+    keyIds: number[] | undefined;
     legacy: boolean | undefined;
     legacyKeychainOffsetXMax: number | undefined;
     legacyKeychainOffsetXMin: number | undefined;
@@ -341,9 +343,9 @@ export class CS2EconomyItem implements Interface<
     modelPath: string | undefined;
     name: string = null!;
     rarity: CS2RarityColor = null!;
+    specialIds: number[] | undefined;
     specialsImagePath: string | undefined;
-    statTrakless: boolean | undefined;
-    statTrakOnly: boolean | undefined;
+    statTrakMode: CS2StatTrakMode | undefined;
     stickerId: number | undefined;
     stickerOffsetXMax: number | undefined;
     stickerOffsetXMin: number | undefined;
@@ -356,8 +358,6 @@ export class CS2EconomyItem implements Interface<
     wearMax: number | undefined;
     wearMin: number | undefined;
 
-    private _contents: number[] | undefined;
-    private _specials: number[] | undefined;
     private _teams: CS2ItemTeam | undefined;
 
     constructor(
@@ -373,13 +373,9 @@ export class CS2EconomyItem implements Interface<
         assert(item.type === CS2ItemType.Stub || typeof this.rarity === "string");
     }
 
-    set contents(value: number[] | undefined) {
-        this._contents = value;
-    }
-
     get contents(): CS2EconomyItem[] {
         this.expectContainer();
-        return ensure(this._contents).map((id) => this.economy.get(id));
+        return ensure(this.contentIds).map((id) => this.economy.get(id));
     }
 
     get parent(): CS2EconomyItem | undefined {
@@ -390,21 +386,9 @@ export class CS2EconomyItem implements Interface<
             : undefined;
     }
 
-    get rawContents(): number[] | undefined {
-        return this._contents;
-    }
-
-    get rawSpecials(): number[] | undefined {
-        return this._specials;
-    }
-
-    set specials(value: number[] | undefined) {
-        this._specials = value;
-    }
-
     get specials(): CS2EconomyItem[] | undefined {
         this.expectContainer();
-        return this._specials?.map((id) => this.economy.get(id));
+        return this.specialIds?.map((id) => this.economy.get(id));
     }
 
     set teams(value: CS2ItemTeam) {
@@ -700,7 +684,7 @@ export class CS2EconomyItem implements Interface<
 
     getSpecialsImageUrl(): string {
         this.expectContainer();
-        assert(this.rawSpecials);
+        assert(this.specialIds);
         assert(this.specialsImagePath);
         return this.economy.resolveUrl(this.specialsImagePath);
     }
@@ -854,19 +838,16 @@ export class CS2EconomyItem implements Interface<
         }
         const stack = ensure(contents[rollRarity]);
         const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
-        const hasStatTrak = this.statTrakless !== true;
-        const alwaysStatTrak = this.statTrakOnly === true;
         return {
             attributes: {
                 containerId: this.id,
                 seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
-                statTrak: hasStatTrak
-                    ? unlocked.hasStatTrak()
-                        ? alwaysStatTrak || Math.random() <= CS2_STATTRAK_ODD
+                statTrak:
+                    unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
+                        ? this.statTrakMode === CS2StatTrakMode.Guaranteed || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
                             : undefined
-                        : undefined
-                    : undefined,
+                        : undefined,
                 wear: unlocked.hasWear()
                     ? truncateToFactor(
                           randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR),

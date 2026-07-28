@@ -53,6 +53,14 @@ export const CS2ContainerType = {
 
 export type CS2ContainerType = EnumValues<typeof CS2ContainerType>;
 
+/** Absent means the normal roll — see CS2_STATTRAK_ODD. */
+export const CS2StatTrakMode = {
+    Excluded: "excluded",
+    Guaranteed: "guaranteed"
+} as const;
+
+export type CS2StatTrakMode = EnumValues<typeof CS2StatTrakMode>;
+
 export interface CS2Item {
     altName?: string | undefined;
     base?: boolean | undefined;
@@ -61,7 +69,7 @@ export interface CS2Item {
     collection?: string | undefined;
     collectionImagePath?: string | undefined;
     containerType?: CS2ContainerType | undefined;
-    contents?: number[] | undefined;
+    contentIds?: number[] | undefined;
     def?: number | undefined;
     displaySeed?: number | undefined;
     free?: boolean | undefined;
@@ -75,7 +83,7 @@ export interface CS2Item {
     keychainOffsetYMin?: number | undefined;
     keychainOffsetZMax?: number | undefined;
     keychainOffsetZMin?: number | undefined;
-    keys?: number[] | undefined;
+    keyIds?: number[] | undefined;
     legacy?: boolean | undefined;
     legacyKeychainOffsetXMax?: number | undefined;
     legacyKeychainOffsetXMin?: number | undefined;
@@ -92,10 +100,9 @@ export interface CS2Item {
     model?: string | undefined;
     modelPath?: string | undefined;
     rarity?: CS2RarityColor | undefined;
-    specials?: number[] | undefined;
+    specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
-    statTrakless?: boolean | undefined;
-    statTrakOnly?: boolean | undefined;
+    statTrakMode?: CS2StatTrakMode | undefined;
     stickerId?: number | undefined;
     stickerOffsetXMax?: number | undefined;
     stickerOffsetXMin?: number | undefined;

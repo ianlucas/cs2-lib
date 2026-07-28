@@ -722,7 +722,7 @@ public static class CatalogBuilder
             if (clientLootListKey == null) continue;
 
             string? contentsType = null;
-            var contents = new List<int>();
+            var contentIds = new List<int>();
             foreach (var itemKey in Collections.GetClientLootListItems(ctx, clientLootListKey))
             {
                 if (!ctx.ContainerItems.TryGetValue(itemKey, out var containedId)) continue;
@@ -733,22 +733,22 @@ public static class CatalogBuilder
                     foreach (var other in ctx.Items.Values)
                     {
                         if (other.Tint != null && other.Index == contained.Index)
-                            contents.Add(other.Id);
+                            contentIds.Add(other.Id);
                     }
                 }
                 else
                 {
-                    contents.Add(containedId);
+                    contentIds.Add(containedId);
                 }
             }
 
-            var specials = new List<int>();
-            await Sources.External.PopulateContainerContents(itemName, contents, ctx.ItemNames);
-            await Sources.External.PopulateContainerSpecials(itemName, specials, ctx.ItemNames);
-            if (contents.Count == 0) continue;
+            var specialIds = new List<int>();
+            await Sources.External.PopulateContainerContents(itemName, contentIds, ctx.ItemNames);
+            await Sources.External.PopulateContainerSpecials(itemName, specialIds, ctx.ItemNames);
+            if (contentIds.Count == 0) continue;
 
             // Parse keys
-            var keys = new List<int>();
+            var keyIds = new List<int>();
             if (associatedItems != null)
             {
                 foreach (var assoc in associatedItems)
@@ -756,7 +756,7 @@ public static class CatalogBuilder
                     var keyItemDef = assoc.Key;
                     if (keyItems.TryGetValue(keyItemDef, out var existingKeyId))
                     {
-                        keys.Add(existingKeyId);
+                        keyIds.Add(existingKeyId);
                         continue;
                     }
                     var keyItem = KvHelper.FindInMergedSection(ctx.GameItems!, "items", keyItemDef);
@@ -778,7 +778,7 @@ public static class CatalogBuilder
                         Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                         Type = CS2ItemType.Key
                     });
-                    keys.Add(keyId);
+                    keyIds.Add(keyId);
                 }
             }
 
@@ -806,17 +806,18 @@ public static class CatalogBuilder
                 Collection = collection,
                 CollectionImagePath = collectionImage,
                 ContainerType = Collections.GetContainerType(containerName, contentsType),
-                Contents = contents,
+                ContentIds = contentIds,
                 Def = int.Parse(containerIndex),
                 Id = id,
                 ImagePath = containerImage,
-                Keys = keys.Count > 0 ? keys : null,
+                KeyIds = keyIds.Count > 0 ? keyIds : null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
-                Specials = specials.Count > 0 ? specials
-                    : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.Specials : null,
+                SpecialIds = specialIds.Count > 0 ? specialIds
+                    : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.SpecialIds : null,
                 SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
-                StatTrakless = containsMusicKit && !containsStatTrak ? true : null,
-                StatTrakOnly = containsMusicKit && containsStatTrak ? true : null,
+                StatTrakMode = containsMusicKit
+                    ? containsStatTrak ? CS2StatTrakMode.Guaranteed : CS2StatTrakMode.Excluded
+                    : null,
                 Type = CS2ItemType.Container
             });
         }

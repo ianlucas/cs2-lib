@@ -75,7 +75,7 @@ function getPropChanges(
     const after: any = {};
     const arrayChanges: string[] = [];
 
-    // Properties like `contents`/`specials`/`keys` hold item ids. Diff them by the referenced
+    // Properties like `contentIds`/`specialIds`/`keyIds` hold item ids. Diff them by the referenced
     // item's name so that an internal id change for the same item (e.g. a different Doppler
     // phase id that still exists in items.json) isn't reported as removed + added.
     const resolveRefs = (values: (string | number)[], names?: Record<string, { name?: string }>) =>
@@ -84,7 +84,7 @@ function getPropChanges(
             : values;
 
     // Render array properties as added/removed deltas instead of dumping the whole
-    // before/after arrays (e.g. container `specials`/`contents` can hold hundreds of ids).
+    // before/after arrays (e.g. container `specialIds`/`contentIds` can hold hundreds of ids).
     const addArrayDelta = (property: string, localValue: any, repoValue: any) => {
         const { added, removed } = getArrayDelta(
             resolveRefs(Array.isArray(localValue) ? localValue : [], localNames),

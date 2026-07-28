@@ -16,14 +16,19 @@
 import { assert, ensure } from "../src/utils.ts";
 import { log, read, write } from "./utils.ts";
 
-// Group 1 — asset paths. Swap this map for the next group's; everything else is generic.
+// Group 2 — container payload. Swap this map for the next group's; everything else is generic.
 const renames: Record<string, string> = {
-    clothCollider: "hasColliderData",
-    collectionImage: "collectionImagePath",
-    image: "imagePath",
-    paintMaterial: "materialPath",
-    playerModel: "modelPath",
-    specialsImage: "specialsImagePath"
+    contents: "contentIds",
+    keys: "keyIds",
+    specials: "specialIds"
+};
+
+// Renames that also rewrite the value. The two StatTrak booleans collapse into one enum, so both
+// old keys land on `statTrakMode` — an item carrying both would lose a property, which the
+// per-item key count below catches.
+const rewrites: Record<string, readonly [string, JsonValue]> = {
+    statTrakless: ["statTrakMode", "excluded"],
+    statTrakOnly: ["statTrakMode", "guaranteed"]
 };
 
 const itemsJsonPath = "scripts/data/items.json";
@@ -32,6 +37,10 @@ const typesCsPath = "scripts/item-generator/Types.cs";
 
 type JsonValue = string | number | boolean | JsonValue[];
 type ItemRecord = Record<string, JsonValue>;
+
+function rename(key: string, value: JsonValue): readonly [string, JsonValue] {
+    return rewrites[key] ?? [renames[key] ?? key, value];
+}
 
 // System.Text.Json's default encoder allows Basic Latin except the characters that are unsafe to
 // drop into HTML or a script tag, and escapes everything else as \uXXXX.
@@ -114,23 +123,24 @@ async function main(): Promise<void> {
 
     const emittedKeys = readEmittedKeys(await read(typesCsPath));
     const emittedAt = new Map(emittedKeys.map((key, at) => [key, at] as const));
-    for (const key of Object.values(renames)) {
+    for (const key of [...Object.values(renames), ...Object.values(rewrites).map(([key]) => key)]) {
         assert(emittedAt.has(key), `Types.cs does not declare '${key}'`);
     }
 
     const counts: Record<string, number> = {};
     const renamed = items.map((item) => {
         const properties = Object.entries(item).map(([key, value]) => {
-            const renamedKey = renames[key] ?? key;
+            const [renamedKey, renamedValue] = rename(key, value);
             assert(emittedAt.has(renamedKey), `'${key}' is neither renamed nor declared in Types.cs`);
-            counts[renamedKey] = (counts[renamedKey] ?? 0) + 1;
-            return [renamedKey, value] as const;
+            counts[key] = (counts[key] ?? 0) + 1;
+            return [renamedKey, renamedValue] as const;
         });
         properties.sort(([a], [b]) => ensure(emittedAt.get(a)) - ensure(emittedAt.get(b)));
         const record: ItemRecord = Object.fromEntries(properties);
         assert(Object.keys(record).length === Object.keys(item).length, `item ${item.id} lost a property`);
         for (const [key, value] of Object.entries(item)) {
-            assert(isSameValue(record[renames[key] ?? key], value), `item ${item.id} changed value of '${key}'`);
+            const [renamedKey, renamedValue] = rename(key, value);
+            assert(isSameValue(record[renamedKey], renamedValue), `item ${item.id} changed value of '${key}'`);
         }
         return record;
     });
@@ -140,9 +150,13 @@ async function main(): Promise<void> {
     await write(itemsJsonPath, renamedJson);
     await write(itemsTsPath, createItemsModule(renamedJson));
 
-    log(`Renamed ${Object.keys(renames).length} properties over ${renamed.length} items.`);
+    const total = Object.keys(renames).length + Object.keys(rewrites).length;
+    log(`Renamed ${total} properties over ${renamed.length} items.`);
     for (const [from, to] of Object.entries(renames)) {
-        log(`  ${from} -> ${to} (${counts[to] ?? 0} items)`);
+        log(`  ${from} -> ${to} (${counts[from] ?? 0} items)`);
+    }
+    for (const [from, [to, value]] of Object.entries(rewrites)) {
+        log(`  ${from} -> ${to}: ${JSON.stringify(value)} (${counts[from] ?? 0} items)`);
     }
     log(`Successfully generated '${itemsJsonPath}'.`);
     log(`Successfully generated '${itemsTsPath}'.`);

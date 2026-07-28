@@ -32,6 +32,13 @@ public static class CS2ContainerType
     public const int SouvenirCase = 3;
 }
 
+// Null means the normal roll — see CS2_STATTRAK_ODD.
+public static class CS2StatTrakMode
+{
+    public const string Excluded = "excluded";
+    public const string Guaranteed = "guaranteed";
+}
+
 public class CS2Item
 {
     [JsonPropertyName("altName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -55,8 +62,8 @@ public class CS2Item
     [JsonPropertyName("containerType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? ContainerType { get; set; }
 
-    [JsonPropertyName("contents"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<int>? Contents { get; set; }
+    [JsonPropertyName("contentIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? ContentIds { get; set; }
 
     [JsonPropertyName("def"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Def { get; set; }
@@ -99,8 +106,8 @@ public class CS2Item
     [JsonPropertyName("keychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? KeychainOffsetZMin { get; set; }
 
-    [JsonPropertyName("keys"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<int>? Keys { get; set; }
+    [JsonPropertyName("keyIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? KeyIds { get; set; }
 
     [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Legacy { get; set; }
@@ -150,17 +157,15 @@ public class CS2Item
     [JsonPropertyName("rarity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Rarity { get; set; }
 
-    [JsonPropertyName("specials"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<int>? Specials { get; set; }
+    [JsonPropertyName("specialIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? SpecialIds { get; set; }
 
     [JsonPropertyName("specialsImagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SpecialsImagePath { get; set; }
 
-    [JsonPropertyName("statTrakless"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? StatTrakless { get; set; }
-
-    [JsonPropertyName("statTrakOnly"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? StatTrakOnly { get; set; }
+    // See CS2StatTrakMode.
+    [JsonPropertyName("statTrakMode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StatTrakMode { get; set; }
 
     [JsonPropertyName("stickerId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerId { get; set; }
