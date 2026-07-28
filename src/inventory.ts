@@ -635,7 +635,7 @@ export class CS2Inventory {
                 otherItem.equippedCT = team === CS2Team.CT ? true : otherItem.equippedCT;
                 otherItem.equippedT = team === CS2Team.T ? true : otherItem.equippedT;
             } else {
-                if (otherItem.type === item.type && (!item.isWeapon() || otherItem.model === item.model)) {
+                if (otherItem.type === item.type && (!item.isWeapon() || otherItem.modelKey === item.modelKey)) {
                     otherItem.equipped = team === undefined ? undefined : otherItem.equipped;
                     otherItem.equippedCT = team === CS2Team.CT ? undefined : otherItem.equippedCT;
                     otherItem.equippedT = team === CS2Team.T ? undefined : otherItem.equippedT;

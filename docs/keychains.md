@@ -49,4 +49,4 @@ Two different seeds are in play and they are stored in different places:
 
 ## Models and materials
 
-Keychains carry their own `modelPath` and `materialPath` when they have one, and otherwise inherit from `parent`. The sticker display case is the case that motivates this: the "slab" item holds the shared model and material, and each per-sticker display-case keychain carries neither, resolving both through `baseId`. `getModelDataUrl()` derives the `.json` path from whichever `.glb` won.
+Keychains carry their own `modelPath` and `materialPath` when they have one, and otherwise inherit from `parent`. The sticker display case is the case that motivates this: the "slab" item holds the shared model and material, and each per-sticker display-case keychain carries neither, resolving both through `parentId`. `getModelDataUrl()` derives the `.json` path from whichever `.glb` won.

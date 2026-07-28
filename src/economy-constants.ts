@@ -69,12 +69,12 @@ export const CS2_STATTRAKABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Melee, CS2Item
 export const CS2_STICKERABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];
 export const CS2_KEYCHAINABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];
 
-export const CS2_MIDTIER_CATEGORIES: string[] = ["heavy", "smg"];
-export const CS2_RIFLE_CATEGORIES: string[] = ["rifle"];
-export const CS2_MISC_CATEGORIES: string[] = ["c4", "equipment"];
+export const CS2_MIDTIER_LOADOUT_CATEGORIES: string[] = ["heavy", "smg"];
+export const CS2_RIFLE_LOADOUT_CATEGORIES: string[] = ["rifle"];
+export const CS2_MISC_LOADOUT_CATEGORIES: string[] = ["c4", "equipment"];
 
-export const CS2_SNIPER_RIFLE_MODELS: string[] = ["awp", "g3sg1", "scar20", "ssg08"];
-export const CS2_MACHINEGUN_MODELS: string[] = ["m249", "negev"];
+export const CS2_SNIPER_RIFLE_MODEL_KEYS: string[] = ["awp", "g3sg1", "scar20", "ssg08"];
+export const CS2_MACHINEGUN_MODEL_KEYS: string[] = ["m249", "negev"];
 
 export const CS2_TEAMS_BOTH: CS2Team[] = [CS2Team.T, CS2Team.CT];
 export const CS2_TEAMS_CT: CS2Team[] = [CS2Team.CT];

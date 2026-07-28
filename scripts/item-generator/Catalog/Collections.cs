@@ -2,7 +2,7 @@ namespace ItemGenerator.Catalog;
 
 public static class Collections
 {
-    public static (string? Collection, string? CollectionImage) GetCollection(
+    public static (string? CollectionKey, string? CollectionImage) GetCollection(
         ItemGeneratorContext ctx, int itemId, string? collection)
     {
         string? collectionImage = null;
@@ -15,7 +15,7 @@ public static class Collections
         var name = KvHelper.GetString(itemSet, "name");
         var setDescription = KvHelper.GetString(itemSet, "set_description");
         Translations.TryAddTranslation(ctx, itemId, "collectionName", name);
-        Translations.TryAddTranslation(ctx, itemId, "collectionDesc", setDescription);
+        Translations.TryAddTranslation(ctx, itemId, "collectionDescription", setDescription);
 
         if (ctx.ItemSetImage.TryGetValue(collection, out collectionImage))
             return (collection, collectionImage);
@@ -23,7 +23,7 @@ public static class Collections
         return (collection, null);
     }
 
-    public static (string? Collection, string? CollectionImage) GetItemCollection(
+    public static (string? CollectionKey, string? CollectionImage) GetItemCollection(
         ItemGeneratorContext ctx, int itemId, string itemKey)
     {
         ctx.ItemSetItemKey.TryGetValue(itemKey, out var collection);

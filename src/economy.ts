@@ -13,7 +13,7 @@ import {
     CS2_FALLBACK_PREVIEW_SEED,
     CS2_GRAPHIC_ART_ITEMS,
     CS2_KEYCHAINABLE_ITEMS,
-    CS2_MACHINEGUN_MODELS,
+    CS2_MACHINEGUN_MODEL_KEYS,
     CS2_MAX_CHARM_DETACHMENT_CHARGES,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
@@ -25,21 +25,21 @@ import {
     CS2_MAX_STICKERS,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
-    CS2_MIDTIER_CATEGORIES,
+    CS2_MIDTIER_LOADOUT_CATEGORIES,
     CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
     CS2_MIN_WEAR,
-    CS2_MISC_CATEGORIES,
+    CS2_MISC_LOADOUT_CATEGORIES,
     CS2_NAMETAGGABLE_ITEMS,
     CS2_NAMETAG_RE,
     CS2_NAMETAG_TOOL_DEFINITION_INDEX,
     CS2_PAINTABLE_ITEMS,
     CS2_PATCHABLE_ITEMS,
-    CS2_RIFLE_CATEGORIES,
+    CS2_RIFLE_LOADOUT_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
-    CS2_SNIPER_RIFLE_MODELS,
+    CS2_SNIPER_RIFLE_MODEL_KEYS,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX,
     CS2_STICKERABLE_ITEMS,
@@ -75,17 +75,19 @@ import {
 import { type CS2Team } from "./teams.ts";
 import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
 
-type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2Team };
+type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { usableByTeam?: CS2Team };
 
 function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem) => boolean {
     return function filter(item: CS2EconomyItem) {
         return (
             compare(predicate.type, item.type) &&
             compare(predicate.isDefault, item.isDefault) &&
-            compare(predicate.model, item.model) &&
+            compare(predicate.modelKey, item.modelKey) &&
             compare(predicate.isBase, item.isBase) &&
-            compare(predicate.category, item.category) &&
-            (predicate.team === undefined || item.teams === undefined || item.teams.includes(predicate.team))
+            compare(predicate.loadoutCategory, item.loadoutCategory) &&
+            (predicate.usableByTeam === undefined ||
+                item.teams === undefined ||
+                item.teams.includes(predicate.usableByTeam))
         );
     };
 }
@@ -124,7 +126,7 @@ export class CS2EconomyInstance {
             if (economyItem.isSticker()) {
                 this.stickers.add(economyItem);
                 if (language !== undefined) {
-                    this.categories.add(ensure(economyItem.category));
+                    this.categories.add(ensure(economyItem.categoryName));
                 }
             }
             this.itemsAsArray.push(economyItem);
@@ -296,23 +298,23 @@ export class CS2EconomyInstance {
 }
 
 export class CS2EconomyItem implements Interface<
-    Omit<CS2Item, "teams"> &
+    CS2Item &
         CS2ItemTranslation & {
             contents: CS2EconomyItem[] | undefined;
             teams: CS2Team[] | undefined;
         }
 > {
-    altName: string | undefined;
-    baseId: number | undefined;
-    category: string | undefined;
-    collection: string | undefined;
-    collectionDesc: string | undefined;
+    alternateName: string | undefined;
+    categoryName: string | undefined;
+    collectionDescription: string | undefined;
     collectionImagePath: string | undefined;
+    collectionKey: string | undefined;
     collectionName: string | undefined;
     containerType: CS2ContainerType | undefined;
     contentIds: number[] | undefined;
     definitionIndex: number | undefined;
-    desc: string | undefined;
+    description: string | undefined;
+    displayedStickerId: number | undefined;
     hasColliderData: boolean | undefined;
     id: number = null!;
     imagePath: string | undefined;
@@ -337,29 +339,29 @@ export class CS2EconomyItem implements Interface<
     legacyStickerOffsetYMax: number | undefined;
     legacyStickerOffsetYMin: number | undefined;
     legacyStickerSchemaCount: number | undefined;
+    loadoutCategory: string | undefined;
     materialPath: string | undefined;
-    model: string | undefined;
+    modelKey: string | undefined;
     modelPath: string | undefined;
     name: string = null!;
+    parentId: number | undefined;
     previewSeed: number | undefined;
-    rarity: CS2RarityColor = null!;
+    rarityColor: CS2RarityColor = null!;
     specialIds: number[] | undefined;
     specialsImagePath: string | undefined;
     statTrakMode: CS2StatTrakMode | undefined;
-    stickerId: number | undefined;
     stickerOffsetXMax: number | undefined;
     stickerOffsetXMin: number | undefined;
     stickerOffsetYMax: number | undefined;
     stickerOffsetYMin: number | undefined;
     stickerSchemaCount: number | undefined;
+    team: CS2ItemTeam | undefined;
     tintIndex: number | undefined;
-    tournamentDesc: string | undefined;
+    tournamentDescription: string | undefined;
     type: CS2ItemType = null!;
     variantIndex: number | undefined;
     wearMax: number | undefined;
     wearMin: number | undefined;
-
-    private _teams: CS2ItemTeam | undefined;
 
     constructor(
         public economy: CS2EconomyInstance,
@@ -371,7 +373,7 @@ export class CS2EconomyItem implements Interface<
         assert(typeof this.id === "number");
         assert(this.name);
         assert(this.type);
-        assert(item.type === CS2ItemType.Stub || typeof this.rarity === "string");
+        assert(item.type === CS2ItemType.Stub || typeof this.rarityColor === "string");
     }
 
     get contents(): CS2EconomyItem[] {
@@ -379,10 +381,14 @@ export class CS2EconomyItem implements Interface<
         return ensure(this.contentIds).map((id) => this.economy.get(id));
     }
 
+    get displayedSticker(): CS2EconomyItem | undefined {
+        return this.displayedStickerId !== undefined ? this.economy.get(this.displayedStickerId) : undefined;
+    }
+
     get parent(): CS2EconomyItem | undefined {
-        return this.baseId !== undefined
-            ? this.economy.items.has(this.baseId)
-                ? this.economy.get(this.baseId)
+        return this.parentId !== undefined
+            ? this.economy.items.has(this.parentId)
+                ? this.economy.get(this.parentId)
                 : undefined
             : undefined;
     }
@@ -392,12 +398,8 @@ export class CS2EconomyItem implements Interface<
         return this.specialIds?.map((id) => this.economy.get(id));
     }
 
-    set teams(value: CS2ItemTeam) {
-        this._teams = value;
-    }
-
     get teams(): CS2Team[] | undefined {
-        switch (this._teams) {
+        switch (this.team) {
             case CS2ItemTeam.Both:
                 return CS2_TEAMS_BOTH;
             case CS2ItemTeam.T:
@@ -409,52 +411,48 @@ export class CS2EconomyItem implements Interface<
         }
     }
 
-    get wrappedSticker(): CS2EconomyItem | undefined {
-        return this.stickerId !== undefined ? this.economy.get(this.stickerId) : undefined;
-    }
-
     isC4(): boolean {
-        return this.category === "c4";
+        return this.loadoutCategory === "c4";
     }
 
     isPistol(): boolean {
-        return this.category === "secondary";
+        return this.loadoutCategory === "secondary";
     }
 
     isSMG(): boolean {
-        return this.category === "smg";
+        return this.loadoutCategory === "smg";
     }
 
     isRifle(): boolean {
-        return this.category === "rifle";
+        return this.loadoutCategory === "rifle";
     }
 
     isSniperRifle(): boolean {
-        return this.model !== undefined && CS2_SNIPER_RIFLE_MODELS.includes(this.model);
+        return this.modelKey !== undefined && CS2_SNIPER_RIFLE_MODEL_KEYS.includes(this.modelKey);
     }
 
     isMachinegun(): boolean {
-        return this.model !== undefined && CS2_MACHINEGUN_MODELS.includes(this.model);
+        return this.modelKey !== undefined && CS2_MACHINEGUN_MODEL_KEYS.includes(this.modelKey);
     }
 
     isHeavy(): boolean {
-        return this.category === "heavy";
+        return this.loadoutCategory === "heavy";
     }
 
     isEquipment(): boolean {
-        return this.category === "equipment";
+        return this.loadoutCategory === "equipment";
     }
 
     isInMidTiers(): boolean {
-        return this.category !== undefined && CS2_MIDTIER_CATEGORIES.includes(this.category);
+        return this.loadoutCategory !== undefined && CS2_MIDTIER_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
     }
 
     isInRifles(): boolean {
-        return this.category !== undefined && CS2_RIFLE_CATEGORIES.includes(this.category);
+        return this.loadoutCategory !== undefined && CS2_RIFLE_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
     }
 
     isInMisc(): boolean {
-        return this.category !== undefined && CS2_MISC_CATEGORIES.includes(this.category);
+        return this.loadoutCategory !== undefined && CS2_MISC_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
     }
 
     isAgent(): boolean {
@@ -796,7 +794,7 @@ export class CS2EconomyItem implements Interface<
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
         for (const item of this.contents) {
-            const rarity = CS2RarityColorName[item.rarity];
+            const rarity = CS2RarityColorName[item.rarityColor];
             if (!items[rarity]) {
                 items[rarity] = [];
             }
@@ -819,8 +817,8 @@ export class CS2EconomyItem implements Interface<
         const items = [...this.contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
         return items.sort((a, b) => {
             return (
-                (CS2RarityColorOrder[a.rarity] ?? CS2_RARITY_COLOR_DEFAULT) -
-                (CS2RarityColorOrder[b.rarity] ?? CS2_RARITY_COLOR_DEFAULT)
+                (CS2RarityColorOrder[a.rarityColor] ?? CS2_RARITY_COLOR_DEFAULT) -
+                (CS2RarityColorOrder[b.rarityColor] ?? CS2_RARITY_COLOR_DEFAULT)
             );
         });
     }
@@ -865,7 +863,7 @@ export class CS2EconomyItem implements Interface<
                     : undefined
             },
             id: unlocked.id,
-            rarity: CS2RaritySoundName[unlocked.rarity],
+            rarity: CS2RaritySoundName[unlocked.rarityColor],
             special: rollRarity === "special"
         };
     }

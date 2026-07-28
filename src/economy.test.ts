@@ -13,9 +13,9 @@ import { CS2_ITEMS } from "./items.ts";
 describe("CS2Economy", () => {
     test("use should add items to the economy", () => {
         const items: CS2Item[] = [
-            { id: 1, rarity: CS2RarityColor.Common, type: "weapon" },
-            { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
-            { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
+            { id: 1, rarityColor: CS2RarityColor.Common, type: "weapon" },
+            { id: 2, rarityColor: CS2RarityColor.Common, type: "weapon" },
+            { id: 3, rarityColor: CS2RarityColor.Common, type: "weapon" }
         ];
         CS2Economy.load({
             items,
@@ -32,7 +32,7 @@ describe("CS2Economy", () => {
     });
 
     test("getById should return the item with the given id", () => {
-        const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
+        const item: CS2Item = { id: 1, rarityColor: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
         CS2Economy.load({
             items: [item],
@@ -45,7 +45,7 @@ describe("CS2Economy", () => {
     });
 
     test("get should return the item with the given id or item object", () => {
-        const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
+        const item: CS2Item = { id: 1, rarityColor: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
 
         CS2Economy.load({
@@ -67,8 +67,8 @@ test("getModelDataUrl derives from modelPath (.glb -> .json) with base inheritan
     const modelPath = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
     const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
     const items: CS2Item[] = [
-        { id: 1, isBase: true, modelPath, rarity: CS2RarityColor.Common, type: "weapon" },
-        { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
+        { id: 1, isBase: true, modelPath, rarityColor: CS2RarityColor.Common, type: "weapon" },
+        { parentId: 1, id: 2, rarityColor: CS2RarityColor.Rare, type: "weapon" }
     ];
     CS2Economy.load({
         items,
@@ -91,25 +91,25 @@ test("modelPath and materialPath resolve own-first, then through the parent", ()
     const slabModel = "/models/kc_sticker_display_case_ab9e13cc_331408bc.glb";
     const slabMaterial = "/materials/kc_sticker_display_case_331408bc.vcompmat.json";
     const items: CS2Item[] = [
-        { id: 1, rarity: CS2RarityColor.Common, type: "stub" },
+        { id: 1, rarityColor: CS2RarityColor.Common, type: "stub" },
         {
-            baseId: 1,
+            parentId: 1,
             id: 2,
             materialPath: ownMaterial,
             modelPath: ownModel,
-            rarity: CS2RarityColor.Rare,
+            rarityColor: CS2RarityColor.Rare,
             type: "keychain"
         },
         {
-            baseId: 1,
+            parentId: 1,
             id: 3,
             isDefault: true,
             materialPath: slabMaterial,
             modelPath: slabModel,
-            rarity: CS2RarityColor.Common,
+            rarityColor: CS2RarityColor.Common,
             type: "keychain"
         },
-        { baseId: 3, id: 4, rarity: CS2RarityColor.Common, stickerId: 5, type: "keychain" }
+        { parentId: 3, id: 4, rarityColor: CS2RarityColor.Common, displayedStickerId: 5, type: "keychain" }
     ];
     CS2Economy.load({
         items,
@@ -151,7 +151,7 @@ test("wear validation", () => {
         CS2Economy,
         {
             id: 1,
-            rarity: CS2RarityColor.Common,
+            rarityColor: CS2RarityColor.Common,
             type: "weapon" as const,
             wearMin: 0.2,
             wearMax: 0.6
@@ -186,7 +186,7 @@ test("default cdn url", () => {
 test("display-case keychain resolves model and material through the slab parent", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     // 15200 is the Sticker Display Case slab (carries the shared model/material);
-    // 15407 is a per-sticker display-case keychain that carries neither and inherits via baseId.
+    // 15407 is a per-sticker display-case keychain that carries neither and inherits via parentId.
     const slab = CS2Economy.getById(15200);
     const displayCase = CS2Economy.getById(15407);
     expect(displayCase.modelPath).toBe(undefined);

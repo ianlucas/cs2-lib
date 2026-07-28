@@ -62,14 +62,13 @@ export const CS2StatTrakMode = {
 export type CS2StatTrakMode = EnumValues<typeof CS2StatTrakMode>;
 
 export interface CS2Item {
-    altName?: string | undefined;
-    baseId?: number | undefined;
-    category?: string | undefined;
-    collection?: string | undefined;
+    alternateName?: string | undefined;
     collectionImagePath?: string | undefined;
+    collectionKey?: string | undefined;
     containerType?: CS2ContainerType | undefined;
     contentIds?: number[] | undefined;
     definitionIndex?: number | undefined;
+    displayedStickerId?: number | undefined;
     hasColliderData?: boolean | undefined;
     id: number;
     imagePath?: string | undefined;
@@ -94,21 +93,22 @@ export interface CS2Item {
     legacyStickerOffsetYMax?: number | undefined;
     legacyStickerOffsetYMin?: number | undefined;
     legacyStickerSchemaCount?: number | undefined;
+    loadoutCategory?: string | undefined;
     materialPath?: string | undefined;
-    model?: string | undefined;
+    modelKey?: string | undefined;
     modelPath?: string | undefined;
+    parentId?: number | undefined;
     previewSeed?: number | undefined;
-    rarity?: CS2RarityColor | undefined;
+    rarityColor?: CS2RarityColor | undefined;
     specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
     statTrakMode?: CS2StatTrakMode | undefined;
-    stickerId?: number | undefined;
     stickerOffsetXMax?: number | undefined;
     stickerOffsetXMin?: number | undefined;
     stickerOffsetYMax?: number | undefined;
     stickerOffsetYMin?: number | undefined;
     stickerSchemaCount?: number | undefined;
-    teams?: CS2ItemTeam | undefined;
+    team?: CS2ItemTeam | undefined;
     tintIndex?: number | undefined;
     type: CS2ItemType;
     variantIndex?: number | undefined;
@@ -117,12 +117,12 @@ export interface CS2Item {
 }
 
 export interface CS2ItemTranslation {
-    category?: string | undefined;
-    collectionDesc?: string | undefined;
+    categoryName?: string | undefined;
+    collectionDescription?: string | undefined;
     collectionName?: string | undefined;
-    desc?: string | undefined;
+    description?: string | undefined;
     name: string;
-    tournamentDesc?: string | undefined;
+    tournamentDescription?: string | undefined;
 }
 
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
