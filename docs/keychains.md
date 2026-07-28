@@ -26,7 +26,7 @@ Bounds come from `getMinimumKeychainPositionX()` / `getMaximumKeychainPositionX(
 
 Values must be finite and sit on the `CS2_KEYCHAIN_POSITION_FACTOR` grid (`0.0001`, four decimals). Validation checks finiteness explicitly, so `NaN` on any axis - `z` included - is rejected rather than silently accepted.
 
-`healKeychainPosition(value, min, max)` normalizes a stored coordinate: non-finite values are dropped, the value is truncated onto the grid, then clamped into `[min, max]`. Raw coordinates read out of the game carry more precision than the grid allows, so truncating (rather than rejecting) is deliberate - `0.123456789` heals to `0.1234`.
+`repairInventoryItem(economy, item)` normalizes a stored coordinate against the item's own bounds: non-finite values are dropped, the value is truncated onto the grid, then clamped into `[min, max]`. Raw coordinates read out of the game carry more precision than the grid allows, so truncating (rather than rejecting) is deliberate - `0.123456789` repairs to `0.1234`.
 
 ## Seed
 

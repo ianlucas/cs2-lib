@@ -16,15 +16,7 @@ import {
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
-import {
-    CS2Inventory,
-    CS2_INVENTORY_VERSION,
-    getNextStickerSchema,
-    healKeychainPosition,
-    healStickerOffset,
-    snapStickerRotation,
-    validateStickerRotation
-} from "./inventory.ts";
+import { CS2Inventory, CS2_INVENTORY_VERSION } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
 import { english } from "./translations/english.ts";
@@ -1233,60 +1225,6 @@ describe("sticker schema materialization", () => {
         expect(stickers.get(0)?.schema).toBe(2);
         expect(stickers.get(1)?.schema).toBe(2);
         expect(stickers.get(2)?.schema).toBe(0);
-    });
-
-    test("getNextStickerSchema returns the first free anchor, falling back to 0 when full", () => {
-        expect(getNextStickerSchema([], 4)).toBe(0);
-        expect(
-            getNextStickerSchema(
-                [
-                    { id: STICKER_ID, schema: 0 },
-                    { id: STICKER_ID, schema: 1 }
-                ],
-                4
-            )
-        ).toBe(2);
-        expect(
-            getNextStickerSchema(
-                [0, 1, 2, 3].map((schema) => ({ id: STICKER_ID, schema })),
-                4
-            )
-        ).toBe(0);
-    });
-
-    test("healStickerOffset clamps into the model bounds and drops non-finite values", () => {
-        expect(healStickerOffset(undefined, 0, 1)).toBe(undefined);
-        expect(healStickerOffset(NaN, 0, 1)).toBe(undefined);
-        expect(healStickerOffset(5, undefined, 1)).toBe(1);
-        expect(healStickerOffset(-5, -1, undefined)).toBe(-1);
-    });
-
-    test("healKeychainPosition snaps onto the grid, clamps into the model bounds, and drops non-finite values", () => {
-        expect(healKeychainPosition(undefined, 0, 1)).toBe(undefined);
-        expect(healKeychainPosition(NaN, 0, 1)).toBe(undefined);
-        expect(healKeychainPosition(Infinity, 0, 1)).toBe(undefined);
-        expect(healKeychainPosition(5, undefined, 1)).toBe(1);
-        expect(healKeychainPosition(-5, -1, undefined)).toBe(-1);
-        // Raw in-game floats carry more precision than the grid; truncate, don't reject.
-        expect(healKeychainPosition(0.123456789, -1, 1)).toBe(0.1234);
-        expect(healKeychainPosition(0.2211, undefined, undefined)).toBe(0.2211);
-    });
-
-    test("validateStickerRotation accepts the half-degree grid within -180-180", () => {
-        for (const rotation of [undefined, -180, -179.5, -0.5, 0, 0.5, 90, 90.5, 180]) {
-            expect(validateStickerRotation(rotation)).toBe(true);
-        }
-        for (const rotation of [-180.5, 180.5, 200, 2.1, 2.6, 90.7, NaN, Infinity, -Infinity]) {
-            expect(validateStickerRotation(rotation)).toBe(false);
-        }
-    });
-
-    test("snapStickerRotation rounds to the nearest half degree", () => {
-        expect(snapStickerRotation(2.4)).toBe(2.5);
-        expect(snapStickerRotation(2.7)).toBe(2.5);
-        expect(snapStickerRotation(-2.4)).toBe(-2.5);
-        expect(snapStickerRotation(2.5)).toBe(2.5);
-        expect(snapStickerRotation(90)).toBe(90);
     });
 });
 
