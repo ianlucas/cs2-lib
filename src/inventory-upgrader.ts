@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CS2Economy, CS2EconomyInstance } from "./economy.ts";
-import { type CS2InventoryData, CS2_INVENTORY_VERSION } from "./inventory.ts";
+import type { CS2InventoryData } from "./inventory-types.ts";
+import { CS2_INVENTORY_VERSION } from "./inventory.ts";
 
 const upgrades: Record<
     number,

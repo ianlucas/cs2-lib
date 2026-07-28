@@ -15,8 +15,8 @@ import {
     CS2_MIN_KEYCHAIN_SEED
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
+import type { CS2BaseInventoryItem } from "./inventory-types.ts";
 import {
-    type CS2BaseInventoryItem,
     CS2Inventory,
     CS2_INVENTORY_VERSION,
     getNextStickerSchema,

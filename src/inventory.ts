@@ -25,6 +25,12 @@ import {
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
+import type {
+    CS2BaseInventoryItem,
+    CS2InventoryData,
+    CS2InventoryOptions,
+    CS2InventorySpec
+} from "./inventory-types.ts";
 import { resolveInventoryData } from "./inventory-upgrader.ts";
 import { CS2Team } from "./teams.ts";
 import {
@@ -38,58 +44,6 @@ import {
     roundToFactor,
     truncateToFactor
 } from "./utils.ts";
-
-export interface CS2BaseInventoryItem {
-    charges?: number;
-    containerId?: number;
-    equipped?: boolean;
-    equippedCT?: boolean;
-    equippedT?: boolean;
-    id: number;
-    keychains?: Record<
-        string,
-        {
-            id: number;
-            seed?: number;
-            x?: number;
-            y?: number;
-            z?: number;
-        }
-    >;
-    nameTag?: string;
-    patches?: Record<string, number>;
-    seed?: number;
-    statTrak?: number;
-    stickers?: Record<
-        string,
-        {
-            id: number;
-            rotation?: number;
-            schema?: number;
-            wear?: number;
-            x?: number;
-            y?: number;
-        }
-    >;
-    storage?: Record<number, CS2BaseInventoryItem>;
-    updatedAt?: number;
-    wear?: number;
-}
-
-export interface CS2InventoryData {
-    items: Record<number, CS2BaseInventoryItem>;
-    version: number;
-}
-
-export interface CS2InventoryOptions {
-    maxItems: number;
-    storageUnitMaxItems: number;
-}
-
-export interface CS2InventorySpec extends CS2InventoryOptions {
-    economy: CS2EconomyInstance;
-    data: CS2InventoryData;
-}
 
 export const CS2_INVENTORY_VERSION = 1;
 export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
