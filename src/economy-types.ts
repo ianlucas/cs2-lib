@@ -63,7 +63,6 @@ export type CS2StatTrakMode = EnumValues<typeof CS2StatTrakMode>;
 
 export interface CS2Item {
     altName?: string | undefined;
-    base?: boolean | undefined;
     baseId?: number | undefined;
     category?: string | undefined;
     collection?: string | undefined;
@@ -72,11 +71,13 @@ export interface CS2Item {
     contentIds?: number[] | undefined;
     def?: number | undefined;
     displaySeed?: number | undefined;
-    free?: boolean | undefined;
     hasColliderData?: boolean | undefined;
     id: number;
     imagePath?: string | undefined;
     index?: number | undefined;
+    isBase?: boolean | undefined;
+    isDefault?: boolean | undefined;
+    isLegacyModel?: boolean | undefined;
     keychainOffsetXMax?: number | undefined;
     keychainOffsetXMin?: number | undefined;
     keychainOffsetYMax?: number | undefined;
@@ -84,7 +85,6 @@ export interface CS2Item {
     keychainOffsetZMax?: number | undefined;
     keychainOffsetZMin?: number | undefined;
     keyIds?: number[] | undefined;
-    legacy?: boolean | undefined;
     legacyKeychainOffsetXMax?: number | undefined;
     legacyKeychainOffsetXMin?: number | undefined;
     legacyKeychainOffsetYMax?: number | undefined;

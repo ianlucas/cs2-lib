@@ -80,9 +80,9 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
     return function filter(item: CS2EconomyItem) {
         return (
             compare(predicate.type, item.type) &&
-            compare(predicate.free, item.free) &&
+            compare(predicate.isDefault, item.isDefault) &&
             compare(predicate.model, item.model) &&
-            compare(predicate.base, item.base) &&
+            compare(predicate.isBase, item.isBase) &&
             compare(predicate.category, item.category) &&
             (predicate.team === undefined || item.teams === undefined || item.teams.includes(predicate.team))
         );
@@ -302,7 +302,6 @@ export class CS2EconomyItem implements Interface<
         }
 > {
     altName: string | undefined;
-    base: boolean | undefined;
     baseId: number | undefined;
     category: string | undefined;
     collection: string | undefined;
@@ -314,11 +313,13 @@ export class CS2EconomyItem implements Interface<
     def: number | undefined;
     desc: string | undefined;
     displaySeed: number | undefined;
-    free: boolean | undefined;
     hasColliderData: boolean | undefined;
     id: number = null!;
     imagePath: string | undefined;
     index: number | undefined;
+    isBase: boolean | undefined;
+    isDefault: boolean | undefined;
+    isLegacyModel: boolean | undefined;
     keychainOffsetXMax: number | undefined;
     keychainOffsetXMin: number | undefined;
     keychainOffsetYMax: number | undefined;
@@ -326,7 +327,6 @@ export class CS2EconomyItem implements Interface<
     keychainOffsetZMax: number | undefined;
     keychainOffsetZMin: number | undefined;
     keyIds: number[] | undefined;
-    legacy: boolean | undefined;
     legacyKeychainOffsetXMax: number | undefined;
     legacyKeychainOffsetXMin: number | undefined;
     legacyKeychainOffsetYMax: number | undefined;
@@ -587,11 +587,11 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasWear(): boolean {
-        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.index !== 0;
     }
 
     hasSeed(): boolean {
-        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.isDefault && this.index !== 0;
     }
 
     hasStickers(): boolean {
@@ -611,7 +611,7 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasStatTrak(): boolean {
-        return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.free;
+        return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
 
     hasCharges(): boolean {
@@ -729,58 +729,58 @@ export class CS2EconomyItem implements Interface<
 
     getStickerSchemaCount(): number {
         const item = this.parent ?? this;
-        const count = (this.legacy ? item.legacyStickerSchemaCount : undefined) ?? item.stickerSchemaCount;
+        const count = (this.isLegacyModel ? item.legacyStickerSchemaCount : undefined) ?? item.stickerSchemaCount;
         return count ?? CS2_MAX_STICKERS;
     }
 
     getMinimumStickerOffsetX(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetXMin : undefined) ?? item.stickerOffsetXMin;
+        return (this.isLegacyModel ? item.legacyStickerOffsetXMin : undefined) ?? item.stickerOffsetXMin;
     }
 
     getMaximumStickerOffsetX(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetXMax : undefined) ?? item.stickerOffsetXMax;
+        return (this.isLegacyModel ? item.legacyStickerOffsetXMax : undefined) ?? item.stickerOffsetXMax;
     }
 
     getMinimumStickerOffsetY(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetYMin : undefined) ?? item.stickerOffsetYMin;
+        return (this.isLegacyModel ? item.legacyStickerOffsetYMin : undefined) ?? item.stickerOffsetYMin;
     }
 
     getMaximumStickerOffsetY(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
+        return (this.isLegacyModel ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
     }
 
     getMinimumKeychainOffsetX(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetXMin : undefined) ?? item.keychainOffsetXMin;
+        return (this.isLegacyModel ? item.legacyKeychainOffsetXMin : undefined) ?? item.keychainOffsetXMin;
     }
 
     getMaximumKeychainOffsetX(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetXMax : undefined) ?? item.keychainOffsetXMax;
+        return (this.isLegacyModel ? item.legacyKeychainOffsetXMax : undefined) ?? item.keychainOffsetXMax;
     }
 
     getMinimumKeychainOffsetY(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetYMin : undefined) ?? item.keychainOffsetYMin;
+        return (this.isLegacyModel ? item.legacyKeychainOffsetYMin : undefined) ?? item.keychainOffsetYMin;
     }
 
     getMaximumKeychainOffsetY(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetYMax : undefined) ?? item.keychainOffsetYMax;
+        return (this.isLegacyModel ? item.legacyKeychainOffsetYMax : undefined) ?? item.keychainOffsetYMax;
     }
 
     getMinimumKeychainOffsetZ(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetZMin : undefined) ?? item.keychainOffsetZMin;
+        return (this.isLegacyModel ? item.legacyKeychainOffsetZMin : undefined) ?? item.keychainOffsetZMin;
     }
 
     getMaximumKeychainOffsetZ(): number | undefined {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetZMax : undefined) ?? item.keychainOffsetZMax;
+        return (this.isLegacyModel ? item.legacyKeychainOffsetZMax : undefined) ?? item.keychainOffsetZMax;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

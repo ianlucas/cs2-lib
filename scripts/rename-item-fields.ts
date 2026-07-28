@@ -16,20 +16,18 @@
 import { assert, ensure } from "../src/utils.ts";
 import { log, read, write } from "./utils.ts";
 
-// Group 2 — container payload. Swap this map for the next group's; everything else is generic.
+// Group 3 — booleans. Swap this map for the next group's; everything else is generic. These three
+// sort into a different slot than the names they replace, so the emitted key order moves with them
+// — which is why every item is re-sorted against Types.cs below rather than rewritten in place.
 const renames: Record<string, string> = {
-    contents: "contentIds",
-    keys: "keyIds",
-    specials: "specialIds"
+    base: "isBase",
+    free: "isDefault",
+    legacy: "isLegacyModel"
 };
 
-// Renames that also rewrite the value. The two StatTrak booleans collapse into one enum, so both
-// old keys land on `statTrakMode` — an item carrying both would lose a property, which the
-// per-item key count below catches.
-const rewrites: Record<string, readonly [string, JsonValue]> = {
-    statTrakless: ["statTrakMode", "excluded"],
-    statTrakOnly: ["statTrakMode", "guaranteed"]
-};
+// Renames that also rewrite the value, as when two booleans collapse into one enum. Two old keys
+// mapping onto one new one would lose a property, which the per-item key count below catches.
+const rewrites: Record<string, readonly [string, JsonValue]> = {};
 
 const itemsJsonPath = "scripts/data/items.json";
 const itemsTsPath = "src/items.ts";

@@ -205,7 +205,7 @@ export class CS2Inventory {
 
     private validateAddable(item: CS2EconomyItem): void {
         if (item.isGloves()) {
-            assert(item.free || !item.base);
+            assert(item.isDefault || !item.isBase);
         }
     }
 

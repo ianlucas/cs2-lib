@@ -55,15 +55,15 @@ public static class CatalogBuilder
             var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 Category = GetBaseWeaponCategory(name, category),
                 ClassName = name,
                 Def = int.Parse(itemDef),
                 DescToken = itemDescription,
-                Free = true,
                 Id = id,
                 ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
                 Index = null,
+                IsBase = true,
+                IsDefault = true,
                 Model = name.Replace("weapon_", ""),
                 ModelPath = modelInfo,
                 NameToken = itemName,
@@ -107,14 +107,14 @@ public static class CatalogBuilder
             var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 ClassName = name,
                 Def = int.Parse(itemDef),
                 DescToken = itemDescription,
-                Free = baseitem == "1" ? true : null,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = baseitem == "1" ? null : 0,
+                IsBase = true,
+                IsDefault = baseitem == "1" ? true : null,
                 Model = name.Replace("weapon_", ""),
                 ModelPath = modelInfo,
                 NameToken = itemName,
@@ -154,14 +154,14 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 ClassName = name,
                 Def = int.Parse(itemDef),
                 DescToken = itemDescription,
-                Free = baseitem == "1" ? true : null,
                 Id = id,
                 ImagePath = image,
                 Index = baseitem == "1" ? null : 0,
+                IsBase = true,
+                IsDefault = baseitem == "1" ? true : null,
                 Model = name,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [baseitem == "1" ? "default" : "ancient"]),
@@ -195,14 +195,14 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 ClassName = name,
                 Def = int.Parse(itemDef),
                 DescToken = itemDescription,
-                Free = true,
                 Id = id,
                 ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
                 Index = null,
+                IsBase = true,
+                IsDefault = true,
                 Model = name.Replace("weapon_", ""),
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
@@ -261,7 +261,7 @@ public static class CatalogBuilder
                     Id = id,
                     ImagePath = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
                     Index = paintKit.Index,
-                    Legacy = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
+                    IsLegacyModel = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
                     MaterialPath = paintMaterial,
                     Model = baseItem.Model,
                     NameToken = baseItem.NameToken,
@@ -290,7 +290,9 @@ public static class CatalogBuilder
 
             var itemKey = $"[{name}]musickit";
             var id = GetItemId(ctx, $"musickit_{index}");
-            var isBase = Config.FreeMusicKits.Contains(index) ? true : (bool?)null;
+            // The two Valve music kits come out with both flags set: for this type IsBase means "the
+            // free one" rather than "the template one".
+            var isFreeMusicKit = Config.FreeMusicKits.Contains(index) ? true : (bool?)null;
 
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_MusicKit", " | ", locName);
@@ -298,13 +300,13 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                Base = isBase,
                 BaseId = baseId,
                 Def = 1314,
-                Free = isBase,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = int.Parse(index),
+                IsBase = isFreeMusicKit,
+                IsDefault = isFreeMusicKit,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["rare"]),
                 Type = CS2ItemType.MusicKit
             });
@@ -346,12 +348,12 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = ctx.KeychainBaseId,
-                Free = index == "37" ? true : null,
                 Def = 1355,
                 DisplaySeed = displaySeed,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = int.Parse(index),
+                IsDefault = index == "37" ? true : null,
                 MaterialPath = GetKeychainMaterial(ctx, name, keychainMaterial),
                 ModelPath = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
@@ -677,10 +679,10 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 Def = int.Parse(index),
-                Free = baseitem == "1" ? true : null,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, image),
                 Index = null,
+                IsDefault = baseitem == "1" ? true : null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                 Type = CS2ItemType.Tool
             });
@@ -843,7 +845,7 @@ public static class CatalogBuilder
     private static void AddItem(ItemGeneratorContext ctx, CS2Item item)
     {
         HydrateExistingModelFields(ctx, item);
-        if (item.Base == true)
+        if (item.IsBase == true)
             ctx.BaseItems.Add(item);
         ctx.Items[item.Id] = item;
     }

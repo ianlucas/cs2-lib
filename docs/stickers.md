@@ -16,7 +16,7 @@ stickers?: Record<
 
 These are independent, and the stack can outnumber the anchors. The AK-47's HD body, for example, publishes 4 anchors while the stack always holds up to 5 — so **two stickers may legitimately share an anchor**. Conversely, reordering the stack does not move any sticker on the model; it only changes draw order.
 
-`getStickerSchemaCount()` reads `stickerSchemaCount` (or `legacyStickerSchemaCount` for a legacy item) off `parent ?? this`, falling back to `CS2_MAX_STICKERS` when the model publishes no count.
+`getStickerSchemaCount()` reads `stickerSchemaCount` (or `legacyStickerSchemaCount` when `isLegacyModel` is set) off `parent ?? this`, falling back to `CS2_MAX_STICKERS` when the model publishes no count.
 
 ## Materialization
 

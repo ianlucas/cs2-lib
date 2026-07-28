@@ -44,9 +44,6 @@ public class CS2Item
     [JsonPropertyName("altName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AltName { get; set; }
 
-    [JsonPropertyName("base"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Base { get; set; }
-
     [JsonPropertyName("baseId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? BaseId { get; set; }
 
@@ -71,9 +68,6 @@ public class CS2Item
     [JsonPropertyName("displaySeed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? DisplaySeed { get; set; }
 
-    [JsonPropertyName("free"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Free { get; set; }
-
     // True when the model publishes a cloth collider beside its model data — the shapes a keychain
     // is pushed out of. See MetadataExtractor.ExtractClothCollider.
     [JsonPropertyName("hasColliderData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -87,6 +81,19 @@ public class CS2Item
 
     [JsonPropertyName("index"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Index { get; set; }
+
+    // The finishless row a model's skins hang off — a paint-kit template, not the schema's
+    // `baseitem`, which this type calls IsDefault.
+    [JsonPropertyName("isBase"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsBase { get; set; }
+
+    // The schema's `baseitem`: the game hands it to you, so it carries no wear, seed or StatTrak.
+    [JsonPropertyName("isDefault"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsDefault { get; set; }
+
+    // The pre-CS2 body and markup generation, not a retired item.
+    [JsonPropertyName("isLegacyModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsLegacyModel { get; set; }
 
     [JsonPropertyName("keychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? KeychainOffsetXMax { get; set; }
@@ -108,9 +115,6 @@ public class CS2Item
 
     [JsonPropertyName("keyIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? KeyIds { get; set; }
-
-    [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Legacy { get; set; }
 
     [JsonPropertyName("legacyKeychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? LegacyKeychainOffsetXMax { get; set; }

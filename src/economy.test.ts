@@ -67,7 +67,7 @@ test("getModelDataUrl derives from modelPath (.glb -> .json) with base inheritan
     const modelPath = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
     const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
     const items: CS2Item[] = [
-        { base: true, id: 1, modelPath, rarity: CS2RarityColor.Common, type: "weapon" },
+        { id: 1, isBase: true, modelPath, rarity: CS2RarityColor.Common, type: "weapon" },
         { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
     ];
     CS2Economy.load({
@@ -102,8 +102,8 @@ test("modelPath and materialPath resolve own-first, then through the parent", ()
         },
         {
             baseId: 1,
-            free: true,
             id: 3,
+            isDefault: true,
             materialPath: slabMaterial,
             modelPath: slabModel,
             rarity: CS2RarityColor.Common,
