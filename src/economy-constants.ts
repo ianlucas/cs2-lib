@@ -45,7 +45,7 @@ export const CS2_STICKER_WEAR_FACTOR = 0.01;
 export const CS2_STICKER_SCRAPE_FACTOR = 0.1;
 export const CS2_STICKER_OFFSET_FACTOR = 0.0001;
 export const CS2_STICKER_ROTATION_STEP = 0.5;
-export const CS2_KEYCHAIN_OFFSET_FACTOR = 0.0001;
+export const CS2_KEYCHAIN_POSITION_FACTOR = 0.0001;
 export const CS2_WEAR_FACTOR = 0.000001;
 
 export const CS2_NAMETAG_RE: RegExp = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_，。；！\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;

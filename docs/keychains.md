@@ -22,11 +22,11 @@ which consumes the keychain item and creates the new weapon carrying it in slot 
 
 `x`, `y` and `z` are **absolute coordinates in the model's markup space** - not deltas from a default position, which is how sticker offsets work. That is why the numbers are large: the legacy AWP's envelope is X `[-10.13, 41.29]`, Y `[-0.02, 1.37]`, Z `[2.64, 11.76]`, where a sticker offset on the same weapon lives inside ±0.5.
 
-Bounds come from `getMinimumKeychainOffsetX()` / `getMaximumKeychainOffsetX()` and the `Y` and `Z` pairs, resolved off `parent ?? this` with the `legacy*` fields preferred when `isLegacyModel` is set. Any bound may be `undefined`, meaning unbounded on that side.
+Bounds come from `getMinimumKeychainPositionX()` / `getMaximumKeychainPositionX()` and the `Y` and `Z` pairs, resolved off `parent ?? this` with the `legacy*` fields preferred when `isLegacyModel` is set. Any bound may be `undefined`, meaning unbounded on that side.
 
-Values must be finite and sit on the `CS2_KEYCHAIN_OFFSET_FACTOR` grid (`0.0001`, four decimals). Validation checks finiteness explicitly, so `NaN` on any axis - `z` included - is rejected rather than silently accepted.
+Values must be finite and sit on the `CS2_KEYCHAIN_POSITION_FACTOR` grid (`0.0001`, four decimals). Validation checks finiteness explicitly, so `NaN` on any axis - `z` included - is rejected rather than silently accepted.
 
-`healKeychainOffset(value, min, max)` normalizes a stored coordinate: non-finite values are dropped, the value is truncated onto the grid, then clamped into `[min, max]`. Raw coordinates read out of the game carry more precision than the grid allows, so truncating (rather than rejecting) is deliberate - `0.123456789` heals to `0.1234`.
+`healKeychainPosition(value, min, max)` normalizes a stored coordinate: non-finite values are dropped, the value is truncated onto the grid, then clamped into `[min, max]`. Raw coordinates read out of the game carry more precision than the grid allows, so truncating (rather than rejecting) is deliberate - `0.123456789` heals to `0.1234`.
 
 ## Seed
 

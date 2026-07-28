@@ -90,44 +90,47 @@ public class CS2Item
     [JsonPropertyName("isLegacyModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsLegacyModel { get; set; }
 
-    [JsonPropertyName("keychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetXMax { get; set; }
+    // The keychain bounds below are absolute coordinates in the model's markup space, which is why
+    // they run to 41.29 on an AWP. The sticker bounds further down are deltas from a slot's authored
+    // offset and stay inside ±0.5 — hence position for one and offset for the other.
+    [JsonPropertyName("keychainPositionXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionXMax { get; set; }
 
-    [JsonPropertyName("keychainOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetXMin { get; set; }
+    [JsonPropertyName("keychainPositionXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionXMin { get; set; }
 
-    [JsonPropertyName("keychainOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetYMax { get; set; }
+    [JsonPropertyName("keychainPositionYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionYMax { get; set; }
 
-    [JsonPropertyName("keychainOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetYMin { get; set; }
+    [JsonPropertyName("keychainPositionYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionYMin { get; set; }
 
-    [JsonPropertyName("keychainOffsetZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetZMax { get; set; }
+    [JsonPropertyName("keychainPositionZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionZMax { get; set; }
 
-    [JsonPropertyName("keychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetZMin { get; set; }
+    [JsonPropertyName("keychainPositionZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionZMin { get; set; }
 
     [JsonPropertyName("keyIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? KeyIds { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetXMax { get; set; }
+    [JsonPropertyName("legacyKeychainPositionXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionXMax { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetXMin { get; set; }
+    [JsonPropertyName("legacyKeychainPositionXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionXMin { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetYMax { get; set; }
+    [JsonPropertyName("legacyKeychainPositionYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionYMax { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetYMin { get; set; }
+    [JsonPropertyName("legacyKeychainPositionYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionYMin { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetZMax { get; set; }
+    [JsonPropertyName("legacyKeychainPositionZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionZMax { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetZMin { get; set; }
+    [JsonPropertyName("legacyKeychainPositionZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionZMin { get; set; }
 
     [JsonPropertyName("legacyStickerOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? LegacyStickerOffsetXMax { get; set; }

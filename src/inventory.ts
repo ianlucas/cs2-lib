@@ -5,7 +5,7 @@
 
 import {
     CS2_CHARM_DETACHMENT_PACK_CHARGES,
-    CS2_KEYCHAIN_OFFSET_FACTOR,
+    CS2_KEYCHAIN_POSITION_FACTOR,
     CS2_MAX_KEYCHAINS,
     CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_PATCHES,
@@ -151,12 +151,12 @@ export function healStickerOffset(
     return healOffset(value, min, max, CS2_STICKER_OFFSET_FACTOR);
 }
 
-export function healKeychainOffset(
+export function healKeychainPosition(
     value: number | undefined,
     min: number | undefined,
     max: number | undefined
 ): number | undefined {
-    return healOffset(value, min, max, CS2_KEYCHAIN_OFFSET_FACTOR);
+    return healOffset(value, min, max, CS2_KEYCHAIN_POSITION_FACTOR);
 }
 
 export function validateStickerRotation(rotation?: number): boolean {
@@ -268,30 +268,30 @@ export class CS2Inventory {
             }
             if (x !== undefined) {
                 assert(Number.isFinite(x));
-                assert(isFactorPrecise(x, CS2_KEYCHAIN_OFFSET_FACTOR));
+                assert(isFactorPrecise(x, CS2_KEYCHAIN_POSITION_FACTOR));
                 if (item !== undefined) {
-                    const min = item.getMinimumKeychainOffsetX();
-                    const max = item.getMaximumKeychainOffsetX();
+                    const min = item.getMinimumKeychainPositionX();
+                    const max = item.getMaximumKeychainPositionX();
                     assert(min === undefined || x >= min);
                     assert(max === undefined || x <= max);
                 }
             }
             if (y !== undefined) {
                 assert(Number.isFinite(y));
-                assert(isFactorPrecise(y, CS2_KEYCHAIN_OFFSET_FACTOR));
+                assert(isFactorPrecise(y, CS2_KEYCHAIN_POSITION_FACTOR));
                 if (item !== undefined) {
-                    const min = item.getMinimumKeychainOffsetY();
-                    const max = item.getMaximumKeychainOffsetY();
+                    const min = item.getMinimumKeychainPositionY();
+                    const max = item.getMaximumKeychainPositionY();
                     assert(min === undefined || y >= min);
                     assert(max === undefined || y <= max);
                 }
             }
             if (z !== undefined) {
                 assert(Number.isFinite(z));
-                assert(isFactorPrecise(z, CS2_KEYCHAIN_OFFSET_FACTOR));
+                assert(isFactorPrecise(z, CS2_KEYCHAIN_POSITION_FACTOR));
                 if (item !== undefined) {
-                    const min = item.getMinimumKeychainOffsetZ();
-                    const max = item.getMaximumKeychainOffsetZ();
+                    const min = item.getMinimumKeychainPositionZ();
+                    const max = item.getMaximumKeychainPositionZ();
                     assert(min === undefined || z >= min);
                     assert(max === undefined || z <= max);
                 }
@@ -368,20 +368,20 @@ export class CS2Inventory {
                         delete item.keychains[slot];
                         continue;
                     }
-                    keychain.x = healKeychainOffset(
+                    keychain.x = healKeychainPosition(
                         keychain.x,
-                        economyItem.getMinimumKeychainOffsetX(),
-                        economyItem.getMaximumKeychainOffsetX()
+                        economyItem.getMinimumKeychainPositionX(),
+                        economyItem.getMaximumKeychainPositionX()
                     );
-                    keychain.y = healKeychainOffset(
+                    keychain.y = healKeychainPosition(
                         keychain.y,
-                        economyItem.getMinimumKeychainOffsetY(),
-                        economyItem.getMaximumKeychainOffsetY()
+                        economyItem.getMinimumKeychainPositionY(),
+                        economyItem.getMaximumKeychainPositionY()
                     );
-                    keychain.z = healKeychainOffset(
+                    keychain.z = healKeychainPosition(
                         keychain.z,
-                        economyItem.getMinimumKeychainOffsetZ(),
-                        economyItem.getMaximumKeychainOffsetZ()
+                        economyItem.getMinimumKeychainPositionZ(),
+                        economyItem.getMaximumKeychainPositionZ()
                     );
                 }
             }

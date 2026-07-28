@@ -307,8 +307,8 @@ public static partial class AssetProcessor
                     if (kvText.TryGetValue("KeychainMarkup", out var keychainMarkupObj) &&
                         keychainMarkupObj is List<object?> keychainMarkup)
                     {
-                        var hdKeychainBounds = ComputeKeychainOffsetBounds(keychainMarkup, legacyModel: false);
-                        var legacyKeychainBounds = ComputeKeychainOffsetBounds(keychainMarkup, legacyModel: true);
+                        var hdKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: false);
+                        var legacyKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: true);
 
                         if (hdKeychainBounds != null || legacyKeychainBounds != null)
                             foreach (var item in ctx.Items.Values)
@@ -316,21 +316,21 @@ public static partial class AssetProcessor
                                 if (item.ModelPath != playerModelPath) continue;
                                 if (hdKeychainBounds is { } hd)
                                 {
-                                    item.KeychainOffsetXMin = hd.XMin;
-                                    item.KeychainOffsetXMax = hd.XMax;
-                                    item.KeychainOffsetYMin = hd.YMin;
-                                    item.KeychainOffsetYMax = hd.YMax;
-                                    item.KeychainOffsetZMin = hd.ZMin;
-                                    item.KeychainOffsetZMax = hd.ZMax;
+                                    item.KeychainPositionXMin = hd.XMin;
+                                    item.KeychainPositionXMax = hd.XMax;
+                                    item.KeychainPositionYMin = hd.YMin;
+                                    item.KeychainPositionYMax = hd.YMax;
+                                    item.KeychainPositionZMin = hd.ZMin;
+                                    item.KeychainPositionZMax = hd.ZMax;
                                 }
                                 if (legacyKeychainBounds is { } legacy)
                                 {
-                                    item.LegacyKeychainOffsetXMin = legacy.XMin;
-                                    item.LegacyKeychainOffsetXMax = legacy.XMax;
-                                    item.LegacyKeychainOffsetYMin = legacy.YMin;
-                                    item.LegacyKeychainOffsetYMax = legacy.YMax;
-                                    item.LegacyKeychainOffsetZMin = legacy.ZMin;
-                                    item.LegacyKeychainOffsetZMax = legacy.ZMax;
+                                    item.LegacyKeychainPositionXMin = legacy.XMin;
+                                    item.LegacyKeychainPositionXMax = legacy.XMax;
+                                    item.LegacyKeychainPositionYMin = legacy.YMin;
+                                    item.LegacyKeychainPositionYMax = legacy.YMax;
+                                    item.LegacyKeychainPositionZMin = legacy.ZMin;
+                                    item.LegacyKeychainPositionZMax = legacy.ZMax;
                                 }
                             }
                     }
@@ -360,9 +360,9 @@ public static partial class AssetProcessor
     // emitted sticker-offset bounds. 4 decimals matches the StickerMarkup offset authoring precision.
     private const double StickerOffsetFactor = 0.0001;
 
-    // Mirrors CS2_KEYCHAIN_OFFSET_FACTOR in src/economy-constants.ts: the quantization step for the
-    // emitted keychain-offset bounds.
-    private const double KeychainOffsetFactor = 0.0001;
+    // Mirrors CS2_KEYCHAIN_POSITION_FACTOR in src/economy-constants.ts: the quantization step for the
+    // emitted keychain-position bounds.
+    private const double KeychainPositionFactor = 0.0001;
 
     // Per-LOD bounds for how far a sticker's x/y can be nudged from its slot default and still land
     // on the body's stickerable surface. The stored x/y are deltas from each slot's StickerMarkup
@@ -435,7 +435,7 @@ public static partial class AssetProcessor
     // surface and simply not render. Mins are floored and maxes ceiled outward so rounding never
     // rejects a valid placement.
     private static (double XMin, double XMax, double YMin, double YMax, double ZMin, double ZMax)?
-        ComputeKeychainOffsetBounds(List<object?> keychainMarkup, bool legacyModel)
+        ComputeKeychainPositionBounds(List<object?> keychainMarkup, bool legacyModel)
     {
         double xMin = double.PositiveInfinity, xMax = double.NegativeInfinity;
         double yMin = double.PositiveInfinity, yMax = double.NegativeInfinity;
@@ -469,12 +469,12 @@ public static partial class AssetProcessor
 
         if (!hasCorner) return null;
         return (
-            QuantizeOutward(xMin, up: false, KeychainOffsetFactor),
-            QuantizeOutward(xMax, up: true, KeychainOffsetFactor),
-            QuantizeOutward(yMin, up: false, KeychainOffsetFactor),
-            QuantizeOutward(yMax, up: true, KeychainOffsetFactor),
-            QuantizeOutward(zMin, up: false, KeychainOffsetFactor),
-            QuantizeOutward(zMax, up: true, KeychainOffsetFactor)
+            QuantizeOutward(xMin, up: false, KeychainPositionFactor),
+            QuantizeOutward(xMax, up: true, KeychainPositionFactor),
+            QuantizeOutward(yMin, up: false, KeychainPositionFactor),
+            QuantizeOutward(yMax, up: true, KeychainPositionFactor),
+            QuantizeOutward(zMin, up: false, KeychainPositionFactor),
+            QuantizeOutward(zMax, up: true, KeychainPositionFactor)
         );
     }
 

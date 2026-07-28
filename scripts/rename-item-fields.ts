@@ -17,23 +17,27 @@ import { readdir } from "fs/promises";
 import { assert, ensure } from "../src/utils.ts";
 import { log, read, write } from "./utils.ts";
 
-// Group 6 — rarity, team, category, translations. Swap these maps for the next group's; everything
-// else is generic. This is the first group to move the translation side, so it runs over
-// english.json and every src/translations/*.ts as well.
+// Group 7 — keychain positions. Swap these maps for the next group's; everything else is generic.
+// The sticker bounds keep "offset" because they really are deltas from a slot default, so only the
+// twelve keychain bounds move.
 const renames: Record<string, string> = {
-    category: "loadoutCategory",
-    rarity: "rarityColor",
-    teams: "team"
+    keychainOffsetXMax: "keychainPositionXMax",
+    keychainOffsetXMin: "keychainPositionXMin",
+    keychainOffsetYMax: "keychainPositionYMax",
+    keychainOffsetYMin: "keychainPositionYMin",
+    keychainOffsetZMax: "keychainPositionZMax",
+    keychainOffsetZMin: "keychainPositionZMin",
+    legacyKeychainOffsetXMax: "legacyKeychainPositionXMax",
+    legacyKeychainOffsetXMin: "legacyKeychainPositionXMin",
+    legacyKeychainOffsetYMax: "legacyKeychainPositionYMax",
+    legacyKeychainOffsetYMin: "legacyKeychainPositionYMin",
+    legacyKeychainOffsetZMax: "legacyKeychainPositionZMax",
+    legacyKeychainOffsetZMin: "legacyKeychainPositionZMin"
 };
 
-// The same, for CS2ItemTranslation. `category` means a sticker's capsule here and a weapon's
-// loadout slot on the item, which is the collision this group exists to resolve — hence two maps.
-const translationRenames: Record<string, string> = {
-    category: "categoryName",
-    collectionDesc: "collectionDescription",
-    desc: "description",
-    tournamentDesc: "tournamentDescription"
-};
+// The same, for CS2ItemTranslation. Empty for this group, which leaves the translation pass a
+// round-trip check: it reads all 29 languages back through this writer and rewrites the same bytes.
+const translationRenames: Record<string, string> = {};
 
 // Renames that also rewrite the value, as when two booleans collapse into one enum. Two old keys
 // mapping onto one new one would lose a property, which the per-item key count below catches.

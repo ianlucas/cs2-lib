@@ -321,19 +321,19 @@ export class CS2EconomyItem implements Interface<
     isBase: boolean | undefined;
     isDefault: boolean | undefined;
     isLegacyModel: boolean | undefined;
-    keychainOffsetXMax: number | undefined;
-    keychainOffsetXMin: number | undefined;
-    keychainOffsetYMax: number | undefined;
-    keychainOffsetYMin: number | undefined;
-    keychainOffsetZMax: number | undefined;
-    keychainOffsetZMin: number | undefined;
+    keychainPositionXMax: number | undefined;
+    keychainPositionXMin: number | undefined;
+    keychainPositionYMax: number | undefined;
+    keychainPositionYMin: number | undefined;
+    keychainPositionZMax: number | undefined;
+    keychainPositionZMin: number | undefined;
     keyIds: number[] | undefined;
-    legacyKeychainOffsetXMax: number | undefined;
-    legacyKeychainOffsetXMin: number | undefined;
-    legacyKeychainOffsetYMax: number | undefined;
-    legacyKeychainOffsetYMin: number | undefined;
-    legacyKeychainOffsetZMax: number | undefined;
-    legacyKeychainOffsetZMin: number | undefined;
+    legacyKeychainPositionXMax: number | undefined;
+    legacyKeychainPositionXMin: number | undefined;
+    legacyKeychainPositionYMax: number | undefined;
+    legacyKeychainPositionYMin: number | undefined;
+    legacyKeychainPositionZMax: number | undefined;
+    legacyKeychainPositionZMin: number | undefined;
     legacyStickerOffsetXMax: number | undefined;
     legacyStickerOffsetXMin: number | undefined;
     legacyStickerOffsetYMax: number | undefined;
@@ -760,34 +760,34 @@ export class CS2EconomyItem implements Interface<
         return (this.isLegacyModel ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
     }
 
-    getMinimumKeychainOffsetX(): number | undefined {
+    getMinimumKeychainPositionX(): number | undefined {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainOffsetXMin : undefined) ?? item.keychainOffsetXMin;
+        return (this.isLegacyModel ? item.legacyKeychainPositionXMin : undefined) ?? item.keychainPositionXMin;
     }
 
-    getMaximumKeychainOffsetX(): number | undefined {
+    getMaximumKeychainPositionX(): number | undefined {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainOffsetXMax : undefined) ?? item.keychainOffsetXMax;
+        return (this.isLegacyModel ? item.legacyKeychainPositionXMax : undefined) ?? item.keychainPositionXMax;
     }
 
-    getMinimumKeychainOffsetY(): number | undefined {
+    getMinimumKeychainPositionY(): number | undefined {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainOffsetYMin : undefined) ?? item.keychainOffsetYMin;
+        return (this.isLegacyModel ? item.legacyKeychainPositionYMin : undefined) ?? item.keychainPositionYMin;
     }
 
-    getMaximumKeychainOffsetY(): number | undefined {
+    getMaximumKeychainPositionY(): number | undefined {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainOffsetYMax : undefined) ?? item.keychainOffsetYMax;
+        return (this.isLegacyModel ? item.legacyKeychainPositionYMax : undefined) ?? item.keychainPositionYMax;
     }
 
-    getMinimumKeychainOffsetZ(): number | undefined {
+    getMinimumKeychainPositionZ(): number | undefined {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainOffsetZMin : undefined) ?? item.keychainOffsetZMin;
+        return (this.isLegacyModel ? item.legacyKeychainPositionZMin : undefined) ?? item.keychainPositionZMin;
     }
 
-    getMaximumKeychainOffsetZ(): number | undefined {
+    getMaximumKeychainPositionZ(): number | undefined {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainOffsetZMax : undefined) ?? item.keychainOffsetZMax;
+        return (this.isLegacyModel ? item.legacyKeychainPositionZMax : undefined) ?? item.keychainPositionZMax;
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {
