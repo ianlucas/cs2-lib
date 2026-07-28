@@ -69,12 +69,10 @@ export interface CS2Item {
     collectionImagePath?: string | undefined;
     containerType?: CS2ContainerType | undefined;
     contentIds?: number[] | undefined;
-    def?: number | undefined;
-    displaySeed?: number | undefined;
+    definitionIndex?: number | undefined;
     hasColliderData?: boolean | undefined;
     id: number;
     imagePath?: string | undefined;
-    index?: number | undefined;
     isBase?: boolean | undefined;
     isDefault?: boolean | undefined;
     isLegacyModel?: boolean | undefined;
@@ -99,6 +97,7 @@ export interface CS2Item {
     materialPath?: string | undefined;
     model?: string | undefined;
     modelPath?: string | undefined;
+    previewSeed?: number | undefined;
     rarity?: CS2RarityColor | undefined;
     specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
@@ -110,8 +109,9 @@ export interface CS2Item {
     stickerOffsetYMin?: number | undefined;
     stickerSchemaCount?: number | undefined;
     teams?: CS2ItemTeam | undefined;
-    tint?: number | undefined;
+    tintIndex?: number | undefined;
     type: CS2ItemType;
+    variantIndex?: number | undefined;
     wearMax?: number | undefined;
     wearMin?: number | undefined;
 }

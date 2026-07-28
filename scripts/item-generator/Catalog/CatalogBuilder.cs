@@ -57,11 +57,10 @@ public static class CatalogBuilder
             {
                 Category = GetBaseWeaponCategory(name, category),
                 ClassName = name,
-                Def = int.Parse(itemDef),
+                DefinitionIndex = int.Parse(itemDef),
                 DescToken = itemDescription,
                 Id = id,
                 ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
-                Index = null,
                 IsBase = true,
                 IsDefault = true,
                 Model = name.Replace("weapon_", ""),
@@ -69,7 +68,8 @@ public static class CatalogBuilder
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
                 Teams = (int)teams,
-                Type = CS2ItemType.Weapon
+                Type = CS2ItemType.Weapon,
+                VariantIndex = null
             });
         }
     }
@@ -108,11 +108,10 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 ClassName = name,
-                Def = int.Parse(itemDef),
+                DefinitionIndex = int.Parse(itemDef),
                 DescToken = itemDescription,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = baseitem == "1" ? null : 0,
                 IsBase = true,
                 IsDefault = baseitem == "1" ? true : null,
                 Model = name.Replace("weapon_", ""),
@@ -120,7 +119,8 @@ public static class CatalogBuilder
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
                 Teams = (int)teams,
-                Type = CS2ItemType.Melee
+                Type = CS2ItemType.Melee,
+                VariantIndex = baseitem == "1" ? null : 0
             });
         }
     }
@@ -155,18 +155,18 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 ClassName = name,
-                Def = int.Parse(itemDef),
+                DefinitionIndex = int.Parse(itemDef),
                 DescToken = itemDescription,
                 Id = id,
                 ImagePath = image,
-                Index = baseitem == "1" ? null : 0,
                 IsBase = true,
                 IsDefault = baseitem == "1" ? true : null,
                 Model = name,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [baseitem == "1" ? "default" : "ancient"]),
                 Teams = (int)teams,
-                Type = CS2ItemType.Gloves
+                Type = CS2ItemType.Gloves,
+                VariantIndex = baseitem == "1" ? null : 0
             });
         }
     }
@@ -196,18 +196,18 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 ClassName = name,
-                Def = int.Parse(itemDef),
+                DefinitionIndex = int.Parse(itemDef),
                 DescToken = itemDescription,
                 Id = id,
                 ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
-                Index = null,
                 IsBase = true,
                 IsDefault = true,
                 Model = name.Replace("weapon_", ""),
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
                 Teams = (int)CS2ItemTeam.Both,
-                Type = CS2ItemType.Utility
+                Type = CS2ItemType.Utility,
+                VariantIndex = null
             });
         }
     }
@@ -225,7 +225,7 @@ public static class CatalogBuilder
                 if (baseItem.Type == CS2ItemType.Weapon && !ctx.GameItemsAsText.Contains(itemKey))
                     continue;
 
-                var id = GetItemId(ctx, $"paint_{baseItem.Def}_{paintKit.Index}");
+                var id = GetItemId(ctx, $"paint_{baseItem.DefinitionIndex}_{paintKit.Index}");
                 Collections.AddContainerItem(ctx, itemKey, id);
                 Translations.AddTranslation(ctx, id, "name", baseItem.NameToken, " | ", paintKit.NameToken);
                 Translations.AddTranslation(ctx, id, "desc", paintKit.DescToken);
@@ -257,10 +257,9 @@ public static class CatalogBuilder
                     ClassName = baseItem.ClassName,
                     Collection = collection,
                     CollectionImagePath = collectionImage,
-                    Def = baseItem.Def,
+                    DefinitionIndex = baseItem.DefinitionIndex,
                     Id = id,
                     ImagePath = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
-                    Index = paintKit.Index,
                     IsLegacyModel = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
                     MaterialPath = paintMaterial,
                     Model = baseItem.Model,
@@ -268,6 +267,7 @@ public static class CatalogBuilder
                     Rarity = rarity,
                     Teams = baseItem.Teams,
                     Type = baseItem.Type,
+                    VariantIndex = paintKit.Index,
                     WearMax = paintKit.WearMax,
                     WearMin = paintKit.WearMin
                 });
@@ -301,14 +301,14 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = baseId,
-                Def = 1314,
+                DefinitionIndex = 1314,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = int.Parse(index),
                 IsBase = isFreeMusicKit,
                 IsDefault = isFreeMusicKit,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["rare"]),
-                Type = CS2ItemType.MusicKit
+                Type = CS2ItemType.MusicKit,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[id] = $"music_kit-{index}";
         }
@@ -332,8 +332,8 @@ public static class CatalogBuilder
             var keychainMaterial = KvHelper.GetString(entry.Value, "keychain_material");
             // Per-kit default seed for the charm's "hero"/preview look, used when an instance carries
             // no seed of its own. Absent for most kits; the client falls back to 50000 when unset.
-            int? displaySeed = int.TryParse(KvHelper.GetString(entry.Value, "display_seed"), out var parsedDisplaySeed)
-                ? parsedDisplaySeed
+            int? previewSeed = int.TryParse(KvHelper.GetString(entry.Value, "display_seed"), out var parsedPreviewSeed)
+                ? parsedPreviewSeed
                 : null;
 
             if (!Translations.HasTranslation(ctx, locName)) continue;
@@ -348,16 +348,16 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = ctx.KeychainBaseId,
-                Def = 1355,
-                DisplaySeed = displaySeed,
+                DefinitionIndex = 1355,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = int.Parse(index),
                 IsDefault = index == "37" ? true : null,
                 MaterialPath = GetKeychainMaterial(ctx, name, keychainMaterial),
                 ModelPath = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
+                PreviewSeed = previewSeed,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Keychain
+                Type = CS2ItemType.Keychain,
+                VariantIndex = int.Parse(index)
             });
 
             if (index == "37")
@@ -402,13 +402,13 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = baseId,
-                Def = 1209,
+                DefinitionIndex = 1209,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
-                Index = int.Parse(index),
                 MaterialPath = paintMaterial,
                 Rarity = rarity,
-                Type = CS2ItemType.Sticker
+                Type = CS2ItemType.Sticker,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[id] = $"sticker-{index}";
 
@@ -430,13 +430,13 @@ public static class CatalogBuilder
                 // resolve the shared display-case model and compositing recipe through baseId
                 // instead of duplicating them on every per-sticker item.
                 BaseId = ctx.StickerDisplayCaseKeychainId ?? ctx.KeychainBaseId,
-                Def = 1355,
+                DefinitionIndex = 1355,
                 Id = keychainId,
                 ImagePath = keychainImage,
-                Index = 37,
                 Rarity = rarity,
                 StickerId = id,
-                Type = CS2ItemType.Keychain
+                Type = CS2ItemType.Keychain,
+                VariantIndex = 37
             });
         }
     }
@@ -477,10 +477,10 @@ public static class CatalogBuilder
                         BaseId = baseId,
                         Id = id,
                         ImagePath = CatalogAssets.GetDefaultGraffitiImage(ctx, stickerMaterial, tint.HexColor),
-                        Index = int.Parse(index),
                         Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity]),
-                        Tint = tint.Id,
-                        Type = CS2ItemType.Graffiti
+                        TintIndex = tint.Id,
+                        Type = CS2ItemType.Graffiti,
+                        VariantIndex = int.Parse(index)
                     });
                     ctx.ItemNames[id] = $"graffiti-{index}";
                 }
@@ -498,12 +498,12 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = baseId,
-                Def = 1348,
+                DefinitionIndex = 1348,
                 Id = graffitiId,
                 ImagePath = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
-                Index = int.Parse(index),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Graffiti
+                Type = CS2ItemType.Graffiti,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[graffitiId] = $"graffiti-{index}";
         }
@@ -537,12 +537,12 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 BaseId = baseId,
-                Def = 4609,
+                DefinitionIndex = 4609,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, $"econ/patches/{patchMaterial}"),
-                Index = int.Parse(index),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Patch
+                Type = CS2ItemType.Patch,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[id] = $"patch-{index}";
         }
@@ -579,14 +579,14 @@ public static class CatalogBuilder
             {
                 Collection = collection,
                 CollectionImagePath = collectionImage,
-                Def = int.Parse(index),
+                DefinitionIndex = int.Parse(index),
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = null,
                 Model = model,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [name, itemRarity]),
                 Teams = (int)teams,
-                Type = CS2ItemType.Agent
+                Type = CS2ItemType.Agent,
+                VariantIndex = null
             });
         }
     }
@@ -638,12 +638,12 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 AltName = name,
-                Def = int.Parse(index),
+                DefinitionIndex = int.Parse(index),
                 Id = id,
                 ImagePath = image,
-                Index = null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity, "ancient"]),
-                Type = CS2ItemType.Collectible
+                Type = CS2ItemType.Collectible,
+                VariantIndex = null
             });
             ctx.ItemNames[id] = $"collectible-{index}";
         }
@@ -678,13 +678,13 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                Def = int.Parse(index),
+                DefinitionIndex = int.Parse(index),
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, image),
-                Index = null,
                 IsDefault = baseitem == "1" ? true : null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
-                Type = CS2ItemType.Tool
+                Type = CS2ItemType.Tool,
+                VariantIndex = null
             });
         }
     }
@@ -730,11 +730,11 @@ public static class CatalogBuilder
                 if (!ctx.ContainerItems.TryGetValue(itemKey, out var containedId)) continue;
                 if (!ctx.Items.TryGetValue(containedId, out var contained)) continue;
                 contentsType = contained.Type;
-                if (contained.Tint != null && contained.Index != null)
+                if (contained.TintIndex != null && contained.VariantIndex != null)
                 {
                     foreach (var other in ctx.Items.Values)
                     {
-                        if (other.Tint != null && other.Index == contained.Index)
+                        if (other.TintIndex != null && other.VariantIndex == contained.VariantIndex)
                             contentIds.Add(other.Id);
                     }
                 }
@@ -774,7 +774,7 @@ public static class CatalogBuilder
 
                     AddItem(ctx, new CS2Item
                     {
-                        Def = int.Parse(keyItemDef),
+                        DefinitionIndex = int.Parse(keyItemDef),
                         Id = keyId,
                         ImagePath = CatalogAssets.GetImage(ctx, keyImageInventory),
                         Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
@@ -809,7 +809,7 @@ public static class CatalogBuilder
                 CollectionImagePath = collectionImage,
                 ContainerType = Collections.GetContainerType(containerName, contentsType),
                 ContentIds = contentIds,
-                Def = int.Parse(containerIndex),
+                DefinitionIndex = int.Parse(containerIndex),
                 Id = id,
                 ImagePath = containerImage,
                 KeyIds = keyIds.Count > 0 ? keyIds : null,
@@ -855,7 +855,6 @@ public static class CatalogBuilder
         if (ctx.Mode != ItemGeneratorMode.Limited) return;
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
-        item.DisplaySeed ??= previous.DisplaySeed;
         item.HasColliderData ??= previous.HasColliderData;
         item.KeychainOffsetXMax ??= previous.KeychainOffsetXMax;
         item.KeychainOffsetXMin ??= previous.KeychainOffsetXMin;
@@ -876,6 +875,7 @@ public static class CatalogBuilder
         item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
         item.MaterialPath ??= previous.MaterialPath;
         item.ModelPath ??= previous.ModelPath;
+        item.PreviewSeed ??= previous.PreviewSeed;
         item.StickerOffsetXMax ??= previous.StickerOffsetXMax;
         item.StickerOffsetXMin ??= previous.StickerOffsetXMin;
         item.StickerOffsetYMax ??= previous.StickerOffsetYMax;

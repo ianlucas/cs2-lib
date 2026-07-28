@@ -928,7 +928,7 @@ export class CS2Inventory {
         const toItem = this.get(toUid);
         assert(fromItem.statTrak !== undefined && toItem.statTrak !== undefined);
         assert(fromItem.type === toItem.type);
-        assert(fromItem.isMusicKit() || fromItem.def === toItem.def);
+        assert(fromItem.isMusicKit() || fromItem.definitionIndex === toItem.definitionIndex);
         const fromStattrak = fromItem.statTrak;
         fromItem.statTrak = toItem.statTrak;
         fromItem.updatedAt = getTimestamp();

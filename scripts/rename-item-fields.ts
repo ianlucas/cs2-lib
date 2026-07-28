@@ -16,13 +16,15 @@
 import { assert, ensure } from "../src/utils.ts";
 import { log, read, write } from "./utils.ts";
 
-// Group 3 — booleans. Swap this map for the next group's; everything else is generic. These three
-// sort into a different slot than the names they replace, so the emitted key order moves with them
-// — which is why every item is re-sorted against Types.cs below rather than rewritten in place.
+// Group 4 — game table indices. Swap this map for the next group's; everything else is generic.
+// `variantIndex` and `previewSeed` sort well away from the names they replace, so the emitted key
+// order moves with them — which is why every item is re-sorted against Types.cs below rather than
+// rewritten in place.
 const renames: Record<string, string> = {
-    base: "isBase",
-    free: "isDefault",
-    legacy: "isLegacyModel"
+    def: "definitionIndex",
+    displaySeed: "previewSeed",
+    index: "variantIndex",
+    tint: "tintIndex"
 };
 
 // Renames that also rewrite the value, as when two booleans collapse into one enum. Two old keys

@@ -4,12 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    CS2_CHARM_DETACHMENT_PACK_TOOL_DEF,
-    CS2_CHARM_DETACHMENT_TOOL_DEF,
+    CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX,
+    CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX,
     CS2_CONTAINER_ITEMS,
-    CS2_CONTRACT_TOOL_DEF,
+    CS2_CONTRACT_TOOL_DEFINITION_INDEX,
     CS2_DISPLAY_ITEMS,
     CS2_EQUIPMENT_ITEMS,
+    CS2_FALLBACK_PREVIEW_SEED,
     CS2_GRAPHIC_ART_ITEMS,
     CS2_KEYCHAINABLE_ITEMS,
     CS2_MACHINEGUN_MODELS,
@@ -33,16 +34,16 @@ import {
     CS2_MISC_CATEGORIES,
     CS2_NAMETAGGABLE_ITEMS,
     CS2_NAMETAG_RE,
-    CS2_NAMETAG_TOOL_DEF,
+    CS2_NAMETAG_TOOL_DEFINITION_INDEX,
     CS2_PAINTABLE_ITEMS,
     CS2_PATCHABLE_ITEMS,
     CS2_RIFLE_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODELS,
     CS2_STATTRAKABLE_ITEMS,
-    CS2_STATTRAK_SWAP_TOOL_DEF,
+    CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX,
     CS2_STICKERABLE_ITEMS,
-    CS2_STORAGE_UNIT_TOOL_DEF,
+    CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX,
     CS2_TEAMS_BOTH,
     CS2_TEAMS_CT,
     CS2_TEAMS_T,
@@ -310,13 +311,11 @@ export class CS2EconomyItem implements Interface<
     collectionName: string | undefined;
     containerType: CS2ContainerType | undefined;
     contentIds: number[] | undefined;
-    def: number | undefined;
+    definitionIndex: number | undefined;
     desc: string | undefined;
-    displaySeed: number | undefined;
     hasColliderData: boolean | undefined;
     id: number = null!;
     imagePath: string | undefined;
-    index: number | undefined;
     isBase: boolean | undefined;
     isDefault: boolean | undefined;
     isLegacyModel: boolean | undefined;
@@ -342,6 +341,7 @@ export class CS2EconomyItem implements Interface<
     model: string | undefined;
     modelPath: string | undefined;
     name: string = null!;
+    previewSeed: number | undefined;
     rarity: CS2RarityColor = null!;
     specialIds: number[] | undefined;
     specialsImagePath: string | undefined;
@@ -352,9 +352,10 @@ export class CS2EconomyItem implements Interface<
     stickerOffsetYMax: number | undefined;
     stickerOffsetYMin: number | undefined;
     stickerSchemaCount: number | undefined;
-    tint: number | undefined;
+    tintIndex: number | undefined;
     tournamentDesc: string | undefined;
     type: CS2ItemType = null!;
+    variantIndex: number | undefined;
     wearMax: number | undefined;
     wearMin: number | undefined;
 
@@ -513,27 +514,27 @@ export class CS2EconomyItem implements Interface<
     }
 
     isStorageUnit(): boolean {
-        return this.isTool() && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX;
     }
 
     isNameTag(): boolean {
-        return this.isTool() && this.def === CS2_NAMETAG_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_NAMETAG_TOOL_DEFINITION_INDEX;
     }
 
     isStatTrakSwapTool(): boolean {
-        return this.isTool() && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX;
     }
 
     isContract(): boolean {
-        return this.isTool() && this.def === CS2_CONTRACT_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_CONTRACT_TOOL_DEFINITION_INDEX;
     }
 
     isCharmDetachment(): boolean {
-        return this.isTool() && this.def === CS2_CHARM_DETACHMENT_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX;
     }
 
     isCharmDetachmentPack(): boolean {
-        return this.isTool() && this.def === CS2_CHARM_DETACHMENT_PACK_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX;
     }
 
     expectAgent(): this {
@@ -587,11 +588,11 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasWear(): boolean {
-        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.index !== 0;
+        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
 
     hasSeed(): boolean {
-        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.isDefault && this.index !== 0;
+        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
 
     hasStickers(): boolean {
@@ -725,6 +726,14 @@ export class CS2EconomyItem implements Interface<
 
     getMaximumSeed(): number {
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
+    }
+
+    /**
+     * The seed this item's own artwork is rendered at — the inventory image, the 3D preview. It is
+     * not a fallback an instance inherits: an item stored without a seed is unseeded, not this.
+     */
+    getPreviewSeed(): number {
+        return this.previewSeed ?? CS2_FALLBACK_PREVIEW_SEED;
     }
 
     getStickerSchemaCount(): number {

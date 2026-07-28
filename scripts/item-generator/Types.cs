@@ -62,11 +62,9 @@ public class CS2Item
     [JsonPropertyName("contentIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? ContentIds { get; set; }
 
-    [JsonPropertyName("def"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Def { get; set; }
-
-    [JsonPropertyName("displaySeed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? DisplaySeed { get; set; }
+    // The item's key into the schema's `items` table.
+    [JsonPropertyName("definitionIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DefinitionIndex { get; set; }
 
     // True when the model publishes a cloth collider beside its model data — the shapes a keychain
     // is pushed out of. See MetadataExtractor.ExtractClothCollider.
@@ -78,9 +76,6 @@ public class CS2Item
 
     [JsonPropertyName("imagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ImagePath { get; set; }
-
-    [JsonPropertyName("index"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Index { get; set; }
 
     // The finishless row a model's skins hang off — a paint-kit template, not the schema's
     // `baseitem`, which this type calls IsDefault.
@@ -158,6 +153,10 @@ public class CS2Item
     [JsonPropertyName("modelPath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ModelPath { get; set; }
 
+    // The seed this kit's own artwork is rendered at, not a default an instance inherits.
+    [JsonPropertyName("previewSeed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? PreviewSeed { get; set; }
+
     [JsonPropertyName("rarity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Rarity { get; set; }
 
@@ -192,11 +191,17 @@ public class CS2Item
     [JsonPropertyName("teams"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Teams { get; set; }
 
-    [JsonPropertyName("tint"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Tint { get; set; }
+    // The graffiti tint's key into the schema's tint table.
+    [JsonPropertyName("tintIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? TintIndex { get; set; }
 
     [JsonPropertyName("type")]
     public string Type { get; set; } = CS2ItemType.Stub;
+
+    // The kit's key into whichever table defines it: paint_kits, sticker_kits, music_definitions
+    // or keychain_definitions.
+    [JsonPropertyName("variantIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? VariantIndex { get; set; }
 
     [JsonPropertyName("wearMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? WearMax { get; set; }

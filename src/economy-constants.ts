@@ -31,6 +31,8 @@ export const CS2_MIN_STICKER_ROTATION = -180;
 export const CS2_MAX_STICKER_ROTATION = 180;
 export const CS2_MIN_KEYCHAIN_SEED = 1;
 export const CS2_MAX_KEYCHAIN_SEED = 100000;
+/** The seed the client renders a kit at when the kit publishes no `previewSeed` of its own. */
+export const CS2_FALLBACK_PREVIEW_SEED = 50000;
 export const CS2_MAX_STICKERS = 5;
 export const CS2_MAX_PATCHES = 5;
 export const CS2_MAX_KEYCHAINS = 1;
@@ -48,12 +50,12 @@ export const CS2_WEAR_FACTOR = 0.000001;
 
 export const CS2_NAMETAG_RE: RegExp = /^[A-Za-z0-9`!@#$%^&*-+=(){}\[\]\/\|\\,.?:;'_，。；！\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\s]{0,20}$/u;
 
-export const CS2_CHARM_DETACHMENT_PACK_TOOL_DEF = 4950;
-export const CS2_CHARM_DETACHMENT_TOOL_DEF = 65;
-export const CS2_CONTRACT_TOOL_DEF = 62;
-export const CS2_NAMETAG_TOOL_DEF = 1200;
-export const CS2_STATTRAK_SWAP_TOOL_DEF = 1324;
-export const CS2_STORAGE_UNIT_TOOL_DEF = 1201;
+export const CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX = 4950;
+export const CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX = 65;
+export const CS2_CONTRACT_TOOL_DEFINITION_INDEX = 62;
+export const CS2_NAMETAG_TOOL_DEFINITION_INDEX = 1200;
+export const CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX = 1324;
+export const CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX = 1201;
 
 export const CS2_CONTAINER_ITEMS: CS2ItemType[] = [CS2ItemType.Container, CS2ItemType.Tool];
 export const CS2_DISPLAY_ITEMS: CS2ItemType[] = [CS2ItemType.Collectible, CS2ItemType.MusicKit];
