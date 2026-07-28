@@ -63,11 +63,11 @@ describe("CS2Economy", () => {
     });
 });
 
-test("getModelData derives from playerModel (.glb -> .json) with base inheritance", () => {
-    const playerModel = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
+test("getModelDataUrl derives from modelPath (.glb -> .json) with base inheritance", () => {
+    const modelPath = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
     const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
     const items: CS2Item[] = [
-        { base: true, id: 1, playerModel, rarity: CS2RarityColor.Common, type: "weapon" },
+        { base: true, id: 1, modelPath, rarity: CS2RarityColor.Common, type: "weapon" },
         { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
     ];
     CS2Economy.load({
@@ -77,13 +77,13 @@ test("getModelData derives from playerModel (.glb -> .json) with base inheritanc
             2: { name: "Bayonet | Skin" }
         }
     });
-    expect(CS2Economy.get(1).getPlayerModel()).toBe(CS2Economy.resolveUrl(playerModel));
-    expect(CS2Economy.get(1).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+    expect(CS2Economy.get(1).getModelUrl()).toBe(CS2Economy.resolveUrl(modelPath));
+    expect(CS2Economy.get(1).getModelDataUrl()).toBe(CS2Economy.resolveUrl(modelData));
     // A skin inherits the base model and derives the same data path.
-    expect(CS2Economy.get(2).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+    expect(CS2Economy.get(2).getModelDataUrl()).toBe(CS2Economy.resolveUrl(modelData));
 });
 
-test("playerModel and paintMaterial resolve own-first, then through the parent", () => {
+test("modelPath and materialPath resolve own-first, then through the parent", () => {
     // Keychain-shaped data: the item carries its own model/material while its base (the shared
     // stub) carries none, and a display-case-shaped item carries none but its base carries both.
     const ownModel = "/models/kc_missinglink_ava_ab9e13cc_331408bc.glb";
@@ -95,8 +95,8 @@ test("playerModel and paintMaterial resolve own-first, then through the parent",
         {
             baseId: 1,
             id: 2,
-            paintMaterial: ownMaterial,
-            playerModel: ownModel,
+            materialPath: ownMaterial,
+            modelPath: ownModel,
             rarity: CS2RarityColor.Rare,
             type: "keychain"
         },
@@ -104,8 +104,8 @@ test("playerModel and paintMaterial resolve own-first, then through the parent",
             baseId: 1,
             free: true,
             id: 3,
-            paintMaterial: slabMaterial,
-            playerModel: slabModel,
+            materialPath: slabMaterial,
+            modelPath: slabModel,
             rarity: CS2RarityColor.Common,
             type: "keychain"
         },
@@ -121,12 +121,12 @@ test("playerModel and paintMaterial resolve own-first, then through the parent",
         }
     });
     // Own model/material win over the (empty) stub parent.
-    expect(CS2Economy.get(2).getPlayerModel()).toBe(CS2Economy.resolveUrl(ownModel));
-    expect(CS2Economy.get(2).getPaintMaterial()).toBe(CS2Economy.resolveUrl(ownMaterial));
+    expect(CS2Economy.get(2).getModelUrl()).toBe(CS2Economy.resolveUrl(ownModel));
+    expect(CS2Economy.get(2).getMaterialUrl()).toBe(CS2Economy.resolveUrl(ownMaterial));
     // The per-sticker display case falls back to the slab parent's model/material.
-    expect(CS2Economy.get(4).getPlayerModel()).toBe(CS2Economy.resolveUrl(slabModel));
-    expect(CS2Economy.get(4).getModelData()).toBe(CS2Economy.resolveUrl(slabModel.replace(/\.glb$/, ".json")));
-    expect(CS2Economy.get(4).getPaintMaterial()).toBe(CS2Economy.resolveUrl(slabMaterial));
+    expect(CS2Economy.get(4).getModelUrl()).toBe(CS2Economy.resolveUrl(slabModel));
+    expect(CS2Economy.get(4).getModelDataUrl()).toBe(CS2Economy.resolveUrl(slabModel.replace(/\.glb$/, ".json")));
+    expect(CS2Economy.get(4).getMaterialUrl()).toBe(CS2Economy.resolveUrl(slabMaterial));
 });
 
 test("nametag validation", () => {
@@ -174,13 +174,13 @@ test("has seed", () => {
 test("default cdn url", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     const dragonLore = CS2Economy.getById(307);
-    assert(dragonLore.getImage().endsWith(".webp"));
-    assert(dragonLore.getImage(1 / 3 - 0.1).endsWith("_light.webp"));
-    assert(dragonLore.getImage(2 / 3 - 0.1).endsWith("_medium.webp"));
-    assert(dragonLore.getImage(3 / 3 - 0.1).endsWith("_heavy.webp"));
+    assert(dragonLore.getImageUrl().endsWith(".webp"));
+    assert(dragonLore.getImageUrl(1 / 3 - 0.1).endsWith("_light.webp"));
+    assert(dragonLore.getImageUrl(2 / 3 - 0.1).endsWith("_medium.webp"));
+    assert(dragonLore.getImageUrl(3 / 3 - 0.1).endsWith("_heavy.webp"));
 
     const baseGloves = CS2Economy.getById(56);
-    expect(baseGloves.getImage().startsWith("https://cdn.cstrike.app/images"));
+    expect(baseGloves.getImageUrl().startsWith("https://cdn.cstrike.app/images"));
 });
 
 test("display-case keychain resolves model and material through the slab parent", () => {
@@ -189,9 +189,9 @@ test("display-case keychain resolves model and material through the slab parent"
     // 15407 is a per-sticker display-case keychain that carries neither and inherits via baseId.
     const slab = CS2Economy.getById(15200);
     const displayCase = CS2Economy.getById(15407);
-    expect(displayCase.playerModel).toBe(undefined);
-    expect(displayCase.paintMaterial).toBe(undefined);
-    expect(displayCase.getPlayerModel()).toBe(slab.getPlayerModel());
-    expect(displayCase.getModelData()).toBe(slab.getModelData());
-    expect(displayCase.getPaintMaterial()).toBe(slab.getPaintMaterial());
+    expect(displayCase.modelPath).toBe(undefined);
+    expect(displayCase.materialPath).toBe(undefined);
+    expect(displayCase.getModelUrl()).toBe(slab.getModelUrl());
+    expect(displayCase.getModelDataUrl()).toBe(slab.getModelDataUrl());
+    expect(displayCase.getMaterialUrl()).toBe(slab.getMaterialUrl());
 });

@@ -288,8 +288,8 @@ export class CS2EconomyInstance {
         assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
     }
 
-    resolveUrl(uri?: string): string {
-        return `${this.baseUrl}${uri}`;
+    resolveUrl(path?: string): string {
+        return `${this.baseUrl}${path}`;
     }
 }
 
@@ -304,18 +304,18 @@ export class CS2EconomyItem implements Interface<
     base: boolean | undefined;
     baseId: number | undefined;
     category: string | undefined;
-    clothCollider: boolean | undefined;
     collection: string | undefined;
     collectionDesc: string | undefined;
-    collectionImage: string | undefined;
+    collectionImagePath: string | undefined;
     collectionName: string | undefined;
     containerType: CS2ContainerType | undefined;
     def: number | undefined;
     desc: string | undefined;
     displaySeed: number | undefined;
     free: boolean | undefined;
+    hasColliderData: boolean | undefined;
     id: number = null!;
-    image: string | undefined;
+    imagePath: string | undefined;
     index: number | undefined;
     keychainOffsetXMax: number | undefined;
     keychainOffsetXMin: number | undefined;
@@ -336,12 +336,12 @@ export class CS2EconomyItem implements Interface<
     legacyStickerOffsetYMax: number | undefined;
     legacyStickerOffsetYMin: number | undefined;
     legacyStickerSchemaCount: number | undefined;
+    materialPath: string | undefined;
     model: string | undefined;
+    modelPath: string | undefined;
     name: string = null!;
-    paintMaterial: string | undefined;
-    playerModel: string | undefined;
     rarity: CS2RarityColor = null!;
-    specialsImage: string | undefined;
+    specialsImagePath: string | undefined;
     statTrakless: boolean | undefined;
     statTrakOnly: boolean | undefined;
     stickerId: number | undefined;
@@ -678,9 +678,9 @@ export class CS2EconomyItem implements Interface<
         return CS2_PAINTABLE_ITEMS.includes(this.type);
     }
 
-    getImage(wear?: number): string {
-        assert(this.image);
-        const url = this.economy.resolveUrl(this.image);
+    getImageUrl(wear?: number): string {
+        assert(this.imagePath);
+        const url = this.economy.resolveUrl(this.imagePath);
         if (this.hasWear() && wear !== undefined) {
             switch (true) {
                 case wear < 1 / 3:
@@ -694,37 +694,37 @@ export class CS2EconomyItem implements Interface<
         return url;
     }
 
-    getCollectionImage(): string {
-        return this.economy.resolveUrl(this.collectionImage);
+    getCollectionImageUrl(): string {
+        return this.economy.resolveUrl(this.collectionImagePath);
     }
 
-    getSpecialsImage(): string {
+    getSpecialsImageUrl(): string {
         this.expectContainer();
         assert(this.rawSpecials);
-        assert(this.specialsImage);
-        return this.economy.resolveUrl(this.specialsImage);
+        assert(this.specialsImagePath);
+        return this.economy.resolveUrl(this.specialsImagePath);
     }
 
-    getPaintMaterial(): string {
-        return this.economy.resolveUrl(this.paintMaterial ?? this.parent?.paintMaterial);
+    getMaterialUrl(): string {
+        return this.economy.resolveUrl(this.materialPath ?? this.parent?.materialPath);
     }
 
-    getPlayerModel(): string {
-        const playerModel = this.playerModel ?? this.parent?.playerModel;
-        return this.economy.resolveUrl(playerModel);
+    getModelUrl(): string {
+        const modelPath = this.modelPath ?? this.parent?.modelPath;
+        return this.economy.resolveUrl(modelPath);
     }
 
-    getModelData(): string {
-        const playerModel = this.playerModel ?? this.parent?.playerModel;
-        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
+    getModelDataUrl(): string {
+        const modelPath = this.modelPath ?? this.parent?.modelPath;
+        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".json"));
     }
 
-    getClothCollider(): string | undefined {
-        if (!(this.clothCollider ?? this.parent?.clothCollider)) {
+    getColliderDataUrl(): string | undefined {
+        if (!(this.hasColliderData ?? this.parent?.hasColliderData)) {
             return undefined;
         }
-        const playerModel = this.playerModel ?? this.parent?.playerModel;
-        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".collider.json"));
+        const modelPath = this.modelPath ?? this.parent?.modelPath;
+        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".collider.json"));
     }
 
     getMinimumWear(): number {

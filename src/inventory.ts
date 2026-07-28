@@ -1179,8 +1179,8 @@ export class CS2InventoryItem
         return this.keychains?.get(slot)?.seed ?? CS2_MIN_KEYCHAIN_SEED;
     }
 
-    override getImage(wear?: number): string {
-        return super.getImage(wear ?? this.getWear());
+    override getImageUrl(wear?: number): string {
+        return super.getImageUrl(wear ?? this.getWear());
     }
 
     asBase(): CS2BaseInventoryItem {

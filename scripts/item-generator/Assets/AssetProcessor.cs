@@ -115,7 +115,7 @@ public static partial class AssetProcessor
                 if (produced.Count == 0) return null;
 
                 // Consumers derive the _light/_medium/_heavy URLs from the base URL (see
-                // economy.ts getImage), so the whole wear set must share one version token.
+                // economy.ts getImageUrl), so the whole wear set must share one version token.
                 var token = ContentVersion.Combine(produced.Select(p => p.Hash));
                 var baseFilename = $"{paint.FinalBase}_{token}.webp";
                 // The base image has always been a re-encode of the first variant's source;
@@ -147,7 +147,7 @@ public static partial class AssetProcessor
     }
 
     // Rewrites provisional asset references on items to their final content-addressed names.
-    // PlayerModel is patched separately by FinalizeModels (the .glb/.json pair move together).
+    // ModelPath is patched separately by FinalizeModels (the .glb/.json pair move together).
     private static void ApplyAssetRenames(ItemGeneratorContext ctx)
     {
         if (ctx.AssetRenames.Count == 0) return;
@@ -156,10 +156,10 @@ public static partial class AssetProcessor
 
         foreach (var item in ctx.Items.Values)
         {
-            item.Image = Map(item.Image);
-            item.CollectionImage = Map(item.CollectionImage);
-            item.SpecialsImage = Map(item.SpecialsImage);
-            item.PaintMaterial = Map(item.PaintMaterial);
+            item.ImagePath = Map(item.ImagePath);
+            item.CollectionImagePath = Map(item.CollectionImagePath);
+            item.SpecialsImagePath = Map(item.SpecialsImagePath);
+            item.MaterialPath = Map(item.MaterialPath);
         }
     }
 
@@ -232,7 +232,7 @@ public static partial class AssetProcessor
     }
 
     // A model's cloth collider sits beside its model data under the same stem, so a consumer
-    // derives the URL the same way it derives the model data's (economy.ts getClothCollider).
+    // derives the URL the same way it derives the model data's (economy.ts getColliderDataUrl).
     private static string ClothColliderPathOf(string modelDataPath) =>
         Path.ChangeExtension(modelDataPath, null) + ".collider.json";
 
@@ -282,7 +282,7 @@ public static partial class AssetProcessor
 
                         foreach (var item in ctx.Items.Values)
                         {
-                            if (item.PlayerModel == playerModelPath)
+                            if (item.ModelPath == playerModelPath)
                             {
                                 item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
                                 item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
@@ -313,7 +313,7 @@ public static partial class AssetProcessor
                         if (hdKeychainBounds != null || legacyKeychainBounds != null)
                             foreach (var item in ctx.Items.Values)
                             {
-                                if (item.PlayerModel != playerModelPath) continue;
+                                if (item.ModelPath != playerModelPath) continue;
                                 if (hdKeychainBounds is { } hd)
                                 {
                                     item.KeychainOffsetXMin = hd.XMin;
@@ -350,7 +350,7 @@ public static partial class AssetProcessor
                 var playerModelPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
                 foreach (var item in ctx.Items.Values)
                 {
-                    if (item.PlayerModel == playerModelPath) item.ClothCollider = true;
+                    if (item.ModelPath == playerModelPath) item.HasColliderData = true;
                 }
             }
         }
@@ -1097,8 +1097,8 @@ public static partial class AssetProcessor
     {
         foreach (var item in ctx.Items.Values)
         {
-            if (item.PlayerModel == model.PlayerModel)
-                item.PlayerModel = playerModel;
+            if (item.ModelPath == model.PlayerModel)
+                item.ModelPath = playerModel;
         }
         model.PlayerModel = playerModel;
         model.ModelData = modelData;

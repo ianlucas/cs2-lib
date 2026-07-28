@@ -46,16 +46,11 @@ public class CS2Item
     [JsonPropertyName("category"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Category { get; set; }
 
-    // True when the model publishes a cloth collider beside its model data — the shapes a keychain
-    // is pushed out of. See MetadataExtractor.ExtractClothCollider.
-    [JsonPropertyName("clothCollider"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? ClothCollider { get; set; }
-
     [JsonPropertyName("collection"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Collection { get; set; }
 
-    [JsonPropertyName("collectionImage"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? CollectionImage { get; set; }
+    [JsonPropertyName("collectionImagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CollectionImagePath { get; set; }
 
     [JsonPropertyName("containerType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? ContainerType { get; set; }
@@ -72,11 +67,16 @@ public class CS2Item
     [JsonPropertyName("free"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Free { get; set; }
 
+    // True when the model publishes a cloth collider beside its model data — the shapes a keychain
+    // is pushed out of. See MetadataExtractor.ExtractClothCollider.
+    [JsonPropertyName("hasColliderData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? HasColliderData { get; set; }
+
     [JsonPropertyName("id")]
     public int Id { get; set; }
 
-    [JsonPropertyName("image"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Image { get; set; }
+    [JsonPropertyName("imagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ImagePath { get; set; }
 
     [JsonPropertyName("index"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Index { get; set; }
@@ -138,14 +138,14 @@ public class CS2Item
     [JsonPropertyName("legacyStickerSchemaCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyStickerSchemaCount { get; set; }
 
+    [JsonPropertyName("materialPath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MaterialPath { get; set; }
+
     [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; set; }
 
-    [JsonPropertyName("paintMaterial"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PaintMaterial { get; set; }
-
-    [JsonPropertyName("playerModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PlayerModel { get; set; }
+    [JsonPropertyName("modelPath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ModelPath { get; set; }
 
     [JsonPropertyName("rarity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Rarity { get; set; }
@@ -153,8 +153,8 @@ public class CS2Item
     [JsonPropertyName("specials"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? Specials { get; set; }
 
-    [JsonPropertyName("specialsImage"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SpecialsImage { get; set; }
+    [JsonPropertyName("specialsImagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SpecialsImagePath { get; set; }
 
     [JsonPropertyName("statTrakless"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? StatTrakless { get; set; }
@@ -296,7 +296,7 @@ public class ItemGeneratorContext
     public List<GraffitiTintRecord> GraffitiTints { get; set; } = [];
     public int? KeychainBaseId { get; set; }
     // The "keychain_37" (sticker display case slab) item id: the base the per-sticker
-    // display-case keychains resolve their playerModel/paintMaterial through.
+    // display-case keychains resolve their modelPath/materialPath through.
     public int? StickerDisplayCaseKeychainId { get; set; }
     public List<string> AllIdentifiers { get; set; } = [];
     public List<string> UniqueIdentifiers { get; set; } = [];

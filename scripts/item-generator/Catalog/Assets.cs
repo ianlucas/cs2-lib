@@ -136,7 +136,7 @@ public static class CatalogAssets
         if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
         {
             if (ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing))
-                return existing.PlayerModel;
+                return existing.ModelPath;
             return null;
         }
 

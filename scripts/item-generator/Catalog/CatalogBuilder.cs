@@ -62,10 +62,10 @@ public static class CatalogBuilder
                 DescToken = itemDescription,
                 Free = true,
                 Id = id,
-                Image = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
+                ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
                 Index = null,
                 Model = name.Replace("weapon_", ""),
-                PlayerModel = modelInfo,
+                ModelPath = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
                 Teams = (int)teams,
@@ -113,10 +113,10 @@ public static class CatalogBuilder
                 DescToken = itemDescription,
                 Free = baseitem == "1" ? true : null,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = baseitem == "1" ? null : 0,
                 Model = name.Replace("weapon_", ""),
-                PlayerModel = modelInfo,
+                ModelPath = modelInfo,
                 NameToken = itemName,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
                 Teams = (int)teams,
@@ -160,7 +160,7 @@ public static class CatalogBuilder
                 DescToken = itemDescription,
                 Free = baseitem == "1" ? true : null,
                 Id = id,
-                Image = image,
+                ImagePath = image,
                 Index = baseitem == "1" ? null : 0,
                 Model = name,
                 NameToken = itemName,
@@ -201,7 +201,7 @@ public static class CatalogBuilder
                 DescToken = itemDescription,
                 Free = true,
                 Id = id,
-                Image = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
+                ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
                 Index = null,
                 Model = name.Replace("weapon_", ""),
                 NameToken = itemName,
@@ -256,15 +256,15 @@ public static class CatalogBuilder
                     Category = baseItem.Category,
                     ClassName = baseItem.ClassName,
                     Collection = collection,
-                    CollectionImage = collectionImage,
+                    CollectionImagePath = collectionImage,
                     Def = baseItem.Def,
                     Id = id,
-                    Image = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
+                    ImagePath = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
                     Index = paintKit.Index,
                     Legacy = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
+                    MaterialPath = paintMaterial,
                     Model = baseItem.Model,
                     NameToken = baseItem.NameToken,
-                    PaintMaterial = paintMaterial,
                     Rarity = rarity,
                     Teams = baseItem.Teams,
                     Type = baseItem.Type,
@@ -303,7 +303,7 @@ public static class CatalogBuilder
                 Def = 1314,
                 Free = isBase,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = int.Parse(index),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["rare"]),
                 Type = CS2ItemType.MusicKit
@@ -350,10 +350,10 @@ public static class CatalogBuilder
                 Def = 1355,
                 DisplaySeed = displaySeed,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = int.Parse(index),
-                PaintMaterial = GetKeychainMaterial(ctx, name, keychainMaterial),
-                PlayerModel = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
+                MaterialPath = GetKeychainMaterial(ctx, name, keychainMaterial),
+                ModelPath = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
                 Type = CS2ItemType.Keychain
             });
@@ -402,9 +402,9 @@ public static class CatalogBuilder
                 BaseId = baseId,
                 Def = 1209,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
+                ImagePath = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
                 Index = int.Parse(index),
-                PaintMaterial = paintMaterial,
+                MaterialPath = paintMaterial,
                 Rarity = rarity,
                 Type = CS2ItemType.Sticker
             });
@@ -424,13 +424,13 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                // The slab item (keychain_37) is the parent so getPlayerModel/getPaintMaterial
+                // The slab item (keychain_37) is the parent so getModelUrl/getMaterialUrl
                 // resolve the shared display-case model and compositing recipe through baseId
                 // instead of duplicating them on every per-sticker item.
                 BaseId = ctx.StickerDisplayCaseKeychainId ?? ctx.KeychainBaseId,
                 Def = 1355,
                 Id = keychainId,
-                Image = keychainImage,
+                ImagePath = keychainImage,
                 Index = 37,
                 Rarity = rarity,
                 StickerId = id,
@@ -474,7 +474,7 @@ public static class CatalogBuilder
                     {
                         BaseId = baseId,
                         Id = id,
-                        Image = CatalogAssets.GetDefaultGraffitiImage(ctx, stickerMaterial, tint.HexColor),
+                        ImagePath = CatalogAssets.GetDefaultGraffitiImage(ctx, stickerMaterial, tint.HexColor),
                         Index = int.Parse(index),
                         Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity]),
                         Tint = tint.Id,
@@ -498,7 +498,7 @@ public static class CatalogBuilder
                 BaseId = baseId,
                 Def = 1348,
                 Id = graffitiId,
-                Image = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
+                ImagePath = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
                 Index = int.Parse(index),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
                 Type = CS2ItemType.Graffiti
@@ -537,7 +537,7 @@ public static class CatalogBuilder
                 BaseId = baseId,
                 Def = 4609,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, $"econ/patches/{patchMaterial}"),
+                ImagePath = CatalogAssets.GetImage(ctx, $"econ/patches/{patchMaterial}"),
                 Index = int.Parse(index),
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
                 Type = CS2ItemType.Patch
@@ -576,10 +576,10 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 Collection = collection,
-                CollectionImage = collectionImage,
+                CollectionImagePath = collectionImage,
                 Def = int.Parse(index),
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 Index = null,
                 Model = model,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [name, itemRarity]),
@@ -638,7 +638,7 @@ public static class CatalogBuilder
                 AltName = name,
                 Def = int.Parse(index),
                 Id = id,
-                Image = image,
+                ImagePath = image,
                 Index = null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity, "ancient"]),
                 Type = CS2ItemType.Collectible
@@ -679,7 +679,7 @@ public static class CatalogBuilder
                 Def = int.Parse(index),
                 Free = baseitem == "1" ? true : null,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, image),
+                ImagePath = CatalogAssets.GetImage(ctx, image),
                 Index = null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                 Type = CS2ItemType.Tool
@@ -774,7 +774,7 @@ public static class CatalogBuilder
                     {
                         Def = int.Parse(keyItemDef),
                         Id = keyId,
-                        Image = CatalogAssets.GetImage(ctx, keyImageInventory),
+                        ImagePath = CatalogAssets.GetImage(ctx, keyImageInventory),
                         Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                         Type = CS2ItemType.Key
                     });
@@ -804,17 +804,17 @@ public static class CatalogBuilder
             AddItem(ctx, new CS2Item
             {
                 Collection = collection,
-                CollectionImage = collectionImage,
+                CollectionImagePath = collectionImage,
                 ContainerType = Collections.GetContainerType(containerName, contentsType),
                 Contents = contents,
                 Def = int.Parse(containerIndex),
                 Id = id,
-                Image = containerImage,
+                ImagePath = containerImage,
                 Keys = keys.Count > 0 ? keys : null,
                 Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                 Specials = specials.Count > 0 ? specials
                     : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.Specials : null,
-                SpecialsImage = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
+                SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
                 StatTrakless = containsMusicKit && !containsStatTrak ? true : null,
                 StatTrakOnly = containsMusicKit && containsStatTrak ? true : null,
                 Type = CS2ItemType.Container
@@ -852,8 +852,8 @@ public static class CatalogBuilder
         if (ctx.Mode != ItemGeneratorMode.Limited) return;
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
-        item.ClothCollider ??= previous.ClothCollider;
         item.DisplaySeed ??= previous.DisplaySeed;
+        item.HasColliderData ??= previous.HasColliderData;
         item.KeychainOffsetXMax ??= previous.KeychainOffsetXMax;
         item.KeychainOffsetXMin ??= previous.KeychainOffsetXMin;
         item.KeychainOffsetYMax ??= previous.KeychainOffsetYMax;
@@ -871,8 +871,8 @@ public static class CatalogBuilder
         item.LegacyStickerOffsetYMax ??= previous.LegacyStickerOffsetYMax;
         item.LegacyStickerOffsetYMin ??= previous.LegacyStickerOffsetYMin;
         item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
-        item.PaintMaterial ??= previous.PaintMaterial;
-        item.PlayerModel ??= previous.PlayerModel;
+        item.MaterialPath ??= previous.MaterialPath;
+        item.ModelPath ??= previous.ModelPath;
         item.StickerOffsetXMax ??= previous.StickerOffsetXMax;
         item.StickerOffsetXMin ??= previous.StickerOffsetXMin;
         item.StickerOffsetYMax ??= previous.StickerOffsetYMax;
@@ -890,7 +890,7 @@ public static class CatalogBuilder
         var item = new CS2Item
         {
             Id = id,
-            PlayerModel = modelInfo,
+            ModelPath = modelInfo,
             Type = CS2ItemType.Stub
         };
         AddItem(ctx, item);

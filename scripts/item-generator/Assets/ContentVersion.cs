@@ -7,7 +7,7 @@ namespace ItemGenerator;
 // SHA-256 of its *output* bytes in its filename, so a change in source data or in the pipeline
 // itself always yields a new CDN URL (URLs are treated as immutable by edge and browser caches).
 // Assets whose URLs must co-derive from one token — paint wear sets (base/_light/_medium/_heavy,
-// see economy.ts getImage) and model .glb/.json pairs — combine their members' full hashes.
+// see economy.ts getImageUrl) and model .glb/.json pairs — combine their members' full hashes.
 public static class ContentVersion
 {
     public static string HashBytes(ReadOnlySpan<byte> bytes)
