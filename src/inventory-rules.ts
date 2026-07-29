@@ -8,11 +8,13 @@ import {
     CS2_MAX_KEYCHAINS,
     CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_PATCHES,
+    CS2_MAX_STATTRAK,
     CS2_MAX_STICKERS,
     CS2_MAX_STICKER_ROTATION,
     CS2_MAX_STICKER_WEAR,
     CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
+    CS2_MIN_STATTRAK,
     CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
     CS2_STICKER_OFFSET_FACTOR,
@@ -117,6 +119,8 @@ const stickerRotationRule: CS2InventoryRule<number> = {
 
 export type CS2InventoryRuleName =
     | "itemCharges"
+    | "itemSeed"
+    | "itemStatTrak"
     | "itemWear"
     | "keychainPositionX"
     | "keychainPositionY"
@@ -139,6 +143,22 @@ export const CS2_INVENTORY_RULES: Record<CS2InventoryRuleName, CS2InventoryRule<
         repair(charges, item) {
             return charges !== undefined && item.hasCharges() && Number.isFinite(charges)
                 ? clamp(Math.trunc(charges), CS2_MIN_CHARGES, item.getMaximumCharges())
+                : undefined;
+        }
+    },
+    itemSeed: {
+        check: (seed, item) => item.economy.safeValidateSeed(seed, item),
+        repair(seed, item) {
+            return seed !== undefined && item.hasSeed() && Number.isFinite(seed)
+                ? clamp(Math.trunc(seed), item.getMinimumSeed(), item.getMaximumSeed())
+                : undefined;
+        }
+    },
+    itemStatTrak: {
+        check: (statTrak, item) => item.economy.safeValidateStatTrak(statTrak, item),
+        repair(statTrak, item) {
+            return statTrak !== undefined && item.hasStatTrak() && Number.isFinite(statTrak)
+                ? clamp(Math.trunc(statTrak), CS2_MIN_STATTRAK, CS2_MAX_STATTRAK)
                 : undefined;
         }
     },
@@ -230,10 +250,19 @@ export function checkAttachable(item: CS2EconomyItem): boolean {
     return item.isDefault !== true;
 }
 
-// The two ways a slot stops holding something the owner acquired: a catalog update took the id
-// away, or the id resolves to an item the game issues for free.
-function checkAttachmentId(economy: CS2EconomyInstance, id: number): boolean {
-    return economy.items.has(id) && checkAttachable(economy.getById(id));
+// The three ways a slot stops holding something the owner acquired: a catalog update took the id
+// away, the id resolves to an item the game issues for free, or it resolves to an item of a kind
+// the slot was never able to hold.
+function checkAttachmentId(
+    economy: CS2EconomyInstance,
+    id: number,
+    checkKind: (item: CS2EconomyItem) => boolean
+): boolean {
+    if (!economy.items.has(id)) {
+        return false;
+    }
+    const item = economy.getById(id);
+    return checkKind(item) && checkAttachable(item);
 }
 
 export function checkStickers(
@@ -391,9 +420,9 @@ export function checkInventoryItem(
     return (
         CS2_INVENTORY_RULES.itemWear.check(wear, item) &&
         CS2_INVENTORY_RULES.itemCharges.check(charges, item) &&
-        economy.safeValidateSeed(seed, item) &&
+        CS2_INVENTORY_RULES.itemSeed.check(seed, item) &&
+        CS2_INVENTORY_RULES.itemStatTrak.check(statTrak, item) &&
         economy.safeValidateNameTag(nameTag, item) &&
-        economy.safeValidateStatTrak(statTrak, item) &&
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&
         checkStickers(economy, stickers, item) &&
@@ -404,6 +433,23 @@ export function checkInventoryItem(
 
 export function assertInventoryItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): void {
     assert(checkInventoryItem(economy, item));
+}
+
+// An attachment is stored against the slot it sits in, so counting is not enough to know a record
+// is holdable: a slot the model does not have is as wrong as one attachment too many, and two keys
+// can name the same slot. Lowest slot wins, the way `stickersToArray` keeps the first stickers.
+function repairSlots(slots: Record<string, unknown>, maximum: number): void {
+    const keys = Object.keys(slots)
+        .map((key) => [key, parseInt(key, 10)] as const)
+        .sort(([, a], [, b]) => a - b);
+    let kept = 0;
+    for (const [key, slot] of keys) {
+        if (!Number.isInteger(slot) || slot < 0 || slot >= maximum || kept === maximum) {
+            delete slots[key];
+        } else {
+            kept++;
+        }
+    }
 }
 
 /**
@@ -442,8 +488,9 @@ export function repairInventoryItem(
         if (!economyItem.hasPatches()) {
             item.patches = undefined;
         } else {
+            repairSlots(item.patches, CS2_MAX_PATCHES);
             for (const [slot, patchId] of Object.entries(item.patches)) {
-                if (!checkAttachmentId(economy, patchId)) {
+                if (!checkAttachmentId(economy, patchId, (patch) => patch.isPatch())) {
                     delete item.patches[slot];
                 }
             }
@@ -454,7 +501,7 @@ export function repairInventoryItem(
             item.stickers = undefined;
         } else {
             for (const [slot, sticker] of Object.entries(item.stickers)) {
-                if (!checkAttachmentId(economy, sticker.id)) {
+                if (!checkAttachmentId(economy, sticker.id, (attachment) => attachment.isSticker())) {
                     delete item.stickers[slot];
                     continue;
                 }
@@ -473,8 +520,9 @@ export function repairInventoryItem(
         if (!economyItem.hasKeychains()) {
             item.keychains = undefined;
         } else {
+            repairSlots(item.keychains, CS2_MAX_KEYCHAINS);
             for (const [slot, keychain] of Object.entries(item.keychains)) {
-                if (!checkAttachmentId(economy, keychain.id)) {
+                if (!checkAttachmentId(economy, keychain.id, (attachment) => attachment.isKeychain())) {
                     delete item.keychains[slot];
                     continue;
                 }
@@ -512,6 +560,13 @@ export function repairInventoryItem(
             }
         }
     }
+    // The one attribute with no coercion behind it: a name the pattern rejects cannot be corrected
+    // into the name the owner meant, and inventing one is worse than leaving the item unnamed.
+    if (!economy.safeValidateNameTag(item.nameTag, economyItem)) {
+        item.nameTag = undefined;
+    }
+    item.seed = CS2_INVENTORY_RULES.itemSeed.repair(item.seed, economyItem);
+    item.statTrak = CS2_INVENTORY_RULES.itemStatTrak.repair(item.statTrak, economyItem);
     item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
     // Generous on purpose: an equipped graffiti with no charges left is handed the default set
     // rather than unequipped, which is the policy `equip()` already assumes.

@@ -65,20 +65,41 @@ test("an item whose id left the catalog is dropped, and the rest of the inventor
     expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
-// A seed outside the item's range is a rule `check` enforces that no `repair` counterpart reaches,
-// so the item cannot be made valid. It goes, and it is recorded under its own reason rather than
-// taking the document with it.
+// An item still in the catalog is worth coercing rather than losing, so the only thing left that
+// cannot be made valid is one that could never have existed: a base glove is a model the game
+// dresses a player in, never an item anyone owns. It goes, and it is recorded under its own reason
+// rather than taking the document with it.
 test("an item no coercion can make valid is dropped as unrepairable, not thrown over", () => {
     const inventory = CS2Inventory.load(
         JSON.stringify({
-            items: { 0: { id: AWP_DRAGON_LORE_ID, seed: 99999 }, 1: { id: AK47_ID } },
+            items: { 0: { id: BROKEN_FANG_GLOVES_ID }, 1: { id: AK47_ID } },
             version: CS2_INVENTORY_VERSION
         })
     );
 
     expect(inventory.size()).toBe(1);
     expect(inventory.get(1).id).toBe(AK47_ID);
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: AWP_DRAGON_LORE_ID, reason: "unrepairable" }]);
+    expect(inventory.loadReport?.dropped).toStrictEqual([
+        { uid: 0, id: BROKEN_FANG_GLOVES_ID, reason: "unrepairable" }
+    ]);
+});
+
+// The reading the rule table promises, and the one a log needs to be worth reading: an id the
+// catalog still has never costs the item, however stale the values written against it are.
+test("an item whose id is in the catalog survives its own bad values, coerced and reported", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: AWP_DRAGON_LORE_ID, seed: 99999, statTrak: 1e9, nameTag: " bad name" } },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.size()).toBe(1);
+    expect(inventory.get(0).seed).toBe(1000);
+    expect(inventory.get(0).statTrak).toBe(999999);
+    expect(inventory.get(0).nameTag).toBeUndefined();
+    expect(inventory.loadReport?.dropped).toStrictEqual([]);
+    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
 });
 
 // A unit holds up to 32 items, so nesting is where a drop costs the most, and it was the one place

@@ -7,8 +7,12 @@ import { describe, expect, test } from "vitest";
 import {
     CS2_MAX_GRAFFITI_CHARGES,
     CS2_MAX_KEYCHAIN_SEED,
+    CS2_MAX_SEED,
+    CS2_MAX_STATTRAK,
     CS2_MAX_STICKER_WEAR,
-    CS2_MIN_KEYCHAIN_SEED
+    CS2_MIN_KEYCHAIN_SEED,
+    CS2_MIN_SEED,
+    CS2_MIN_STATTRAK
 } from "./economy-constants.ts";
 import { CS2RarityColor } from "./economy-container.ts";
 import { CS2ItemType } from "./economy-types.ts";
@@ -17,6 +21,7 @@ import type { CS2InventoryDrop } from "./inventory-format.ts";
 import {
     CS2_INVENTORY_RULES,
     assertInventoryItem,
+    checkAddable,
     checkInventoryItem,
     getNextStickerSchema,
     reconcileInventoryItems,
@@ -37,6 +42,7 @@ const CHARM_DETACHMENT_ID = 12450;
 const CHARM_DETACHMENT_PACK_ID = 12451;
 const FALLEN_COLOGNE_2015_ID = 2226;
 const GRAFFITI_ACE_ID = 9543;
+const GROUND_REBEL_ID = 8620;
 const KARAMBIT_BOREAL_FOREST_ID = 1334;
 const LIL_AVA_ID = 13113;
 const STORAGE_UNIT_ID = 11262;
@@ -172,21 +178,22 @@ describe("repairInventoryItem offsets and positions", () => {
     });
 
     test("clamps keychain positions to the model bounds, truncates onto the grid and drops non-finite ones", () => {
-        const item: CS2BaseInventoryItem = {
-            id: AWP_DRAGON_LORE_ID,
-            keychains: {
-                0: { id: LIL_AVA_ID, x: 100, y: 100, z: 100 },
-                1: { id: LIL_AVA_ID, x: -100, y: -100, z: -100 },
-                // Raw in-game floats carry more precision than the grid; truncate, don't reject.
-                2: { id: LIL_AVA_ID, x: 0.123456789, y: 0.2211, z: 3 },
-                3: { id: LIL_AVA_ID, x: NaN, y: Infinity, z: -Infinity }
-            }
-        };
-        repairInventoryItem(CS2Economy, item);
-        expect(item.keychains?.[0]).toMatchObject({ x: 41.2865, y: 1.3716, z: 11.7576 });
-        expect(item.keychains?.[1]).toMatchObject({ x: -10.1283, y: -0.0176, z: 2.6437 });
-        expect(item.keychains?.[2]).toMatchObject({ x: 0.1234, y: 0.2211, z: 3 });
-        expect(item.keychains?.[3]).toMatchObject({ x: undefined, y: undefined, z: undefined });
+        // Only one keychain slot exists, so each case needs its own item.
+        const cases: [position: [number, number, number], expected: Record<string, number | undefined>][] = [
+            [[100, 100, 100], { x: 41.2865, y: 1.3716, z: 11.7576 }],
+            [[-100, -100, -100], { x: -10.1283, y: -0.0176, z: 2.6437 }],
+            // Raw in-game floats carry more precision than the grid; truncate, don't reject.
+            [[0.123456789, 0.2211, 3], { x: 0.1234, y: 0.2211, z: 3 }],
+            [[NaN, Infinity, -Infinity], { x: undefined, y: undefined, z: undefined }]
+        ];
+        for (const [[x, y, z], expected] of cases) {
+            const item: CS2BaseInventoryItem = {
+                id: AWP_DRAGON_LORE_ID,
+                keychains: { 0: { id: LIL_AVA_ID, x, y, z } }
+            };
+            repairInventoryItem(CS2Economy, item);
+            expect(item.keychains?.[0]).toMatchObject(expected);
+        }
     });
 });
 
@@ -207,6 +214,83 @@ describe("repairInventoryItem attributes with no model bounds", () => {
             expect(repairInventoryItem(CS2Economy, item)).toBe(true);
             expect(item.keychains?.[0]?.seed).toBe(expected);
         }
+    });
+
+    test("clamps the item's own seed into its range, and strips one from an item that has no pattern", () => {
+        const cases: [item: CS2BaseInventoryItem, expected: number | undefined][] = [
+            [{ id: AWP_DRAGON_LORE_ID, seed: 99999 }, CS2_MAX_SEED],
+            [{ id: AWP_DRAGON_LORE_ID, seed: 0 }, CS2_MIN_SEED],
+            [{ id: AWP_DRAGON_LORE_ID, seed: 5.9 }, 5],
+            [{ id: AWP_DRAGON_LORE_ID, seed: NaN }, undefined],
+            [{ id: STORAGE_UNIT_ID, seed: 5 }, undefined]
+        ];
+        for (const [item, expected] of cases) {
+            expect(repairInventoryItem(CS2Economy, item)).toBe(true);
+            expect(item.seed).toBe(expected);
+        }
+    });
+
+    test("clamps a stattrak count into range, and strips one from an item that never counted", () => {
+        const cases: [item: CS2BaseInventoryItem, expected: number | undefined][] = [
+            [{ id: AWP_DRAGON_LORE_ID, statTrak: 1e9 }, CS2_MAX_STATTRAK],
+            [{ id: AWP_DRAGON_LORE_ID, statTrak: -5 }, CS2_MIN_STATTRAK],
+            [{ id: AWP_DRAGON_LORE_ID, statTrak: 5.9 }, 5],
+            [{ id: AWP_DRAGON_LORE_ID, statTrak: NaN }, undefined],
+            [{ id: STORAGE_UNIT_ID, statTrak: 5 }, undefined]
+        ];
+        for (const [item, expected] of cases) {
+            expect(repairInventoryItem(CS2Economy, item)).toBe(true);
+            expect(item.statTrak).toBe(expected);
+        }
+    });
+});
+
+describe("repairInventoryItem attributes with nothing to coerce them into", () => {
+    test("drops a name the pattern rejects instead of inventing one the owner did not choose", () => {
+        for (const nameTag of [" leading space", "x".repeat(30), "🎉", 'he said "hi"']) {
+            const item: CS2BaseInventoryItem = { id: AK47_ID, nameTag };
+            expect(repairInventoryItem(CS2Economy, item), `repairing ${nameTag}`).toBe(true);
+            expect(item.nameTag).toBeUndefined();
+        }
+        const stickerNamed: CS2BaseInventoryItem = { id: FALLEN_COLOGNE_2015_ID, nameTag: "my sticker" };
+        expect(repairInventoryItem(CS2Economy, stickerNamed)).toBe(true);
+        expect(stickerNamed.nameTag).toBeUndefined();
+
+        const named: CS2BaseInventoryItem = { id: AK47_ID, nameTag: "my rifle" };
+        expect(repairInventoryItem(CS2Economy, named)).toBe(true);
+        expect(named.nameTag).toBe("my rifle");
+    });
+
+    test("trims attachments to the slots the model has, keeping the lowest", () => {
+        const keychained: CS2BaseInventoryItem = {
+            id: AK47_ID,
+            keychains: { 0: { id: LIL_AVA_ID, seed: 1 }, 1: { id: LIL_AVA_ID, seed: 2 }, 5: { id: LIL_AVA_ID } }
+        };
+        expect(repairInventoryItem(CS2Economy, keychained)).toBe(true);
+        expect(keychained.keychains).toEqual({
+            0: { id: LIL_AVA_ID, seed: 1, x: undefined, y: undefined, z: undefined }
+        });
+
+        const patched: CS2BaseInventoryItem = {
+            id: GROUND_REBEL_ID,
+            patches: { 0: BLOODHOUND_ID, 4: BLOODHOUND_ID, 99: BLOODHOUND_ID, "-1": BLOODHOUND_ID }
+        };
+        expect(repairInventoryItem(CS2Economy, patched)).toBe(true);
+        expect(patched.patches).toEqual({ 0: BLOODHOUND_ID, 4: BLOODHOUND_ID });
+    });
+
+    test("drops an attachment of a kind its slot was never able to hold", () => {
+        const stickered: CS2BaseInventoryItem = { id: AK47_ID, stickers: { 0: { id: LIL_AVA_ID } } };
+        expect(repairInventoryItem(CS2Economy, stickered)).toBe(true);
+        expect(stickered.stickers).toBeUndefined();
+
+        const keychained: CS2BaseInventoryItem = { id: AK47_ID, keychains: { 0: { id: FALLEN_COLOGNE_2015_ID } } };
+        expect(repairInventoryItem(CS2Economy, keychained)).toBe(true);
+        expect(keychained.keychains).toEqual({});
+
+        const patched: CS2BaseInventoryItem = { id: GROUND_REBEL_ID, patches: { 0: FALLEN_COLOGNE_2015_ID } };
+        expect(repairInventoryItem(CS2Economy, patched)).toBe(true);
+        expect(patched.patches).toEqual({});
     });
 });
 
@@ -245,9 +329,11 @@ describe("repairInventoryItem reports whether the item survived", () => {
     });
 
     test("returns false when no coercion can reach the offending attribute", () => {
-        // Nothing repairs a nameTag, so a malformed one is what "unrepairable" means: the item is
-        // still invalid after every coercion has run.
-        expect(repairInventoryItem(CS2Economy, { id: AK47_ID, nameTag: " leading space" })).toBe(false);
+        // `checkAddable` is the one rule with no coercion behind it, and the only thing left that
+        // "unrepairable" can mean: a base glove is an item the game never issued, so there is no
+        // value to correct and nothing worth keeping.
+        expect(checkAddable(CS2Economy.getById(BROKEN_FANG_GLOVES_ID))).toBe(false);
+        expect(repairInventoryItem(CS2Economy, { id: BROKEN_FANG_GLOVES_ID })).toBe(false);
     });
 });
 
@@ -314,18 +400,23 @@ describe("repairInventoryItem against a catalog without markup", () => {
     });
 
     test("clamps only on the side the model publishes", () => {
-        const item: CS2BaseInventoryItem = {
+        const stickered: CS2BaseInventoryItem = {
             id: HALF_BOUNDED_ID,
-            stickers: { 0: { id: STICKER_ID, x: 5 }, 1: { id: STICKER_ID, x: -5 } },
-            keychains: { 0: { id: KEYCHAIN_ID, x: -5 }, 1: { id: KEYCHAIN_ID, x: 5 } }
+            stickers: { 0: { id: STICKER_ID, x: 5 }, 1: { id: STICKER_ID, x: -5 } }
         };
-        repairInventoryItem(economy, item);
+        repairInventoryItem(economy, stickered);
         // Sticker X publishes a max only: the high side clamps, the low side passes through.
-        expect(item.stickers?.[0]?.x).toBe(1);
-        expect(item.stickers?.[1]?.x).toBe(-5);
+        expect(stickered.stickers?.[0]?.x).toBe(1);
+        expect(stickered.stickers?.[1]?.x).toBe(-5);
         // Keychain X publishes a min only: the low side clamps, the high side passes through.
-        expect(item.keychains?.[0]?.x).toBe(-1);
-        expect(item.keychains?.[1]?.x).toBe(5);
+        for (const [x, expected] of [
+            [-5, -1],
+            [5, 5]
+        ]) {
+            const item: CS2BaseInventoryItem = { id: HALF_BOUNDED_ID, keychains: { 0: { id: KEYCHAIN_ID, x } } };
+            repairInventoryItem(economy, item);
+            expect(item.keychains?.[0]?.x).toBe(expected);
+        }
     });
 });
 
@@ -391,6 +482,81 @@ describe("every rule repairs into what it checks", () => {
                         `${name} repaired ${value} to ${repaired} on item ${host.id}`
                     ).toBe(true);
                 }
+            }
+        });
+    }
+});
+
+// The promise the rule table was written to keep: an item whose id the catalog still has is worth
+// coercing, never worth losing. Every `"unrepairable"` that reaches a log is then a real signal —
+// a rule exists in `check` with no counterpart in `repair` — instead of constant noise.
+describe("an item whose id is in the catalog is always repairable", () => {
+    const hosts = [
+        AK47_ID,
+        AWP_DRAGON_LORE_ID,
+        KARAMBIT_BOREAL_FOREST_ID,
+        GRAFFITI_ACE_ID,
+        CHARM_DETACHMENT_ID,
+        GROUND_REBEL_ID,
+        STORAGE_UNIT_ID,
+        FALLEN_COLOGNE_2015_ID,
+        LIL_AVA_ID,
+        // The exception, and the only one: a base glove is an item the game never issued, so there
+        // is no value to coerce and nothing to keep.
+        BROKEN_FANG_GLOVES_ID
+    ];
+
+    // Anything a stale document, a hand-written request body or an item that outlived the rule
+    // that produced it can carry.
+    const shapes: Partial<CS2BaseInventoryItem>[] = [
+        {},
+        { wear: 0.9 },
+        { wear: -1 },
+        { wear: NaN },
+        { charges: 1e9 },
+        { charges: 2.5 },
+        { seed: 99999 },
+        { seed: 5.5 },
+        { seed: -1 },
+        { seed: NaN },
+        { statTrak: 1e9 },
+        { statTrak: 5.5 },
+        { statTrak: -1 },
+        { statTrak: NaN },
+        { nameTag: " leading space" },
+        { nameTag: "x".repeat(30) },
+        { nameTag: "🎉" },
+        { nameTag: "" },
+        { keychains: { 0: { id: LIL_AVA_ID }, 1: { id: LIL_AVA_ID } } },
+        { keychains: { 5: { id: LIL_AVA_ID } } },
+        { keychains: { "-1": { id: LIL_AVA_ID } } },
+        { keychains: { 0: { id: UNKNOWN_ID } } },
+        { keychains: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
+        { keychains: { 0: { id: LIL_AVA_ID, seed: 1e9, x: NaN } } },
+        { patches: { 99: BLOODHOUND_ID } },
+        { patches: { "-1": BLOODHOUND_ID } },
+        { patches: { 0: UNKNOWN_ID } },
+        { patches: { 0: LIL_AVA_ID } },
+        { stickers: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map((slot) => [slot, { id: FALLEN_COLOGNE_2015_ID }])) },
+        { stickers: { 9: { id: FALLEN_COLOGNE_2015_ID } } },
+        { stickers: { 0: { id: UNKNOWN_ID } } },
+        { stickers: { 0: { id: LIL_AVA_ID } } },
+        { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270, schema: 99, wear: 5, x: 1e9 } } },
+        { storage: { 0: { id: AK47_ID } } },
+        { storage: { 0: { id: UNKNOWN_ID } } },
+        { storage: { 0: { id: BROKEN_FANG_GLOVES_ID } } },
+        { storage: { 0: { id: STORAGE_UNIT_ID, storage: { 0: { id: AK47_ID } } } } },
+        { storage: { 0: { id: AWP_DRAGON_LORE_ID, seed: 99999, nameTag: " bad" } } }
+    ];
+
+    for (const id of hosts) {
+        test(`every shape of item ${id} repairs into one assert accepts`, () => {
+            const addable = checkAddable(CS2Economy.getById(id));
+            for (const shape of shapes) {
+                const item: CS2BaseInventoryItem = structuredClone({ id, ...shape });
+                expect(repairInventoryItem(CS2Economy, item), `repairing ${JSON.stringify({ id, ...shape })}`).toBe(
+                    addable
+                );
             }
         });
     }
