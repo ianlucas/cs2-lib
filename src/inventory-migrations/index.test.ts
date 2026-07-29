@@ -19,7 +19,7 @@ const FALLEN_COLOGNE_2015_ID = 2226;
 const STORAGE_UNIT_ID = 11262;
 
 test("the ladder is the single source of the format's version numbers", () => {
-    expect(CS2_INVENTORY_VERSION).toBe(1);
+    expect(CS2_INVENTORY_VERSION).toBe(2);
     expect(CS2_MIN_INVENTORY_VERSION).toBe(0);
 });
 
@@ -48,7 +48,8 @@ test("version 0 stores items as an array; version 1 keys them by uid", () => {
             0: { id: AK47_ID },
             3: { id: AWP_ID }
         },
-        version: 1
+        // A version 0 document does not stop at the rung that reshaped it: the ladder runs to the end.
+        version: 2
     });
 });
 
@@ -147,6 +148,91 @@ test("version 1 unequips patches, which version 0 wrongly allowed to be equipped
         equippedT: true,
         id: AK47_ID
     });
+});
+
+test("version 2 wraps the upper half of the legacy 0-359 sticker rotation onto its negative equivalent", () => {
+    const data = resolveInventoryData(
+        JSON.stringify({
+            items: {
+                0: {
+                    id: AK47_ID,
+                    stickers: {
+                        0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 },
+                        1: { id: FALLEN_COLOGNE_2015_ID, rotation: 359 },
+                        2: { id: FALLEN_COLOGNE_2015_ID, rotation: 181 },
+                        3: { id: FALLEN_COLOGNE_2015_ID, rotation: 359.5 }
+                    }
+                }
+            },
+            version: 1
+        })
+    );
+
+    expect(data?.items[0]?.stickers).toStrictEqual({
+        0: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 },
+        1: { id: FALLEN_COLOGNE_2015_ID, rotation: -1 },
+        2: { id: FALLEN_COLOGNE_2015_ID, rotation: -179 },
+        3: { id: FALLEN_COLOGNE_2015_ID, rotation: -0.5 }
+    });
+    expect(data?.version).toBe(2);
+});
+
+test("version 2 leaves an angle the two encodings already agree on exactly where it is", () => {
+    const data = resolveInventoryData(
+        JSON.stringify({
+            items: {
+                0: {
+                    id: AK47_ID,
+                    stickers: {
+                        // The lower half of 0-359 means the same angle in both encodings, and 180 is
+                        // the one value the wrap must not touch: it is the maximum, not past it.
+                        0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
+                        1: { id: FALLEN_COLOGNE_2015_ID, rotation: 90.5 },
+                        2: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 }
+                    }
+                }
+            },
+            version: 1
+        })
+    );
+
+    expect(data?.items[0]?.stickers).toStrictEqual({
+        0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
+        1: { id: FALLEN_COLOGNE_2015_ID, rotation: 90.5 },
+        2: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 }
+    });
+});
+
+test("version 2 snaps onto the half-degree grid before wrapping, so an off-grid legacy angle converts too", () => {
+    const data = resolveInventoryData(
+        JSON.stringify({
+            items: { 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270.7 } } } },
+            version: 1
+        })
+    );
+
+    expect(data?.items[0]?.stickers?.[0]?.rotation).toBe(-89.5);
+});
+
+test("version 2 wraps the stickers on an item sitting inside a storage unit", () => {
+    const data = resolveInventoryData(
+        JSON.stringify({
+            items: {
+                0: {
+                    id: STORAGE_UNIT_ID,
+                    storage: {
+                        7: {
+                            id: AK47_ID,
+                            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } }
+                        }
+                    }
+                }
+            },
+            version: 1
+        })
+    );
+
+    expect(data?.items[0]?.storage?.[7]?.stickers?.[0]?.rotation).toBe(-90);
 });
 
 test("a document already at the current version keeps its contents", () => {

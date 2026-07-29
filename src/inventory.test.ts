@@ -16,7 +16,7 @@ import {
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
-import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
+import { CS2_INVENTORY_VERSION, resolveInventoryData } from "./inventory-migrations/index.ts";
 import { CS2Inventory } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
@@ -61,6 +61,12 @@ const CHARM_DETACHMENT_ID = 12450;
 const CHARM_DETACHMENT_PACK_ID = 12451;
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
+
+// What a stored document goes through on its way in: the ladder, then the constructor. Group 6
+// folds both into `CS2Inventory.load(JSON.stringify(data))`.
+function loadInventory(data: unknown): CS2Inventory {
+    return new CS2Inventory({ data: ensure(resolveInventoryData(JSON.stringify(data))) });
+}
 
 describe("CS2Inventory methods", () => {
     let inventory: CS2Inventory;
@@ -973,32 +979,30 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(glovesUid).wear).toBe(0.5);
     });
 
-    test("converts legacy 0-359 sticker rotation to the in-game -180-180 range on load", () => {
-        inventory = new CS2Inventory({
-            data: {
-                items: {
-                    0: {
-                        id: AWP_DRAGON_LORE_ID,
-                        stickers: {
-                            0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 },
-                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: 359 },
-                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: 181 },
-                            3: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 },
-                            4: { id: FALLEN_COLOGNE_2015_ID, rotation: 359.5 }
-                        }
-                    },
-                    1: {
-                        id: AWP_DRAGON_LORE_ID,
-                        stickers: {
-                            0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
-                            // Already within the new range: must stay untouched (idempotent).
-                            1: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 },
-                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: -90.5 }
-                        }
+    test("a stored version 1 document arrives with its rotation inside the in-game -180-180 range", () => {
+        inventory = loadInventory({
+            items: {
+                0: {
+                    id: AWP_DRAGON_LORE_ID,
+                    stickers: {
+                        0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 },
+                        1: { id: FALLEN_COLOGNE_2015_ID, rotation: 359 },
+                        2: { id: FALLEN_COLOGNE_2015_ID, rotation: 181 },
+                        3: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 },
+                        4: { id: FALLEN_COLOGNE_2015_ID, rotation: 359.5 }
                     }
                 },
-                version: 1
-            }
+                1: {
+                    id: AWP_DRAGON_LORE_ID,
+                    stickers: {
+                        0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
+                        // Already within the new range: must stay untouched (idempotent).
+                        1: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 },
+                        2: { id: FALLEN_COLOGNE_2015_ID, rotation: -90.5 }
+                    }
+                }
+            },
+            version: 1
         });
         // The upper half wraps to the equivalent negative angle (same visual rotation).
         const first = ensure(inventory.get(0).stickers);
@@ -1025,20 +1029,17 @@ describe("CS2Inventory methods", () => {
                         stickers: {
                             0: { id: FALLEN_COLOGNE_2015_ID, rotation: 2.4 },
                             1: { id: FALLEN_COLOGNE_2015_ID, rotation: 2.7 },
-                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: -2.4 },
-                            // Snap happens before the legacy wrap, so an off-grid legacy angle heals too.
-                            3: { id: FALLEN_COLOGNE_2015_ID, rotation: 270.7 }
+                            2: { id: FALLEN_COLOGNE_2015_ID, rotation: -2.4 }
                         }
                     }
                 },
-                version: 1
+                version: CS2_INVENTORY_VERSION
             }
         });
         const stickers = ensure(inventory.get(0).stickers);
         expect(stickers.get(0)?.rotation).toBe(2.5);
         expect(stickers.get(1)?.rotation).toBe(2.5);
         expect(stickers.get(2)?.rotation).toBe(-2.5);
-        expect(stickers.get(3)?.rotation).toBe(-89.5);
     });
 
     test("drops unrecoverable sticker rotation on load without bricking the inventory", () => {
@@ -1069,22 +1070,20 @@ describe("CS2Inventory methods", () => {
         expect(stickers.get(4)?.rotation).toBe(45.5);
     });
 
-    test("heals legacy sticker rotation nested inside storage units", () => {
-        inventory = new CS2Inventory({
-            data: {
-                items: {
-                    0: {
-                        id: STORAGE_UNIT_ID,
-                        storage: {
-                            0: {
-                                id: AWP_DRAGON_LORE_ID,
-                                stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } }
-                            }
+    test("a stored version 1 document converts the rotation inside a storage unit too", () => {
+        inventory = loadInventory({
+            items: {
+                0: {
+                    id: STORAGE_UNIT_ID,
+                    storage: {
+                        0: {
+                            id: AWP_DRAGON_LORE_ID,
+                            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270 } }
                         }
                     }
-                },
-                version: 1
-            }
+                }
+            },
+            version: 1
         });
         expect(inventory.get(0).storage?.get(0)?.stickers?.get(0)?.rotation).toBe(-90);
     });

@@ -79,6 +79,28 @@ describe("sticker rotation", () => {
         expect(snapStickerRotation(2.5)).toBe(2.5);
         expect(snapStickerRotation(90)).toBe(90);
     });
+
+    test("repair snaps onto the grid and drops what is off it, with no legacy angle to convert", () => {
+        // The 0-359 encoding is version 2's rung now, so 270 reaching a rule is an angle out of
+        // range rather than an old one: `check` and `repair` agree on it, which is the whole point.
+        const item = CS2Economy.getById(AWP_DRAGON_LORE_ID);
+        const cases: [rotation: number | undefined, expected: number | undefined][] = [
+            [2.4, 2.5],
+            [2.7, 2.5],
+            [-2.4, -2.5],
+            [180, 180],
+            [-180, -180],
+            [270, undefined],
+            [270.7, undefined],
+            [359.5, undefined],
+            [-300, undefined],
+            [NaN, undefined],
+            [undefined, undefined]
+        ];
+        for (const [rotation, expected] of cases) {
+            expect(CS2_INVENTORY_RULES.stickerRotation.repair(rotation, item), `repairing ${rotation}`).toBe(expected);
+        }
+    });
 });
 
 describe("repairInventoryItem offsets and positions", () => {

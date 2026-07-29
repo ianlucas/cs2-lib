@@ -7,6 +7,7 @@ import { CS2Economy, type CS2EconomyInstance } from "../economy.ts";
 import type { CS2InventoryData } from "../inventory-types.ts";
 import { assert, ensure } from "../utils.ts";
 import { migration as v1 } from "./v1.ts";
+import { migration as v2 } from "./v2.ts";
 
 /**
  * One rung of the ladder: the shape change that takes an inventory to version `to`. A rung exists
@@ -20,7 +21,7 @@ export interface CS2InventoryMigration {
     apply(data: any, economy: CS2EconomyInstance): any;
 }
 
-export const migrations: CS2InventoryMigration[] = [v1];
+export const migrations: CS2InventoryMigration[] = [v1, v2];
 
 // A gap in the ladder would let a document skip a rung and arrive half-migrated with nothing
 // raised, so refuse to load at all rather than run an incomplete ladder.

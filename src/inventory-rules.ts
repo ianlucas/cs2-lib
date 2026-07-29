@@ -101,18 +101,15 @@ export function snapStickerRotation(rotation: number): number {
 }
 
 // The only rule the item plays no part in: the grid and the range are the game's, not the model's.
+// The 0-359 encoding it used to convert is `inventory-migrations/v2.ts`, so what is left here is the
+// constraint and nothing else — no reading of a value on which `check` and `repair` disagree.
 const stickerRotationRule: CS2InventoryRule<number> = {
     check: (rotation) => validateStickerRotation(rotation),
     repair(rotation) {
         if (rotation === undefined) {
             return undefined;
         }
-        let snapped = snapStickerRotation(rotation);
-        // The legacy 0-359 encoding; group 5 promotes the wrap to a migration and this branch goes
-        // away, leaving the constraint and nothing else.
-        if (snapped > CS2_MAX_STICKER_ROTATION) {
-            snapped -= 360;
-        }
+        const snapped = snapStickerRotation(rotation);
         return validateStickerRotation(snapped) ? snapped : undefined;
     }
 };
