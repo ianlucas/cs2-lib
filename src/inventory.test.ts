@@ -130,9 +130,9 @@ describe("CS2Inventory methods", () => {
     });
 
     test("addWithNameTag should add items with nametags to the inventory", () => {
-        inventory.add({ id: NAMETAG_ID }); // uid:0
+        inventory.add({ id: NAMETAG_ID });
         const args = [AK47_ID, "My Nametag"] as const;
-        inventory.addWithNameTag(0, ...args); // uid:0
+        inventory.addWithNameTag(0, ...args);
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
         expect(result.id).toBe(AK47_ID);
@@ -146,8 +146,8 @@ describe("CS2Inventory methods", () => {
     });
 
     test("addWithSticker should add items with stickers to the inventory", () => {
-        inventory.add({ id: FALLEN_COLOGNE_2015_ID }); // uid:0
-        inventory.addWithSticker(0, AK47_ID, { schema: 2 }); // uid:0; the sticker anchors to markup schema 2
+        inventory.add({ id: FALLEN_COLOGNE_2015_ID });
+        inventory.addWithSticker(0, AK47_ID, { schema: 2 });
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
         expect(result.id).toBe(AK47_ID);
@@ -160,9 +160,8 @@ describe("CS2Inventory methods", () => {
     });
 
     test("addWithSticker validates attributes and rejects invalid ones without consuming the sticker", () => {
-        inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:0 (sticker)
-        // Valid attributes are validated and stored on the new item's first sticker; the sticker is consumed.
-        inventory.addWithSticker(0, AWP_DRAGON_LORE_ID, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90.5 }); // uid:0
+        inventory.add({ id: ZZ_NATION_RIO_2022_ID });
+        inventory.addWithSticker(0, AWP_DRAGON_LORE_ID, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: 90.5 });
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).stickers?.get(0)).toMatchObject({
             id: ZZ_NATION_RIO_2022_ID,
@@ -172,16 +171,15 @@ describe("CS2Inventory methods", () => {
             y: -0.05,
             rotation: 90.5
         });
-        // Each invalid attribute throws before any mutation: the sticker stays unconsumed.
-        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID }); // uid:1 (fresh sticker)
+        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID });
         for (const attributes of [
-            { x: 0.12345 }, // offset more precise than the 0.0001 grid
-            { y: -0.2 }, // outside the model's offset envelope (AWP legacy Y max ≈ 0.1415)
-            { rotation: 90.7 }, // off the half-degree grid
-            { rotation: 200 }, // rotation outside [-180, 180]
-            { wear: 2 }, // wear outside [0, 1]
-            { wear: 0.005 }, // wear more precise than the 0.01 grid
-            { schema: 5 } // schema outside the model's markup range
+            { x: 0.12345 },
+            { y: -0.2 },
+            { rotation: 90.7 },
+            { rotation: 200 },
+            { wear: 2 },
+            { wear: 0.005 },
+            { schema: 5 }
         ]) {
             expect(() => inventory.addWithSticker(1, AWP_DRAGON_LORE_ID, attributes)).toThrow();
         }
@@ -190,8 +188,8 @@ describe("CS2Inventory methods", () => {
     });
 
     test("addWithKeychain should add items with keychains to the inventory", () => {
-        inventory.add({ id: LIL_AVA_ID }); // uid:0
-        inventory.addWithKeychain(0, AK47_ID); // uid:0
+        inventory.add({ id: LIL_AVA_ID });
+        inventory.addWithKeychain(0, AK47_ID);
         expect(inventory.size()).toBe(1);
         const result = inventory.get(0);
         expect(result.id).toBe(AK47_ID);
@@ -204,9 +202,8 @@ describe("CS2Inventory methods", () => {
     });
 
     test("addWithKeychain validates attributes and rejects invalid ones without consuming the keychain", () => {
-        inventory.add({ id: LIL_AVA_ID }); // uid:0 (keychain)
-        // Positions are absolute markup-space coordinates; large in-bounds values are fine.
-        inventory.addWithKeychain(0, AWP_DRAGON_LORE_ID, { seed: 1234, x: 40, y: 1.3, z: 11 }); // uid:0
+        inventory.add({ id: LIL_AVA_ID });
+        inventory.addWithKeychain(0, AWP_DRAGON_LORE_ID, { seed: 1234, x: 40, y: 1.3, z: 11 });
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).keychains?.get(0)).toMatchObject({
             id: LIL_AVA_ID,
@@ -215,14 +212,13 @@ describe("CS2Inventory methods", () => {
             y: 1.3,
             z: 11
         });
-        // Each invalid attribute throws before any mutation: the keychain stays unconsumed.
-        inventory.add({ id: LIL_AVA_ID }); // uid:1 (fresh keychain)
+        inventory.add({ id: LIL_AVA_ID });
         for (const attributes of [
-            { seed: CS2_MIN_KEYCHAIN_SEED - 1 }, // seed below the valid range
-            { seed: CS2_MAX_KEYCHAIN_SEED + 1 }, // seed above the valid range
-            { seed: 1.5 }, // seed must be an integer
-            { x: 0.123456 }, // offset more precise than the 0.0001 grid
-            { x: NaN }, // non-finite offset
+            { seed: CS2_MIN_KEYCHAIN_SEED - 1 },
+            { seed: CS2_MAX_KEYCHAIN_SEED + 1 },
+            { seed: 1.5 },
+            { x: 0.123456 },
+            { x: NaN },
             { y: NaN },
             { z: NaN }
         ]) {
@@ -230,8 +226,7 @@ describe("CS2Inventory methods", () => {
         }
         expect(inventory.size()).toBe(2);
         expect(inventory.get(1).id).toBe(LIL_AVA_ID);
-        // A non-keychain item cannot be consumed, and an item without keychain support cannot hold one.
-        inventory.add({ id: FALLEN_COLOGNE_2015_ID }); // uid:2 (sticker)
+        inventory.add({ id: FALLEN_COLOGNE_2015_ID });
         expect(() => inventory.addWithKeychain(2, AWP_DRAGON_LORE_ID)).toThrow();
         expect(() => inventory.addWithKeychain(1, KARAMBIT_BOREAL_FOREST_ID)).toThrow();
         expect(inventory.size()).toBe(3);
@@ -261,13 +256,12 @@ describe("CS2Inventory methods", () => {
             },
             wear: 0.7
         };
-        inventory.add({ ...originalItem }); // uid:0
+        inventory.add({ ...originalItem });
         inventory.edit(0, { ...editedItem });
         const result = inventory.get(0);
         expect(result.nameTag).toBe(editedItem.nameTag);
         expect(result.seed).toBe(editedItem.seed);
         expect(result.statTrak).toBe(editedItem.statTrak);
-        // The sparse {0,2} edit reflows to contiguous {0,1}, pinning each schema to its old key.
         expect(Object.fromEntries(ensure(result.stickers))).toEqual({
             0: { id: ALLU_COLOGNE_2015_ID, schema: 0, wear: 0.5 },
             1: { id: ALLU_COLOGNE_2015_ID, schema: 2, wear: 0.7 }
@@ -276,62 +270,62 @@ describe("CS2Inventory methods", () => {
     });
 
     test("equip should equip the item with the given id", () => {
-        inventory.add({ id: AK47_ID }); // uid:0
+        inventory.add({ id: AK47_ID });
         inventory.equip(0, CS2Team.T);
         expect(() => inventory.equip(0)).toThrow();
         expect(() => inventory.equip(0, CS2Team.CT)).toThrow();
         expect(inventory.get(0).equippedT).toBe(true);
         expect(inventory.get(0).equippedCT).toBe(undefined);
         expect(inventory.get(0).equipped).toBe(undefined);
-        inventory.add({ id: M4A1_S_ID }); // uid:1
+        inventory.add({ id: M4A1_S_ID });
         inventory.equip(1, CS2Team.CT);
         expect(() => inventory.equip(1)).toThrow();
         expect(() => inventory.equip(1, CS2Team.T)).toThrow();
         expect(inventory.get(1).equippedCT).toBe(true);
         expect(inventory.get(1).equippedT).toBe(undefined);
         expect(inventory.get(1).equipped).toBe(undefined);
-        inventory.add({ id: AWP_ID }); // uid:2
+        inventory.add({ id: AWP_ID });
         inventory.equip(2, CS2Team.CT);
         inventory.equip(2, CS2Team.T);
         expect(() => inventory.equip(2)).toThrow();
         expect(inventory.get(2).equippedCT).toBe(true);
         expect(inventory.get(2).equippedT).toBe(true);
         expect(inventory.get(2).equipped).toBe(undefined);
-        inventory.add({ id: FIVE_YEAR_VETERAN_COIN_ID }); // uid:3
+        inventory.add({ id: FIVE_YEAR_VETERAN_COIN_ID });
         inventory.equip(3);
         expect(() => inventory.equip(3, CS2Team.T)).toThrow();
         expect(() => inventory.equip(3, CS2Team.CT)).toThrow();
         expect(inventory.get(3).equipped).toBe(true);
         expect(inventory.get(3).equippedCT).toBe(undefined);
         expect(inventory.get(3).equippedT).toBe(undefined);
-        inventory.add({ id: AK47_ID }); // uid:4
+        inventory.add({ id: AK47_ID });
         inventory.equip(4, CS2Team.T);
         expect(inventory.get(0).equippedT).toBe(undefined);
         expect(inventory.get(4).equippedT).toBe(true);
-        inventory.add({ id: M4A1_S_ID }); // uid:5
+        inventory.add({ id: M4A1_S_ID });
         inventory.equip(5, CS2Team.CT);
         expect(inventory.get(1).equippedCT).toBe(undefined);
         expect(inventory.get(5).equippedCT).toBe(true);
-        inventory.add({ id: FIVE_YEAR_VETERAN_COIN_ID }); // uid:6
+        inventory.add({ id: FIVE_YEAR_VETERAN_COIN_ID });
         inventory.equip(6);
         expect(inventory.get(3).equipped).toBe(undefined);
         expect(inventory.get(6).equipped).toBe(true);
     });
 
     test("unequip should unequip the item with the given id", () => {
-        inventory.add({ id: AK47_ID }); // uid:0
+        inventory.add({ id: AK47_ID });
         inventory.equip(0, CS2Team.T);
         inventory.unequip(0, CS2Team.T);
         expect(inventory.get(0).equippedT).toBe(undefined);
         expect(inventory.get(0).equippedCT).toBe(undefined);
         expect(inventory.get(0).equipped).toBe(undefined);
-        inventory.add({ id: M4A1_S_ID }); // uid:1
+        inventory.add({ id: M4A1_S_ID });
         inventory.equip(1, CS2Team.CT);
         inventory.unequip(1, CS2Team.CT);
         expect(inventory.get(1).equippedCT).toBe(undefined);
         expect(inventory.get(1).equippedT).toBe(undefined);
         expect(inventory.get(1).equipped).toBe(undefined);
-        inventory.add({ id: AWP_ID }); // uid:2
+        inventory.add({ id: AWP_ID });
         inventory.equip(2, CS2Team.CT);
         inventory.equip(2, CS2Team.T);
         inventory.unequip(2, CS2Team.CT);
@@ -339,7 +333,7 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(2).equippedCT).toBe(undefined);
         expect(inventory.get(2).equippedT).toBe(undefined);
         expect(inventory.get(2).equipped).toBe(undefined);
-        inventory.add({ id: FIVE_YEAR_VETERAN_COIN_ID }); // uid:3
+        inventory.add({ id: FIVE_YEAR_VETERAN_COIN_ID });
         inventory.equip(3);
         inventory.unequip(3);
         expect(inventory.get(3).equipped).toBe(undefined);
@@ -348,12 +342,12 @@ describe("CS2Inventory methods", () => {
     });
 
     test("unlockCase should unlock a case and add the items to the inventory", () => {
-        inventory.add({ id: ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID }); // uid:0
-        inventory.add({ id: KILOWATT_CASE_ID }); // uid:1
-        inventory.add({ id: KILOWATT_CASE_KEY_ID }); // uid:2
+        inventory.add({ id: ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID });
+        inventory.add({ id: KILOWATT_CASE_ID });
+        inventory.add({ id: KILOWATT_CASE_KEY_ID });
         const unlocked1 = CS2Economy.getById(ESL_ONE_COLOGNE_2014_DUST_II_SOUVENIR_ID).unlockContainer();
         expect(() => inventory.unlockContainer(unlocked1, 0, 2)).toThrow();
-        inventory.unlockContainer(unlocked1, 0); // uid:0
+        inventory.unlockContainer(unlocked1, 0);
         expect(inventory.size()).toBe(3);
         const result1 = inventory.get(0);
         expect(result1.containerId).toBe(unlocked1.attributes.containerId);
@@ -368,7 +362,7 @@ describe("CS2Inventory methods", () => {
         expect(result1.updatedAt).not.toBe(undefined);
         expect(result1.wear).toEqual(unlocked1.attributes.wear);
         const unlocked2 = CS2Economy.getById(KILOWATT_CASE_ID).unlockContainer();
-        inventory.unlockContainer(unlocked2, 1, 2); // uid:1
+        inventory.unlockContainer(unlocked2, 1, 2);
         expect(inventory.size()).toBe(2);
         const result2 = inventory.get(1);
         expect(result2.containerId).toBe(unlocked2.attributes.containerId);
@@ -385,8 +379,8 @@ describe("CS2Inventory methods", () => {
     });
 
     test("renameItem should rename the item with the given id", () => {
-        inventory.add({ id: NAMETAG_ID }); // uid:0
-        inventory.add({ id: AK47_ID, nameTag: "My Nametag" }); // uid:1
+        inventory.add({ id: NAMETAG_ID });
+        inventory.add({ id: AK47_ID, nameTag: "My Nametag" });
         inventory.renameItem(0, 1, "My New Nametag");
         expect(inventory.size()).toBe(1);
         const result = inventory.get(1);
@@ -394,7 +388,7 @@ describe("CS2Inventory methods", () => {
     });
 
     test("renameStorageUnit should rename the storage unit with the given id", () => {
-        inventory.add({ id: STORAGE_UNIT_ID }); // uid:0
+        inventory.add({ id: STORAGE_UNIT_ID });
         expect(inventory.get(0).nameTag).toBe(undefined);
         inventory.renameStorageUnit(0, "Storage Unit");
         expect(inventory.size()).toBe(1);
@@ -404,13 +398,13 @@ describe("CS2Inventory methods", () => {
     });
 
     test("storage unit interactions", () => {
-        inventory.add({ id: STORAGE_UNIT_ID }); // uid:0
-        inventory.add({ id: STORAGE_UNIT_ID }); // uid:1
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 1 }); // uid:2
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2 }); // uid:3
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 }); // uid:4
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 4 }); // uid:5
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 5 }); // uid:6
+        inventory.add({ id: STORAGE_UNIT_ID });
+        inventory.add({ id: STORAGE_UNIT_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 1 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 4 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 5 });
         expect(inventory.size()).toBe(7);
         expect(inventory.isStorageUnitFull(0)).toBe(false);
         expect(inventory.isStorageUnitFilled(0)).toBe(false);
@@ -437,22 +431,20 @@ describe("CS2Inventory methods", () => {
         expect(inventory.isStorageUnitFull(0)).toBe(true);
         expect(() => inventory.retrieveFromStorageUnit(0, [])).toThrow();
         expect(() => inventory.retrieveFromStorageUnit(0, [0, 99])).toThrow();
-        inventory.retrieveFromStorageUnit(0, [1]); // uid:2
+        inventory.retrieveFromStorageUnit(0, [1]);
         expect(inventory.size()).toBe(5);
         expect(inventory.get(2).statTrak).toBe(2);
         expect(inventory.getStorageUnitSize(0)).toBe(2);
     });
 
     test("applyItemSticker should apply a sticker to the item with the given id", () => {
-        inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:0
-        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID }); // uid:1
-        inventory.add({ id: ZZ_NATION_RIO_2022_GOLD_ID }); // uid:2
-        inventory.add({ id: O00_THIEVES_2020_RMR_FOIL_ID }); // uid:3
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:4
-        // Can't apply a sticker onto a non-stickerable item (uid:0 is itself a sticker).
+        inventory.add({ id: ZZ_NATION_RIO_2022_ID });
+        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID });
+        inventory.add({ id: ZZ_NATION_RIO_2022_GOLD_ID });
+        inventory.add({ id: O00_THIEVES_2020_RMR_FOIL_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
         expect(() => inventory.applyItemSticker(0, 1)).toThrow();
         expect(inventory.get(4).stickers).toBe(undefined);
-        // Each application appends the sticker and auto-assigns the next free markup schema.
         for (let index = 0; index < 4; index++) {
             const expectedId = inventory.get(index).id;
             inventory.applyItemSticker(4, index);
@@ -460,24 +452,20 @@ describe("CS2Inventory methods", () => {
             expect(inventory.get(4).stickers?.get(index)?.id).toBe(expectedId);
             expect(inventory.get(4).stickers?.get(index)?.schema).toBe(index);
         }
-        inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID }); // uid:0
-        // Schemas outside the weapon's markup range are rejected (legacy AWP defines 5 slots).
+        inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID });
         expect(() => inventory.applyItemSticker(4, 0, { schema: 5 })).toThrow();
         expect(() => inventory.applyItemSticker(4, 0, { schema: -1 })).toThrow();
         expect(() => inventory.applyItemSticker(4, 0, { schema: NaN })).toThrow();
-        // A fifth sticker is allowed (cap is CS2_MAX_STICKERS) and may double up a schema.
         inventory.applyItemSticker(4, 0, { schema: 1 });
         expect(inventory.get(4).stickers?.get(4)?.schema).toBe(1);
         expect(inventory.get(4).getStickersCount()).toBe(5);
-        // A sixth exceeds the cap.
-        inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID }); // uid:0
+        inventory.add({ id: ZZ_NATION_RIO_2022_GLITTER_ID });
         expect(() => inventory.applyItemSticker(4, 0)).toThrow();
     });
 
     test("applyItemSticker validates and stores attributes, rejecting invalid ones without consuming the sticker", () => {
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:0 (target)
-        inventory.add({ id: ZZ_NATION_RIO_2022_ID }); // uid:1 (sticker)
-        // Valid attributes are validated and stored on the applied sticker, and the sticker is consumed.
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        inventory.add({ id: ZZ_NATION_RIO_2022_ID });
         inventory.applyItemSticker(0, 1, { schema: 3, wear: 0.5, x: 0.1, y: -0.05, rotation: -90.5 });
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).stickers?.get(0)).toMatchObject({
@@ -488,17 +476,15 @@ describe("CS2Inventory methods", () => {
             y: -0.05,
             rotation: -90.5
         });
-        // Each invalid attribute throws before any mutation: the sticker stays unconsumed and the
-        // target's stack is left untouched.
-        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID }); // uid:1 (fresh sticker)
+        inventory.add({ id: ZZ_NATION_RIO_2022_HOLO_ID });
         for (const attributes of [
-            { x: 0.12345 }, // offset more precise than the 0.0001 grid
-            { y: -0.2 }, // outside the model's offset envelope (AWP legacy Y max ≈ 0.1415)
-            { rotation: 90.7 }, // off the half-degree grid
-            { rotation: 200 }, // rotation outside [-180, 180]
-            { wear: 2 }, // wear outside [0, 1]
-            { wear: 0.005 }, // wear more precise than the 0.01 grid
-            { schema: 5 } // schema outside the model's markup range
+            { x: 0.12345 },
+            { y: -0.2 },
+            { rotation: 90.7 },
+            { rotation: 200 },
+            { wear: 2 },
+            { wear: 0.005 },
+            { schema: 5 }
         ]) {
             expect(() => inventory.applyItemSticker(0, 1, attributes)).toThrow();
         }
@@ -524,16 +510,12 @@ describe("CS2Inventory methods", () => {
         });
         expect(() => inventory.scrapeItemSticker(0, -5)).toThrow();
         expect(() => inventory.scrapeItemSticker(0, NaN)).toThrow();
-        // Each default scrape steps wear by CS2_STICKER_SCRAPE_FACTOR (0.1), matching the ~10-click
-        // CS:GO behavior.
         for (let scrape = 1; scrape <= 9; scrape++) {
             inventory.scrapeItemSticker(0, 0);
             expect(inventory.get(0).stickers?.get(0)?.wear).toBe(float(0.1 * scrape));
         }
-        // The 10th click rests wear at the maximum; the sticker is still present.
         inventory.scrapeItemSticker(0, 0);
         expect(inventory.get(0).stickers?.get(0)?.wear).toBe(1);
-        // The 11th click clears it; the one below reflows to index 0.
         inventory.scrapeItemSticker(0, 0);
         expect(inventory.get(0).stickers?.get(0)?.id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
         expect(inventory.get(0).stickers?.get(1)).toBe(undefined);
@@ -547,16 +529,13 @@ describe("CS2Inventory methods", () => {
                 1: { id: ZZ_NATION_RIO_2022_HOLO_ID }
             }
         });
-        inventory.scrapeItemSticker(0, 0); // step current wear up to 0.1
-        // The explicit-wear slider must move strictly above the current wear.
+        inventory.scrapeItemSticker(0, 0);
         expect(() => inventory.scrapeItemSticker(0, 0, 0.05)).toThrow();
         inventory.scrapeItemSticker(0, 0, 0.5);
         expect(inventory.get(0).stickers?.get(0)?.wear).toBe(0.5);
-        // Reaching wear 1 via the slider removes the sticker; the one below reflows to index 0.
         inventory.scrapeItemSticker(0, 0, 1);
         expect(inventory.get(0).stickers?.get(0)?.id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
         expect(inventory.get(0).stickers?.get(1)).toBe(undefined);
-        // Default-scraping the last sticker past 1 clears the map entirely.
         inventory.edit(0, { stickers: { 0: { id: ZZ_NATION_RIO_2022_HOLO_ID, wear: 0.99 } } });
         inventory.scrapeItemSticker(0, 0);
         expect(inventory.get(0).stickers).toBe(undefined);
@@ -576,7 +555,6 @@ describe("CS2Inventory methods", () => {
         const stickers = ensure(inventory.get(0).stickers);
         expect(stickers.size).toBe(2);
         expect(stickers.get(0)).toMatchObject({ id: ZZ_NATION_RIO_2022_ID, schema: 0 });
-        // The survivor from index 2 reflows to index 1 but keeps its markup schema (2).
         expect(stickers.get(1)).toMatchObject({ id: ZZ_NATION_RIO_2022_GOLD_ID, schema: 2 });
     });
 
@@ -589,7 +567,7 @@ describe("CS2Inventory methods", () => {
                 2: { id: ZZ_NATION_RIO_2022_GOLD_ID }
             }
         });
-        inventory.moveItemSticker(0, 2, 0); // send the top sticker to the back
+        inventory.moveItemSticker(0, 2, 0);
         const stickers = ensure(inventory.get(0).stickers);
         expect(stickers.get(0)).toMatchObject({ id: ZZ_NATION_RIO_2022_GOLD_ID, schema: 2 });
         expect(stickers.get(1)).toMatchObject({ id: ZZ_NATION_RIO_2022_ID, schema: 0 });
@@ -611,13 +589,9 @@ describe("CS2Inventory methods", () => {
             y: -0.05,
             rotation: 90
         });
-        // Out-of-range schema (legacy AWP defines 5 slots) is rejected.
         expect(() => inventory.editItemSticker(0, 0, { schema: 5 })).toThrow();
-        // Swapping in a non-sticker id is rejected.
         expect(() => inventory.editItemSticker(0, 0, { id: AWP_DRAGON_LORE_ID })).toThrow();
-        // An offset outside the model's published envelope is rejected (AWP legacy Y max ≈ 0.1415).
         expect(() => inventory.editItemSticker(0, 0, { y: -0.2 })).toThrow();
-        // An over-precise offset (more than the factor's 4 decimals) is rejected.
         expect(() => inventory.editItemSticker(0, 0, { x: 0.12345 })).toThrow();
     });
 
@@ -636,38 +610,38 @@ describe("CS2Inventory methods", () => {
     });
 
     test("swapItemsStatTrak should swap the StatTrak count of the items with the given ids", () => {
-        inventory.add({ id: STATTRAK_SWAP_TOOL_ID }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 0 }); // uid:1
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2556 }); // uid:2
+        inventory.add({ id: STATTRAK_SWAP_TOOL_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 0 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2556 });
         inventory.swapItemsStatTrak(0, 1, 2);
         expect(inventory.get(2).statTrak).toBe(0);
         expect(inventory.get(1).statTrak).toBe(2556);
         inventory.removeAll();
-        inventory.add({ id: STATTRAK_SWAP_TOOL_ID }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 0 }); // uid:1
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2556 }); // uid:2
+        inventory.add({ id: STATTRAK_SWAP_TOOL_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 0 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2556 });
         inventory.swapItemsStatTrak(0, 2, 1);
         expect(inventory.get(2).statTrak).toBe(0);
         expect(inventory.get(1).statTrak).toBe(2556);
         inventory.removeAll();
-        inventory.add({ id: STATTRAK_SWAP_TOOL_ID }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:1
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2556 }); // uid:2
+        inventory.add({ id: STATTRAK_SWAP_TOOL_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2556 });
         expect(() => inventory.swapItemsStatTrak(0, 1, 2)).toThrow();
         inventory.removeAll();
         for (let i = 0; i < 5; i++) {
-            inventory.add({ id: STATTRAK_SWAP_TOOL_ID }); // uid:0-4
+            inventory.add({ id: STATTRAK_SWAP_TOOL_ID });
         }
-        inventory.add({ id: BUTTERFLY_KNIFE_CASE_HARDNED_ID, statTrak: 10 }); // uid:5
-        inventory.add({ id: BUTTERFLY_KNIFE_BLUE_STEEL_ID, statTrak: 9 }); // uid:6
-        inventory.add({ id: KARAMBIT_BOREAL_FOREST_ID, statTrak: 8 }); // uid:7
-        inventory.add({ id: KARAMBIT_AUTOTRONIC_ID, statTrak: 7 }); // uid:8
-        inventory.add({ id: USP_KILL_CONFIRMED_ID, statTrak: 1 }); // uid:9
-        inventory.add({ id: USP_BLOOD_TIGER_ID, statTrak: 2 }); // uid:10
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 }); // uid:11
-        inventory.add({ id: AWP_ELITE_BUILD_ID, statTrak: 4 }); // uid:12
-        inventory.add({ id: TKLIKSPHILIP_HEADING_FOR_THE_SOURCE_ID, statTrak: 5 }); // uid:13
-        inventory.add({ id: AWOLNATION_I_AM_ID, statTrak: 6 }); // uid:14
+        inventory.add({ id: BUTTERFLY_KNIFE_CASE_HARDNED_ID, statTrak: 10 });
+        inventory.add({ id: BUTTERFLY_KNIFE_BLUE_STEEL_ID, statTrak: 9 });
+        inventory.add({ id: KARAMBIT_BOREAL_FOREST_ID, statTrak: 8 });
+        inventory.add({ id: KARAMBIT_AUTOTRONIC_ID, statTrak: 7 });
+        inventory.add({ id: USP_KILL_CONFIRMED_ID, statTrak: 1 });
+        inventory.add({ id: USP_BLOOD_TIGER_ID, statTrak: 2 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 });
+        inventory.add({ id: AWP_ELITE_BUILD_ID, statTrak: 4 });
+        inventory.add({ id: TKLIKSPHILIP_HEADING_FOR_THE_SOURCE_ID, statTrak: 5 });
+        inventory.add({ id: AWOLNATION_I_AM_ID, statTrak: 6 });
         const initialSize = inventory.size();
         for (let i = 5; i < 15; i += 2) {
             for (let j = 5; j < 15; j++) {
@@ -688,8 +662,8 @@ describe("CS2Inventory methods", () => {
     });
 
     test("remove should remove the item with the given id", () => {
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:1
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
         inventory.remove(0);
         expect(inventory.size()).toBe(1);
         inventory.remove(1);
@@ -697,30 +671,30 @@ describe("CS2Inventory methods", () => {
     });
 
     test("removeAll should remove all items from the inventory", () => {
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID }); // uid:1
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
         inventory.removeAll();
         expect(inventory.size()).toBe(0);
     });
 
     test("uid", () => {
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 1 }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2 }); // uid:1
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 1 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2 });
         inventory.remove(0);
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 }); // uid:0
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 });
         expect(inventory.size()).toBe(2);
         expect(inventory.get(0).statTrak).toBe(3);
         inventory.removeAll();
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 4 }); // uid:0
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 4 });
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).statTrak).toBe(4);
     });
 
     test("storage unit uid", () => {
-        inventory.add({ id: STORAGE_UNIT_ID }); // uid:0
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 1 }); // uid:1
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2 }); // uid:2
-        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 }); // uid:3
+        inventory.add({ id: STORAGE_UNIT_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 1 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 2 });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, statTrak: 3 });
         inventory.renameStorageUnit(0, "My Storage Unit");
         inventory.depositToStorageUnit(0, [1, 2, 3]);
         expect(inventory.getStorageUnitSize(0)).toBe(3);
@@ -739,12 +713,12 @@ describe("CS2Inventory methods", () => {
     });
 
     test("apply and remove patches", () => {
-        inventory.add({ id: BLOODY_DARRYL_THE_STRAPPED_ID }); // 0
-        inventory.add({ id: BLOODHOUND_ID }); // 1
-        inventory.add({ id: BLOODHOUND_ID }); // 2
-        inventory.add({ id: BLOODHOUND_ID }); // 3
-        inventory.add({ id: BLOODHOUND_ID }); // 4
-        inventory.add({ id: BLOODHOUND_ID }); // 5
+        inventory.add({ id: BLOODY_DARRYL_THE_STRAPPED_ID });
+        inventory.add({ id: BLOODHOUND_ID });
+        inventory.add({ id: BLOODHOUND_ID });
+        inventory.add({ id: BLOODHOUND_ID });
+        inventory.add({ id: BLOODHOUND_ID });
+        inventory.add({ id: BLOODHOUND_ID });
         expect(() => inventory.applyItemPatch(0, 1, -1)).toThrow();
         expect(() => inventory.applyItemPatch(0, 1, CS2_MAX_PATCHES)).toThrow();
         for (let uid = 1; uid < 1 + 5; uid++) {
@@ -824,7 +798,6 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(1).patches?.get(0)).toBe(undefined);
         expect(inventory.get(1).patches?.get(1)).toBe(8559);
         expect(inventory.get(1).patches?.get(2)).toBe(8561);
-        // The invalid sticker at slot 1 is dropped; slot 2 reflows to index 1 but keeps schema 2.
         expect(inventory.get(2).stickers?.get(0)).toMatchObject({ id: 1943, schema: 0, wear: 0.1 });
         expect(inventory.get(2).stickers?.get(1)).toMatchObject({ id: 1947, schema: 2, wear: 0.1 });
         expect(inventory.get(2).stickers?.get(2)).toBe(undefined);
@@ -867,7 +840,6 @@ describe("CS2Inventory methods", () => {
                 seed: CS2_MAX_KEYCHAIN_SEED + 1
             })
         ).toThrow();
-        // Regression test
         expect(() =>
             inventory.add({
                 id: AWP_DRAGON_LORE_ID,
@@ -907,8 +879,6 @@ describe("CS2Inventory methods", () => {
                 id: AWP_DRAGON_LORE_ID,
                 keychains: { 0: { id: LIL_AVA_ID, ...coords } }
             });
-        // AWP legacy keychain envelope: x[-10.13,41.29] y[-0.02,1.37] z[2.64,11.76].
-        // A large finite offset on any axis (z included) is accepted when in-bounds.
         expect(keychainWithCoords({ x: 40 })).not.toThrow();
         expect(keychainWithCoords({ y: 1.3 })).not.toThrow();
         expect(keychainWithCoords({ z: 11 })).not.toThrow();
@@ -921,21 +891,13 @@ describe("CS2Inventory methods", () => {
         inventory = new CS2Inventory({
             data: {
                 items: {
-                    // Valid item that must survive alongside the bad ones.
                     0: { id: AWP_DRAGON_LORE_ID },
-                    // Knife cannot hold stickers.
                     1: { id: KARAMBIT_BOREAL_FOREST_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
-                    // Non-agent (weapon) cannot hold patches.
                     2: { id: AK47_ID, patches: { 0: BLOODHOUND_ID } },
-                    // Knife cannot hold keychains.
                     3: { id: KARAMBIT_BOREAL_FOREST_ID, keychains: { 0: { id: LIL_AVA_ID } } },
-                    // Wear below wearMin gets clamped up to wearMin.
                     4: { id: BROKEN_FANG_GLOVES_JADE_ID, wear: 0.01 },
-                    // Wear above wearMax gets clamped down to wearMax.
                     5: { id: BROKEN_FANG_GLOVES_JADE_ID, wear: 0.9 },
-                    // Wear on a type without wear gets dropped.
                     6: { id: BLOODY_DARRYL_THE_STRAPPED_ID, wear: 0.5 },
-                    // Wear with excess precision gets dropped.
                     7: { id: BROKEN_FANG_GLOVES_JADE_ID, wear: 0.123456789 }
                 },
                 version: 1
@@ -959,20 +921,15 @@ describe("CS2Inventory methods", () => {
         const knifeUid = 0;
         const weaponUid = 1;
         const glovesUid = 2;
-        // Knife cannot hold stickers or keychains.
         expect(() => inventory.edit(knifeUid, { stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } })).toThrow();
         expect(() => inventory.edit(knifeUid, { keychains: { 0: { id: LIL_AVA_ID } } })).toThrow();
-        // Non-agent (weapon) cannot hold patches.
         expect(() => inventory.edit(weaponUid, { patches: { 0: BLOODHOUND_ID } })).toThrow();
-        // Wear outside [wearMin, wearMax] is rejected.
         expect(() => inventory.edit(glovesUid, { wear: 0.01 })).toThrow();
         expect(() => inventory.edit(glovesUid, { wear: 0.9 })).toThrow();
-        // The invalid writes must not have mutated the items.
         expect(inventory.get(knifeUid).stickers).toBe(undefined);
         expect(inventory.get(knifeUid).keychains).toBe(undefined);
         expect(inventory.get(weaponUid).patches).toBe(undefined);
         expect(inventory.get(glovesUid).wear).toBe(undefined);
-        // A valid edit still goes through.
         inventory.edit(glovesUid, { wear: 0.5 });
         expect(inventory.get(glovesUid).wear).toBe(0.5);
     });
@@ -994,7 +951,6 @@ describe("CS2Inventory methods", () => {
                     id: AWP_DRAGON_LORE_ID,
                     stickers: {
                         0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
-                        // Already within the new range: must stay untouched (idempotent).
                         1: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 },
                         2: { id: FALLEN_COLOGNE_2015_ID, rotation: -90.5 }
                     }
@@ -1002,17 +958,14 @@ describe("CS2Inventory methods", () => {
             },
             version: 1
         });
-        // The upper half wraps to the equivalent negative angle (same visual rotation).
         const first = ensure(inventory.get(0).stickers);
         expect(first.get(0)?.rotation).toBe(-90);
         expect(first.get(1)?.rotation).toBe(-1);
         expect(first.get(2)?.rotation).toBe(-179);
         expect(first.get(3)?.rotation).toBe(180);
         expect(first.get(4)?.rotation).toBe(-0.5);
-        // Conversion preserves sticker identity.
         expect(first.get(0)?.id).toBe(FALLEN_COLOGNE_2015_ID);
         const second = ensure(inventory.get(1).stickers);
-        // A default rotation of 0 is compacted away (omitted) on normalize.
         expect(second.get(0)?.rotation).toBe(undefined);
         expect(second.get(1)?.rotation).toBe(-90);
         expect(second.get(2)?.rotation).toBe(-90.5);
@@ -1051,7 +1004,6 @@ describe("CS2Inventory methods", () => {
                             1: { id: FALLEN_COLOGNE_2015_ID, rotation: Infinity },
                             2: { id: FALLEN_COLOGNE_2015_ID, rotation: 1000 },
                             3: { id: FALLEN_COLOGNE_2015_ID, rotation: -300 },
-                            // A valid neighbor must survive intact.
                             4: { id: FALLEN_COLOGNE_2015_ID, rotation: 45.5 }
                         }
                     }
@@ -1103,8 +1055,6 @@ describe("CS2Inventory methods", () => {
     });
 
     test("clamps and snaps out-of-envelope sticker offsets to the model bounds on load", () => {
-        // AWP Dragon Lore is legacy, so it resolves to the legacy envelope: X [-0.4323, 0.4206],
-        // Y [-0.0921, 0.1415].
         inventory = new CS2Inventory({
             data: {
                 items: {
@@ -1122,22 +1072,17 @@ describe("CS2Inventory methods", () => {
             }
         });
         const stickers = ensure(inventory.get(0).stickers);
-        // Out-of-range values clamp to the nearest published bound.
         expect(stickers.get(0)).toMatchObject({ x: 0.4206, y: 0.05 });
         expect(stickers.get(1)).toMatchObject({ x: -0.4323, y: -0.0921 });
-        // Over-precise values snap (truncate) to the 4-decimal offset grid.
         expect(stickers.get(2)).toMatchObject({ x: 0.1, y: 0.1234 });
-        // Non-finite offsets are dropped; the surviving axis is untouched.
         expect(stickers.get(3)?.x).toBe(undefined);
         expect(stickers.get(3)?.y).toBe(0.05);
-        // Healed data round-trips through validation cleanly.
         expect(() => inventory.get(0)).not.toThrow();
     });
 
     test("add and edit enforce the model's sticker offset envelope", () => {
         const addOffset = (x: number, y: number) => () =>
             inventory.add({ id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, x, y } } });
-        // On-grid values inside the legacy envelope (including the exact bounds) are accepted.
         for (const [x, y] of [
             [0, 0],
             [0.4206, 0.1415],
@@ -1145,7 +1090,6 @@ describe("CS2Inventory methods", () => {
         ] as const) {
             expect(addOffset(x, y)).not.toThrow();
         }
-        // Outside the envelope, or finer than the factor's 4 decimals, is rejected.
         for (const [x, y] of [
             [0.4207, 0],
             [0, -0.0922],
@@ -1158,8 +1102,6 @@ describe("CS2Inventory methods", () => {
 });
 
 describe("sticker schema materialization", () => {
-    // The AK-47 HD body defines only 4 StickerMarkup anchors, while the stack always holds up to
-    // CS2_MAX_STICKERS (5) — so a schema materialized from a slot/index can outrun the anchor range.
     const STICKER_ID = FALLEN_COLOGNE_2015_ID;
     const fiveStickers = {
         0: { id: STICKER_ID },
@@ -1180,7 +1122,6 @@ describe("sticker schema materialization", () => {
         inventory.add({ id: AK47_ID, stickers: fiveStickers });
         const stickers = ensure(inventory.get(0).stickers);
         expect(stickers.size).toBe(5);
-        // Slots 0-3 keep their index as schema; the 5th (index 4, out of range) reuses anchor 0.
         expect([0, 1, 2, 3, 4].map((slot) => stickers.get(slot)?.schema)).toEqual([0, 1, 2, 3, 0]);
         for (const [, sticker] of stickers) {
             expect(sticker.schema).toBeLessThan(4);
@@ -1341,7 +1282,6 @@ describe("charges", () => {
         inventory.add({ id: GRAFFITI_ACE_ID });
         inventory.add({ id: GRAFFITI_ACE_ID });
         inventory.unsealItem(0);
-        // Refilling, spending and unsealing are all rejected; only a no-op passes through.
         expect(() => inventory.edit(0, { charges: 10 })).toThrow();
         expect(() => inventory.edit(1, { charges: 50 })).toThrow();
         inventory.edit(0, { charges: CS2_MAX_GRAFFITI_CHARGES, nameTag: undefined });
@@ -1407,7 +1347,6 @@ describe("charges", () => {
         });
         expect(inventory.getStorageUnitSize(0)).toBe(1);
         expect(inventory.getStorageUnitItems(0)[0]?.id).toBe(AK47_ID);
-        // Wiped, not withdrawn: nothing lands back in the inventory.
         expect(inventory.size()).toBe(1);
     });
 

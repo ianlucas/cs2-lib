@@ -53,10 +53,6 @@ const noPolicy = { maxItems: 256, storageUnitMaxItems: 32 };
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
-// Every item in the shipped catalog publishes a full envelope, so the unbounded and half-bounded
-// branches are only reachable through a catalog that omits the markup — which is exactly what an
-// `items.json` predating a new field looks like. The economy being an argument is what makes this
-// testable at all.
 const UNBOUNDED_ID = 1;
 const HALF_BOUNDED_ID = 2;
 const STICKER_ID = 3;
@@ -77,8 +73,6 @@ unmarkedEconomy.load({
     ]
 });
 
-// The shipped catalog marks exactly one attachment `isDefault` — `Charm | Sticker Slab`, which the
-// game hands out — so a sticker and a patch of the same kind only exist in a catalog written here.
 const DEFAULT_KEYCHAIN_ID = 15200;
 const AGENT_ID = 5;
 const DEFAULT_STICKER_ID = 6;
@@ -115,8 +109,6 @@ describe("sticker rotation", () => {
     });
 
     test("repair snaps onto the grid and drops what is off it, with no legacy angle to convert", () => {
-        // The 0-359 encoding is version 2's rung now, so 270 reaching a rule is an angle out of
-        // range rather than an old one: `check` and `repair` agree on it, which is the whole point.
         const item = CS2Economy.getById(AWP_DRAGON_LORE_ID);
         const cases: [rotation: number | undefined, expected: number | undefined][] = [
             [2.4, 2.5],
@@ -138,9 +130,6 @@ describe("sticker rotation", () => {
 });
 
 describe("repairInventoryItem offsets and positions", () => {
-    // AWP | Dragon Lore is legacy, so it resolves to the legacy envelopes:
-    // stickers X [-0.4323, 0.4206] Y [-0.0921, 0.1415]
-    // keychains X [-10.1283, 41.2865] Y [-0.0176, 1.3716] Z [2.6437, 11.7576]
     test("clamps sticker offsets to the model bounds, truncates onto the grid and drops non-finite ones", () => {
         const item: CS2BaseInventoryItem = {
             id: AWP_DRAGON_LORE_ID,
@@ -172,19 +161,14 @@ describe("repairInventoryItem offsets and positions", () => {
         expect(repairInventoryItem(CS2Economy, item)).toBe(true);
         expect(item.stickers?.[0]?.wear).toBe(0.12);
         expect(item.stickers?.[1]?.wear).toBe(CS2_MAX_STICKER_WEAR);
-        // Clamping downwards lands on CS2_MIN_STICKER_WEAR. An unscraped sticker is written with no
-        // wear at all rather than with zero, but that is `stickersFromArray`'s spelling of the same
-        // value, and repair has no reason to rewrite a sticker to say it.
         expect(item.stickers?.[2]?.wear).toBe(CS2_MIN_STICKER_WEAR);
         expect(item.stickers?.[3]?.wear).toBe(undefined);
     });
 
     test("clamps keychain positions to the model bounds, truncates onto the grid and drops non-finite ones", () => {
-        // Only one keychain slot exists, so each case needs its own item.
         const cases: [position: [number, number, number], expected: Record<string, number | undefined>][] = [
             [[100, 100, 100], { x: 41.2865, y: 1.3716, z: 11.7576 }],
             [[-100, -100, -100], { x: -10.1283, y: -0.0176, z: 2.6437 }],
-            // Raw in-game floats carry more precision than the grid; truncate, don't reject.
             [[0.123456789, 0.2211, 3], { x: 0.1234, y: 0.2211, z: 3 }],
             [[NaN, Infinity, -Infinity], { x: undefined, y: undefined, z: undefined }]
         ];
@@ -201,7 +185,6 @@ describe("repairInventoryItem offsets and positions", () => {
 
 describe("repairInventoryItem attributes with no model bounds", () => {
     test("truncates keychain seeds to whole numbers, clamps them into range and drops non-finite ones", () => {
-        // Only one keychain slot exists, so each case needs its own item.
         const cases: [seed: number, expected: number | undefined][] = [
             [1.9, 1],
             [0, CS2_MIN_KEYCHAIN_SEED],
@@ -307,8 +290,6 @@ describe("repairInventoryItem charges", () => {
     });
 
     test("hands an equipped graffiti the default charges whenever it has none left to lose", () => {
-        // Equipping is what asserts `!isSealed()`, so an equipped graffiti carrying charges that do
-        // not survive repair is in the same position as one carrying none at all.
         for (const charges of [undefined, NaN]) {
             const item: CS2BaseInventoryItem = { id: GRAFFITI_ACE_ID, charges, equipped: true };
             expect(repairInventoryItem(CS2Economy, item)).toBe(true);
@@ -331,9 +312,6 @@ describe("repairInventoryItem reports whether the item survived", () => {
     });
 
     test("returns false when no coercion can reach the offending attribute", () => {
-        // `checkAddable` is the one rule with no coercion behind it, and the only thing left that
-        // "unrepairable" can mean: a base glove is an item the game never issued, so there is no
-        // value to correct and nothing worth keeping.
         expect(checkAddable(CS2Economy.getById(BROKEN_FANG_GLOVES_ID))).toBe(false);
         expect(repairInventoryItem(CS2Economy, { id: BROKEN_FANG_GLOVES_ID })).toBe(false);
     });
@@ -354,14 +332,10 @@ describe("assertInventoryItem", () => {
 
     test("rejects attributes the item type cannot hold and values off the item's grid", () => {
         const rejected: CS2BaseInventoryItem[] = [
-            // A knife holds neither stickers nor keychains.
             { id: KARAMBIT_BOREAL_FOREST_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
             { id: KARAMBIT_BOREAL_FOREST_ID, keychains: { 0: { id: LIL_AVA_ID } } },
-            // Only an agent holds patches.
             { id: AK47_ID, patches: { 0: BLOODHOUND_ID } },
-            // A base glove is not addable.
             { id: BROKEN_FANG_GLOVES_ID },
-            // Off the half-degree rotation grid, and outside the model's offset envelope.
             { id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 2.7 } } },
             { id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, x: 0.4207 } } }
         ];
@@ -371,8 +345,6 @@ describe("assertInventoryItem", () => {
     });
 
     test("accepts what repairInventoryItem produced", () => {
-        // The pairing the rule table in group 3 makes structural: repair's output always satisfies
-        // assert. Anything repair leaves behind that assert rejects is an unrepairable item.
         const item: CS2BaseInventoryItem = {
             id: AWP_DRAGON_LORE_ID,
             stickers: {
@@ -407,10 +379,8 @@ describe("repairInventoryItem against a catalog without markup", () => {
             stickers: { 0: { id: STICKER_ID, x: 5 }, 1: { id: STICKER_ID, x: -5 } }
         };
         repairInventoryItem(economy, stickered);
-        // Sticker X publishes a max only: the high side clamps, the low side passes through.
         expect(stickered.stickers?.[0]?.x).toBe(1);
         expect(stickered.stickers?.[1]?.x).toBe(-5);
-        // Keychain X publishes a min only: the low side clamps, the high side passes through.
         for (const [x, expected] of [
             [-5, -1],
             [5, 5]
@@ -422,26 +392,17 @@ describe("repairInventoryItem against a catalog without markup", () => {
     });
 });
 
-// The generalisation of `truncateToFactor output always satisfies isFactorPrecise` in utils.test.ts
-// to the whole table. It is what the table exists to provide: a `check` whose `repair` cannot
-// produce a value it accepts is a rule that drops an item on load, and this is what says so.
 describe("every rule repairs into what it checks", () => {
     const hosts = [
-        // Full markup, legacy envelopes.
         CS2Economy.getById(AWP_DRAGON_LORE_ID),
-        // Wear, stickers and keychains, non-legacy envelopes.
         CS2Economy.getById(AK47_ID),
-        // Neither stickers nor keychains, but wear.
         CS2Economy.getById(KARAMBIT_BOREAL_FOREST_ID),
-        // Charges, no wear.
         CS2Economy.getById(GRAFFITI_ACE_ID),
         CS2Economy.getById(CHARM_DETACHMENT_ID),
-        // A catalog that publishes no envelope at all, and one that publishes half of one.
         unmarkedEconomy.getById(UNBOUNDED_ID),
         unmarkedEconomy.getById(HALF_BOUNDED_ID)
     ];
 
-    // Anything a stale document, a hand-written request body or a raw in-game float can carry.
     const values = [
         undefined,
         NaN,
@@ -489,9 +450,6 @@ describe("every rule repairs into what it checks", () => {
     }
 });
 
-// The promise the rule table was written to keep: an item whose id the catalog still has is worth
-// coercing, never worth losing. Every `"unrepairable"` that reaches a log is then a real signal —
-// a rule exists in `check` with no counterpart in `repair` — instead of constant noise.
 describe("an item whose id is in the catalog is always repairable", () => {
     const hosts = [
         AK47_ID,
@@ -503,13 +461,9 @@ describe("an item whose id is in the catalog is always repairable", () => {
         STORAGE_UNIT_ID,
         FALLEN_COLOGNE_2015_ID,
         LIL_AVA_ID,
-        // The exception, and the only one: a base glove is an item the game never issued, so there
-        // is no value to coerce and nothing to keep.
         BROKEN_FANG_GLOVES_ID
     ];
 
-    // Anything a stale document, a hand-written request body or an item that outlived the rule
-    // that produced it can carry.
     const shapes: Partial<CS2BaseInventoryItem>[] = [
         {},
         { wear: 0.9 },
@@ -566,8 +520,6 @@ describe("an item whose id is in the catalog is always repairable", () => {
 
 describe("a default item cannot be applied as an attachment", () => {
     test("assert rejects a default sticker, keychain or patch", () => {
-        // Not a rule about one id: the game hands these out, so applying one is claiming an
-        // attachment you never acquired. It generalises the day a second free charm ships.
         expect(() =>
             assertInventoryItem(CS2Economy, { id: AK47_ID, keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } } })
         ).toThrow();
@@ -685,8 +637,6 @@ describe("reconcileInventoryItems", () => {
         expect(items[2]?.charges).toBe(6);
     });
 
-    // The base AK-47 is `isDefault` in the shipped catalog: the game issues it, so an untouched one
-    // is worth nothing stored. One the owner has named, stickered or charged is not the same item.
     test("drops the free items carrying nothing, and only when the consumer asked for it", () => {
         const makeItems = (): Record<number, CS2BaseInventoryItem> => ({
             0: { id: AK47_ID },
@@ -719,7 +669,6 @@ describe("reconcileInventoryItems", () => {
             dropEmptyDefaultItems: true
         });
 
-        // The two free AK-47s go on policy, which leaves the pair the owner bought inside the cap.
         expect(dropped).toEqual([
             { uid: 0, id: AK47_ID, reason: "policy" },
             { uid: 1, id: AK47_ID, reason: "policy" }
@@ -740,13 +689,11 @@ describe("reconcileInventoryItems", () => {
             },
             1: { id: STORAGE_UNIT_ID, nameTag: "Empties", storage: { 0: { id: CHARM_DETACHMENT_ID } } }
         };
-        // Charges are worth something, so wiping a stack is a drop and says so.
         expect(reconcileInventoryItems(CS2Economy, items, noPolicy)).toEqual([
             { uid: 0, id: CHARM_DETACHMENT_ID, reason: "policy", storageUid: 0 },
             { uid: 2, id: CHARM_DETACHMENT_PACK_ID, reason: "policy", storageUid: 0 },
             { uid: 0, id: CHARM_DETACHMENT_ID, reason: "policy", storageUid: 1 }
         ]);
-        // Wiped, not withdrawn: nothing lands back in the inventory.
         expect(Object.keys(ensure(items[0]?.storage))).toEqual(["1"]);
         expect(items[0]?.storage?.[1]?.charges).toBeUndefined();
         expect(items[1]?.storage).toBeUndefined();

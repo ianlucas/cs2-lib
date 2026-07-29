@@ -48,11 +48,6 @@ export interface CS2InventoryData {
 }
 
 export interface CS2InventoryOptions {
-    /**
-     * Drop items the game hands out for free that carry nothing worth storing. The rule lives here
-     * so there is one implementation, tested and reported; the decision to apply it stays with the
-     * consumer, since an inventory losing items it did not ask to lose is a surprise otherwise.
-     */
     dropEmptyDefaultItems?: boolean;
     maxItems: number;
     storageUnitMaxItems: number;

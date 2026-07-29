@@ -18,7 +18,6 @@ const AWP_ID = 6;
 const BLOODHOUND_PATCH_ID = 8569;
 const FALLEN_COLOGNE_2015_ID = 2226;
 const STORAGE_UNIT_ID = 11262;
-// An id no `items.json` has ever published, standing in for one a catalog update took away.
 const RETIRED_ID = 999999;
 
 test("the ladder is the single source of the format's version numbers", () => {
@@ -51,7 +50,6 @@ test("version 0 stores items as an array; version 1 keys them by uid", () => {
             0: { id: AK47_ID },
             3: { id: AWP_ID }
         },
-        // A version 0 document does not stop at the rung that reshaped it: the ladder runs to the end.
         version: 2
     });
 });
@@ -153,10 +151,6 @@ test("version 1 unequips patches, which version 0 wrongly allowed to be equipped
     });
 });
 
-// Version 0 documents are the oldest, so they are the likeliest to hold an id a catalog update has
-// since taken away — and asking the catalog about one is what the rung does to unequip patches.
-// Catalog drift costs an item, never a document: the item survives the ladder unchanged and repair
-// is what drops it.
 test("version 1 leaves an equipped item whose id left the catalog for repair to drop", () => {
     const { data } = decodeInventoryData(
         JSON.stringify([
@@ -203,8 +197,6 @@ test("version 2 leaves an angle the two encodings already agree on exactly where
                 0: {
                     id: AK47_ID,
                     stickers: {
-                        // The lower half of 0-359 means the same angle in both encodings, and 180 is
-                        // the one value the wrap must not touch: it is the maximum, not past it.
                         0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
                         1: { id: FALLEN_COLOGNE_2015_ID, rotation: 90.5 },
                         2: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 }

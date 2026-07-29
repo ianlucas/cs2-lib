@@ -20,9 +20,6 @@ export const migration: CS2InventoryMigration = {
                     case "equipped":
                     case "equippedCT":
                     case "equippedT":
-                        // An id the catalog no longer has costs its item and nothing more, so the
-                        // rung passes it through untouched and leaves the drop to repair. Asking
-                        // the catalog outright would fail the whole document over one stale item.
                         if (economy.items.has(v0.id) && economy.getById(v0.id).isPatch()) {
                             value = undefined;
                         }

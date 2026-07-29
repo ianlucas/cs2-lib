@@ -78,24 +78,12 @@ export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
     readonly options: Readonly<CS2InventoryOptions>;
-    /** What loading `data` had to change. `undefined` on an inventory that started empty. */
     readonly loadReport: CS2InventoryLoadReport | undefined;
 
-    /**
-     * The entry point for stored or cached bytes: decode, run the ladder, repair, reconcile,
-     * construct. It throws `CS2InventoryError` and never returns `undefined`, so a caller that would
-     * rather have nothing than an exception wraps it in `safe()` and says so.
-     *
-     * Data that a server has already vouched for goes through the constructor instead — re-running
-     * the ladder on it means a second reading of the format's semantics, possibly from a different
-     * version of this package than the one that wrote it.
-     */
     static load(raw: string, options: Partial<CS2InventorySpec> = {}): CS2Inventory {
         const economy = options.economy ?? CS2Economy;
         const { data, migratedFrom } = decodeInventoryData(raw, economy);
         const inventory = new CS2Inventory({ ...options, data, economy });
-        // The ladder runs before a single item exists, so which rung ran is the one thing the
-        // constructor's report cannot observe for itself.
         ensure(inventory.loadReport).migratedFrom = migratedFrom;
         return inventory;
     }
@@ -108,16 +96,12 @@ export class CS2Inventory {
         storageUnitMaxItems
     }: Partial<CS2InventorySpec> = {}) {
         this.economy = economy ?? CS2Economy;
-        // Resolved before the items are read, because reconciliation is one of the readers.
         this.options = {
             dropEmptyDefaultItems: dropEmptyDefaultItems ?? false,
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
         const report: CS2InventoryLoadReport = { migratedFrom: undefined, dropped: [], repairedUids: [] };
-        // Repair coerces in place and deletes what it drops, so the items are copied first: the
-        // caller handed over a document to read, not one to have rewritten underneath them. `load`
-        // pays a clone of data it already owns, which is nothing against building the items.
         this.items = data !== undefined ? this.toInventoryItems(structuredClone(data.items), report) : new Map();
         this.loadReport = data !== undefined ? report : undefined;
     }
@@ -126,11 +110,6 @@ export class CS2Inventory {
         items: Record<number, CS2BaseInventoryItem>,
         report: CS2InventoryLoadReport
     ): Map<number, CS2InventoryItem> {
-        // Both passes coerce in place, so the only way to tell an item they changed from one they
-        // left alone is to hold the document it arrived as next to the one it became. The window
-        // spans both of them: a stack reconcile merged or charges it stripped out of a storage unit
-        // are as much a change the stored bytes are missing as anything repair rewrote, and a load
-        // that does not say so is one the backfill will skip on every run.
         const arrived = new Map(Object.entries(items).map(([key, base]) => [parseInt(key, 10), JSON.stringify(base)]));
         for (const [key, base] of Object.entries(items)) {
             const uid = parseInt(key, 10);
@@ -143,8 +122,6 @@ export class CS2Inventory {
         return new Map(
             Object.entries(items).map(([key, value]) => {
                 const uid = parseInt(key, 10);
-                // Only what survived is compared, so a coercion applied to an item that was then
-                // taken away is a drop and never also a repair — there is nothing left to write back.
                 if (JSON.stringify(value) !== arrived.get(uid)) {
                     report.repairedUids.push(uid);
                 }
@@ -665,8 +642,6 @@ export class CS2InventoryItem
     updatedAt: number | undefined;
     wear: number | undefined;
 
-    // Every branch here is a plain construction over data `assertInventoryItem` has already read,
-    // which is the only reason a stored item can be built without asking the catalog anything.
     private assign({ keychains, patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
         if (patches !== undefined) {
             this.patches = new Map(Object.entries(patches).map(([slot, patchId]) => [parseInt(slot, 10), patchId]));
@@ -700,8 +675,6 @@ export class CS2InventoryItem
         { economy, item, language }: CS2EconomyItem
     ) {
         super(economy, item, language);
-        // The invariant guard. `load` repairs and drops before it gets here, so on that path this is
-        // unreachable; what it still protects is everyone who builds an item directly.
         assertInventoryItem(this.economy, baseInventoryItem);
         Object.assign(this, baseInventoryItem);
         this.assign(baseInventoryItem);

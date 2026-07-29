@@ -27,11 +27,6 @@ import type { CS2BaseInventoryItem, CS2InventoryOptions } from "./inventory-type
 import { CS2InventoryItem, getTimestamp } from "./inventory.ts";
 import { type RecordValue, assert, clamp, ensure, isFactorPrecise, truncateToFactor } from "./utils.ts";
 
-/**
- * One constrained attribute, written once and read two ways: `check` is what an `assert*` asserts,
- * `repair` is the coercion `repairInventoryItem` applies. Every rule holds `check(repair(value))`,
- * which is what lets repair and assert never drift apart.
- */
 export interface CS2InventoryRule<T> {
     check(value: T | undefined, item: CS2EconomyItem): boolean;
     repair(value: T | undefined, item: CS2EconomyItem): T | undefined;
@@ -39,8 +34,6 @@ export interface CS2InventoryRule<T> {
 
 type CS2EconomyItemBound = (item: CS2EconomyItem) => number | undefined;
 
-// A numeric attribute quantized to a factor's grid and bounded by the catalog — the shape most of
-// the table has. A bound the catalog omits is unbounded on that side, not zero.
 function boundedRule(
     factor: number,
     getMinimum: CS2EconomyItemBound,
@@ -73,7 +66,6 @@ function boundedRule(
 
 type CS2EconomyItemRange = (item: CS2EconomyItem) => number;
 
-// A counted attribute: whole numbers inside a range the catalog always publishes.
 function wholeNumberRule(getMinimum: CS2EconomyItemRange, getMaximum: CS2EconomyItemRange): CS2InventoryRule<number> {
     return {
         check(value, item) {
@@ -103,9 +95,6 @@ export function snapStickerRotation(rotation: number): number {
     return Math.round(rotation / CS2_STICKER_ROTATION_STEP) * CS2_STICKER_ROTATION_STEP;
 }
 
-// The only rule the item plays no part in: the grid and the range are the game's, not the model's.
-// The 0-359 encoding it used to convert is `inventory-migrations/v2.ts`, so what is left here is the
-// constraint and nothing else — no reading of a value on which `check` and `repair` disagree.
 const stickerRotationRule: CS2InventoryRule<number> = {
     check: (rotation) => validateStickerRotation(rotation),
     repair(rotation) {
@@ -132,11 +121,6 @@ export type CS2InventoryRuleName =
     | "stickerX"
     | "stickerY";
 
-/**
- * Every attribute the catalog constrains, each written once. `check*` and `assert*` read the `check`
- * side, `repairInventoryItem` reads the `repair` side, and `src/inventory-rules.test.ts` holds them
- * together with `check(repair(value))`.
- */
 export const CS2_INVENTORY_RULES: Record<CS2InventoryRuleName, CS2InventoryRule<number>> = {
     itemCharges: {
         check: (charges, item) => item.economy.safeValidateCharges(charges, item),
@@ -192,9 +176,6 @@ export const CS2_INVENTORY_RULES: Record<CS2InventoryRuleName, CS2InventoryRule<
         () => CS2_MAX_KEYCHAIN_SEED
     ),
     stickerRotation: stickerRotationRule,
-    // Which anchor a sticker sits on is the one attribute a value on its own cannot settle: picking
-    // a free one needs the item's other stickers. So `repair` only drops what the model cannot
-    // render, and `stickersToArray` — which sees them all — assigns the replacement.
     stickerSchema: {
         check: (schema, item) => checkStickerSchema(schema, item.getStickerSchemaCount()),
         repair: (schema, item) => (checkStickerSchema(schema, item.getStickerSchemaCount()) ? schema : undefined)
@@ -241,18 +222,10 @@ export function assertAddable(item: CS2EconomyItem): void {
     assert(checkAddable(item));
 }
 
-/**
- * A default item is one the game issues rather than one you acquired, so applying it as a sticker,
- * keychain or patch is claiming an attachment nobody owns. Stated over `isDefault` rather than over
- * the one id that has it today, so a second free charm needs no second rule.
- */
 export function checkAttachable(item: CS2EconomyItem): boolean {
     return item.isDefault !== true;
 }
 
-// The three ways a slot stops holding something the owner acquired: a catalog update took the id
-// away, the id resolves to an item the game issues for free, or it resolves to an item of a kind
-// the slot was never able to hold.
 function checkAttachmentId(
     economy: CS2EconomyInstance,
     id: number,
@@ -385,11 +358,6 @@ export function assertPatches(
     assert(checkPatches(economy, patches, item));
 }
 
-/**
- * The only item that holds other items, and it holds them one level deep: a unit inside a unit is
- * something the game cannot produce and nothing here could bound. Everything stored is read by the
- * same rules a loose item is read by, so a stored item is never the one thing nobody checked.
- */
 export function checkStorage(
     economy: CS2EconomyInstance,
     storage: CS2BaseInventoryItem["storage"],
@@ -435,9 +403,6 @@ export function assertInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
     assert(checkInventoryItem(economy, item));
 }
 
-// An attachment is stored against the slot it sits in, so counting is not enough to know a record
-// is holdable: a slot the model does not have is as wrong as one attachment too many, and two keys
-// can name the same slot. Lowest slot wins, the way `stickersToArray` keeps the first stickers.
 function repairSlots(slots: Record<string, unknown>, maximum: number): void {
     const keys = Object.keys(slots)
         .map((key) => [key, parseInt(key, 10)] as const)
@@ -452,29 +417,15 @@ function repairSlots(slots: Record<string, unknown>, maximum: number): void {
     }
 }
 
-/**
- * The two ways an item fails to survive repair, which a report reads differently: a catalog update
- * took the item away, or a rule rejects a value no coercion reaches — a gap in the rule table.
- */
 export function getDropReason(economy: CS2EconomyInstance, id: number): CS2InventoryDropReason {
     return economy.items.has(id) ? "unrepairable" : "unknown-item";
 }
 
-/**
- * Where a repair records what it had to take out of a storage unit. The unit's own uid comes from
- * the caller: a repair is handed one item, so it can name the slot a stored item sat in but not the
- * unit holding it.
- */
 export interface CS2InventoryStorageDrops {
     dropped: CS2InventoryDrop[];
     storageUid: number;
 }
 
-/**
- * Coerces every attribute the catalog constrains, then reports whether what is left is an item
- * `checkInventoryItem` accepts. A `false` return is the signal to drop the item: either its id has
- * left the catalog, or a rule rejects a value no coercion reaches.
- */
 export function repairInventoryItem(
     economy: CS2EconomyInstance,
     item: CS2BaseInventoryItem,
@@ -516,11 +467,6 @@ export function repairInventoryItem(
                 sticker.x = CS2_INVENTORY_RULES.stickerX.repair(sticker.x, economyItem);
                 sticker.y = CS2_INVENTORY_RULES.stickerY.repair(sticker.y, economyItem);
             }
-            // Rebuilding drops the schemas the model cannot render, hands out free ones in their
-            // place, and reindexes the slots a deletion left holes in — so it runs only when one of
-            // those happened. Doing it every time writes an anchor into stickers that never carried
-            // one, which is canonicalisation rather than repair, and the report would then name
-            // every inventory holding a sticker as one the load had to change.
             if (rebuild) {
                 item.stickers = CS2InventoryItem.stickersFromArray(
                     CS2InventoryItem.stickersToArray(item.stickers, schemaCount)
@@ -551,8 +497,6 @@ export function repairInventoryItem(
         } else {
             for (const [slot, stored] of Object.entries(item.storage)) {
                 const uid = parseInt(slot, 10);
-                // Unnested before it is read, so that a unit someone wrote inside a unit costs its
-                // contents rather than the unit it was stored in.
                 stored.storage = undefined;
                 if (!repairInventoryItem(economy, stored)) {
                     storageDrops?.dropped.push({
@@ -564,24 +508,17 @@ export function repairInventoryItem(
                     delete item.storage[uid];
                 }
             }
-            // The unit stays: it is a tool the owner paid for and named, and losing what was inside
-            // it is not a reason to lose it too. An empty one holds nothing rather than an empty
-            // record, which is the invariant `retrieveFromStorageUnit` keeps.
             if (Object.keys(item.storage).length === 0) {
                 item.storage = undefined;
             }
         }
     }
-    // The one attribute with no coercion behind it: a name the pattern rejects cannot be corrected
-    // into the name the owner meant, and inventing one is worse than leaving the item unnamed.
     if (!economy.safeValidateNameTag(item.nameTag, economyItem)) {
         item.nameTag = undefined;
     }
     item.seed = CS2_INVENTORY_RULES.itemSeed.repair(item.seed, economyItem);
     item.statTrak = CS2_INVENTORY_RULES.itemStatTrak.repair(item.statTrak, economyItem);
     item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
-    // Generous on purpose: an equipped graffiti with no charges left is handed the default set
-    // rather than unequipped, which is the policy `equip()` already assumes.
     if (
         item.charges === undefined &&
         economyItem.isGraffiti() &&
@@ -593,11 +530,6 @@ export function repairInventoryItem(
     return checkInventoryItem(economy, item);
 }
 
-/**
- * A default item the game issues carrying nothing that distinguishes it from the one the game would
- * issue again. `charges` is in the list because `Tool | Charm Detachments` is itself a default item,
- * so leaving it out would spend a stack the owner earned.
- */
 function checkEmptyDefaultItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): boolean {
     return (
         economy.items.has(item.id) &&
@@ -609,11 +541,6 @@ function checkEmptyDefaultItem(economy: CS2EconomyInstance, item: CS2BaseInvento
     );
 }
 
-/**
- * Trims a record of items down to the cap the consumer set, taking the highest uids first so the
- * oldest items are the ones that survive. Every item it takes is named, which is the difference
- * between lowering a cap and quietly eating the inventories that were over it.
- */
 function trimToMaximum(
     items: Record<number, CS2BaseInventoryItem>,
     maximum: number,
@@ -633,13 +560,6 @@ function trimToMaximum(
     }
 }
 
-/**
- * The invariants no single-item repair can see, because holding one item is not enough to know
- * whether it holds: an inventory carries at most one charm detachment stack, a stored item carries
- * no charges, and neither the inventory nor a unit inside it holds more than the consumer allowed.
- * Returns what it took away — merging a stack keeps every charge, so nothing leaves with it, but a
- * stack wiped out of a unit is charges the owner had and no longer has.
- */
 export function reconcileInventoryItems(
     economy: CS2EconomyInstance,
     items: Record<number, CS2BaseInventoryItem>,
@@ -685,8 +605,6 @@ export function reconcileInventoryItems(
         survivor.charges = Math.min(charges, economyItem.getMaximumCharges());
         survivor.updatedAt = getTimestamp();
     }
-    // Last, so that a stack merged a moment ago is judged on the charges it now holds rather than
-    // on the empty rows it was spread across.
     if (options.dropEmptyDefaultItems === true) {
         for (const [key, item] of Object.entries(items)) {
             if (checkEmptyDefaultItem(economy, item)) {
@@ -696,8 +614,6 @@ export function reconcileInventoryItems(
             }
         }
     }
-    // After every other rule, so that room a merge or a policy drop freed up counts against the cap
-    // and nothing is taken for a cap it no longer exceeds.
     for (const [key, item] of Object.entries(items)) {
         if (item.storage !== undefined && Object.keys(item.storage).length > options.storageUnitMaxItems) {
             trimToMaximum(item.storage, options.storageUnitMaxItems, dropped, parseInt(key, 10));
