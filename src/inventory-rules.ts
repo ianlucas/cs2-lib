@@ -20,7 +20,7 @@ import {
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
 import type { CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
-import type { CS2InventoryDrop } from "./inventory-format.ts";
+import type { CS2InventoryDrop, CS2InventoryDropReason } from "./inventory-format.ts";
 import type { CS2BaseInventoryItem, CS2InventoryOptions } from "./inventory-types.ts";
 import { CS2InventoryItem, getTimestamp } from "./inventory.ts";
 import { type RecordValue, assert, clamp, ensure, isFactorPrecise, truncateToFactor } from "./utils.ts";
@@ -356,9 +356,33 @@ export function assertPatches(
     assert(checkPatches(economy, patches, item));
 }
 
+/**
+ * The only item that holds other items, and it holds them one level deep: a unit inside a unit is
+ * something the game cannot produce and nothing here could bound. Everything stored is read by the
+ * same rules a loose item is read by, so a stored item is never the one thing nobody checked.
+ */
+export function checkStorage(
+    economy: CS2EconomyInstance,
+    storage: CS2BaseInventoryItem["storage"],
+    item: CS2EconomyItem
+): boolean {
+    if (storage === undefined) {
+        return true;
+    }
+    if (!item.isStorageUnit()) {
+        return false;
+    }
+    for (const stored of Object.values(storage)) {
+        if (stored.storage !== undefined || !checkInventoryItem(economy, stored)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 export function checkInventoryItem(
     economy: CS2EconomyInstance,
-    { charges, id, keychains, nameTag, patches, seed, statTrak, stickers, wear }: CS2BaseInventoryItem
+    { charges, id, keychains, nameTag, patches, seed, statTrak, stickers, storage, wear }: CS2BaseInventoryItem
 ): boolean {
     if (!economy.items.has(id)) {
         return false;
@@ -373,7 +397,8 @@ export function checkInventoryItem(
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&
         checkStickers(economy, stickers, item) &&
-        checkKeychains(economy, keychains, item)
+        checkKeychains(economy, keychains, item) &&
+        checkStorage(economy, storage, item)
     );
 }
 
@@ -382,11 +407,33 @@ export function assertInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
 }
 
 /**
+ * The two ways an item fails to survive repair, which a report reads differently: a catalog update
+ * took the item away, or a rule rejects a value no coercion reaches — a gap in the rule table.
+ */
+export function getDropReason(economy: CS2EconomyInstance, id: number): CS2InventoryDropReason {
+    return economy.items.has(id) ? "unrepairable" : "unknown-item";
+}
+
+/**
+ * Where a repair records what it had to take out of a storage unit. The unit's own uid comes from
+ * the caller: a repair is handed one item, so it can name the slot a stored item sat in but not the
+ * unit holding it.
+ */
+export interface CS2InventoryStorageDrops {
+    dropped: CS2InventoryDrop[];
+    storageUid: number;
+}
+
+/**
  * Coerces every attribute the catalog constrains, then reports whether what is left is an item
  * `checkInventoryItem` accepts. A `false` return is the signal to drop the item: either its id has
  * left the catalog, or a rule rejects a value no coercion reaches.
  */
-export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): boolean {
+export function repairInventoryItem(
+    economy: CS2EconomyInstance,
+    item: CS2BaseInventoryItem,
+    storageDrops?: CS2InventoryStorageDrops
+): boolean {
     if (!economy.items.has(item.id)) {
         return false;
     }
@@ -438,6 +485,33 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
             }
         }
     }
+    if (item.storage !== undefined) {
+        if (!economyItem.isStorageUnit()) {
+            item.storage = undefined;
+        } else {
+            for (const [slot, stored] of Object.entries(item.storage)) {
+                const uid = parseInt(slot, 10);
+                // Unnested before it is read, so that a unit someone wrote inside a unit costs its
+                // contents rather than the unit it was stored in.
+                stored.storage = undefined;
+                if (!repairInventoryItem(economy, stored)) {
+                    storageDrops?.dropped.push({
+                        uid,
+                        id: stored.id,
+                        reason: getDropReason(economy, stored.id),
+                        storageUid: storageDrops.storageUid
+                    });
+                    delete item.storage[uid];
+                }
+            }
+            // The unit stays: it is a tool the owner paid for and named, and losing what was inside
+            // it is not a reason to lose it too. An empty one holds nothing rather than an empty
+            // record, which is the invariant `retrieveFromStorageUnit` keeps.
+            if (Object.keys(item.storage).length === 0) {
+                item.storage = undefined;
+            }
+        }
+    }
     item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
     // Generous on purpose: an equipped graffiti with no charges left is handed the default set
     // rather than unequipped, which is the policy `equip()` already assumes.
@@ -471,25 +545,29 @@ function checkEmptyDefaultItem(economy: CS2EconomyInstance, item: CS2BaseInvento
 /**
  * The invariants no single-item repair can see, because holding one item is not enough to know
  * whether it holds: an inventory carries at most one charm detachment stack, and a stored item
- * carries no charges. Returns what it took away, which is only ever the policy pass — merging a
- * stack keeps every charge, so no data leaves with it.
+ * carries no charges. Returns what it took away — merging a stack keeps every charge, so nothing
+ * leaves with it, but a stack wiped out of a unit is charges the owner had and no longer has.
  */
 export function reconcileInventoryItems(
     economy: CS2EconomyInstance,
     items: Record<number, CS2BaseInventoryItem>,
     options: Readonly<CS2InventoryOptions>
 ): CS2InventoryDrop[] {
-    for (const item of Object.values(items)) {
+    const dropped: CS2InventoryDrop[] = [];
+    for (const [key, item] of Object.entries(items)) {
         if (item.storage === undefined) {
             continue;
         }
+        const storageUid = parseInt(key, 10);
         for (const [slot, stored] of Object.entries(item.storage)) {
             if (!economy.items.has(stored.id)) {
                 continue;
             }
             const economyItem = economy.getById(stored.id);
             if (economyItem.isCharmDetachment() || economyItem.isCharmDetachmentPack()) {
-                delete item.storage[parseInt(slot, 10)];
+                const uid = parseInt(slot, 10);
+                dropped.push({ uid, id: stored.id, reason: "policy", storageUid });
+                delete item.storage[uid];
             } else if (economyItem.hasCharges()) {
                 stored.charges = undefined;
             }
@@ -515,7 +593,6 @@ export function reconcileInventoryItems(
         survivor.charges = Math.min(charges, economyItem.getMaximumCharges());
         survivor.updatedAt = getTimestamp();
     }
-    const dropped: CS2InventoryDrop[] = [];
     // Last, so that a stack merged a moment ago is judged on the charges it now holds rather than
     // on the empty rows it was spread across.
     if (options.dropEmptyDefaultItems === true) {

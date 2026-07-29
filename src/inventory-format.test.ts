@@ -20,7 +20,9 @@ CS2Economy.load({ items: CS2_ITEMS, language: english });
 
 const AK47_ID = 4;
 const AWP_DRAGON_LORE_ID = 307;
+const BROKEN_FANG_GLOVES_ID = 56;
 const FALLEN_COLOGNE_2015_ID = 2226;
+const STORAGE_UNIT_ID = 11262;
 // An id no `items.json` has ever published, standing in for one a catalog update took away.
 const RETIRED_ID = 999999;
 
@@ -77,6 +79,51 @@ test("an item no coercion can make valid is dropped as unrepairable, not thrown 
     expect(inventory.size()).toBe(1);
     expect(inventory.get(1).id).toBe(AK47_ID);
     expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: AWP_DRAGON_LORE_ID, reason: "unrepairable" }]);
+});
+
+// A unit holds up to 32 items, so nesting is where a drop costs the most, and it was the one place
+// a drop was either unrecorded or fatal to the whole document.
+test("a stored item whose id left the catalog is dropped, and the unit it came out of is named", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: STORAGE_UNIT_ID, storage: { 0: { id: RETIRED_ID }, 1: { id: AK47_ID } } } },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.get(0).storage?.size).toBe(1);
+    expect(inventory.loadReport?.dropped).toStrictEqual([
+        { uid: 0, id: RETIRED_ID, reason: "unknown-item", storageUid: 0 }
+    ]);
+});
+
+test("a stored item no coercion can make valid is dropped, and the document survives", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: STORAGE_UNIT_ID, storage: { 0: { id: BROKEN_FANG_GLOVES_ID } } }, 1: { id: AK47_ID } },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.size()).toBe(2);
+    expect(inventory.loadReport?.dropped).toStrictEqual([
+        { uid: 0, id: BROKEN_FANG_GLOVES_ID, reason: "unrepairable", storageUid: 0 }
+    ]);
+});
+
+// The unit is a tool the owner paid for and named, so losing what was inside it is not a reason to
+// lose it as well.
+test("a storage unit its contents leaving emptied is kept, holding nothing", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: STORAGE_UNIT_ID, nameTag: "My Storage Unit", storage: { 0: { id: RETIRED_ID } } } },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.size()).toBe(1);
+    expect(inventory.get(0).nameTag).toBe("My Storage Unit");
+    expect(inventory.get(0).storage).toBeUndefined();
 });
 
 test("an item a coercion had to change is reported by uid, and an untouched one is not", () => {

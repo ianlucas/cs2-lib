@@ -13,9 +13,11 @@ import {
 import { CS2RarityColor } from "./economy-container.ts";
 import { CS2ItemType } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance } from "./economy.ts";
+import type { CS2InventoryDrop } from "./inventory-format.ts";
 import {
     CS2_INVENTORY_RULES,
     assertInventoryItem,
+    checkInventoryItem,
     getNextStickerSchema,
     reconcileInventoryItems,
     repairInventoryItem,
@@ -444,6 +446,64 @@ describe("a default attachment is stripped rather than costing the item", () => 
     });
 });
 
+describe("storage is a rule like any other attribute", () => {
+    test("check accepts stored items only inside a storage unit, and never a unit inside one", () => {
+        expect(checkInventoryItem(CS2Economy, { id: STORAGE_UNIT_ID, storage: { 0: { id: AK47_ID } } })).toBe(true);
+        expect(checkInventoryItem(CS2Economy, { id: AK47_ID, storage: { 0: { id: AK47_ID } } })).toBe(false);
+        expect(
+            checkInventoryItem(CS2Economy, {
+                id: STORAGE_UNIT_ID,
+                storage: { 0: { id: STORAGE_UNIT_ID, storage: { 0: { id: AK47_ID } } } }
+            })
+        ).toBe(false);
+    });
+
+    test("check reads every stored item with the same rules it reads a loose one by", () => {
+        expect(checkInventoryItem(CS2Economy, { id: STORAGE_UNIT_ID, storage: { 0: { id: UNKNOWN_ID } } })).toBe(false);
+        expect(
+            checkInventoryItem(CS2Economy, { id: STORAGE_UNIT_ID, storage: { 0: { id: BROKEN_FANG_GLOVES_ID } } })
+        ).toBe(false);
+    });
+
+    test("repair takes storage off an item that cannot hold one, and unnests a unit inside a unit", () => {
+        const weapon: CS2BaseInventoryItem = { id: AK47_ID, storage: { 0: { id: AK47_ID } } };
+        expect(repairInventoryItem(CS2Economy, weapon)).toBe(true);
+        expect(weapon.storage).toBeUndefined();
+
+        const nested: CS2BaseInventoryItem = {
+            id: STORAGE_UNIT_ID,
+            storage: { 0: { id: STORAGE_UNIT_ID, storage: { 0: { id: AK47_ID } } } }
+        };
+        expect(repairInventoryItem(CS2Economy, nested)).toBe(true);
+        expect(nested.storage?.[0]?.storage).toBeUndefined();
+    });
+
+    test("repair coerces each stored item and records the ones it could not save", () => {
+        const item: CS2BaseInventoryItem = {
+            id: STORAGE_UNIT_ID,
+            storage: {
+                0: { id: AWP_DRAGON_LORE_ID, wear: 0.9 },
+                1: { id: UNKNOWN_ID },
+                2: { id: BROKEN_FANG_GLOVES_ID }
+            }
+        };
+        const dropped: CS2InventoryDrop[] = [];
+        expect(repairInventoryItem(CS2Economy, item, { dropped, storageUid: 7 })).toBe(true);
+        expect(item.storage?.[0]?.wear).toBe(0.7);
+        expect(Object.keys(ensure(item.storage))).toEqual(["0"]);
+        expect(dropped).toEqual([
+            { uid: 1, id: UNKNOWN_ID, reason: "unknown-item", storageUid: 7 },
+            { uid: 2, id: BROKEN_FANG_GLOVES_ID, reason: "unrepairable", storageUid: 7 }
+        ]);
+    });
+
+    test("a unit emptied by repair holds nothing rather than an empty record, and survives", () => {
+        const item: CS2BaseInventoryItem = { id: STORAGE_UNIT_ID, storage: { 0: { id: UNKNOWN_ID } } };
+        expect(repairInventoryItem(CS2Economy, item)).toBe(true);
+        expect(item.storage).toBeUndefined();
+    });
+});
+
 describe("reconcileInventoryItems", () => {
     test("folds loose charm detachment stacks into the lowest uid, summing their charges", () => {
         const items: Record<number, CS2BaseInventoryItem> = {
@@ -491,7 +551,12 @@ describe("reconcileInventoryItems", () => {
             },
             1: { id: STORAGE_UNIT_ID, nameTag: "Empties", storage: { 0: { id: CHARM_DETACHMENT_ID } } }
         };
-        reconcileInventoryItems(CS2Economy, items, noPolicy);
+        // Charges are worth something, so wiping a stack is a drop and says so.
+        expect(reconcileInventoryItems(CS2Economy, items, noPolicy)).toEqual([
+            { uid: 0, id: CHARM_DETACHMENT_ID, reason: "policy", storageUid: 0 },
+            { uid: 2, id: CHARM_DETACHMENT_PACK_ID, reason: "policy", storageUid: 0 },
+            { uid: 0, id: CHARM_DETACHMENT_ID, reason: "policy", storageUid: 1 }
+        ]);
         // Wiped, not withdrawn: nothing lands back in the inventory.
         expect(Object.keys(ensure(items[0]?.storage))).toEqual(["1"]);
         expect(items[0]?.storage?.[1]?.charges).toBeUndefined();

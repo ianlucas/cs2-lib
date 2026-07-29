@@ -40,9 +40,12 @@ export interface CS2InventoryLoadReport {
 export type CS2InventoryDropReason = "unknown-item" | "unrepairable" | "policy";
 
 export interface CS2InventoryDrop {
+    /** The slot the item sat in inside its unit when `storageUid` is set, otherwise its own uid. */
     uid: number;
     id: number;
     reason: CS2InventoryDropReason;
+    /** The storage unit the item came out of, absent for an item that was not inside one. */
+    storageUid?: number;
 }
 
 /**

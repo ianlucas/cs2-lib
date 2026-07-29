@@ -25,6 +25,7 @@ import {
     assertKeychains,
     assertStickers,
     checkStickerSchema,
+    getDropReason,
     getNextStickerSchema,
     reconcileInventoryItems,
     repairInventoryItem,
@@ -127,11 +128,8 @@ export class CS2Inventory {
             // Repair coerces in place, so the only way to tell a coerced item from an untouched one
             // is to hold the document it arrived as next to the one it became.
             const before = JSON.stringify(base);
-            if (!repairInventoryItem(this.economy, base)) {
-                // Two failures the caller reads differently: a catalog update took the item away, or
-                // a rule rejects a value no coercion reaches — a gap in the rule table.
-                const reason = this.economy.items.has(base.id) ? "unrepairable" : "unknown-item";
-                report.dropped.push({ uid, id: base.id, reason });
+            if (!repairInventoryItem(this.economy, base, { dropped: report.dropped, storageUid: uid })) {
+                report.dropped.push({ uid, id: base.id, reason: getDropReason(this.economy, base.id) });
                 delete items[uid];
                 continue;
             }
@@ -660,42 +658,30 @@ export class CS2InventoryItem
     updatedAt: number | undefined;
     wear: number | undefined;
 
+    // Every branch here is a plain construction over data `assertInventoryItem` has already read,
+    // which is the only reason a stored item can be built without asking the catalog anything.
     private assign({ keychains, patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
         if (patches !== undefined) {
-            this.patches = new Map(
-                Object.entries(patches)
-                    .filter(([, patchId]) => this.economy.items.has(patchId))
-                    .map(([slot, patchId]) => [parseInt(slot, 10), patchId])
-            );
+            this.patches = new Map(Object.entries(patches).map(([slot, patchId]) => [parseInt(slot, 10), patchId]));
         }
         if (stickers !== undefined) {
             this.stickers = toStickerMap(
                 CS2InventoryItem.stickersFromArray(
-                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount()).filter(({ id }) =>
-                        this.economy.items.has(id)
-                    )
+                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount())
                 )
             );
         }
         if (keychains !== undefined) {
             this.keychains = new Map(
-                Object.entries(keychains)
-                    .filter(([, { id }]) => this.economy.items.has(id))
-                    .map(([slot, keychain]) => [parseInt(slot, 10), keychain])
+                Object.entries(keychains).map(([slot, keychain]) => [parseInt(slot, 10), keychain])
             );
         }
         if (storage !== undefined) {
-            assert(this.isStorageUnit());
             this.storage = new Map(
-                Object.entries(storage)
-                    .filter(([, { id }]) => this.economy.items.has(id))
-                    .map(([key, value]) => {
-                        repairInventoryItem(this.economy, value);
-                        const economyItem = this.economy.getById(value.id);
-                        assert(value.storage === undefined);
-                        const uid = parseInt(key, 10);
-                        return [uid, new CS2InventoryItem(this.inventory, uid, value, economyItem)];
-                    })
+                Object.entries(storage).map(([key, value]) => {
+                    const uid = parseInt(key, 10);
+                    return [uid, new CS2InventoryItem(this.inventory, uid, value, this.economy.getById(value.id))];
+                })
             );
         }
     }
