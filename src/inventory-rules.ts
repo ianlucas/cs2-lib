@@ -610,10 +610,35 @@ function checkEmptyDefaultItem(economy: CS2EconomyInstance, item: CS2BaseInvento
 }
 
 /**
+ * Trims a record of items down to the cap the consumer set, taking the highest uids first so the
+ * oldest items are the ones that survive. Every item it takes is named, which is the difference
+ * between lowering a cap and quietly eating the inventories that were over it.
+ */
+function trimToMaximum(
+    items: Record<number, CS2BaseInventoryItem>,
+    maximum: number,
+    dropped: CS2InventoryDrop[],
+    storageUid?: number
+): void {
+    const uids = Object.keys(items)
+        .map((key) => parseInt(key, 10))
+        .sort((a, b) => a - b);
+    for (const uid of uids.slice(maximum)) {
+        const drop: CS2InventoryDrop = { uid, id: ensure(items[uid]).id, reason: "policy" };
+        if (storageUid !== undefined) {
+            drop.storageUid = storageUid;
+        }
+        dropped.push(drop);
+        delete items[uid];
+    }
+}
+
+/**
  * The invariants no single-item repair can see, because holding one item is not enough to know
- * whether it holds: an inventory carries at most one charm detachment stack, and a stored item
- * carries no charges. Returns what it took away — merging a stack keeps every charge, so nothing
- * leaves with it, but a stack wiped out of a unit is charges the owner had and no longer has.
+ * whether it holds: an inventory carries at most one charm detachment stack, a stored item carries
+ * no charges, and neither the inventory nor a unit inside it holds more than the consumer allowed.
+ * Returns what it took away — merging a stack keeps every charge, so nothing leaves with it, but a
+ * stack wiped out of a unit is charges the owner had and no longer has.
  */
 export function reconcileInventoryItems(
     economy: CS2EconomyInstance,
@@ -670,6 +695,16 @@ export function reconcileInventoryItems(
                 delete items[uid];
             }
         }
+    }
+    // After every other rule, so that room a merge or a policy drop freed up counts against the cap
+    // and nothing is taken for a cap it no longer exceeds.
+    for (const [key, item] of Object.entries(items)) {
+        if (item.storage !== undefined && Object.keys(item.storage).length > options.storageUnitMaxItems) {
+            trimToMaximum(item.storage, options.storageUnitMaxItems, dropped, parseInt(key, 10));
+        }
+    }
+    if (Object.keys(items).length > options.maxItems) {
+        trimToMaximum(items, options.maxItems, dropped);
     }
     return dropped;
 }

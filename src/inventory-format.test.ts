@@ -239,6 +239,39 @@ test("dropEmptyDefaultItems takes the free items and records them under their ow
     expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: AK47_ID, reason: "policy" }]);
 });
 
+// `load` is the untrusted-bytes entry point, and every item it keeps becomes an economy item
+// carrying the whole catalog row. A cap the caller set and the loader ignores is not a cap.
+test("an inventory past its cap loses its newest items, and every one of them is named", () => {
+    const items = Object.fromEntries(Array.from({ length: 12 }, (_, uid) => [uid, { id: AK47_ID }]));
+    const inventory = CS2Inventory.load(JSON.stringify({ items, version: CS2_INVENTORY_VERSION }), { maxItems: 10 });
+
+    expect(inventory.size()).toBe(10);
+    // The highest uids go, so the oldest items are the ones that survive.
+    expect(inventory.loadReport?.dropped).toStrictEqual([
+        { uid: 10, id: AK47_ID, reason: "policy" },
+        { uid: 11, id: AK47_ID, reason: "policy" }
+    ]);
+});
+
+test("a storage unit past its cap loses its newest contents, named against the unit", () => {
+    const storage = Object.fromEntries(Array.from({ length: 4 }, (_, uid) => [uid, { id: AK47_ID }]));
+    const inventory = CS2Inventory.load(
+        JSON.stringify({ items: { 0: { id: STORAGE_UNIT_ID, storage } }, version: CS2_INVENTORY_VERSION }),
+        { storageUnitMaxItems: 3 }
+    );
+
+    expect(inventory.get(0).storage?.size).toBe(3);
+    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 3, id: AK47_ID, reason: "policy", storageUid: 0 }]);
+});
+
+test("an inventory inside its cap is left alone", () => {
+    const items = Object.fromEntries(Array.from({ length: 10 }, (_, uid) => [uid, { id: AK47_ID }]));
+    const inventory = CS2Inventory.load(JSON.stringify({ items, version: CS2_INVENTORY_VERSION }), { maxItems: 10 });
+
+    expect(inventory.size()).toBe(10);
+    expect(inventory.loadReport?.dropped).toStrictEqual([]);
+});
+
 test("an inventory that started empty has nothing to report", () => {
     expect(new CS2Inventory().loadReport).toBeUndefined();
 });

@@ -706,6 +706,27 @@ describe("reconcileInventoryItems", () => {
         expect(Object.keys(items)).toEqual(["1", "2", "3", "4", "5"]);
     });
 
+    test("counts the cap after every other rule, so room a policy drop freed is room the cap has", () => {
+        const items: Record<number, CS2BaseInventoryItem> = {
+            0: { id: AK47_ID },
+            1: { id: AK47_ID },
+            2: { id: AWP_DRAGON_LORE_ID },
+            3: { id: AWP_DRAGON_LORE_ID }
+        };
+        const dropped = reconcileInventoryItems(CS2Economy, items, {
+            maxItems: 2,
+            storageUnitMaxItems: 32,
+            dropEmptyDefaultItems: true
+        });
+
+        // The two free AK-47s go on policy, which leaves the pair the owner bought inside the cap.
+        expect(dropped).toEqual([
+            { uid: 0, id: AK47_ID, reason: "policy" },
+            { uid: 1, id: AK47_ID, reason: "policy" }
+        ]);
+        expect(Object.keys(items)).toEqual(["2", "3"]);
+    });
+
     test("wipes detachments out of storage, re-seals what is left and empties a unit it emptied", () => {
         const items: Record<number, CS2BaseInventoryItem> = {
             0: {
