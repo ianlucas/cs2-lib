@@ -17,6 +17,7 @@ import {
     CS2_INVENTORY_RULES,
     assertInventoryItem,
     getNextStickerSchema,
+    reconcileInventoryItems,
     repairInventoryItem,
     snapStickerRotation,
     validateStickerRotation
@@ -24,17 +25,22 @@ import {
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { english } from "./translations/english.ts";
+import { ensure } from "./utils.ts";
 
 const AK47_ID = 4;
 const AWP_DRAGON_LORE_ID = 307;
 const BLOODHOUND_ID = 8569;
 const BROKEN_FANG_GLOVES_ID = 56;
 const CHARM_DETACHMENT_ID = 12450;
+const CHARM_DETACHMENT_PACK_ID = 12451;
 const FALLEN_COLOGNE_2015_ID = 2226;
 const GRAFFITI_ACE_ID = 9543;
 const KARAMBIT_BOREAL_FOREST_ID = 1334;
 const LIL_AVA_ID = 13113;
+const STORAGE_UNIT_ID = 11262;
 const UNKNOWN_ID = 999999;
+
+const noPolicy = { maxItems: 256, storageUnitMaxItems: 32 };
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
@@ -59,6 +65,25 @@ unmarkedEconomy.load({
         },
         { id: STICKER_ID, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Common },
         { id: KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Common }
+    ]
+});
+
+// The shipped catalog marks exactly one attachment `isDefault` — `Charm | Sticker Slab`, which the
+// game hands out — so a sticker and a patch of the same kind only exist in a catalog written here.
+const DEFAULT_KEYCHAIN_ID = 15200;
+const AGENT_ID = 5;
+const DEFAULT_STICKER_ID = 6;
+const DEFAULT_PATCH_ID = 7;
+const PATCH_ID = 8;
+const defaultAttachmentEconomy = new CS2EconomyInstance();
+defaultAttachmentEconomy.load({
+    items: [
+        { id: UNBOUNDED_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Common },
+        { id: STICKER_ID, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Common },
+        { id: AGENT_ID, type: CS2ItemType.Agent, rarityColor: CS2RarityColor.Common },
+        { id: DEFAULT_STICKER_ID, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Common, isDefault: true },
+        { id: DEFAULT_PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common, isDefault: true },
+        { id: PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common }
     ]
 });
 
@@ -367,6 +392,112 @@ describe("every rule repairs into what it checks", () => {
             }
         });
     }
+});
+
+describe("a default item cannot be applied as an attachment", () => {
+    test("assert rejects a default sticker, keychain or patch", () => {
+        // Not a rule about one id: the game hands these out, so applying one is claiming an
+        // attachment you never acquired. It generalises the day a second free charm ships.
+        expect(() =>
+            assertInventoryItem(CS2Economy, { id: AK47_ID, keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } } })
+        ).toThrow();
+        expect(() =>
+            assertInventoryItem(defaultAttachmentEconomy, {
+                id: UNBOUNDED_ID,
+                stickers: { 0: { id: DEFAULT_STICKER_ID } }
+            })
+        ).toThrow();
+        expect(() =>
+            assertInventoryItem(defaultAttachmentEconomy, { id: AGENT_ID, patches: { 0: DEFAULT_PATCH_ID } })
+        ).toThrow();
+    });
+
+    test("assert still accepts the ordinary attachment of each kind", () => {
+        expect(() =>
+            assertInventoryItem(CS2Economy, { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID } } })
+        ).not.toThrow();
+        expect(() =>
+            assertInventoryItem(defaultAttachmentEconomy, { id: UNBOUNDED_ID, stickers: { 0: { id: STICKER_ID } } })
+        ).not.toThrow();
+        expect(() =>
+            assertInventoryItem(defaultAttachmentEconomy, { id: AGENT_ID, patches: { 0: PATCH_ID } })
+        ).not.toThrow();
+    });
+});
+
+describe("a default attachment is stripped rather than costing the item", () => {
+    test("repair drops the default attachment and keeps the item and its ordinary ones", () => {
+        const keychained: CS2BaseInventoryItem = { id: AK47_ID, keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } } };
+        expect(repairInventoryItem(CS2Economy, keychained)).toBe(true);
+        expect(keychained.keychains?.[0]).toBeUndefined();
+
+        const stickered: CS2BaseInventoryItem = {
+            id: UNBOUNDED_ID,
+            stickers: { 0: { id: DEFAULT_STICKER_ID }, 1: { id: STICKER_ID } }
+        };
+        expect(repairInventoryItem(defaultAttachmentEconomy, stickered)).toBe(true);
+        expect(Object.values(ensure(stickered.stickers)).map(({ id }) => id)).toEqual([STICKER_ID]);
+
+        const patched: CS2BaseInventoryItem = { id: AGENT_ID, patches: { 0: DEFAULT_PATCH_ID, 1: PATCH_ID } };
+        expect(repairInventoryItem(defaultAttachmentEconomy, patched)).toBe(true);
+        expect(patched.patches).toEqual({ 1: PATCH_ID });
+    });
+});
+
+describe("reconcileInventoryItems", () => {
+    test("folds loose charm detachment stacks into the lowest uid, summing their charges", () => {
+        const items: Record<number, CS2BaseInventoryItem> = {
+            2: { id: CHARM_DETACHMENT_ID },
+            5: { id: CHARM_DETACHMENT_ID, charges: 4 },
+            7: { id: CHARM_DETACHMENT_ID },
+            9: { id: AK47_ID }
+        };
+        reconcileInventoryItems(CS2Economy, items, noPolicy);
+        expect(Object.keys(items)).toEqual(["2", "9"]);
+        expect(items[2]?.charges).toBe(6);
+    });
+
+    // The base AK-47 is `isDefault` in the shipped catalog: the game issues it, so an untouched one
+    // is worth nothing stored. One the owner has named, stickered or charged is not the same item.
+    test("drops the free items carrying nothing, and only when the consumer asked for it", () => {
+        const makeItems = (): Record<number, CS2BaseInventoryItem> => ({
+            0: { id: AK47_ID },
+            1: { id: AWP_DRAGON_LORE_ID },
+            2: { id: AK47_ID, nameTag: "Mine" },
+            3: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
+            4: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID } } },
+            5: { id: CHARM_DETACHMENT_ID, charges: 3 }
+        });
+        const untouched = makeItems();
+        expect(reconcileInventoryItems(CS2Economy, untouched, noPolicy)).toEqual([]);
+        expect(Object.keys(untouched)).toEqual(["0", "1", "2", "3", "4", "5"]);
+
+        const items = makeItems();
+        const dropped = reconcileInventoryItems(CS2Economy, items, { ...noPolicy, dropEmptyDefaultItems: true });
+        expect(dropped).toEqual([{ uid: 0, id: AK47_ID, reason: "policy" }]);
+        expect(Object.keys(items)).toEqual(["1", "2", "3", "4", "5"]);
+    });
+
+    test("wipes detachments out of storage, re-seals what is left and empties a unit it emptied", () => {
+        const items: Record<number, CS2BaseInventoryItem> = {
+            0: {
+                id: STORAGE_UNIT_ID,
+                nameTag: "My Storage Unit",
+                storage: {
+                    0: { id: CHARM_DETACHMENT_ID, charges: 9 },
+                    1: { id: GRAFFITI_ACE_ID, charges: 12 },
+                    2: { id: CHARM_DETACHMENT_PACK_ID }
+                }
+            },
+            1: { id: STORAGE_UNIT_ID, nameTag: "Empties", storage: { 0: { id: CHARM_DETACHMENT_ID } } }
+        };
+        reconcileInventoryItems(CS2Economy, items, noPolicy);
+        // Wiped, not withdrawn: nothing lands back in the inventory.
+        expect(Object.keys(ensure(items[0]?.storage))).toEqual(["1"]);
+        expect(items[0]?.storage?.[1]?.charges).toBeUndefined();
+        expect(items[1]?.storage).toBeUndefined();
+        expect(Object.keys(items)).toEqual(["0", "1"]);
+    });
 });
 
 describe("sticker schema", () => {

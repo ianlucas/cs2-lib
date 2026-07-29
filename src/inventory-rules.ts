@@ -20,9 +20,10 @@ import {
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
 import type { CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
-import type { CS2BaseInventoryItem } from "./inventory-types.ts";
-import { CS2InventoryItem } from "./inventory.ts";
-import { type RecordValue, assert, clamp, isFactorPrecise, truncateToFactor } from "./utils.ts";
+import type { CS2InventoryDrop } from "./inventory-format.ts";
+import type { CS2BaseInventoryItem, CS2InventoryOptions } from "./inventory-types.ts";
+import { CS2InventoryItem, getTimestamp } from "./inventory.ts";
+import { type RecordValue, assert, clamp, ensure, isFactorPrecise, truncateToFactor } from "./utils.ts";
 
 /**
  * One constrained attribute, written once and read two ways: `check` is what an `assert*` asserts,
@@ -220,6 +221,21 @@ export function assertAddable(item: CS2EconomyItem): void {
     assert(checkAddable(item));
 }
 
+/**
+ * A default item is one the game issues rather than one you acquired, so applying it as a sticker,
+ * keychain or patch is claiming an attachment nobody owns. Stated over `isDefault` rather than over
+ * the one id that has it today, so a second free charm needs no second rule.
+ */
+export function checkAttachable(item: CS2EconomyItem): boolean {
+    return item.isDefault !== true;
+}
+
+// The two ways a slot stops holding something the owner acquired: a catalog update took the id
+// away, or the id resolves to an item the game issues for free.
+function checkAttachmentId(economy: CS2EconomyInstance, id: number): boolean {
+    return economy.items.has(id) && checkAttachable(economy.getById(id));
+}
+
 export function checkStickers(
     economy: CS2EconomyInstance,
     stickers: CS2BaseInventoryItem["stickers"],
@@ -233,7 +249,11 @@ export function checkStickers(
         return false;
     }
     for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
-        if (!economy.items.has(stickerId) || !economy.getById(stickerId).isSticker()) {
+        if (!economy.items.has(stickerId)) {
+            return false;
+        }
+        const sticker = economy.getById(stickerId);
+        if (!sticker.isSticker() || !checkAttachable(sticker)) {
             return false;
         }
         if (
@@ -274,7 +294,11 @@ export function checkKeychains(
         if (slot < 0 || slot > CS2_MAX_KEYCHAINS - 1) {
             return false;
         }
-        if (!economy.items.has(keychainId) || !economy.getById(keychainId).isKeychain()) {
+        if (!economy.items.has(keychainId)) {
+            return false;
+        }
+        const keychain = economy.getById(keychainId);
+        if (!keychain.isKeychain() || !checkAttachable(keychain)) {
             return false;
         }
         if (
@@ -313,7 +337,11 @@ export function checkPatches(
         if (slot < 0 || slot > CS2_MAX_PATCHES - 1) {
             return false;
         }
-        if (!economy.items.has(patchId) || !economy.getById(patchId).isPatch()) {
+        if (!economy.items.has(patchId)) {
+            return false;
+        }
+        const patch = economy.getById(patchId);
+        if (!patch.isPatch() || !checkAttachable(patch)) {
             return false;
         }
     }
@@ -368,7 +396,7 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
             item.patches = undefined;
         } else {
             for (const [slot, patchId] of Object.entries(item.patches)) {
-                if (!economy.items.has(patchId)) {
+                if (!checkAttachmentId(economy, patchId)) {
                     delete item.patches[slot];
                 }
             }
@@ -379,7 +407,7 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
             item.stickers = undefined;
         } else {
             for (const [slot, sticker] of Object.entries(item.stickers)) {
-                if (!economy.items.has(sticker.id)) {
+                if (!checkAttachmentId(economy, sticker.id)) {
                     delete item.stickers[slot];
                     continue;
                 }
@@ -399,7 +427,7 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
             item.keychains = undefined;
         } else {
             for (const [slot, keychain] of Object.entries(item.keychains)) {
-                if (!economy.items.has(keychain.id)) {
+                if (!checkAttachmentId(economy, keychain.id)) {
                     delete item.keychains[slot];
                     continue;
                 }
@@ -422,4 +450,82 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
     }
     item.wear = CS2_INVENTORY_RULES.itemWear.repair(item.wear, economyItem);
     return checkInventoryItem(economy, item);
+}
+
+/**
+ * A default item the game issues carrying nothing that distinguishes it from the one the game would
+ * issue again. `charges` is in the list because `Tool | Charm Detachments` is itself a default item,
+ * so leaving it out would spend a stack the owner earned.
+ */
+function checkEmptyDefaultItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): boolean {
+    return (
+        economy.items.has(item.id) &&
+        economy.getById(item.id).isDefault === true &&
+        item.nameTag === undefined &&
+        item.charges === undefined &&
+        Object.keys(item.stickers ?? {}).length === 0 &&
+        Object.keys(item.keychains ?? {}).length === 0
+    );
+}
+
+/**
+ * The invariants no single-item repair can see, because holding one item is not enough to know
+ * whether it holds: an inventory carries at most one charm detachment stack, and a stored item
+ * carries no charges. Returns what it took away, which is only ever the policy pass — merging a
+ * stack keeps every charge, so no data leaves with it.
+ */
+export function reconcileInventoryItems(
+    economy: CS2EconomyInstance,
+    items: Record<number, CS2BaseInventoryItem>,
+    options: Readonly<CS2InventoryOptions>
+): CS2InventoryDrop[] {
+    for (const item of Object.values(items)) {
+        if (item.storage === undefined) {
+            continue;
+        }
+        for (const [slot, stored] of Object.entries(item.storage)) {
+            if (!economy.items.has(stored.id)) {
+                continue;
+            }
+            const economyItem = economy.getById(stored.id);
+            if (economyItem.isCharmDetachment() || economyItem.isCharmDetachmentPack()) {
+                delete item.storage[parseInt(slot, 10)];
+            } else if (economyItem.hasCharges()) {
+                stored.charges = undefined;
+            }
+        }
+        if (Object.keys(item.storage).length === 0) {
+            item.storage = undefined;
+        }
+    }
+    const detachments = Object.entries(items)
+        .map(([key, value]) => [parseInt(key, 10), value] as const)
+        .filter(([, { id }]) => economy.items.has(id) && economy.getById(id).isCharmDetachment())
+        .sort(([a], [b]) => a - b);
+    if (detachments.length > 1) {
+        const [survivorUid, survivor] = ensure(detachments[0]);
+        const economyItem = economy.getById(survivor.id);
+        let charges = 0;
+        for (const [uid, item] of detachments) {
+            charges += item.charges ?? economyItem.getDefaultCharges();
+            if (uid !== survivorUid) {
+                delete items[uid];
+            }
+        }
+        survivor.charges = Math.min(charges, economyItem.getMaximumCharges());
+        survivor.updatedAt = getTimestamp();
+    }
+    const dropped: CS2InventoryDrop[] = [];
+    // Last, so that a stack merged a moment ago is judged on the charges it now holds rather than
+    // on the empty rows it was spread across.
+    if (options.dropEmptyDefaultItems === true) {
+        for (const [key, item] of Object.entries(items)) {
+            if (checkEmptyDefaultItem(economy, item)) {
+                const uid = parseInt(key, 10);
+                dropped.push({ uid, id: item.id, reason: "policy" });
+                delete items[uid];
+            }
+        }
+    }
+    return dropped;
 }

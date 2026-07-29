@@ -26,6 +26,7 @@ import {
     assertStickers,
     checkStickerSchema,
     getNextStickerSchema,
+    reconcileInventoryItems,
     repairInventoryItem,
     snapStickerRotation,
     validateStickerRotation
@@ -98,55 +99,23 @@ export class CS2Inventory {
         return inventory;
     }
 
-    constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec> = {}) {
+    constructor({
+        economy,
+        data,
+        dropEmptyDefaultItems,
+        maxItems,
+        storageUnitMaxItems
+    }: Partial<CS2InventorySpec> = {}) {
         this.economy = economy ?? CS2Economy;
-        const report: CS2InventoryLoadReport = { migratedFrom: undefined, dropped: [], repairedUids: [] };
-        this.items = data !== undefined ? this.toInventoryItems(data.items, report) : new Map();
-        this.loadReport = data !== undefined ? report : undefined;
+        // Resolved before the items are read, because reconciliation is one of the readers.
         this.options = {
+            dropEmptyDefaultItems: dropEmptyDefaultItems ?? false,
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
-    }
-
-    private reconcileChargeableItems(items: Record<number, CS2BaseInventoryItem>): void {
-        for (const item of Object.values(items)) {
-            if (item.storage === undefined) {
-                continue;
-            }
-            for (const [slot, stored] of Object.entries(item.storage)) {
-                if (!this.economy.items.has(stored.id)) {
-                    continue;
-                }
-                const economyItem = this.economy.getById(stored.id);
-                if (economyItem.isCharmDetachment() || economyItem.isCharmDetachmentPack()) {
-                    delete item.storage[parseInt(slot, 10)];
-                } else if (economyItem.hasCharges()) {
-                    stored.charges = undefined;
-                }
-            }
-            if (Object.keys(item.storage).length === 0) {
-                item.storage = undefined;
-            }
-        }
-        const entries = Object.entries(items)
-            .map(([key, value]) => [parseInt(key, 10), value] as const)
-            .filter(([, { id }]) => this.economy.items.has(id) && this.economy.getById(id).isCharmDetachment())
-            .sort(([a], [b]) => a - b);
-        if (entries.length <= 1) {
-            return;
-        }
-        const [survivorUid, survivor] = ensure(entries[0]);
-        const economyItem = this.economy.getById(survivor.id);
-        let charges = 0;
-        for (const [uid, item] of entries) {
-            charges += item.charges ?? economyItem.getDefaultCharges();
-            if (uid !== survivorUid) {
-                delete items[uid];
-            }
-        }
-        survivor.charges = Math.min(charges, economyItem.getMaximumCharges());
-        survivor.updatedAt = getTimestamp();
+        const report: CS2InventoryLoadReport = { migratedFrom: undefined, dropped: [], repairedUids: [] };
+        this.items = data !== undefined ? this.toInventoryItems(data.items, report) : new Map();
+        this.loadReport = data !== undefined ? report : undefined;
     }
 
     private toInventoryItems(
@@ -170,7 +139,7 @@ export class CS2Inventory {
                 report.repairedUids.push(uid);
             }
         }
-        this.reconcileChargeableItems(items);
+        report.dropped.push(...reconcileInventoryItems(this.economy, items, this.options));
         return new Map(
             Object.entries(items).map(([key, value]) => {
                 const uid = parseInt(key, 10);

@@ -108,6 +108,21 @@ test("data handed straight to the constructor is repaired and reported, but not 
     expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
+// The lib owns the rule, the consumer owns the decision — so the drop is opt-in, and once taken it
+// is reported like any other, rather than being a one-shot pass that has to remember it ran.
+test("dropEmptyDefaultItems takes the free items and records them under their own reason", () => {
+    const raw = JSON.stringify({
+        items: { 0: { id: AK47_ID }, 1: { id: AK47_ID, nameTag: "my rifle" }, 2: { id: AWP_DRAGON_LORE_ID } },
+        version: CS2_INVENTORY_VERSION
+    });
+
+    expect(CS2Inventory.load(raw).size()).toBe(3);
+
+    const inventory = CS2Inventory.load(raw, { dropEmptyDefaultItems: true });
+    expect(inventory.size()).toBe(2);
+    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: AK47_ID, reason: "policy" }]);
+});
+
 test("an inventory that started empty has nothing to report", () => {
     expect(new CS2Inventory().loadReport).toBeUndefined();
 });

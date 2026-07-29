@@ -1379,7 +1379,7 @@ describe("charges", () => {
         expect(inventory.get(2).charges).toBeUndefined();
     });
 
-    test("heal folds loose charm detachments into the lowest uid", () => {
+    test("reconcile folds loose charm detachments into the lowest uid", () => {
         const inventory = makeInventory({
             2: { id: CHARM_DETACHMENT_ID },
             5: { id: CHARM_DETACHMENT_ID, charges: 4 },
@@ -1393,7 +1393,7 @@ describe("charges", () => {
         expect(inventory.get(9).id).toBe(AK47_ID);
     });
 
-    test("heal wipes charm detachments and packs out of storage units", () => {
+    test("reconcile wipes charm detachments and packs out of storage units", () => {
         const inventory = makeInventory({
             0: {
                 id: STORAGE_UNIT_ID,
@@ -1411,7 +1411,7 @@ describe("charges", () => {
         expect(inventory.size()).toBe(1);
     });
 
-    test("heal empties a storage unit that held nothing but detachments", () => {
+    test("reconcile empties a storage unit that held nothing but detachments", () => {
         const inventory = makeInventory({
             0: {
                 id: STORAGE_UNIT_ID,
@@ -1424,7 +1424,7 @@ describe("charges", () => {
         expect(inventory.get(0).storage).toBeUndefined();
     });
 
-    test("heal re-seals a stored graffiti instead of discarding it", () => {
+    test("reconcile re-seals a stored graffiti instead of discarding it", () => {
         const inventory = makeInventory({
             0: {
                 id: STORAGE_UNIT_ID,
@@ -1438,7 +1438,7 @@ describe("charges", () => {
         expect(stored.getCharges()).toBe(0);
     });
 
-    test("heal leaves charm detachment packs alone", () => {
+    test("reconcile leaves charm detachment packs alone", () => {
         const inventory = makeInventory({
             0: { id: CHARM_DETACHMENT_PACK_ID },
             1: { id: CHARM_DETACHMENT_PACK_ID }
