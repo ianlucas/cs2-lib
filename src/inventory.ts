@@ -35,11 +35,10 @@ import type {
     CS2InventoryOptions,
     CS2InventorySpec
 } from "./inventory-types.ts";
-import { resolveInventoryData } from "./inventory-upgrader.ts";
+import { CS2_INVENTORY_VERSION, resolveInventoryData } from "./inventory-migrations/index.ts";
 import { CS2Team } from "./teams.ts";
 import { type Interface, type MapValue, type RecordValue, assert, ensure, roundToFactor } from "./utils.ts";
 
-export const CS2_INVENTORY_VERSION = 1;
 export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
 // prettier-ignore
 export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Weapon];

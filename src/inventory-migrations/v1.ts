@@ -3,23 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2Economy, CS2EconomyInstance } from "./economy.ts";
-import type { CS2InventoryData } from "./inventory-types.ts";
-import { CS2_INVENTORY_VERSION } from "./inventory.ts";
+import type { CS2EconomyInstance } from "../economy.ts";
+import type { CS2InventoryMigration } from "./index.ts";
 
-const upgrades: Record<
-    number,
-    (
-        data: any,
-        economy: CS2EconomyInstance
-    ) => {
-        items: {
-            [k: string]: any;
-        };
-        version: number;
-    }
-> = {
-    1: (data: any, economy: CS2EconomyInstance) => {
+export const migration: CS2InventoryMigration = {
+    to: 1,
+    describe: "array of items becomes a record keyed by uid",
+    apply(data: any, economy: CS2EconomyInstance): any {
         function walkV0(v0: any) {
             const v1: any = {};
             for (let [key, value] of Object.entries<any>(v0)) {
@@ -80,25 +70,3 @@ const upgrades: Record<
         };
     }
 };
-
-export function resolveInventoryData(
-    stringValue?: string,
-    economy: CS2EconomyInstance = CS2Economy
-): CS2InventoryData | undefined {
-    try {
-        if (!stringValue) {
-            return undefined;
-        }
-        let value = JSON.parse(stringValue);
-        const currentVersion = value.version ?? 0;
-        for (let i = currentVersion + 1; i <= CS2_INVENTORY_VERSION; i++) {
-            const upgrade = upgrades[i];
-            if (upgrade !== undefined) {
-                value = upgrade(value, economy);
-            }
-        }
-        return value;
-    } catch {
-        return undefined;
-    }
-}

@@ -16,7 +16,8 @@ import {
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
-import { CS2Inventory, CS2_INVENTORY_VERSION } from "./inventory.ts";
+import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
+import { CS2Inventory } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
 import { english } from "./translations/english.ts";
