@@ -126,24 +126,28 @@ export class CS2Inventory {
         items: Record<number, CS2BaseInventoryItem>,
         report: CS2InventoryLoadReport
     ): Map<number, CS2InventoryItem> {
+        // Both passes coerce in place, so the only way to tell an item they changed from one they
+        // left alone is to hold the document it arrived as next to the one it became. The window
+        // spans both of them: a stack reconcile merged or charges it stripped out of a storage unit
+        // are as much a change the stored bytes are missing as anything repair rewrote, and a load
+        // that does not say so is one the backfill will skip on every run.
+        const arrived = new Map(Object.entries(items).map(([key, base]) => [parseInt(key, 10), JSON.stringify(base)]));
         for (const [key, base] of Object.entries(items)) {
             const uid = parseInt(key, 10);
-            // Repair coerces in place, so the only way to tell a coerced item from an untouched one
-            // is to hold the document it arrived as next to the one it became.
-            const before = JSON.stringify(base);
             if (!repairInventoryItem(this.economy, base, { dropped: report.dropped, storageUid: uid })) {
                 report.dropped.push({ uid, id: base.id, reason: getDropReason(this.economy, base.id) });
                 delete items[uid];
-                continue;
-            }
-            if (JSON.stringify(base) !== before) {
-                report.repairedUids.push(uid);
             }
         }
         report.dropped.push(...reconcileInventoryItems(this.economy, items, this.options));
         return new Map(
             Object.entries(items).map(([key, value]) => {
                 const uid = parseInt(key, 10);
+                // Only what survived is compared, so a coercion applied to an item that was then
+                // taken away is a drop and never also a repair — there is nothing left to write back.
+                if (JSON.stringify(value) !== arrived.get(uid)) {
+                    report.repairedUids.push(uid);
+                }
                 return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
             })
         );

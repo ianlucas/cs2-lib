@@ -22,7 +22,9 @@ const AK47_ID = 4;
 const AWP_DRAGON_LORE_ID = 307;
 const BLOODHOUND_ID = 8569;
 const BROKEN_FANG_GLOVES_ID = 56;
+const CHARM_DETACHMENT_ID = 12450;
 const FALLEN_COLOGNE_2015_ID = 2226;
+const GRAFFITI_ACE_ID = 9543;
 const GROUND_REBEL_ID = 8620;
 const LIL_AVA_ID = 13113;
 const STORAGE_UNIT_ID = 11262;
@@ -183,6 +185,53 @@ test("canonicalising an item is not a repair, and is not reported as one", () =>
 
     expect(inventory.loadReport?.repairedUids).toStrictEqual([]);
     expect(inventory.get(0).stickers?.get(0)?.schema).toBe(0);
+});
+
+// Reconcile runs after repair and edits the same items, so a report closed before it calls a merged
+// stack an item nothing happened to. The backfill writes back only what a load says it changed, so
+// what the report leaves out is a document that merges again on every load, stamping a new
+// `updatedAt` each time — the same stored bytes producing a different `stringify()` forever.
+test("an edit reconcile made is reported as a repair, not left out of the report", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: CHARM_DETACHMENT_ID, charges: 2 }, 3: { id: CHARM_DETACHMENT_ID, charges: 4 } },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.size()).toBe(1);
+    expect(inventory.get(0).charges).toBe(6);
+    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
+    // The stack that folded into the survivor kept every charge it had, so nothing left the
+    // inventory with it and there is nothing to record as lost.
+    expect(inventory.loadReport?.dropped).toStrictEqual([]);
+});
+
+test("a storage unit reconcile took the charges out of is reported as repaired", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: STORAGE_UNIT_ID, storage: { 0: { id: GRAFFITI_ACE_ID, charges: 12 } } } },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.get(0).storage?.get(0)?.charges).toBeUndefined();
+    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
+});
+
+// A coercion the item did not outlive is nothing to write back, so only what survived is compared.
+// Naming an item under both headings would have the backfill reading a loss as a repair.
+test("an item a cap took away is a drop and not also a repair", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: { 0: { id: AK47_ID }, 1: { id: AWP_DRAGON_LORE_ID, wear: 0.9 } },
+            version: CS2_INVENTORY_VERSION
+        }),
+        { maxItems: 1 }
+    );
+
+    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: AWP_DRAGON_LORE_ID, reason: "policy" }]);
+    expect(inventory.loadReport?.repairedUids).toStrictEqual([]);
 });
 
 // The invariant the backfill routine depends on: it writes back whatever a load had to change, so
