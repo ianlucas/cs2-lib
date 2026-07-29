@@ -115,7 +115,10 @@ export class CS2Inventory {
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
         const report: CS2InventoryLoadReport = { migratedFrom: undefined, dropped: [], repairedUids: [] };
-        this.items = data !== undefined ? this.toInventoryItems(data.items, report) : new Map();
+        // Repair coerces in place and deletes what it drops, so the items are copied first: the
+        // caller handed over a document to read, not one to have rewritten underneath them. `load`
+        // pays a clone of data it already owns, which is nothing against building the items.
+        this.items = data !== undefined ? this.toInventoryItems(structuredClone(data.items), report) : new Map();
         this.loadReport = data !== undefined ? report : undefined;
     }
 

@@ -224,6 +224,23 @@ test("data handed straight to the constructor is repaired and reported, but not 
     expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
+// Repair coerces in place, and the place it coerced used to be the caller's own object: handing an
+// inventory to the constructor silently rewrote the values in it and deleted the items it dropped.
+test("the constructor leaves the data it was handed exactly as it found it", () => {
+    const data = {
+        items: {
+            0: { id: AWP_DRAGON_LORE_ID, wear: 0.9 },
+            1: { id: RETIRED_ID },
+            2: { id: STORAGE_UNIT_ID, storage: { 0: { id: RETIRED_ID } } }
+        },
+        version: CS2_INVENTORY_VERSION
+    };
+    const before = JSON.stringify(data);
+    new CS2Inventory({ data });
+
+    expect(JSON.stringify(data)).toBe(before);
+});
+
 // The lib owns the rule, the consumer owns the decision — so the drop is opt-in, and once taken it
 // is reported like any other, rather than being a one-shot pass that has to remember it ran.
 test("dropEmptyDefaultItems takes the free items and records them under their own reason", () => {
