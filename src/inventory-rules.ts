@@ -500,20 +500,32 @@ export function repairInventoryItem(
         if (!economyItem.hasStickers()) {
             item.stickers = undefined;
         } else {
+            const schemaCount = economyItem.getStickerSchemaCount();
+            let rebuild = Object.keys(item.stickers).length > CS2_MAX_STICKERS;
             for (const [slot, sticker] of Object.entries(item.stickers)) {
                 if (!checkAttachmentId(economy, sticker.id, (attachment) => attachment.isSticker())) {
                     delete item.stickers[slot];
+                    rebuild = true;
                     continue;
+                }
+                if (!checkStickerSchema(sticker.schema, schemaCount)) {
+                    rebuild = true;
                 }
                 sticker.wear = CS2_INVENTORY_RULES.stickerWear.repair(sticker.wear, economyItem);
                 sticker.rotation = CS2_INVENTORY_RULES.stickerRotation.repair(sticker.rotation, economyItem);
                 sticker.x = CS2_INVENTORY_RULES.stickerX.repair(sticker.x, economyItem);
                 sticker.y = CS2_INVENTORY_RULES.stickerY.repair(sticker.y, economyItem);
             }
-            // Drops the schemas the model cannot render and hands out free ones in their place.
-            item.stickers = CS2InventoryItem.stickersFromArray(
-                CS2InventoryItem.stickersToArray(item.stickers, economyItem.getStickerSchemaCount())
-            );
+            // Rebuilding drops the schemas the model cannot render, hands out free ones in their
+            // place, and reindexes the slots a deletion left holes in — so it runs only when one of
+            // those happened. Doing it every time writes an anchor into stickers that never carried
+            // one, which is canonicalisation rather than repair, and the report would then name
+            // every inventory holding a sticker as one the load had to change.
+            if (rebuild) {
+                item.stickers = CS2InventoryItem.stickersFromArray(
+                    CS2InventoryItem.stickersToArray(item.stickers, schemaCount)
+                );
+            }
         }
     }
     if (item.keychains !== undefined) {

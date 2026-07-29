@@ -12,7 +12,8 @@ import {
     CS2_MAX_STICKER_WEAR,
     CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_SEED,
-    CS2_MIN_STATTRAK
+    CS2_MIN_STATTRAK,
+    CS2_MIN_STICKER_WEAR
 } from "./economy-constants.ts";
 import { CS2RarityColor } from "./economy-container.ts";
 import { CS2ItemType } from "./economy-types.ts";
@@ -171,9 +172,10 @@ describe("repairInventoryItem offsets and positions", () => {
         expect(repairInventoryItem(CS2Economy, item)).toBe(true);
         expect(item.stickers?.[0]?.wear).toBe(0.12);
         expect(item.stickers?.[1]?.wear).toBe(CS2_MAX_STICKER_WEAR);
-        // Clamping downwards lands on CS2_MIN_STICKER_WEAR, which is how an unscraped sticker is
-        // stored: no wear at all.
-        expect(item.stickers?.[2]?.wear).toBe(undefined);
+        // Clamping downwards lands on CS2_MIN_STICKER_WEAR. An unscraped sticker is written with no
+        // wear at all rather than with zero, but that is `stickersFromArray`'s spelling of the same
+        // value, and repair has no reason to rewrite a sticker to say it.
+        expect(item.stickers?.[2]?.wear).toBe(CS2_MIN_STICKER_WEAR);
         expect(item.stickers?.[3]?.wear).toBe(undefined);
     });
 

@@ -20,8 +20,11 @@ CS2Economy.load({ items: CS2_ITEMS, language: english });
 
 const AK47_ID = 4;
 const AWP_DRAGON_LORE_ID = 307;
+const BLOODHOUND_ID = 8569;
 const BROKEN_FANG_GLOVES_ID = 56;
 const FALLEN_COLOGNE_2015_ID = 2226;
+const GROUND_REBEL_ID = 8620;
+const LIL_AVA_ID = 13113;
 const STORAGE_UNIT_ID = 11262;
 // An id no `items.json` has ever published, standing in for one a catalog update took away.
 const RETIRED_ID = 999999;
@@ -158,6 +161,51 @@ test("an item a coercion had to change is reported by uid, and an untouched one 
 
     expect(inventory.get(0).wear).toBe(0.7);
     expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
+});
+
+// Writing a sticker's anchor in is canonicalisation, not repair: the document said nothing about
+// which anchor to use and the model picked one. Reporting it would name nearly every inventory
+// holding a sticker as one a load had to change, and the backfill reads the report to decide what
+// to rewrite.
+test("canonicalising an item is not a repair, and is not reported as one", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: {
+                0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
+                1: {
+                    id: STORAGE_UNIT_ID,
+                    storage: { 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } }
+                }
+            },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+
+    expect(inventory.loadReport?.repairedUids).toStrictEqual([]);
+    expect(inventory.get(0).stickers?.get(0)?.schema).toBe(0);
+});
+
+// The invariant the backfill routine depends on: it writes back whatever a load had to change, so
+// a load that changes something on data this package itself wrote would rewrite every row on every
+// run, and never stop.
+test("loading what an inventory stringified reports nothing to change", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify({
+            items: {
+                0: { id: AWP_DRAGON_LORE_ID, wear: 0.9, seed: 99999, nameTag: " bad name" },
+                1: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID }, 3: { id: FALLEN_COLOGNE_2015_ID } } },
+                2: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID, seed: 1e9 } } },
+                3: { id: STORAGE_UNIT_ID, nameTag: "My Storage Unit", storage: { 0: { id: RETIRED_ID } } },
+                4: { id: GROUND_REBEL_ID, patches: { 0: BLOODHOUND_ID, 99: BLOODHOUND_ID } }
+            },
+            version: CS2_INVENTORY_VERSION
+        })
+    );
+    const reloaded = CS2Inventory.load(inventory.stringify());
+
+    expect(reloaded.loadReport?.dropped).toStrictEqual([]);
+    expect(reloaded.loadReport?.repairedUids).toStrictEqual([]);
+    expect(reloaded.stringify()).toBe(inventory.stringify());
 });
 
 // Repair's trigger is "always", so vetted data gets the same coercions and the same drops — what
