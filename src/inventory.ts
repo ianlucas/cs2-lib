@@ -23,6 +23,7 @@ import {
     assertInventoryItem,
     assertKeychains,
     assertStickers,
+    checkStickerSchema,
     getNextStickerSchema,
     repairInventoryItem,
     snapStickerRotation,
@@ -740,7 +741,7 @@ export class CS2InventoryItem
         const result: RecordValue<CS2BaseInventoryItem["stickers"]>[] = [];
         for (const [key, sticker] of sorted) {
             let schema = sticker.schema ?? key;
-            if (schemaCount !== undefined && (!Number.isInteger(schema) || schema < 0 || schema >= schemaCount)) {
+            if (schemaCount !== undefined && !checkStickerSchema(schema, schemaCount)) {
                 schema = getNextStickerSchema(result, schemaCount);
             }
             result.push({ ...sticker, schema });

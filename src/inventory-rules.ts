@@ -24,39 +24,67 @@ import type { CS2BaseInventoryItem } from "./inventory-types.ts";
 import { CS2InventoryItem } from "./inventory.ts";
 import { type RecordValue, assert, clamp, isFactorPrecise, truncateToFactor } from "./utils.ts";
 
-function repairOffset(
-    value: number | undefined,
-    min: number | undefined,
-    max: number | undefined,
-    factor: number
-): number | undefined {
-    if (value === undefined || !Number.isFinite(value)) {
-        return undefined;
-    }
-    value = truncateToFactor(value, factor);
-    if (min !== undefined && value < min) {
-        return min;
-    }
-    if (max !== undefined && value > max) {
-        return max;
-    }
-    return value;
+/**
+ * One constrained attribute, written once and read two ways: `check` is what an `assert*` asserts,
+ * `repair` is the coercion `repairInventoryItem` applies. Every rule holds `check(repair(value))`,
+ * which is what lets repair and assert never drift apart.
+ */
+export interface CS2InventoryRule<T> {
+    check(value: T | undefined, item: CS2EconomyItem): boolean;
+    repair(value: T | undefined, item: CS2EconomyItem): T | undefined;
 }
 
-function repairStickerOffset(
-    value: number | undefined,
-    min: number | undefined,
-    max: number | undefined
-): number | undefined {
-    return repairOffset(value, min, max, CS2_STICKER_OFFSET_FACTOR);
+type CS2EconomyItemBound = (item: CS2EconomyItem) => number | undefined;
+
+// A numeric attribute quantized to a factor's grid and bounded by the catalog — the shape most of
+// the table has. A bound the catalog omits is unbounded on that side, not zero.
+function boundedRule(
+    factor: number,
+    getMinimum: CS2EconomyItemBound,
+    getMaximum: CS2EconomyItemBound
+): CS2InventoryRule<number> {
+    return {
+        check(value, item) {
+            if (value === undefined) {
+                return true;
+            }
+            const min = getMinimum(item);
+            const max = getMaximum(item);
+            return (
+                isFactorPrecise(value, factor) &&
+                (min === undefined || value >= min) &&
+                (max === undefined || value <= max)
+            );
+        },
+        repair(value, item) {
+            if (value === undefined || !Number.isFinite(value)) {
+                return undefined;
+            }
+            const min = getMinimum(item);
+            const max = getMaximum(item);
+            const truncated = truncateToFactor(value, factor);
+            return clamp(truncated, min ?? truncated, max ?? truncated);
+        }
+    };
 }
 
-function repairKeychainPosition(
-    value: number | undefined,
-    min: number | undefined,
-    max: number | undefined
-): number | undefined {
-    return repairOffset(value, min, max, CS2_KEYCHAIN_POSITION_FACTOR);
+type CS2EconomyItemRange = (item: CS2EconomyItem) => number;
+
+// A counted attribute: whole numbers inside a range the catalog always publishes.
+function wholeNumberRule(getMinimum: CS2EconomyItemRange, getMaximum: CS2EconomyItemRange): CS2InventoryRule<number> {
+    return {
+        check(value, item) {
+            return (
+                value === undefined ||
+                (Number.isInteger(value) && value >= getMinimum(item) && value <= getMaximum(item))
+            );
+        },
+        repair(value, item) {
+            return value !== undefined && Number.isFinite(value)
+                ? clamp(Math.trunc(value), getMinimum(item), getMaximum(item))
+                : undefined;
+        }
+    };
 }
 
 export function validateStickerRotation(rotation?: number): boolean {
@@ -72,6 +100,108 @@ export function snapStickerRotation(rotation: number): number {
     return Math.round(rotation / CS2_STICKER_ROTATION_STEP) * CS2_STICKER_ROTATION_STEP;
 }
 
+// The only rule the item plays no part in: the grid and the range are the game's, not the model's.
+const stickerRotationRule: CS2InventoryRule<number> = {
+    check: (rotation) => validateStickerRotation(rotation),
+    repair(rotation) {
+        if (rotation === undefined) {
+            return undefined;
+        }
+        let snapped = snapStickerRotation(rotation);
+        // The legacy 0-359 encoding; group 5 promotes the wrap to a migration and this branch goes
+        // away, leaving the constraint and nothing else.
+        if (snapped > CS2_MAX_STICKER_ROTATION) {
+            snapped -= 360;
+        }
+        return validateStickerRotation(snapped) ? snapped : undefined;
+    }
+};
+
+export type CS2InventoryRuleName =
+    | "itemCharges"
+    | "itemWear"
+    | "keychainPositionX"
+    | "keychainPositionY"
+    | "keychainPositionZ"
+    | "keychainSeed"
+    | "stickerRotation"
+    | "stickerSchema"
+    | "stickerWear"
+    | "stickerX"
+    | "stickerY";
+
+/**
+ * Every attribute the catalog constrains, each written once. `check*` and `assert*` read the `check`
+ * side, `repairInventoryItem` reads the `repair` side, and `src/inventory-rules.test.ts` holds them
+ * together with `check(repair(value))`.
+ */
+export const CS2_INVENTORY_RULES: Record<CS2InventoryRuleName, CS2InventoryRule<number>> = {
+    itemCharges: {
+        check: (charges, item) => item.economy.safeValidateCharges(charges, item),
+        repair(charges, item) {
+            return charges !== undefined && item.hasCharges() && Number.isFinite(charges)
+                ? clamp(Math.trunc(charges), CS2_MIN_CHARGES, item.getMaximumCharges())
+                : undefined;
+        }
+    },
+    itemWear: {
+        check: (wear, item) => item.economy.safeValidateWear(wear, item),
+        repair(wear, item) {
+            if (wear === undefined || !item.hasWear()) {
+                return undefined;
+            }
+            const clamped = clamp(wear, item.getMinimumWear(), item.getMaximumWear());
+            return item.economy.safeValidateWear(clamped, item) ? clamped : undefined;
+        }
+    },
+    keychainPositionX: boundedRule(
+        CS2_KEYCHAIN_POSITION_FACTOR,
+        (item) => item.getMinimumKeychainPositionX(),
+        (item) => item.getMaximumKeychainPositionX()
+    ),
+    keychainPositionY: boundedRule(
+        CS2_KEYCHAIN_POSITION_FACTOR,
+        (item) => item.getMinimumKeychainPositionY(),
+        (item) => item.getMaximumKeychainPositionY()
+    ),
+    keychainPositionZ: boundedRule(
+        CS2_KEYCHAIN_POSITION_FACTOR,
+        (item) => item.getMinimumKeychainPositionZ(),
+        (item) => item.getMaximumKeychainPositionZ()
+    ),
+    keychainSeed: wholeNumberRule(
+        () => CS2_MIN_KEYCHAIN_SEED,
+        () => CS2_MAX_KEYCHAIN_SEED
+    ),
+    stickerRotation: stickerRotationRule,
+    // Which anchor a sticker sits on is the one attribute a value on its own cannot settle: picking
+    // a free one needs the item's other stickers. So `repair` only drops what the model cannot
+    // render, and `stickersToArray` — which sees them all — assigns the replacement.
+    stickerSchema: {
+        check: (schema, item) => checkStickerSchema(schema, item.getStickerSchemaCount()),
+        repair: (schema, item) => (checkStickerSchema(schema, item.getStickerSchemaCount()) ? schema : undefined)
+    },
+    stickerWear: boundedRule(
+        CS2_STICKER_WEAR_FACTOR,
+        () => CS2_MIN_STICKER_WEAR,
+        () => CS2_MAX_STICKER_WEAR
+    ),
+    stickerX: boundedRule(
+        CS2_STICKER_OFFSET_FACTOR,
+        (item) => item.getMinimumStickerOffsetX(),
+        (item) => item.getMaximumStickerOffsetX()
+    ),
+    stickerY: boundedRule(
+        CS2_STICKER_OFFSET_FACTOR,
+        (item) => item.getMinimumStickerOffsetY(),
+        (item) => item.getMaximumStickerOffsetY()
+    )
+};
+
+export function checkStickerSchema(schema: number | undefined, schemaCount: number): boolean {
+    return schema === undefined || (Number.isInteger(schema) && schema >= 0 && schema < schemaCount);
+}
+
 export function getNextStickerSchema(
     stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[],
     schemaCount: number
@@ -85,145 +215,155 @@ export function getNextStickerSchema(
     return 0;
 }
 
+export function checkAddable(item: CS2EconomyItem): boolean {
+    return !item.isGloves() || item.isDefault === true || item.isBase !== true;
+}
+
 export function assertAddable(item: CS2EconomyItem): void {
-    if (item.isGloves()) {
-        assert(item.isDefault || !item.isBase);
+    assert(checkAddable(item));
+}
+
+export function checkStickers(
+    economy: CS2EconomyInstance,
+    stickers: CS2BaseInventoryItem["stickers"],
+    item: CS2EconomyItem
+): boolean {
+    if (stickers === undefined) {
+        return true;
     }
+    const entries = Object.values(stickers);
+    if (entries.length > CS2_MAX_STICKERS || !item.hasStickers()) {
+        return false;
+    }
+    for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
+        if (!economy.items.has(stickerId) || !economy.getById(stickerId).isSticker()) {
+            return false;
+        }
+        if (
+            !CS2_INVENTORY_RULES.stickerWear.check(wear, item) ||
+            !CS2_INVENTORY_RULES.stickerRotation.check(rotation, item) ||
+            !CS2_INVENTORY_RULES.stickerX.check(x, item) ||
+            !CS2_INVENTORY_RULES.stickerY.check(y, item) ||
+            !CS2_INVENTORY_RULES.stickerSchema.check(schema, item)
+        ) {
+            return false;
+        }
+    }
+    return true;
 }
 
 export function assertStickers(
     economy: CS2EconomyInstance,
-    stickers?: CS2BaseInventoryItem["stickers"],
-    item?: CS2EconomyItem
+    stickers: CS2BaseInventoryItem["stickers"],
+    item: CS2EconomyItem
 ): void {
-    if (stickers === undefined) {
-        return;
+    assert(checkStickers(economy, stickers, item));
+}
+
+export function checkKeychains(
+    economy: CS2EconomyInstance,
+    keychains: CS2BaseInventoryItem["keychains"],
+    item: CS2EconomyItem
+): boolean {
+    if (keychains === undefined) {
+        return true;
     }
-    const entries = Object.values(stickers);
-    assert(entries.length <= CS2_MAX_STICKERS);
-    assert(item === undefined || item.hasStickers());
-    for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
-        economy.getById(stickerId).expectSticker();
-        if (wear !== undefined) {
-            assert(isFactorPrecise(wear, CS2_STICKER_WEAR_FACTOR));
-            assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
+    const entries = Object.entries(keychains);
+    if (entries.length > CS2_MAX_KEYCHAINS || !item.hasKeychains()) {
+        return false;
+    }
+    for (const [key, { id: keychainId, seed, x, y, z }] of entries) {
+        const slot = parseInt(key, 10);
+        if (slot < 0 || slot > CS2_MAX_KEYCHAINS - 1) {
+            return false;
         }
-        if (rotation !== undefined) {
-            assert(validateStickerRotation(rotation));
+        if (!economy.items.has(keychainId) || !economy.getById(keychainId).isKeychain()) {
+            return false;
         }
-        if (x !== undefined) {
-            assert(isFactorPrecise(x, CS2_STICKER_OFFSET_FACTOR));
-            if (item !== undefined) {
-                const min = item.getMinimumStickerOffsetX();
-                const max = item.getMaximumStickerOffsetX();
-                assert(min === undefined || x >= min);
-                assert(max === undefined || x <= max);
-            }
-        }
-        if (y !== undefined) {
-            assert(isFactorPrecise(y, CS2_STICKER_OFFSET_FACTOR));
-            if (item !== undefined) {
-                const min = item.getMinimumStickerOffsetY();
-                const max = item.getMaximumStickerOffsetY();
-                assert(min === undefined || y >= min);
-                assert(max === undefined || y <= max);
-            }
-        }
-        if (schema !== undefined) {
-            assert(Number.isInteger(schema));
-            assert(schema >= 0 && schema < (item?.getStickerSchemaCount() ?? CS2_MAX_STICKERS));
+        if (
+            !CS2_INVENTORY_RULES.keychainSeed.check(seed, item) ||
+            !CS2_INVENTORY_RULES.keychainPositionX.check(x, item) ||
+            !CS2_INVENTORY_RULES.keychainPositionY.check(y, item) ||
+            !CS2_INVENTORY_RULES.keychainPositionZ.check(z, item)
+        ) {
+            return false;
         }
     }
+    return true;
 }
 
 export function assertKeychains(
     economy: CS2EconomyInstance,
-    keychains?: CS2BaseInventoryItem["keychains"],
-    item?: CS2EconomyItem
+    keychains: CS2BaseInventoryItem["keychains"],
+    item: CS2EconomyItem
 ): void {
-    if (keychains === undefined) {
-        return;
+    assert(checkKeychains(economy, keychains, item));
+}
+
+export function checkPatches(
+    economy: CS2EconomyInstance,
+    patches: CS2BaseInventoryItem["patches"],
+    item: CS2EconomyItem
+): boolean {
+    if (patches === undefined) {
+        return true;
     }
-    const entries = Object.entries(keychains);
-    assert(entries.length <= CS2_MAX_KEYCHAINS);
-    assert(item === undefined || item.hasKeychains());
-    for (const [key, { id: keychainId, seed, x, y, z }] of entries) {
+    if (!item.isAgent()) {
+        return false;
+    }
+    for (const [key, patchId] of Object.entries(patches)) {
         const slot = parseInt(key, 10);
-        assert(slot >= 0 && slot <= CS2_MAX_KEYCHAINS - 1);
-        economy.getById(keychainId).expectKeychain();
-        if (seed !== undefined) {
-            assert(Number.isFinite(seed));
-            assert(Number.isInteger(seed));
-            assert(seed >= CS2_MIN_KEYCHAIN_SEED && seed <= CS2_MAX_KEYCHAIN_SEED);
+        if (slot < 0 || slot > CS2_MAX_PATCHES - 1) {
+            return false;
         }
-        if (x !== undefined) {
-            assert(Number.isFinite(x));
-            assert(isFactorPrecise(x, CS2_KEYCHAIN_POSITION_FACTOR));
-            if (item !== undefined) {
-                const min = item.getMinimumKeychainPositionX();
-                const max = item.getMaximumKeychainPositionX();
-                assert(min === undefined || x >= min);
-                assert(max === undefined || x <= max);
-            }
-        }
-        if (y !== undefined) {
-            assert(Number.isFinite(y));
-            assert(isFactorPrecise(y, CS2_KEYCHAIN_POSITION_FACTOR));
-            if (item !== undefined) {
-                const min = item.getMinimumKeychainPositionY();
-                const max = item.getMaximumKeychainPositionY();
-                assert(min === undefined || y >= min);
-                assert(max === undefined || y <= max);
-            }
-        }
-        if (z !== undefined) {
-            assert(Number.isFinite(z));
-            assert(isFactorPrecise(z, CS2_KEYCHAIN_POSITION_FACTOR));
-            if (item !== undefined) {
-                const min = item.getMinimumKeychainPositionZ();
-                const max = item.getMaximumKeychainPositionZ();
-                assert(min === undefined || z >= min);
-                assert(max === undefined || z <= max);
-            }
+        if (!economy.items.has(patchId) || !economy.getById(patchId).isPatch()) {
+            return false;
         }
     }
+    return true;
 }
 
 export function assertPatches(
     economy: CS2EconomyInstance,
-    patches?: CS2BaseInventoryItem["patches"],
-    item?: CS2EconomyItem
+    patches: CS2BaseInventoryItem["patches"],
+    item: CS2EconomyItem
 ): void {
-    if (patches === undefined) {
-        return;
-    }
-    assert(item === undefined || item.isAgent());
-    for (const [key, patchId] of Object.entries(patches)) {
-        const slot = parseInt(key, 10);
-        assert(slot >= 0 && slot <= CS2_MAX_PATCHES - 1);
-        assert(patchId === undefined || economy.getById(patchId).isPatch());
-    }
+    assert(checkPatches(economy, patches, item));
 }
 
-export function assertInventoryItem(
+export function checkInventoryItem(
     economy: CS2EconomyInstance,
     { charges, id, keychains, nameTag, patches, seed, statTrak, stickers, wear }: CS2BaseInventoryItem
-): void {
+): boolean {
+    if (!economy.items.has(id)) {
+        return false;
+    }
     const item = economy.getById(id);
-    economy.validateWear(wear, item);
-    economy.validateSeed(seed, item);
-    economy.validateNameTag(nameTag, item);
-    economy.validateStatTrak(statTrak, item);
-    economy.validateCharges(charges, item);
-    assertAddable(item);
-    assertPatches(economy, patches, item);
-    assertStickers(economy, stickers, item);
-    assertKeychains(economy, keychains, item);
+    return (
+        CS2_INVENTORY_RULES.itemWear.check(wear, item) &&
+        CS2_INVENTORY_RULES.itemCharges.check(charges, item) &&
+        economy.safeValidateSeed(seed, item) &&
+        economy.safeValidateNameTag(nameTag, item) &&
+        economy.safeValidateStatTrak(statTrak, item) &&
+        checkAddable(item) &&
+        checkPatches(economy, patches, item) &&
+        checkStickers(economy, stickers, item) &&
+        checkKeychains(economy, keychains, item)
+    );
 }
 
-export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): void {
+export function assertInventoryItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): void {
+    assert(checkInventoryItem(economy, item));
+}
+
+/**
+ * Coerces every attribute the catalog constrains, then reports whether what is left is an item
+ * `checkInventoryItem` accepts. A `false` return is the signal to drop the item: either its id has
+ * left the catalog, or a rule rejects a value no coercion reaches.
+ */
+export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseInventoryItem): boolean {
     if (!economy.items.has(item.id)) {
-        return;
+        return false;
     }
     const economyItem = economy.getById(item.id);
     if (item.patches !== undefined) {
@@ -246,24 +386,12 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
                     delete item.stickers[slot];
                     continue;
                 }
-                if (sticker.rotation !== undefined) {
-                    let rotation = snapStickerRotation(sticker.rotation);
-                    if (rotation > CS2_MAX_STICKER_ROTATION) {
-                        rotation -= 360;
-                    }
-                    sticker.rotation = validateStickerRotation(rotation) ? rotation : undefined;
-                }
-                sticker.x = repairStickerOffset(
-                    sticker.x,
-                    economyItem.getMinimumStickerOffsetX(),
-                    economyItem.getMaximumStickerOffsetX()
-                );
-                sticker.y = repairStickerOffset(
-                    sticker.y,
-                    economyItem.getMinimumStickerOffsetY(),
-                    economyItem.getMaximumStickerOffsetY()
-                );
+                sticker.wear = CS2_INVENTORY_RULES.stickerWear.repair(sticker.wear, economyItem);
+                sticker.rotation = CS2_INVENTORY_RULES.stickerRotation.repair(sticker.rotation, economyItem);
+                sticker.x = CS2_INVENTORY_RULES.stickerX.repair(sticker.x, economyItem);
+                sticker.y = CS2_INVENTORY_RULES.stickerY.repair(sticker.y, economyItem);
             }
+            // Drops the schemas the model cannot render and hands out free ones in their place.
             item.stickers = CS2InventoryItem.stickersFromArray(
                 CS2InventoryItem.stickersToArray(item.stickers, economyItem.getStickerSchemaCount())
             );
@@ -278,44 +406,23 @@ export function repairInventoryItem(economy: CS2EconomyInstance, item: CS2BaseIn
                     delete item.keychains[slot];
                     continue;
                 }
-                keychain.x = repairKeychainPosition(
-                    keychain.x,
-                    economyItem.getMinimumKeychainPositionX(),
-                    economyItem.getMaximumKeychainPositionX()
-                );
-                keychain.y = repairKeychainPosition(
-                    keychain.y,
-                    economyItem.getMinimumKeychainPositionY(),
-                    economyItem.getMaximumKeychainPositionY()
-                );
-                keychain.z = repairKeychainPosition(
-                    keychain.z,
-                    economyItem.getMinimumKeychainPositionZ(),
-                    economyItem.getMaximumKeychainPositionZ()
-                );
+                keychain.seed = CS2_INVENTORY_RULES.keychainSeed.repair(keychain.seed, economyItem);
+                keychain.x = CS2_INVENTORY_RULES.keychainPositionX.repair(keychain.x, economyItem);
+                keychain.y = CS2_INVENTORY_RULES.keychainPositionY.repair(keychain.y, economyItem);
+                keychain.z = CS2_INVENTORY_RULES.keychainPositionZ.repair(keychain.z, economyItem);
             }
         }
     }
-    if (!economyItem.hasCharges()) {
-        item.charges = undefined;
-    } else if (item.charges !== undefined) {
-        item.charges = Number.isFinite(item.charges)
-            ? clamp(Math.trunc(item.charges), CS2_MIN_CHARGES, economyItem.getMaximumCharges())
-            : undefined;
-    } else if (
+    item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
+    // Generous on purpose: an equipped graffiti with no charges left is handed the default set
+    // rather than unequipped, which is the policy `equip()` already assumes.
+    if (
+        item.charges === undefined &&
         economyItem.isGraffiti() &&
         (item.equipped === true || item.equippedCT === true || item.equippedT === true)
     ) {
         item.charges = economyItem.getDefaultCharges();
     }
-    if (item.wear !== undefined) {
-        if (!economyItem.hasWear()) {
-            item.wear = undefined;
-        } else {
-            item.wear = clamp(item.wear, economyItem.getMinimumWear(), economyItem.getMaximumWear());
-            if (!economy.safeValidateWear(item.wear, economyItem)) {
-                item.wear = undefined;
-            }
-        }
-    }
+    item.wear = CS2_INVENTORY_RULES.itemWear.repair(item.wear, economyItem);
+    return checkInventoryItem(economy, item);
 }
