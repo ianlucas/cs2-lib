@@ -301,8 +301,21 @@ test("bytes that are not JSON are refused as a decode failure", () => {
     expect(() => CS2Inventory.load("")).toThrow(CS2InventoryDecodeError);
 });
 
+// A document has to have the shape its own version stamp implies, and an object carrying no stamp
+// reads as version 0, which is a bare array. Without that gate any object at all reaches the first
+// rung, and bytes that were never an inventory come back as a migration that failed.
 test("JSON that is not an inventory document is refused as a decode failure", () => {
-    for (const raw of ["null", "5", '"an inventory"', '{"items":5,"version":2}', '{"items":null,"version":2}']) {
+    for (const raw of [
+        "null",
+        "5",
+        '"an inventory"',
+        "{}",
+        '{"foo":1}',
+        '{"items":{}}',
+        '{"items":{},"version":0}',
+        '{"items":5,"version":2}',
+        '{"items":null,"version":2}'
+    ]) {
         expect(() => CS2Inventory.load(raw)).toThrow(CS2InventoryDecodeError);
     }
 });
@@ -315,10 +328,21 @@ test("a document stamped above the ladder's top rung is refused, never silently 
     expect(() => CS2Inventory.load(raw)).toThrow(CS2InventoryVersionError);
 });
 
-// A document carrying no version is read as version 0, which is an array of items; an object is
-// something the version 1 rung cannot walk at all.
+// An empty inventory is a real thing to have stored, and version 0 wrote it as an empty array. It
+// has to survive the shape gate, which is otherwise the one place an inventory with nothing in it
+// looks the same as bytes with nothing in them.
+test("an empty version 0 inventory loads as an inventory holding nothing", () => {
+    const inventory = CS2Inventory.load("[]");
+
+    expect(inventory.size()).toBe(0);
+    expect(inventory.loadReport?.migratedFrom).toBe(0);
+});
+
+// The gate reads the document, not the items inside it, so an array whose elements are not items is
+// what still reaches a rung and kills it — a rung failing on a document it should have been able to
+// walk, which is the one failure a caller can do nothing about but is owed the reason for.
 test("a rung that throws is reported as a migration failure, with the original error kept", () => {
-    const raw = JSON.stringify({ items: { 0: { id: AK47_ID } } });
+    const raw = "[null]";
 
     expect(() => CS2Inventory.load(raw)).toThrow(CS2InventoryMigrationError);
     try {

@@ -60,7 +60,7 @@ export function decodeInventoryData(raw: string, economy: CS2EconomyInstance = C
     } catch (cause) {
         throw new CS2InventoryDecodeError("inventory is not valid JSON", { cause });
     }
-    // Version 0 is a bare array, so the only shape the ladder's input has to have is "an object".
+    // An array is an object too, which is as much as can be said before the version stamp is read.
     if (typeof value !== "object" || value === null) {
         throw new CS2InventoryDecodeError("inventory is not an object");
     }
@@ -69,6 +69,17 @@ export function decodeInventoryData(raw: string, economy: CS2EconomyInstance = C
         throw new CS2InventoryVersionError(
             `inventory version ${version} is outside the readable range ${CS2_MIN_INVENTORY_VERSION}-${CS2_INVENTORY_VERSION}`
         );
+    }
+    // A document has to be the shape its own stamp implies before a rung is allowed to touch it.
+    // Otherwise any object at all reads as an unstamped version 0, reaches the rung that expects an
+    // array, and comes back as a migration that failed — when what it is is bytes that were never an
+    // inventory, which is a caller's problem to fix rather than this package's.
+    if (version === 0) {
+        if (!Array.isArray(value)) {
+            throw new CS2InventoryDecodeError("inventory is not an array of items");
+        }
+    } else if (typeof value.items !== "object" || value.items === null) {
+        throw new CS2InventoryDecodeError("inventory has no items");
     }
     let migrated = false;
     for (const migration of migrations) {
@@ -83,9 +94,6 @@ export function decodeInventoryData(raw: string, economy: CS2EconomyInstance = C
             }
             migrated = true;
         }
-    }
-    if (typeof value.items !== "object" || value.items === null) {
-        throw new CS2InventoryDecodeError("inventory has no items");
     }
     return { data: value, migratedFrom: migrated ? version : undefined };
 }
