@@ -7,6 +7,7 @@ export * from "./economy-constants.ts";
 export * from "./economy-container.ts";
 export * from "./economy-types.ts";
 export * from "./economy.ts";
+export * from "./inventory-format.ts";
 export * from "./inventory-migrations/index.ts";
 export * from "./inventory-rules.ts";
 export * from "./inventory-types.ts";

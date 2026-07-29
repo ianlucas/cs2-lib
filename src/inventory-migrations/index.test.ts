@@ -5,9 +5,10 @@
 
 import { expect, test } from "vitest";
 import { CS2Economy } from "../economy.ts";
+import { CS2InventoryDecodeError, decodeInventoryData } from "../inventory-format.ts";
 import { CS2_ITEMS } from "../items.ts";
 import { english } from "../translations/english.ts";
-import { CS2_INVENTORY_VERSION, CS2_MIN_INVENTORY_VERSION, migrations, resolveInventoryData } from "./index.ts";
+import { CS2_INVENTORY_VERSION, CS2_MIN_INVENTORY_VERSION, migrations } from "./index.ts";
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
@@ -36,7 +37,7 @@ test("every rung describes the shape change it performs", () => {
 });
 
 test("version 0 stores items as an array; version 1 keys them by uid", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify([
             { id: AK47_ID, uid: 0 },
             { id: AWP_ID, uid: 3 }
@@ -54,7 +55,7 @@ test("version 0 stores items as an array; version 1 keys them by uid", () => {
 });
 
 test("version 1 renames the lowercased version 0 fields", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify([
             {
                 caseid: 9425,
@@ -67,7 +68,7 @@ test("version 1 renames the lowercased version 0 fields", () => {
         ])
     );
 
-    expect(data?.items[0]).toStrictEqual({
+    expect(data.items[0]).toStrictEqual({
         containerId: 9425,
         id: AK47_ID,
         nameTag: "my rifle",
@@ -77,7 +78,7 @@ test("version 1 renames the lowercased version 0 fields", () => {
 });
 
 test("version 1 pairs the two sticker arrays into a record keyed by slot, dropping empty slots", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify([
             {
                 id: AK47_ID,
@@ -88,7 +89,7 @@ test("version 1 pairs the two sticker arrays into a record keyed by slot, droppi
         ])
     );
 
-    expect(data?.items[0]).toStrictEqual({
+    expect(data.items[0]).toStrictEqual({
         id: AK47_ID,
         stickers: {
             1: { id: FALLEN_COLOGNE_2015_ID, wear: 0.5 },
@@ -98,7 +99,7 @@ test("version 1 pairs the two sticker arrays into a record keyed by slot, droppi
 });
 
 test("version 1 applies the same conversion to the items inside a storage unit", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify([
             {
                 id: STORAGE_UNIT_ID,
@@ -116,7 +117,7 @@ test("version 1 applies the same conversion to the items inside a storage unit",
         ])
     );
 
-    expect(data?.items[0]).toStrictEqual({
+    expect(data.items[0]).toStrictEqual({
         id: STORAGE_UNIT_ID,
         nameTag: "my storage",
         storage: {
@@ -129,20 +130,20 @@ test("version 1 applies the same conversion to the items inside a storage unit",
 });
 
 test("version 1 unequips patches, which version 0 wrongly allowed to be equipped", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify([
             { equipped: true, equippedCT: true, equippedT: true, id: BLOODHOUND_PATCH_ID, uid: 0 },
             { equipped: true, equippedCT: true, equippedT: true, id: AK47_ID, uid: 1 }
         ])
     );
 
-    expect(data?.items[0]).toStrictEqual({
+    expect(data.items[0]).toStrictEqual({
         equipped: undefined,
         equippedCT: undefined,
         equippedT: undefined,
         id: BLOODHOUND_PATCH_ID
     });
-    expect(data?.items[1]).toStrictEqual({
+    expect(data.items[1]).toStrictEqual({
         equipped: true,
         equippedCT: true,
         equippedT: true,
@@ -151,7 +152,7 @@ test("version 1 unequips patches, which version 0 wrongly allowed to be equipped
 });
 
 test("version 2 wraps the upper half of the legacy 0-359 sticker rotation onto its negative equivalent", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify({
             items: {
                 0: {
@@ -168,17 +169,17 @@ test("version 2 wraps the upper half of the legacy 0-359 sticker rotation onto i
         })
     );
 
-    expect(data?.items[0]?.stickers).toStrictEqual({
+    expect(data.items[0]?.stickers).toStrictEqual({
         0: { id: FALLEN_COLOGNE_2015_ID, rotation: -90 },
         1: { id: FALLEN_COLOGNE_2015_ID, rotation: -1 },
         2: { id: FALLEN_COLOGNE_2015_ID, rotation: -179 },
         3: { id: FALLEN_COLOGNE_2015_ID, rotation: -0.5 }
     });
-    expect(data?.version).toBe(2);
+    expect(data.version).toBe(2);
 });
 
 test("version 2 leaves an angle the two encodings already agree on exactly where it is", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify({
             items: {
                 0: {
@@ -196,7 +197,7 @@ test("version 2 leaves an angle the two encodings already agree on exactly where
         })
     );
 
-    expect(data?.items[0]?.stickers).toStrictEqual({
+    expect(data.items[0]?.stickers).toStrictEqual({
         0: { id: FALLEN_COLOGNE_2015_ID, rotation: 0 },
         1: { id: FALLEN_COLOGNE_2015_ID, rotation: 90.5 },
         2: { id: FALLEN_COLOGNE_2015_ID, rotation: 180 }
@@ -204,18 +205,18 @@ test("version 2 leaves an angle the two encodings already agree on exactly where
 });
 
 test("version 2 snaps onto the half-degree grid before wrapping, so an off-grid legacy angle converts too", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify({
             items: { 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, rotation: 270.7 } } } },
             version: 1
         })
     );
 
-    expect(data?.items[0]?.stickers?.[0]?.rotation).toBe(-89.5);
+    expect(data.items[0]?.stickers?.[0]?.rotation).toBe(-89.5);
 });
 
 test("version 2 wraps the stickers on an item sitting inside a storage unit", () => {
-    const data = resolveInventoryData(
+    const { data } = decodeInventoryData(
         JSON.stringify({
             items: {
                 0: {
@@ -232,18 +233,24 @@ test("version 2 wraps the stickers on an item sitting inside a storage unit", ()
         })
     );
 
-    expect(data?.items[0]?.storage?.[7]?.stickers?.[0]?.rotation).toBe(-90);
+    expect(data.items[0]?.storage?.[7]?.stickers?.[0]?.rotation).toBe(-90);
 });
 
-test("a document already at the current version keeps its contents", () => {
-    const data = { items: { 0: { id: AK47_ID, nameTag: "my rifle" } }, version: CS2_INVENTORY_VERSION };
+test("a document already at the current version keeps its contents, and reports no rung ran", () => {
+    const stored = { items: { 0: { id: AK47_ID, nameTag: "my rifle" } }, version: CS2_INVENTORY_VERSION };
 
-    expect(resolveInventoryData(JSON.stringify(data))).toStrictEqual(data);
+    const { data, migratedFrom } = decodeInventoryData(JSON.stringify(stored));
+
+    expect(data).toStrictEqual(stored);
+    expect(migratedFrom).toBeUndefined();
 });
 
-// Swallowing everything is what group 6 replaces with the typed `CS2InventoryError` hierarchy.
-test("input that cannot be read as a document resolves to undefined", () => {
-    expect(resolveInventoryData(undefined)).toBeUndefined();
-    expect(resolveInventoryData("")).toBeUndefined();
-    expect(resolveInventoryData("not json")).toBeUndefined();
+test("the version a document arrived at is the one the report names", () => {
+    expect(decodeInventoryData(JSON.stringify([{ id: AK47_ID, uid: 0 }])).migratedFrom).toBe(0);
+    expect(decodeInventoryData(JSON.stringify({ items: {}, version: 1 })).migratedFrom).toBe(1);
+});
+
+test("input that cannot be read as a document is refused rather than swallowed", () => {
+    expect(() => decodeInventoryData("")).toThrow(CS2InventoryDecodeError);
+    expect(() => decodeInventoryData("not json")).toThrow(CS2InventoryDecodeError);
 });

@@ -19,6 +19,7 @@ import {
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
+import { type CS2InventoryLoadReport, decodeInventoryData } from "./inventory-format.ts";
 import {
     assertInventoryItem,
     assertKeychains,
@@ -35,7 +36,7 @@ import type {
     CS2InventoryOptions,
     CS2InventorySpec
 } from "./inventory-types.ts";
-import { CS2_INVENTORY_VERSION, resolveInventoryData } from "./inventory-migrations/index.ts";
+import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
 import { CS2Team } from "./teams.ts";
 import { type Interface, type MapValue, type RecordValue, assert, ensure, roundToFactor } from "./utils.ts";
 
@@ -75,24 +76,37 @@ export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
     readonly options: Readonly<CS2InventoryOptions>;
+    /** What loading `data` had to change. `undefined` on an inventory that started empty. */
+    readonly loadReport: CS2InventoryLoadReport | undefined;
 
-    static parse(stringValue: string | undefined | null, economy?: CS2EconomyInstance): CS2InventoryData | undefined {
-        return resolveInventoryData(stringValue ?? undefined, economy);
+    /**
+     * The entry point for stored or cached bytes: decode, run the ladder, repair, reconcile,
+     * construct. It throws `CS2InventoryError` and never returns `undefined`, so a caller that would
+     * rather have nothing than an exception wraps it in `safe()` and says so.
+     *
+     * Data that a server has already vouched for goes through the constructor instead — re-running
+     * the ladder on it means a second reading of the format's semantics, possibly from a different
+     * version of this package than the one that wrote it.
+     */
+    static load(raw: string, options: Partial<CS2InventorySpec> = {}): CS2Inventory {
+        const economy = options.economy ?? CS2Economy;
+        const { data, migratedFrom } = decodeInventoryData(raw, economy);
+        const inventory = new CS2Inventory({ ...options, data, economy });
+        // The ladder runs before a single item exists, so which rung ran is the one thing the
+        // constructor's report cannot observe for itself.
+        ensure(inventory.loadReport).migratedFrom = migratedFrom;
+        return inventory;
     }
 
     constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec> = {}) {
         this.economy = economy ?? CS2Economy;
-        this.items = data !== undefined ? this.toInventoryItems(data.items) : new Map();
+        const report: CS2InventoryLoadReport = { migratedFrom: undefined, dropped: [], repairedUids: [] };
+        this.items = data !== undefined ? this.toInventoryItems(data.items, report) : new Map();
+        this.loadReport = data !== undefined ? report : undefined;
         this.options = {
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
-    }
-
-    // Kept as a delegate while `CS2InventoryItem` still reaches back through the inventory to
-    // validate; group 6 moves those call sites onto `assertInventoryItem` directly.
-    public validateBaseInventoryItem(item: CS2BaseInventoryItem): void {
-        assertInventoryItem(this.economy, item);
     }
 
     private reconcileChargeableItems(items: Record<number, CS2BaseInventoryItem>): void {
@@ -135,18 +149,33 @@ export class CS2Inventory {
         survivor.updatedAt = getTimestamp();
     }
 
-    private toInventoryItems(items: Record<number, CS2BaseInventoryItem>): Map<number, CS2InventoryItem> {
-        for (const value of Object.values(items)) {
-            repairInventoryItem(this.economy, value);
+    private toInventoryItems(
+        items: Record<number, CS2BaseInventoryItem>,
+        report: CS2InventoryLoadReport
+    ): Map<number, CS2InventoryItem> {
+        for (const [key, base] of Object.entries(items)) {
+            const uid = parseInt(key, 10);
+            // Repair coerces in place, so the only way to tell a coerced item from an untouched one
+            // is to hold the document it arrived as next to the one it became.
+            const before = JSON.stringify(base);
+            if (!repairInventoryItem(this.economy, base)) {
+                // Two failures the caller reads differently: a catalog update took the item away, or
+                // a rule rejects a value no coercion reaches — a gap in the rule table.
+                const reason = this.economy.items.has(base.id) ? "unrepairable" : "unknown-item";
+                report.dropped.push({ uid, id: base.id, reason });
+                delete items[uid];
+                continue;
+            }
+            if (JSON.stringify(base) !== before) {
+                report.repairedUids.push(uid);
+            }
         }
         this.reconcileChargeableItems(items);
         return new Map(
-            Object.entries(items)
-                .filter(([, { id }]) => this.economy.items.has(id))
-                .map(([key, value]) => {
-                    const uid = parseInt(key, 10);
-                    return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
-                })
+            Object.entries(items).map(([key, value]) => {
+                const uid = parseInt(key, 10);
+                return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
+            })
         );
     }
 
@@ -709,7 +738,9 @@ export class CS2InventoryItem
         { economy, item, language }: CS2EconomyItem
     ) {
         super(economy, item, language);
-        inventory.validateBaseInventoryItem(baseInventoryItem);
+        // The invariant guard. `load` repairs and drops before it gets here, so on that path this is
+        // unreachable; what it still protects is everyone who builds an item directly.
+        assertInventoryItem(this.economy, baseInventoryItem);
         Object.assign(this, baseInventoryItem);
         this.assign(baseInventoryItem);
     }
@@ -719,7 +750,7 @@ export class CS2InventoryItem
         for (const source of sources) {
             Object.assign(merged, source);
         }
-        this.inventory.validateBaseInventoryItem(merged);
+        assertInventoryItem(this.economy, merged);
         for (const source of sources) {
             Object.assign(this, source);
             this.assign(source);

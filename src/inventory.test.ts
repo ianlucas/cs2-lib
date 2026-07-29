@@ -16,7 +16,7 @@ import {
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
-import { CS2_INVENTORY_VERSION, resolveInventoryData } from "./inventory-migrations/index.ts";
+import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
 import { CS2Inventory } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
@@ -62,10 +62,8 @@ const CHARM_DETACHMENT_PACK_ID = 12451;
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
-// What a stored document goes through on its way in: the ladder, then the constructor. Group 6
-// folds both into `CS2Inventory.load(JSON.stringify(data))`.
 function loadInventory(data: unknown): CS2Inventory {
-    return new CS2Inventory({ data: ensure(resolveInventoryData(JSON.stringify(data))) });
+    return CS2Inventory.load(JSON.stringify(data));
 }
 
 describe("CS2Inventory methods", () => {
@@ -1058,7 +1056,7 @@ describe("CS2Inventory methods", () => {
                         }
                     }
                 },
-                version: 1
+                version: CS2_INVENTORY_VERSION
             }
         });
         expect(inventory.size()).toBe(1);
@@ -1484,7 +1482,7 @@ describe("charges", () => {
         inventory.add({ id: GRAFFITI_ACE_ID });
         inventory.unsealItem(1);
         inventory.consumeItemCharges(1, 8);
-        const restored = new CS2Inventory({ data: ensure(CS2Inventory.parse(inventory.stringify())) });
+        const restored = CS2Inventory.load(inventory.stringify());
         expect(restored.get(0).isSealed()).toBe(true);
         expect(restored.get(1).getCharges()).toBe(42);
     });

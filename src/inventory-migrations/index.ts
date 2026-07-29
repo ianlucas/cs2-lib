@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CS2Economy, type CS2EconomyInstance } from "../economy.ts";
-import type { CS2InventoryData } from "../inventory-types.ts";
+import type { CS2EconomyInstance } from "../economy.ts";
 import { assert, ensure } from "../utils.ts";
 import { migration as v1 } from "./v1.ts";
 import { migration as v2 } from "./v2.ts";
@@ -43,24 +42,3 @@ export const CS2_INVENTORY_VERSION: number = ensure(migrations.at(-1)).to;
  * stored document sits below the floor; until then every version down to 0 stays supported.
  */
 export const CS2_MIN_INVENTORY_VERSION = 0;
-
-export function resolveInventoryData(
-    stringValue?: string,
-    economy: CS2EconomyInstance = CS2Economy
-): CS2InventoryData | undefined {
-    try {
-        if (!stringValue) {
-            return undefined;
-        }
-        let value = JSON.parse(stringValue);
-        const version = value.version ?? 0;
-        for (const migration of migrations) {
-            if (migration.to > version) {
-                value = migration.apply(value, economy);
-            }
-        }
-        return value;
-    } catch {
-        return undefined;
-    }
-}
