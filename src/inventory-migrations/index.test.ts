@@ -18,6 +18,8 @@ const AWP_ID = 6;
 const BLOODHOUND_PATCH_ID = 8569;
 const FALLEN_COLOGNE_2015_ID = 2226;
 const STORAGE_UNIT_ID = 11262;
+// An id no `items.json` has ever published, standing in for one a catalog update took away.
+const RETIRED_ID = 999999;
 
 test("the ladder is the single source of the format's version numbers", () => {
     expect(CS2_INVENTORY_VERSION).toBe(2);
@@ -149,6 +151,22 @@ test("version 1 unequips patches, which version 0 wrongly allowed to be equipped
         equippedT: true,
         id: AK47_ID
     });
+});
+
+// Version 0 documents are the oldest, so they are the likeliest to hold an id a catalog update has
+// since taken away — and asking the catalog about one is what the rung does to unequip patches.
+// Catalog drift costs an item, never a document: the item survives the ladder unchanged and repair
+// is what drops it.
+test("version 1 leaves an equipped item whose id left the catalog for repair to drop", () => {
+    const { data } = decodeInventoryData(
+        JSON.stringify([
+            { equipped: true, id: RETIRED_ID, uid: 0 },
+            { equipped: true, id: AK47_ID, uid: 1 }
+        ])
+    );
+
+    expect(data.items[0]).toStrictEqual({ equipped: true, id: RETIRED_ID });
+    expect(data.items[1]).toStrictEqual({ equipped: true, id: AK47_ID });
 });
 
 test("version 2 wraps the upper half of the legacy 0-359 sticker rotation onto its negative equivalent", () => {

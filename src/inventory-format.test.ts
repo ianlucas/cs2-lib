@@ -315,10 +315,10 @@ test("a document stamped above the ladder's top rung is refused, never silently 
     expect(() => CS2Inventory.load(raw)).toThrow(CS2InventoryVersionError);
 });
 
-// The version 1 rung asks the catalog whether an item is a patch before it unequips it, so an id
-// that has since left `items.json` makes the rung itself throw.
+// A document carrying no version is read as version 0, which is an array of items; an object is
+// something the version 1 rung cannot walk at all.
 test("a rung that throws is reported as a migration failure, with the original error kept", () => {
-    const raw = JSON.stringify([{ equipped: true, id: RETIRED_ID, uid: 0 }]);
+    const raw = JSON.stringify({ items: { 0: { id: AK47_ID } } });
 
     expect(() => CS2Inventory.load(raw)).toThrow(CS2InventoryMigrationError);
     try {
@@ -326,6 +326,22 @@ test("a rung that throws is reported as a migration failure, with the original e
     } catch (error) {
         expect((error as CS2InventoryMigrationError).cause).toBeInstanceOf(Error);
     }
+});
+
+// Catalog drift is an item-level loss by design, and a version 0 document is the likeliest to be
+// holding an id that drifted. The rung leaves it alone; repair is what drops it, reported.
+test("a version 0 document holding an equipped id that left the catalog loses the item, not itself", () => {
+    const inventory = CS2Inventory.load(
+        JSON.stringify([
+            { equipped: true, id: RETIRED_ID, uid: 0 },
+            { equipped: true, id: AK47_ID, uid: 1 }
+        ])
+    );
+
+    expect(inventory.size()).toBe(1);
+    expect(inventory.get(1).id).toBe(AK47_ID);
+    expect(inventory.loadReport?.migratedFrom).toBe(0);
+    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
 test("a document stamped below the oldest version still read is refused", () => {
