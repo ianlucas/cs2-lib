@@ -20,6 +20,7 @@ import {
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
 import { type CS2InventoryLoadChanges, decodeInventoryData } from "./inventory-format.ts";
+import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
 import {
     assertInventoryItem,
     assertKeychains,
@@ -28,9 +29,7 @@ import {
     getDropReason,
     getNextStickerSchema,
     reconcileInventoryItems,
-    repairInventoryItem,
-    snapStickerRotation,
-    validateStickerRotation
+    repairInventoryItem
 } from "./inventory-rules.ts";
 import type {
     CS2BaseInventoryItem,
@@ -38,7 +37,6 @@ import type {
     CS2InventoryOptions,
     CS2InventorySpec
 } from "./inventory-types.ts";
-import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
 import { CS2Team } from "./teams.ts";
 import { type Interface, type MapValue, type RecordValue, assert, ensure, roundToFactor } from "./utils.ts";
 
@@ -77,8 +75,8 @@ export function toStickerMap(
 export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
-    readonly options: Readonly<CS2InventoryOptions>;
     readonly loadChanges: CS2InventoryLoadChanges | undefined;
+    readonly options: Readonly<CS2InventoryOptions>;
 
     static load(raw: string, options: Partial<CS2InventorySpec> = {}): CS2Inventory {
         const economy = options.economy ?? CS2Economy;
@@ -134,12 +132,54 @@ export class CS2Inventory {
         return Object.fromEntries(Array.from(items).map(([key, value]) => [key, value.asBase()]));
     }
 
-    stringify(): string {
-        return JSON.stringify(this.getData());
-    }
-
     isFull(): boolean {
         return this.items.size >= this.options.maxItems;
+    }
+
+    isStorageUnitFull(storageUid: number): boolean {
+        return this.get(storageUid).storage?.size === this.options.storageUnitMaxItems;
+    }
+
+    isStorageUnitFilled(storageUid: number): boolean {
+        return this.getStorageUnitSize(storageUid) > 0;
+    }
+
+    canDepositToStorageUnit(storageUid: number, size = 1): boolean {
+        return (
+            this.get(storageUid).nameTag !== undefined &&
+            this.getStorageUnitSize(storageUid) + size <= this.options.storageUnitMaxItems
+        );
+    }
+
+    canRetrieveFromStorageUnit(storageUid: number, size = 1): boolean {
+        return this.getStorageUnitSize(storageUid) - size >= 0 && this.size() + size <= this.options.maxItems;
+    }
+
+    get(uid: number): CS2InventoryItem {
+        return ensure(this.items.get(uid));
+    }
+
+    getAll(): CS2InventoryItem[] {
+        return Array.from(this.items.values());
+    }
+
+    getAllAsBase(): CS2BaseInventoryItem[] {
+        return Object.values(this.toBaseInventoryItems(this.items));
+    }
+
+    getStorageUnitSize(storageUid: number): number {
+        return this.get(storageUid).storage?.size ?? 0;
+    }
+
+    getStorageUnitItems(storageUid: number): CS2InventoryItem[] {
+        return Array.from(this.get(storageUid).storage?.values() ?? []);
+    }
+
+    getData(): CS2InventoryData {
+        return {
+            items: this.toBaseInventoryItems(this.items),
+            version: CS2_INVENTORY_VERSION
+        };
     }
 
     private findChargeableUid(id: number): number | undefined {
@@ -359,33 +399,6 @@ export class CS2Inventory {
         return this;
     }
 
-    isStorageUnitFull(storageUid: number): boolean {
-        return this.get(storageUid).storage?.size === this.options.storageUnitMaxItems;
-    }
-
-    getStorageUnitSize(storageUid: number): number {
-        return this.get(storageUid).storage?.size ?? 0;
-    }
-
-    isStorageUnitFilled(storageUid: number): boolean {
-        return this.getStorageUnitSize(storageUid) > 0;
-    }
-
-    canDepositToStorageUnit(storageUid: number, size = 1): boolean {
-        return (
-            this.get(storageUid).nameTag !== undefined &&
-            this.getStorageUnitSize(storageUid) + size <= this.options.storageUnitMaxItems
-        );
-    }
-
-    canRetrieveFromStorageUnit(storageUid: number, size = 1): boolean {
-        return this.getStorageUnitSize(storageUid) - size >= 0 && this.size() + size <= this.options.maxItems;
-    }
-
-    getStorageUnitItems(storageUid: number): CS2InventoryItem[] {
-        return Array.from(this.get(storageUid).storage?.values() ?? []);
-    }
-
     depositToStorageUnit(storageUid: number, depositUids: number[]): this {
         const item = this.get(storageUid);
         item.expectStorageUnit();
@@ -586,32 +599,17 @@ export class CS2Inventory {
         return this;
     }
 
-    get(uid: number): CS2InventoryItem {
-        return ensure(this.items.get(uid));
-    }
-
-    getAll(): CS2InventoryItem[] {
-        return Array.from(this.items.values());
-    }
-
-    getAllAsBase(): CS2BaseInventoryItem[] {
-        return Object.values(this.toBaseInventoryItems(this.items));
-    }
-
     setAll(items: Map<number, CS2InventoryItem>): this {
         this.items = items;
         return this;
     }
 
-    getData(): CS2InventoryData {
-        return {
-            items: this.toBaseInventoryItems(this.items),
-            version: CS2_INVENTORY_VERSION
-        };
-    }
-
     size(): number {
         return this.items.size;
+    }
+
+    stringify(): string {
+        return JSON.stringify(this.getData());
     }
 
     move(options: Partial<CS2InventorySpec> = {}): CS2Inventory {
@@ -641,56 +639,6 @@ export class CS2InventoryItem
     storage: Map<number, CS2InventoryItem> | undefined;
     updatedAt: number | undefined;
     wear: number | undefined;
-
-    private assign({ keychains, patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
-        if (patches !== undefined) {
-            this.patches = new Map(Object.entries(patches).map(([slot, patchId]) => [parseInt(slot, 10), patchId]));
-        }
-        if (stickers !== undefined) {
-            this.stickers = toStickerMap(
-                CS2InventoryItem.stickersFromArray(
-                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount())
-                )
-            );
-        }
-        if (keychains !== undefined) {
-            this.keychains = new Map(
-                Object.entries(keychains).map(([slot, keychain]) => [parseInt(slot, 10), keychain])
-            );
-        }
-        if (storage !== undefined) {
-            this.storage = new Map(
-                Object.entries(storage).map(([key, value]) => {
-                    const uid = parseInt(key, 10);
-                    return [uid, new CS2InventoryItem(this.inventory, uid, value, this.economy.getById(value.id))];
-                })
-            );
-        }
-    }
-
-    constructor(
-        private inventory: CS2Inventory,
-        public uid: number,
-        baseInventoryItem: CS2BaseInventoryItem,
-        { economy, item, language }: CS2EconomyItem
-    ) {
-        super(economy, item, language);
-        assertInventoryItem(this.economy, baseInventoryItem);
-        Object.assign(this, baseInventoryItem);
-        this.assign(baseInventoryItem);
-    }
-
-    edit(...sources: Partial<CS2BaseInventoryItem>[]): void {
-        const merged: CS2BaseInventoryItem = this.asBase();
-        for (const source of sources) {
-            Object.assign(merged, source);
-        }
-        assertInventoryItem(this.economy, merged);
-        for (const source of sources) {
-            Object.assign(this, source);
-            this.assign(source);
-        }
-    }
 
     static stickersToArray(
         stickers: CS2BaseInventoryItem["stickers"],
@@ -735,16 +683,82 @@ export class CS2InventoryItem
         );
     }
 
-    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
-        return stickerMapToArray(this.stickers).map((sticker, index) => [index, sticker]);
+    private assign({ keychains, patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
+        if (patches !== undefined) {
+            this.patches = new Map(Object.entries(patches).map(([slot, patchId]) => [parseInt(slot, 10), patchId]));
+        }
+        if (stickers !== undefined) {
+            this.stickers = toStickerMap(
+                CS2InventoryItem.stickersFromArray(
+                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount())
+                )
+            );
+        }
+        if (keychains !== undefined) {
+            this.keychains = new Map(
+                Object.entries(keychains).map(([slot, keychain]) => [parseInt(slot, 10), keychain])
+            );
+        }
+        if (storage !== undefined) {
+            this.storage = new Map(
+                Object.entries(storage).map(([key, value]) => {
+                    const uid = parseInt(key, 10);
+                    return [uid, new CS2InventoryItem(this.inventory, uid, value, this.economy.getById(value.id))];
+                })
+            );
+        }
     }
 
-    someStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
-        return this.allStickers();
+    constructor(
+        private inventory: CS2Inventory,
+        public uid: number,
+        baseInventoryItem: CS2BaseInventoryItem,
+        { economy, item, language }: CS2EconomyItem
+    ) {
+        super(economy, item, language);
+        assertInventoryItem(this.economy, baseInventoryItem);
+        Object.assign(this, baseInventoryItem);
+        this.assign(baseInventoryItem);
+    }
+
+    isSealed(): boolean {
+        return this.hasCharges() && this.charges === undefined;
     }
 
     getStickersCount(): number {
         return this.stickers?.size ?? 0;
+    }
+
+    getStickerWear(slot: number): number {
+        return this.stickers?.get(slot)?.wear ?? CS2_MIN_STICKER_WEAR;
+    }
+
+    getKeychainsCount(): number {
+        return this.keychains?.size ?? 0;
+    }
+
+    getKeychainSeed(slot: number): number {
+        return this.keychains?.get(slot)?.seed ?? CS2_MIN_KEYCHAIN_SEED;
+    }
+
+    getPatchesCount(): number {
+        return this.patches?.size ?? 0;
+    }
+
+    getCharges(): number {
+        return this.charges ?? 0;
+    }
+
+    getWear(): number {
+        return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
+    }
+
+    override getImageUrl(wear?: number): string {
+        return super.getImageUrl(wear ?? this.getWear());
+    }
+
+    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
+        return stickerMapToArray(this.stickers).map((sticker, index) => [index, sticker]);
     }
 
     allKeychains(): [number, MapValue<CS2InventoryItem["keychains"]> | undefined][] {
@@ -756,16 +770,6 @@ export class CS2InventoryItem
         return entries;
     }
 
-    someKeychains(): [number, MapValue<CS2InventoryItem["keychains"]>][] {
-        return this.allKeychains().filter(
-            (value): value is [number, MapValue<CS2InventoryItem["keychains"]>] => value[1] !== undefined
-        );
-    }
-
-    getKeychainsCount(): number {
-        return this.keychains?.size ?? 0;
-    }
-
     allPatches(): [number, number | undefined][] {
         const entries: [number, number | undefined][] = [];
         for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
@@ -775,36 +779,30 @@ export class CS2InventoryItem
         return entries;
     }
 
+    someStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
+        return this.allStickers();
+    }
+
+    someKeychains(): [number, MapValue<CS2InventoryItem["keychains"]>][] {
+        return this.allKeychains().filter(
+            (value): value is [number, MapValue<CS2InventoryItem["keychains"]>] => value[1] !== undefined
+        );
+    }
+
     somePatches(): [number, number][] {
         return this.allPatches().filter((value): value is [number, number] => value[1] !== undefined);
     }
 
-    getPatchesCount(): number {
-        return this.patches?.size ?? 0;
-    }
-
-    getCharges(): number {
-        return this.charges ?? 0;
-    }
-
-    isSealed(): boolean {
-        return this.hasCharges() && this.charges === undefined;
-    }
-
-    getWear(): number {
-        return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
-    }
-
-    getStickerWear(slot: number): number {
-        return this.stickers?.get(slot)?.wear ?? CS2_MIN_STICKER_WEAR;
-    }
-
-    getKeychainSeed(slot: number): number {
-        return this.keychains?.get(slot)?.seed ?? CS2_MIN_KEYCHAIN_SEED;
-    }
-
-    override getImageUrl(wear?: number): string {
-        return super.getImageUrl(wear ?? this.getWear());
+    edit(...sources: Partial<CS2BaseInventoryItem>[]): void {
+        const merged: CS2BaseInventoryItem = this.asBase();
+        for (const source of sources) {
+            Object.assign(merged, source);
+        }
+        assertInventoryItem(this.economy, merged);
+        for (const source of sources) {
+            Object.assign(this, source);
+            this.assign(source);
+        }
     }
 
     asBase(): CS2BaseInventoryItem {
