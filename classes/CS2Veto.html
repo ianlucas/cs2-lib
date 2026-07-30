@@ -11,7 +11,7 @@
 <li><a href="" aria-current="page">CS2Veto</a></li></ul>
 <h1>Class CS2Veto</h1></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L34">veto.ts:34</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L41">src/veto.ts:41</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -24,12 +24,13 @@
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading tsd-anchor-link" id="methods">Methods<a href="#methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-index-list"><a href="#choose" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>choose</span></a>
-<a href="#done" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>done</span></a>
 <a href="#getcurrentaction" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Current<wbr/>Action</span></a>
 <a href="#getcurrentteam" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Current<wbr/>Team</span></a>
+<a href="#gethistory" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>History</span></a>
 <a href="#getmaps" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Maps</span></a>
+<a href="#getmatchmapnames" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Match<wbr/>Mapnames</span></a>
 <a href="#getrandomavailablemapname" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Random<wbr/>Available<wbr/>Mapname</span></a>
-<a href="#getstate" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>State</span></a>
+<a href="#isdone" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Done</span></a>
 <a href="#random" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>random</span></a>
 </div></section></div></details></section></section>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -39,17 +40,18 @@
 <h3 class="tsd-anchor-link" id="constructor"><span>constructor</span><a href="#constructor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="constructorcs2veto"><span class="tsd-signature-keyword">new</span> <span class="tsd-kind-constructor-signature">CS2Veto</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">type</span><span class="tsd-signature-symbol">:</span> <a href="../types/CS2VetoType.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoType</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">maps</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2Map.html" class="tsd-signature-type tsd-kind-interface">CS2Map</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">actions</span><span class="tsd-signature-symbol">?:</span> <a href="../types/CS2VetoAction.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoAction</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">CS2Veto</a><a href="#constructorcs2veto" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="constructorcs2veto"><span class="tsd-signature-keyword">new</span> <span class="tsd-kind-constructor-signature">CS2Veto</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">type</span><span class="tsd-signature-symbol">:</span> <a href="../types/CS2VetoType.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoType</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">maps</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2Map.html" class="tsd-signature-type tsd-kind-interface">CS2Map</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">actions</span><span class="tsd-signature-symbol">?:</span> <a href="../types/CS2VetoAction.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoAction</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">startingTeam</span><span class="tsd-signature-symbol">?:</span> <a href="../types/CS2VetoTeam.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoTeam</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">CS2Veto</a><a href="#constructorcs2veto" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">type</span>: <a href="../types/CS2VetoType.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoType</a></span></li>
 <li><span><span class="tsd-kind-parameter">maps</span>: <a href="../interfaces/CS2Map.html" class="tsd-signature-type tsd-kind-interface">CS2Map</a><span class="tsd-signature-symbol">[]</span></span></li>
-<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">actions</span>: <a href="../types/CS2VetoAction.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoAction</a><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">actions</span>: <a href="../types/CS2VetoAction.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoAction</a><span class="tsd-signature-symbol">[]</span></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">startingTeam</span>: <a href="../types/CS2VetoTeam.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoTeam</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CS2Veto</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L40">veto.ts:40</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L47">src/veto.ts:47</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -57,24 +59,15 @@
 <h3 class="tsd-anchor-link" id="choose"><span>choose</span><a href="#choose" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="choose-1"><span class="tsd-kind-call-signature">choose</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">mapname</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><a href="#choose-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="choose-1"><span class="tsd-kind-call-signature">choose</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">mapname</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><a href="#choose-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">mapname</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
+<li><span><span class="tsd-kind-parameter">mapname</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L125">veto.ts:125</a></li></ul></aside></div></li></ul></section>
-<section class="tsd-panel tsd-member">
-<h3 class="tsd-anchor-link" id="done"><span>done</span><a href="#done" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<ul class="tsd-signatures">
-<li class="">
-<div class="tsd-signature tsd-anchor-link" id="done-1"><span class="tsd-kind-call-signature">done</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><a href="#done-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
-<div class="tsd-description">
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
-<ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L177">veto.ts:177</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L147">src/veto.ts:147</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getcurrentaction"><span>get<wbr/>Current<wbr/>Action</span><a href="#getcurrentaction" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -83,25 +76,43 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="../types/CS2VetoAction.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoAction</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L107">veto.ts:107</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L117">src/veto.ts:117</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getcurrentteam"><span>get<wbr/>Current<wbr/>Team</span><a href="#getcurrentteam" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="getcurrentteam-1"><span class="tsd-kind-call-signature">getCurrentTeam</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><a href="#getcurrentteam-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="getcurrentteam-1"><span class="tsd-kind-call-signature">getCurrentTeam</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <a href="../types/CS2VetoTeam.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoTeam</a><a href="#getcurrentteam-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <a href="../types/CS2VetoTeam.html" class="tsd-signature-type tsd-kind-type-alias">CS2VetoTeam</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L111">veto.ts:111</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L121">src/veto.ts:121</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="gethistory"><span>get<wbr/>History</span><a href="#gethistory" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="gethistory-1"><span class="tsd-kind-call-signature">getHistory</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <a href="../interfaces/CS2VetoEvent.html" class="tsd-signature-type tsd-kind-interface">CS2VetoEvent</a><span class="tsd-signature-symbol">[]</span><a href="#gethistory-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-keyword">readonly</span> <a href="../interfaces/CS2VetoEvent.html" class="tsd-signature-type tsd-kind-interface">CS2VetoEvent</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L126">src/veto.ts:126</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getmaps"><span>get<wbr/>Maps</span><a href="#getmaps" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="getmaps-1"><span class="tsd-kind-call-signature">getMaps</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#getmaps-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="getmaps-1"><span class="tsd-kind-call-signature">getMaps</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS2VetoMap</a><span class="tsd-signature-symbol">[]</span><a href="#getmaps-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/CS2VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS2VetoMap</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L130">src/veto.ts:130</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="getmatchmapnames"><span>get<wbr/>Match<wbr/>Mapnames</span><a href="#getmatchmapnames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="getmatchmapnames-1"><span class="tsd-kind-call-signature">getMatchMapnames</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#getmatchmapnames-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L169">veto.ts:169</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L134">src/veto.ts:134</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getrandomavailablemapname"><span>get<wbr/>Random<wbr/>Available<wbr/>Mapname</span><a href="#getrandomavailablemapname" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -110,16 +121,16 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L115">veto.ts:115</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L138">src/veto.ts:138</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
-<h3 class="tsd-anchor-link" id="getstate"><span>get<wbr/>State</span><a href="#getstate" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<h3 class="tsd-anchor-link" id="isdone"><span>is<wbr/>Done</span><a href="#isdone" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="getstate-1"><span class="tsd-kind-call-signature">getState</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS2VetoMap</a><span class="tsd-signature-symbol">[]</span><a href="#getstate-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="isdone-1"><span class="tsd-kind-call-signature">isDone</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><a href="#isdone-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<h4 class="tsd-returns-title">Returns <a href="../interfaces/CS2VetoMap.html" class="tsd-signature-type tsd-kind-interface">CS2VetoMap</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L165">veto.ts:165</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L101">src/veto.ts:101</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="random"><span>random</span><a href="#random" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -128,7 +139,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/veto.ts#L157">veto.ts:157</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/veto.ts#L169">src/veto.ts:169</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -147,7 +158,7 @@
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Constructors</summary>
 <div><a href="#constructor"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Constructor"><use href="../assets/icons.svg#icon-512"></use></svg><span>constructor</span></a></div></details>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Methods</summary>
-<div><a href="#choose"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>choose</span></a><a href="#done"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>done</span></a><a href="#getcurrentaction"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Current<wbr/>Action</span></a><a href="#getcurrentteam"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Current<wbr/>Team</span></a><a href="#getmaps"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Maps</span></a><a href="#getrandomavailablemapname"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Random<wbr/>Available<wbr/>Mapname</span></a><a href="#getstate"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>State</span></a><a href="#random"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>random</span></a></div></details></div></details></div>
+<div><a href="#choose"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>choose</span></a><a href="#getcurrentaction"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Current<wbr/>Action</span></a><a href="#getcurrentteam"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Current<wbr/>Team</span></a><a href="#gethistory"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>History</span></a><a href="#getmaps"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Maps</span></a><a href="#getmatchmapnames"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Match<wbr/>Mapnames</span></a><a href="#getrandomavailablemapname"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Random<wbr/>Available<wbr/>Mapname</span></a><a href="#isdone"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Done</span></a><a href="#random"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>random</span></a></div></details></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html">@ianlucas/cs2-lib</a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container">

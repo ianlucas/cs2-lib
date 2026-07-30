@@ -11,7 +11,7 @@
 <li><a href="" aria-current="page">CS2Inventory</a></li></ul>
 <h1>Class CS2Inventory</h1></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L188">inventory.ts:188</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L75">src/inventory.ts:75</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -23,7 +23,8 @@
 </div></section>
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading tsd-anchor-link" id="properties">Properties<a href="#properties" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-index-list"><a href="#options" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>options</span></a>
+<div class="tsd-index-list"><a href="#loadchanges" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>load<wbr/>Changes</span></a>
+<a href="#options" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>options</span></a>
 </div></section>
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading tsd-anchor-link" id="methods">Methods<a href="#methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
@@ -31,6 +32,7 @@
 <a href="#addwithkeychain" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Keychain</span></a>
 <a href="#addwithnametag" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Name<wbr/>Tag</span></a>
 <a href="#addwithsticker" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Sticker</span></a>
+<a href="#applyitemkeychain" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Keychain</span></a>
 <a href="#applyitempatch" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Patch</span></a>
 <a href="#applyitemsticker" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Sticker</span></a>
 <a href="#candeposittostorageunit" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>can<wbr/>Deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span></a>
@@ -38,15 +40,16 @@
 <a href="#consumeitemcharges" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>consume<wbr/>Item<wbr/>Charges</span></a>
 <a href="#deposittostorageunit" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span></a>
 <a href="#edit" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit</span></a>
+<a href="#edititemkeychain" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit<wbr/>Item<wbr/>Keychain</span></a>
 <a href="#edititemsticker" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit<wbr/>Item<wbr/>Sticker</span></a>
 <a href="#equip" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>equip</span></a>
 <a href="#get" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get</span></a>
 <a href="#getall" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>All</span></a>
 <a href="#getallasbase" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>All<wbr/>As<wbr/>Base</span></a>
+<a href="#getcharmdetachmentcharges" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Charm<wbr/>Detachment<wbr/>Charges</span></a>
 <a href="#getdata" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Data</span></a>
 <a href="#getstorageunititems" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Storage<wbr/>Unit<wbr/>Items</span></a>
 <a href="#getstorageunitsize" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Storage<wbr/>Unit<wbr/>Size</span></a>
-<a href="#healbaseinventoryitem" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>heal<wbr/>Base<wbr/>Inventory<wbr/>Item</span></a>
 <a href="#incrementitemstattrak" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>increment<wbr/>Item<wbr/>Stat<wbr/>Trak</span></a>
 <a href="#isfull" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Full</span></a>
 <a href="#isstorageunitfilled" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Storage<wbr/>Unit<wbr/>Filled</span></a>
@@ -55,7 +58,7 @@
 <a href="#moveitemsticker" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>move<wbr/>Item<wbr/>Sticker</span></a>
 <a href="#remove" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove</span></a>
 <a href="#removeall" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>All</span></a>
-<a href="#removeinvaliditemreferences" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Invalid<wbr/>Item<wbr/>References</span></a>
+<a href="#removeitemkeychain" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Keychain</span></a>
 <a href="#removeitempatch" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Patch</span></a>
 <a href="#removeitemsticker" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Sticker</span></a>
 <a href="#renameitem" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rename<wbr/>Item</span></a>
@@ -70,8 +73,7 @@
 <a href="#unlockcontainer" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unlock<wbr/>Container</span></a>
 <a href="#unpackitem" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unpack<wbr/>Item</span></a>
 <a href="#unsealitem" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unseal<wbr/>Item</span></a>
-<a href="#validatebaseinventoryitem" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>validate<wbr/>Base<wbr/>Inventory<wbr/>Item</span></a>
-<a href="#parse" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>parse</span></a>
+<a href="#load" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load</span></a>
 </div></section></div></details></section></section>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="constructors-1">Constructors<a href="#constructors-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
@@ -88,15 +90,20 @@
 <li><span><span class="tsd-kind-parameter">__namedParameters</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2InventorySpec.html" class="tsd-signature-type tsd-kind-interface">CS2InventorySpec</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CS2Inventory</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L197">inventory.ts:197</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L89">src/inventory.ts:89</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
 <section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="loadchanges"><code class="tsd-tag">Readonly</code><span>load<wbr/>Changes</span><a href="#loadchanges" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">loadChanges</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2InventoryLoadChanges.html" class="tsd-signature-type tsd-kind-interface">CS2InventoryLoadChanges</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L78">src/inventory.ts:78</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="options"><code class="tsd-tag">Readonly</code><span>options</span><a href="#options" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">options</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2InventoryOptions.html" class="tsd-signature-type tsd-kind-interface">CS2InventoryOptions</a><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L191">inventory.ts:191</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L79">src/inventory.ts:79</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -112,22 +119,22 @@
 <li><span><span class="tsd-kind-parameter">item</span>: <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L541">inventory.ts:541</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L224">src/inventory.ts:224</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="addwithkeychain"><span>add<wbr/>With<wbr/>Keychain</span><a href="#addwithkeychain" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="addwithkeychain-1"><span class="tsd-kind-call-signature">addWithKeychain</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">keychainUid</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">id</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">attributes</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">this</span><a href="#addwithkeychain-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="addwithkeychain-1"><span class="tsd-kind-call-signature">addWithKeychain</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">keychainUid</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">id</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">attributes</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><br/>        <a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-signature-type">&quot;id&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;seed&quot;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">this</span><a href="#addwithkeychain-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">keychainUid</span>: <span class="tsd-signature-type">number</span></span></li>
 <li><span><span class="tsd-kind-parameter">id</span>: <span class="tsd-signature-type">number</span></span></li>
-<li><span><span class="tsd-kind-parameter">attributes</span>: <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
+<li><span><span class="tsd-kind-parameter">attributes</span>: <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;seed&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L601">inventory.ts:601</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L284">src/inventory.ts:284</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="addwithnametag"><span>add<wbr/>With<wbr/>Name<wbr/>Tag</span><a href="#addwithnametag" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -142,7 +149,7 @@
 <li><span><span class="tsd-kind-parameter">nameTag</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L579">inventory.ts:579</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L262">src/inventory.ts:262</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="addwithsticker"><span>add<wbr/>With<wbr/>Sticker</span><a href="#addwithsticker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -157,7 +164,22 @@
 <li><span><span class="tsd-kind-parameter">attributes</span>: <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#stickers"><span class="tsd-signature-type">&quot;stickers&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L587">inventory.ts:587</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L270">src/inventory.ts:270</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="applyitemkeychain"><span>apply<wbr/>Item<wbr/>Keychain</span><a href="#applyitemkeychain" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="applyitemkeychain-1"><span class="tsd-kind-call-signature">applyItemKeychain</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">targetUid</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">keychainUid</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">attributes</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><br/>        <a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-signature-type">&quot;id&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;seed&quot;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">this</span><a href="#applyitemkeychain-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">targetUid</span>: <span class="tsd-signature-type">number</span></span></li>
+<li><span><span class="tsd-kind-parameter">keychainUid</span>: <span class="tsd-signature-type">number</span></span></li>
+<li><span><span class="tsd-kind-parameter">attributes</span>: <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;seed&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L546">src/inventory.ts:546</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="applyitempatch"><span>apply<wbr/>Item<wbr/>Patch</span><a href="#applyitempatch" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -172,7 +194,7 @@
 <li><span><span class="tsd-kind-parameter">slot</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L890">inventory.ts:890</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L600">src/inventory.ts:600</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="applyitemsticker"><span>apply<wbr/>Item<wbr/>Sticker</span><a href="#applyitemsticker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -187,7 +209,7 @@
 <li><span><span class="tsd-kind-parameter">attributes</span>: <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#stickers"><span class="tsd-signature-type">&quot;stickers&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L801">inventory.ts:801</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L457">src/inventory.ts:457</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="candeposittostorageunit"><span>can<wbr/>Deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span><a href="#candeposittostorageunit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -201,7 +223,7 @@
 <li><span><span class="tsd-kind-parameter">size</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 1</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L736">inventory.ts:736</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L147">src/inventory.ts:147</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="canretrievefromstorageunit"><span>can<wbr/>Retrieve<wbr/>From<wbr/>Storage<wbr/>Unit</span><a href="#canretrievefromstorageunit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -215,7 +237,7 @@
 <li><span><span class="tsd-kind-parameter">size</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 1</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L743">inventory.ts:743</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L154">src/inventory.ts:154</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="consumeitemcharges"><span>consume<wbr/>Item<wbr/>Charges</span><a href="#consumeitemcharges" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -229,7 +251,7 @@
 <li><span><span class="tsd-kind-parameter">amount</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 1</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L687">inventory.ts:687</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L370">src/inventory.ts:370</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="deposittostorageunit"><span>deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span><a href="#deposittostorageunit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -243,7 +265,7 @@
 <li><span><span class="tsd-kind-parameter">depositUids</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L751">inventory.ts:751</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L407">src/inventory.ts:407</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="edit"><span>edit</span><a href="#edit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -257,7 +279,22 @@
 <li><span><span class="tsd-kind-parameter">properties</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L615">inventory.ts:615</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L298">src/inventory.ts:298</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="edititemkeychain"><span>edit<wbr/>Item<wbr/>Keychain</span><a href="#edititemkeychain" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="edititemkeychain-1"><span class="tsd-kind-call-signature">editItemKeychain</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">targetUid</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">slot</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">patch</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><br/>        <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;seed&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">this</span><a href="#edititemkeychain-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">targetUid</span>: <span class="tsd-signature-type">number</span></span></li>
+<li><span><span class="tsd-kind-parameter">slot</span>: <span class="tsd-signature-type">number</span></span></li>
+<li><span><span class="tsd-kind-parameter">patch</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#keychains"><span class="tsd-signature-type">&quot;keychains&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">&quot;id&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;seed&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L585">src/inventory.ts:585</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="edititemsticker"><span>edit<wbr/>Item<wbr/>Sticker</span><a href="#edititemsticker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -272,7 +309,7 @@
 <li><span><span class="tsd-kind-parameter">patch</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/RecordValue.html" class="tsd-signature-type tsd-kind-type-alias">RecordValue</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[</span><a href="../interfaces/CS2BaseInventoryItem.html#stickers"><span class="tsd-signature-type">&quot;stickers&quot;</span></a><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L850">inventory.ts:850</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L506">src/inventory.ts:506</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="equip"><span>equip</span><a href="#equip" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -286,7 +323,7 @@
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">team</span>: <a href="../types/CS2Team.html" class="tsd-signature-type tsd-kind-type-alias">CS2Team</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L623">inventory.ts:623</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L306">src/inventory.ts:306</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="get"><span>get</span><a href="#get" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -299,7 +336,7 @@
 <li><span><span class="tsd-kind-parameter">uid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="CS2InventoryItem.html" class="tsd-signature-type tsd-kind-class">CS2InventoryItem</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L951">inventory.ts:951</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L158">src/inventory.ts:158</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getall"><span>get<wbr/>All</span><a href="#getall" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -308,7 +345,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="CS2InventoryItem.html" class="tsd-signature-type tsd-kind-class">CS2InventoryItem</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L955">inventory.ts:955</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L162">src/inventory.ts:162</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getallasbase"><span>get<wbr/>All<wbr/>As<wbr/>Base</span><a href="#getallasbase" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -317,7 +354,16 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L959">inventory.ts:959</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L166">src/inventory.ts:166</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="getcharmdetachmentcharges"><span>get<wbr/>Charm<wbr/>Detachment<wbr/>Charges</span><a href="#getcharmdetachmentcharges" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="getcharmdetachmentcharges-1"><span class="tsd-kind-call-signature">getCharmDetachmentCharges</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><a href="#getcharmdetachmentcharges-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L178">src/inventory.ts:178</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getdata"><span>get<wbr/>Data</span><a href="#getdata" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -326,7 +372,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/CS2InventoryData.html" class="tsd-signature-type tsd-kind-interface">CS2InventoryData</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L968">inventory.ts:968</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L183">src/inventory.ts:183</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getstorageunititems"><span>get<wbr/>Storage<wbr/>Unit<wbr/>Items</span><a href="#getstorageunititems" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -339,7 +385,7 @@
 <li><span><span class="tsd-kind-parameter">storageUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="CS2InventoryItem.html" class="tsd-signature-type tsd-kind-class">CS2InventoryItem</a><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L747">inventory.ts:747</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L174">src/inventory.ts:174</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="getstorageunitsize"><span>get<wbr/>Storage<wbr/>Unit<wbr/>Size</span><a href="#getstorageunitsize" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -352,20 +398,7 @@
 <li><span><span class="tsd-kind-parameter">storageUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L728">inventory.ts:728</a></li></ul></aside></div></li></ul></section>
-<section class="tsd-panel tsd-member">
-<h3 class="tsd-anchor-link" id="healbaseinventoryitem"><span>heal<wbr/>Base<wbr/>Inventory<wbr/>Item</span><a href="#healbaseinventoryitem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<ul class="tsd-signatures">
-<li class="">
-<div class="tsd-signature tsd-anchor-link" id="healbaseinventoryitem-1"><span class="tsd-kind-call-signature">healBaseInventoryItem</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">item</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#healbaseinventoryitem-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
-<div class="tsd-description">
-<div class="tsd-parameters">
-<h4 class="tsd-parameters-title">Parameters</h4>
-<ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">item</span>: <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
-<ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L314">inventory.ts:314</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L170">src/inventory.ts:170</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="incrementitemstattrak"><span>increment<wbr/>Item<wbr/>Stat<wbr/>Trak</span><a href="#incrementitemstattrak" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -378,7 +411,7 @@
 <li><span><span class="tsd-kind-parameter">targetUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L914">inventory.ts:914</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L624">src/inventory.ts:624</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="isfull"><span>is<wbr/>Full</span><a href="#isfull" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -387,7 +420,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L503">inventory.ts:503</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L135">src/inventory.ts:135</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="isstorageunitfilled"><span>is<wbr/>Storage<wbr/>Unit<wbr/>Filled</span><a href="#isstorageunitfilled" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -400,7 +433,7 @@
 <li><span><span class="tsd-kind-parameter">storageUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L732">inventory.ts:732</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L143">src/inventory.ts:143</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="isstorageunitfull"><span>is<wbr/>Storage<wbr/>Unit<wbr/>Full</span><a href="#isstorageunitfull" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -413,7 +446,7 @@
 <li><span><span class="tsd-kind-parameter">storageUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L724">inventory.ts:724</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L139">src/inventory.ts:139</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="move"><span>move</span><a href="#move" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -426,7 +459,7 @@
 <li><span><span class="tsd-kind-parameter">options</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2InventorySpec.html" class="tsd-signature-type tsd-kind-interface">CS2InventorySpec</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CS2Inventory</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L979">inventory.ts:979</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L674">src/inventory.ts:674</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="moveitemsticker"><span>move<wbr/>Item<wbr/>Sticker</span><a href="#moveitemsticker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -441,7 +474,7 @@
 <li><span><span class="tsd-kind-parameter">toIndex</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L838">inventory.ts:838</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L494">src/inventory.ts:494</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="remove"><span>remove</span><a href="#remove" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -454,7 +487,7 @@
 <li><span><span class="tsd-kind-parameter">uid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L941">inventory.ts:941</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L651">src/inventory.ts:651</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="removeall"><span>remove<wbr/>All</span><a href="#removeall" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -463,20 +496,21 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L946">inventory.ts:946</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L656">src/inventory.ts:656</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
-<h3 class="tsd-anchor-link" id="removeinvaliditemreferences"><span>remove<wbr/>Invalid<wbr/>Item<wbr/>References</span><a href="#removeinvaliditemreferences" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<h3 class="tsd-anchor-link" id="removeitemkeychain"><span>remove<wbr/>Item<wbr/>Keychain</span><a href="#removeitemkeychain" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="removeinvaliditemreferences-1"><span class="tsd-kind-call-signature">removeInvalidItemReferences</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">item</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#removeinvaliditemreferences-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="removeitemkeychain-1"><span class="tsd-kind-call-signature">removeItemKeychain</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">targetUid</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">slot</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">this</span><a href="#removeitemkeychain-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">item</span>: <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
+<li><span><span class="tsd-kind-parameter">targetUid</span>: <span class="tsd-signature-type">number</span></span></li>
+<li><span><span class="tsd-kind-parameter">slot</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L413">inventory.ts:413</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L569">src/inventory.ts:569</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="removeitempatch"><span>remove<wbr/>Item<wbr/>Patch</span><a href="#removeitempatch" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -490,7 +524,7 @@
 <li><span><span class="tsd-kind-parameter">slot</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L902">inventory.ts:902</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L612">src/inventory.ts:612</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="removeitemsticker"><span>remove<wbr/>Item<wbr/>Sticker</span><a href="#removeitemsticker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -504,7 +538,7 @@
 <li><span><span class="tsd-kind-parameter">index</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L828">inventory.ts:828</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L484">src/inventory.ts:484</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="renameitem"><span>rename<wbr/>Item</span><a href="#renameitem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -519,7 +553,7 @@
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">nameTag</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L703">inventory.ts:703</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L386">src/inventory.ts:386</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="renamestorageunit"><span>rename<wbr/>Storage<wbr/>Unit</span><a href="#renamestorageunit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -533,7 +567,7 @@
 <li><span><span class="tsd-kind-parameter">nameTag</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L714">inventory.ts:714</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L397">src/inventory.ts:397</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="retrievefromstorageunit"><span>retrieve<wbr/>From<wbr/>Storage<wbr/>Unit</span><a href="#retrievefromstorageunit" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -547,7 +581,7 @@
 <li><span><span class="tsd-kind-parameter">retrieveUids</span>: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L781">inventory.ts:781</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L437">src/inventory.ts:437</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="scrapeitemsticker"><span>scrape<wbr/>Item<wbr/>Sticker</span><a href="#scrapeitemsticker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -562,7 +596,7 @@
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">wear</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L866">inventory.ts:866</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L522">src/inventory.ts:522</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="setall"><span>set<wbr/>All</span><a href="#setall" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -575,7 +609,7 @@
 <li><span><span class="tsd-kind-parameter">items</span>: <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span> <a href="CS2InventoryItem.html" class="tsd-signature-type tsd-kind-class">CS2InventoryItem</a><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L963">inventory.ts:963</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L661">src/inventory.ts:661</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="size"><span>size</span><a href="#size" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -584,7 +618,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L975">inventory.ts:975</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L666">src/inventory.ts:666</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="stringify"><span>stringify</span><a href="#stringify" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -593,7 +627,7 @@
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L499">inventory.ts:499</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L670">src/inventory.ts:670</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="swapitemsstattrak"><span>swap<wbr/>Items<wbr/>Stat<wbr/>Trak</span><a href="#swapitemsstattrak" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -608,7 +642,7 @@
 <li><span><span class="tsd-kind-parameter">toUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L924">inventory.ts:924</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L634">src/inventory.ts:634</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="unequip"><span>unequip</span><a href="#unequip" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -622,7 +656,7 @@
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">team</span>: <a href="../types/CS2Team.html" class="tsd-signature-type tsd-kind-type-alias">CS2Team</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L648">inventory.ts:648</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L331">src/inventory.ts:331</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="unlockcontainer"><span>unlock<wbr/>Container</span><a href="#unlockcontainer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -637,7 +671,7 @@
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">keyUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L656">inventory.ts:656</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L339">src/inventory.ts:339</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="unpackitem"><span>unpack<wbr/>Item</span><a href="#unpackitem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -650,7 +684,7 @@
 <li><span><span class="tsd-kind-parameter">packUid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L681">inventory.ts:681</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L364">src/inventory.ts:364</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="unsealitem"><span>unseal<wbr/>Item</span><a href="#unsealitem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -663,34 +697,21 @@
 <li><span><span class="tsd-kind-parameter">uid</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L673">inventory.ts:673</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L356">src/inventory.ts:356</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
-<h3 class="tsd-anchor-link" id="validatebaseinventoryitem"><span>validate<wbr/>Base<wbr/>Inventory<wbr/>Item</span><a href="#validatebaseinventoryitem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<h3 class="tsd-anchor-link" id="load"><code class="tsd-tag">Static</code><span>load</span><a href="#load" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="validatebaseinventoryitem-1"><span class="tsd-kind-call-signature">validateBaseInventoryItem</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">__namedParameters</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#validatebaseinventoryitem-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="load-1"><span class="tsd-kind-call-signature">load</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">raw</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2InventorySpec.html" class="tsd-signature-type tsd-kind-interface">CS2InventorySpec</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">CS2Inventory</a><a href="#load-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">__namedParameters</span>: <a href="../interfaces/CS2BaseInventoryItem.html" class="tsd-signature-type tsd-kind-interface">CS2BaseInventoryItem</a></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
+<li><span><span class="tsd-kind-parameter">raw</span>: <span class="tsd-signature-type">string</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/CS2InventorySpec.html" class="tsd-signature-type tsd-kind-interface">CS2InventorySpec</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">CS2Inventory</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L417">inventory.ts:417</a></li></ul></aside></div></li></ul></section>
-<section class="tsd-panel tsd-member">
-<h3 class="tsd-anchor-link" id="parse"><code class="tsd-tag">Static</code><span>parse</span><a href="#parse" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<ul class="tsd-signatures">
-<li class="">
-<div class="tsd-signature tsd-anchor-link" id="parse-1"><span class="tsd-kind-call-signature">parse</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">stringValue</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">economy</span><span class="tsd-signature-symbol">?:</span> <a href="CS2EconomyInstance.html" class="tsd-signature-type tsd-kind-class">CS2EconomyInstance</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/CS2InventoryData.html" class="tsd-signature-type tsd-kind-interface">CS2InventoryData</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><a href="#parse-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
-<div class="tsd-description">
-<div class="tsd-parameters">
-<h4 class="tsd-parameters-title">Parameters</h4>
-<ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">stringValue</span>: <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></span></li>
-<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">economy</span>: <a href="CS2EconomyInstance.html" class="tsd-signature-type tsd-kind-class">CS2EconomyInstance</a></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <a href="../interfaces/CS2InventoryData.html" class="tsd-signature-type tsd-kind-interface">CS2InventoryData</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></h4><aside class="tsd-sources">
-<ul>
-<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/c334c5345b17e7e92e6deb23051bf9b6cbea9146/src/inventory.ts#L193">inventory.ts:193</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/ianlucas/cs2-lib/blob/8c68d47b144573f066982c2b20428a7cc796d0b6/src/inventory.ts#L81">src/inventory.ts:81</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -709,9 +730,9 @@
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Constructors</summary>
 <div><a href="#constructor"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Constructor"><use href="../assets/icons.svg#icon-512"></use></svg><span>constructor</span></a></div></details>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Properties</summary>
-<div><a href="#options"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>options</span></a></div></details>
+<div><a href="#loadchanges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>load<wbr/>Changes</span></a><a href="#options"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>options</span></a></div></details>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Methods</summary>
-<div><a href="#add"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add</span></a><a href="#addwithkeychain"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Keychain</span></a><a href="#addwithnametag"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Name<wbr/>Tag</span></a><a href="#addwithsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Sticker</span></a><a href="#applyitempatch"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Patch</span></a><a href="#applyitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Sticker</span></a><a href="#candeposittostorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>can<wbr/>Deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span></a><a href="#canretrievefromstorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>can<wbr/>Retrieve<wbr/>From<wbr/>Storage<wbr/>Unit</span></a><a href="#consumeitemcharges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>consume<wbr/>Item<wbr/>Charges</span></a><a href="#deposittostorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span></a><a href="#edit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit</span></a><a href="#edititemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit<wbr/>Item<wbr/>Sticker</span></a><a href="#equip"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>equip</span></a><a href="#get"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get</span></a><a href="#getall"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>All</span></a><a href="#getallasbase"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>All<wbr/>As<wbr/>Base</span></a><a href="#getdata"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Data</span></a><a href="#getstorageunititems"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Storage<wbr/>Unit<wbr/>Items</span></a><a href="#getstorageunitsize"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Storage<wbr/>Unit<wbr/>Size</span></a><a href="#healbaseinventoryitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>heal<wbr/>Base<wbr/>Inventory<wbr/>Item</span></a><a href="#incrementitemstattrak"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>increment<wbr/>Item<wbr/>Stat<wbr/>Trak</span></a><a href="#isfull"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Full</span></a><a href="#isstorageunitfilled"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Storage<wbr/>Unit<wbr/>Filled</span></a><a href="#isstorageunitfull"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Storage<wbr/>Unit<wbr/>Full</span></a><a href="#move"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>move</span></a><a href="#moveitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>move<wbr/>Item<wbr/>Sticker</span></a><a href="#remove"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove</span></a><a href="#removeall"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>All</span></a><a href="#removeinvaliditemreferences"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Invalid<wbr/>Item<wbr/>References</span></a><a href="#removeitempatch"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Patch</span></a><a href="#removeitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Sticker</span></a><a href="#renameitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rename<wbr/>Item</span></a><a href="#renamestorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rename<wbr/>Storage<wbr/>Unit</span></a><a href="#retrievefromstorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>retrieve<wbr/>From<wbr/>Storage<wbr/>Unit</span></a><a href="#scrapeitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>scrape<wbr/>Item<wbr/>Sticker</span></a><a href="#setall"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>set<wbr/>All</span></a><a href="#size"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>size</span></a><a href="#stringify"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>stringify</span></a><a href="#swapitemsstattrak"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>swap<wbr/>Items<wbr/>Stat<wbr/>Trak</span></a><a href="#unequip"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unequip</span></a><a href="#unlockcontainer"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unlock<wbr/>Container</span></a><a href="#unpackitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unpack<wbr/>Item</span></a><a href="#unsealitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unseal<wbr/>Item</span></a><a href="#validatebaseinventoryitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>validate<wbr/>Base<wbr/>Inventory<wbr/>Item</span></a><a href="#parse"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>parse</span></a></div></details></div></details></div>
+<div><a href="#add"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add</span></a><a href="#addwithkeychain"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Keychain</span></a><a href="#addwithnametag"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Name<wbr/>Tag</span></a><a href="#addwithsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>add<wbr/>With<wbr/>Sticker</span></a><a href="#applyitemkeychain"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Keychain</span></a><a href="#applyitempatch"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Patch</span></a><a href="#applyitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>apply<wbr/>Item<wbr/>Sticker</span></a><a href="#candeposittostorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>can<wbr/>Deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span></a><a href="#canretrievefromstorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>can<wbr/>Retrieve<wbr/>From<wbr/>Storage<wbr/>Unit</span></a><a href="#consumeitemcharges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>consume<wbr/>Item<wbr/>Charges</span></a><a href="#deposittostorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>deposit<wbr/>To<wbr/>Storage<wbr/>Unit</span></a><a href="#edit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit</span></a><a href="#edititemkeychain"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit<wbr/>Item<wbr/>Keychain</span></a><a href="#edititemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>edit<wbr/>Item<wbr/>Sticker</span></a><a href="#equip"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>equip</span></a><a href="#get"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get</span></a><a href="#getall"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>All</span></a><a href="#getallasbase"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>All<wbr/>As<wbr/>Base</span></a><a href="#getcharmdetachmentcharges"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Charm<wbr/>Detachment<wbr/>Charges</span></a><a href="#getdata"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Data</span></a><a href="#getstorageunititems"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Storage<wbr/>Unit<wbr/>Items</span></a><a href="#getstorageunitsize"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Storage<wbr/>Unit<wbr/>Size</span></a><a href="#incrementitemstattrak"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>increment<wbr/>Item<wbr/>Stat<wbr/>Trak</span></a><a href="#isfull"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Full</span></a><a href="#isstorageunitfilled"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Storage<wbr/>Unit<wbr/>Filled</span></a><a href="#isstorageunitfull"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>is<wbr/>Storage<wbr/>Unit<wbr/>Full</span></a><a href="#move"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>move</span></a><a href="#moveitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>move<wbr/>Item<wbr/>Sticker</span></a><a href="#remove"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove</span></a><a href="#removeall"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>All</span></a><a href="#removeitemkeychain"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Keychain</span></a><a href="#removeitempatch"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Patch</span></a><a href="#removeitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>remove<wbr/>Item<wbr/>Sticker</span></a><a href="#renameitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rename<wbr/>Item</span></a><a href="#renamestorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>rename<wbr/>Storage<wbr/>Unit</span></a><a href="#retrievefromstorageunit"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>retrieve<wbr/>From<wbr/>Storage<wbr/>Unit</span></a><a href="#scrapeitemsticker"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>scrape<wbr/>Item<wbr/>Sticker</span></a><a href="#setall"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>set<wbr/>All</span></a><a href="#size"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>size</span></a><a href="#stringify"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>stringify</span></a><a href="#swapitemsstattrak"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>swap<wbr/>Items<wbr/>Stat<wbr/>Trak</span></a><a href="#unequip"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unequip</span></a><a href="#unlockcontainer"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unlock<wbr/>Container</span></a><a href="#unpackitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unpack<wbr/>Item</span></a><a href="#unsealitem"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>unseal<wbr/>Item</span></a><a href="#load"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>load</span></a></div></details></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html">@ianlucas/cs2-lib</a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container">
