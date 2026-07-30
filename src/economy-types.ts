@@ -53,7 +53,6 @@ export const CS2ContainerType = {
 
 export type CS2ContainerType = EnumValues<typeof CS2ContainerType>;
 
-/** Absent means the normal roll — see CS2_STATTRAK_ODD. */
 export const CS2StatTrakMode = {
     Excluded: "excluded",
     Guaranteed: "guaranteed"

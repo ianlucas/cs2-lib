@@ -726,10 +726,6 @@ export class CS2EconomyItem implements Interface<
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
-    /**
-     * The seed this item's own artwork is rendered at — the inventory image, the 3D preview. It is
-     * not a fallback an instance inherits: an item stored without a seed is unseeded, not this.
-     */
     getPreviewSeed(): number {
         return this.previewSeed ?? CS2_FALLBACK_PREVIEW_SEED;
     }

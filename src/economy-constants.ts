@@ -31,7 +31,6 @@ export const CS2_MIN_STICKER_ROTATION = -180;
 export const CS2_MAX_STICKER_ROTATION = 180;
 export const CS2_MIN_KEYCHAIN_SEED = 1;
 export const CS2_MAX_KEYCHAIN_SEED = 100000;
-/** The seed the client renders a kit at when the kit publishes no `previewSeed` of its own. */
 export const CS2_FALLBACK_PREVIEW_SEED = 50000;
 export const CS2_MAX_STICKERS = 5;
 export const CS2_MAX_PATCHES = 5;
