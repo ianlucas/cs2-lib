@@ -17,10 +17,33 @@ import { readdir } from "fs/promises";
 import { assert, ensure } from "../src/utils.ts";
 import { log, read, write } from "./utils.ts";
 
-// Group 7 — keychain positions. Swap these maps for the next group's; everything else is generic.
-// The sticker bounds keep "offset" because they really are deltas from a slot default, so only the
-// twelve keychain bounds move.
+// All groups combined — migrates the pre-rename data merged from main to the v9 schema in one
+// pass. No key is renamed twice across the groups, so the union composes cleanly.
 const renames: Record<string, string> = {
+    altName: "alternateName",
+    base: "isBase",
+    baseId: "parentId",
+    collection: "collectionKey",
+    model: "modelKey",
+    stickerId: "displayedStickerId",
+    category: "loadoutCategory",
+    clothCollider: "hasColliderData",
+    collectionImage: "collectionImagePath",
+    contents: "contentIds",
+    def: "definitionIndex",
+    displaySeed: "previewSeed",
+    free: "isDefault",
+    image: "imagePath",
+    index: "variantIndex",
+    keys: "keyIds",
+    legacy: "isLegacyModel",
+    paintMaterial: "materialPath",
+    playerModel: "modelPath",
+    rarity: "rarityColor",
+    specials: "specialIds",
+    specialsImage: "specialsImagePath",
+    teams: "team",
+    tint: "tintIndex",
     keychainOffsetXMax: "keychainPositionXMax",
     keychainOffsetXMin: "keychainPositionXMin",
     keychainOffsetYMax: "keychainPositionYMax",
@@ -35,13 +58,22 @@ const renames: Record<string, string> = {
     legacyKeychainOffsetZMin: "legacyKeychainPositionZMin"
 };
 
-// The same, for CS2ItemTranslation. Empty for this group, which leaves the translation pass a
-// round-trip check: it reads all 29 languages back through this writer and rewrites the same bytes.
-const translationRenames: Record<string, string> = {};
+// The same, for CS2ItemTranslation. `category` means a sticker's capsule here and a weapon's
+// loadout slot on the item, which is the collision that forces two maps.
+const translationRenames: Record<string, string> = {
+    category: "categoryName",
+    collectionDesc: "collectionDescription",
+    desc: "description",
+    tournamentDesc: "tournamentDescription"
+};
 
-// Renames that also rewrite the value, as when two booleans collapse into one enum. Two old keys
-// mapping onto one new one would lose a property, which the per-item key count below catches.
-const rewrites: Record<string, readonly [string, JsonValue]> = {};
+// Renames that also rewrite the value. The two StatTrak booleans collapse into one enum, so both
+// old keys land on `statTrakMode` — an item carrying both would lose a property, which the
+// per-item key count below catches.
+const rewrites: Record<string, readonly [string, JsonValue]> = {
+    statTrakless: ["statTrakMode", "excluded"],
+    statTrakOnly: ["statTrakMode", "guaranteed"]
+};
 
 const itemsJsonPath = "scripts/data/items.json";
 const itemsTsPath = "src/items.ts";
