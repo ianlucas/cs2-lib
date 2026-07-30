@@ -239,6 +239,24 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
+    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
+        containerItem = this.get(containerItem);
+        containerItem.expectContainer();
+        keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
+        if (keyItem !== undefined) {
+            keyItem.expectKey();
+            assert(containerItem.keyIds !== undefined);
+            assert(containerItem.keyIds.includes(keyItem.id));
+        } else {
+            assert(containerItem.keyIds === undefined);
+        }
+        return true;
+    }
+
+    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
+        return safe(() => this.validateContainerAndKey(containerItem, keyItem));
+    }
+
     getWearFromValue(value: number): CS2ItemWear {
         switch (true) {
             case value <= CS2_MAX_FACTORY_NEW_WEAR:
@@ -265,24 +283,6 @@ export class CS2EconomyInstance {
     getCharmDetachment(): CS2EconomyItem {
         this.charmDetachment ??= ensure(this.itemsAsArray.find((item) => item.isCharmDetachment()));
         return this.charmDetachment;
-    }
-
-    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
-        containerItem = this.get(containerItem);
-        containerItem.expectContainer();
-        keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
-        if (keyItem !== undefined) {
-            keyItem.expectKey();
-            assert(containerItem.keyIds !== undefined);
-            assert(containerItem.keyIds.includes(keyItem.id));
-        } else {
-            assert(containerItem.keyIds === undefined);
-        }
-        return true;
-    }
-
-    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
-        return safe(() => this.validateContainerAndKey(containerItem, keyItem));
     }
 
     expectUnlockedItem(
@@ -428,20 +428,20 @@ export class CS2EconomyItem implements Interface<
         return this.loadoutCategory === "rifle";
     }
 
-    isSniperRifle(): boolean {
-        return this.modelKey !== undefined && CS2_SNIPER_RIFLE_MODEL_KEYS.includes(this.modelKey);
-    }
-
-    isMachinegun(): boolean {
-        return this.modelKey !== undefined && CS2_MACHINEGUN_MODEL_KEYS.includes(this.modelKey);
-    }
-
     isHeavy(): boolean {
         return this.loadoutCategory === "heavy";
     }
 
     isEquipment(): boolean {
         return this.loadoutCategory === "equipment";
+    }
+
+    isSniperRifle(): boolean {
+        return this.modelKey !== undefined && CS2_SNIPER_RIFLE_MODEL_KEYS.includes(this.modelKey);
+    }
+
+    isMachinegun(): boolean {
+        return this.modelKey !== undefined && CS2_MACHINEGUN_MODEL_KEYS.includes(this.modelKey);
     }
 
     isInMidTiers(): boolean {
@@ -456,6 +456,26 @@ export class CS2EconomyItem implements Interface<
         return this.loadoutCategory !== undefined && CS2_MISC_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
     }
 
+    isInEquipments(): boolean {
+        return CS2_EQUIPMENT_ITEMS.includes(this.type);
+    }
+
+    isInGraphicArts(): boolean {
+        return CS2_GRAPHIC_ART_ITEMS.includes(this.type);
+    }
+
+    isInContainers(): boolean {
+        return CS2_CONTAINER_ITEMS.includes(this.type);
+    }
+
+    isInDisplay(): boolean {
+        return CS2_DISPLAY_ITEMS.includes(this.type);
+    }
+
+    isPaintable(): boolean {
+        return CS2_PAINTABLE_ITEMS.includes(this.type);
+    }
+
     isAgent(): boolean {
         return this.type === CS2ItemType.Agent;
     }
@@ -468,16 +488,20 @@ export class CS2EconomyItem implements Interface<
         return this.type === CS2ItemType.Container;
     }
 
-    isKey(): boolean {
-        return this.type === CS2ItemType.Key;
-    }
-
     isGloves(): boolean {
         return this.type === CS2ItemType.Gloves;
     }
 
     isGraffiti(): boolean {
         return this.type === CS2ItemType.Graffiti;
+    }
+
+    isKey(): boolean {
+        return this.type === CS2ItemType.Key;
+    }
+
+    isKeychain(): boolean {
+        return this.type === CS2ItemType.Keychain;
     }
 
     isMelee(): boolean {
@@ -494,10 +518,6 @@ export class CS2EconomyItem implements Interface<
 
     isSticker(): boolean {
         return this.type === CS2ItemType.Sticker;
-    }
-
-    isKeychain(): boolean {
-        return this.type === CS2ItemType.Keychain;
     }
 
     isStub(): boolean {
@@ -536,8 +556,39 @@ export class CS2EconomyItem implements Interface<
         return this.isTool() && this.definitionIndex === CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX;
     }
 
+    isWeaponCase(): boolean {
+        return this.containerType === CS2ContainerType.WeaponCase;
+    }
+
+    isStickerCapsule(): boolean {
+        return this.containerType === CS2ContainerType.StickerCapsule;
+    }
+
+    isGraffitiBox(): boolean {
+        return this.containerType === CS2ContainerType.GraffitiBox;
+    }
+
+    isSouvenirCase(): boolean {
+        return this.containerType === CS2ContainerType.SouvenirCase;
+    }
+
     expectAgent(): this {
         assert(this.isAgent());
+        return this;
+    }
+
+    expectContainer(): this {
+        assert(this.isContainer());
+        return this;
+    }
+
+    expectKey(): this {
+        assert(this.isKey());
+        return this;
+    }
+
+    expectKeychain(): this {
+        assert(this.isKeychain());
         return this;
     }
 
@@ -548,11 +599,6 @@ export class CS2EconomyItem implements Interface<
 
     expectSticker(): this {
         assert(this.isSticker());
-        return this;
-    }
-
-    expectKeychain(): this {
-        assert(this.isKeychain());
         return this;
     }
 
@@ -573,16 +619,6 @@ export class CS2EconomyItem implements Interface<
 
     expectCharmDetachmentPack(): this {
         assert(this.isCharmDetachmentPack());
-        return this;
-    }
-
-    expectContainer(): this {
-        assert(this.isContainer());
-        return this;
-    }
-
-    expectKey(): this {
-        assert(this.isKey());
         return this;
     }
 
@@ -616,50 +652,6 @@ export class CS2EconomyItem implements Interface<
 
     hasCharges(): boolean {
         return this.isGraffiti() || this.isCharmDetachment();
-    }
-
-    getDefaultCharges(): number {
-        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MIN_CHARGES;
-    }
-
-    getMaximumCharges(): number {
-        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MAX_CHARM_DETACHMENT_CHARGES;
-    }
-
-    isWeaponCase(): boolean {
-        return this.containerType === CS2ContainerType.WeaponCase;
-    }
-
-    isStickerCapsule(): boolean {
-        return this.containerType === CS2ContainerType.StickerCapsule;
-    }
-
-    isGraffitiBox(): boolean {
-        return this.containerType === CS2ContainerType.GraffitiBox;
-    }
-
-    isSouvenirCase(): boolean {
-        return this.containerType === CS2ContainerType.SouvenirCase;
-    }
-
-    isInEquipments(): boolean {
-        return CS2_EQUIPMENT_ITEMS.includes(this.type);
-    }
-
-    isInGraphicArts(): boolean {
-        return CS2_GRAPHIC_ART_ITEMS.includes(this.type);
-    }
-
-    isInContainers(): boolean {
-        return CS2_CONTAINER_ITEMS.includes(this.type);
-    }
-
-    isInDisplay(): boolean {
-        return CS2_DISPLAY_ITEMS.includes(this.type);
-    }
-
-    isPaintable(): boolean {
-        return CS2_PAINTABLE_ITEMS.includes(this.type);
     }
 
     getImageUrl(wear?: number): string {
@@ -729,6 +721,14 @@ export class CS2EconomyItem implements Interface<
 
     getPreviewSeed(): number {
         return this.previewSeed ?? CS2_FALLBACK_PREVIEW_SEED;
+    }
+
+    getDefaultCharges(): number {
+        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MIN_CHARGES;
+    }
+
+    getMaximumCharges(): number {
+        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MAX_CHARM_DETACHMENT_CHARGES;
     }
 
     getStickerSchemaCount(): number {
