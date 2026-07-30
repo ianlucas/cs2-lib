@@ -10,13 +10,25 @@ Only weapons can hold a keychain (`hasKeychains()`: keychainable types minus the
 
 ## Setting one
 
-There is no dedicated apply/remove pair. A keychain is set through `add`, `edit`, or:
+A keychain can be set through `add`, `edit`, or one of the dedicated operations:
 
 ```typescript
-inventory.addWithKeychain(keychainUid, AK47_ID, { seed: 1234, x: 40, y: 1.3, z: 11 });
+inventory.addWithKeychain(keychainUid, AK47_ID, { x: 40, y: 1.3, z: 11 });
+inventory.applyItemKeychain(targetUid, keychainUid, { x: 40, y: 1.3, z: 11 });
 ```
 
-which consumes the keychain item and creates the new weapon carrying it in slot 0. Everything is validated against the new item before any mutation, so an invalid attribute throws without consuming the keychain.
+`addWithKeychain` consumes the keychain item and creates the new weapon carrying it in slot 0. `applyItemKeychain` attaches it to an existing item, using the first free slot (which, with `CS2_MAX_KEYCHAINS` at 1, means slot 0 on an item with none). In both cases the attributes accept only `x`, `y`, `z` - `id` and `seed` are taken from the consumed keychain item itself, so the loose item's seed travels with it onto the weapon. Everything is validated against the target before any mutation, so an invalid attribute throws without consuming the keychain.
+
+## Editing and removing
+
+```typescript
+inventory.editItemKeychain(targetUid, 0, { x: 41, z: 10.5 });
+inventory.removeItemKeychain(targetUid, 0);
+```
+
+`editItemKeychain` patches position only - the `Partial` excludes `id` and `seed`, so a repositioned keychain can never change identity. The merged record is validated before it is written.
+
+`removeItemKeychain` is not free: it requires a charm detachment tool in the inventory and consumes one charge from it (the lowest-uid chargeable is used; `getCharmDetachmentCharges()` reads the balance, and `unpackItem` on a detachment pack refills it). The detached keychain returns to the inventory as a loose item with its `seed` preserved. A full inventory is allowed only when the detachment tool sits at exactly 1 charge - consuming that last charge deletes the tool, which frees the slot the keychain lands in.
 
 ## Position
 
