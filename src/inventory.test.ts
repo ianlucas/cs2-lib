@@ -201,9 +201,9 @@ describe("CS2Inventory methods", () => {
         expect(result.updatedAt).not.toBe(undefined);
     });
 
-    test("addWithKeychain validates attributes and rejects invalid ones without consuming the keychain", () => {
-        inventory.add({ id: LIL_AVA_ID });
-        inventory.addWithKeychain(0, AWP_DRAGON_LORE_ID, { seed: 1234, x: 40, y: 1.3, z: 11 });
+    test("addWithKeychain takes the seed from the keychain item and validates attributes", () => {
+        inventory.add({ id: LIL_AVA_ID, seed: 1234 });
+        inventory.addWithKeychain(0, AWP_DRAGON_LORE_ID, { x: 40, y: 1.3, z: 11 });
         expect(inventory.size()).toBe(1);
         expect(inventory.get(0).keychains?.get(0)).toMatchObject({
             id: LIL_AVA_ID,
@@ -213,15 +213,7 @@ describe("CS2Inventory methods", () => {
             z: 11
         });
         inventory.add({ id: LIL_AVA_ID });
-        for (const attributes of [
-            { seed: CS2_MIN_KEYCHAIN_SEED - 1 },
-            { seed: CS2_MAX_KEYCHAIN_SEED + 1 },
-            { seed: 1.5 },
-            { x: 0.123456 },
-            { x: NaN },
-            { y: NaN },
-            { z: NaN }
-        ]) {
+        for (const attributes of [{ x: 0.123456 }, { x: NaN }, { y: NaN }, { z: NaN }]) {
             expect(() => inventory.addWithKeychain(1, AWP_DRAGON_LORE_ID, attributes)).toThrow();
         }
         expect(inventory.size()).toBe(2);
@@ -230,6 +222,51 @@ describe("CS2Inventory methods", () => {
         expect(() => inventory.addWithKeychain(2, AWP_DRAGON_LORE_ID)).toThrow();
         expect(() => inventory.addWithKeychain(1, KARAMBIT_BOREAL_FOREST_ID)).toThrow();
         expect(inventory.size()).toBe(3);
+    });
+
+    test("applyItemKeychain should attach a keychain to an existing item", () => {
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        inventory.add({ id: LIL_AVA_ID, seed: 5 });
+        inventory.applyItemKeychain(0, 1, { x: 40, y: 1.3, z: 11 });
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).keychains?.get(0)).toMatchObject({
+            id: LIL_AVA_ID,
+            seed: 5,
+            x: 40,
+            y: 1.3,
+            z: 11
+        });
+        inventory.add({ id: LIL_AVA_ID });
+        expect(() => inventory.applyItemKeychain(0, 1)).toThrow();
+        expect(inventory.size()).toBe(2);
+    });
+
+    test("applyItemKeychain validates attributes and rejects invalid ones without consuming the keychain", () => {
+        inventory.add({ id: AWP_DRAGON_LORE_ID });
+        inventory.add({ id: LIL_AVA_ID });
+        for (const attributes of [{ x: 0.123456 }, { x: NaN }, { y: NaN }, { z: NaN }]) {
+            expect(() => inventory.applyItemKeychain(0, 1, attributes)).toThrow();
+        }
+        inventory.add({ id: FALLEN_COLOGNE_2015_ID });
+        expect(() => inventory.applyItemKeychain(0, 2)).toThrow();
+        expect(() => inventory.applyItemKeychain(2, 1)).toThrow();
+        expect(inventory.size()).toBe(3);
+    });
+
+    test("editItemKeychain should patch keychain attributes in place", () => {
+        inventory.add({ id: LIL_AVA_ID, seed: 1 });
+        inventory.addWithKeychain(0, AWP_DRAGON_LORE_ID, { x: 40, y: 1.3, z: 11 });
+        inventory.editItemKeychain(0, 0, { x: 30, z: 10 });
+        expect(inventory.get(0).keychains?.get(0)).toMatchObject({
+            id: LIL_AVA_ID,
+            seed: 1,
+            x: 30,
+            y: 1.3,
+            z: 10
+        });
+        expect(() => inventory.editItemKeychain(0, 0, { x: NaN })).toThrow();
+        expect(() => inventory.editItemKeychain(0, 1, { x: 30 })).toThrow();
+        expect(inventory.get(0).keychains?.get(0)).toMatchObject({ seed: 1, x: 30 });
     });
 
     test("edit should edit the item with the given id", () => {
@@ -1253,6 +1290,59 @@ describe("charges", () => {
         inventory.add({ id: CHARM_DETACHMENT_ID });
         expect(() => inventory.unpackItem(0)).toThrow();
         expect(() => inventory.unpackItem(1)).toThrow();
+    });
+
+    test("getCharmDetachmentCharges reads the current detachment stack", () => {
+        const inventory = makeInventory();
+        expect(inventory.getCharmDetachmentCharges()).toBe(0);
+        inventory.add({ id: CHARM_DETACHMENT_PACK_ID });
+        expect(inventory.getCharmDetachmentCharges()).toBe(0);
+        inventory.unpackItem(0);
+        expect(inventory.getCharmDetachmentCharges()).toBe(CS2_CHARM_DETACHMENT_PACK_CHARGES);
+        inventory.consumeItemCharges(ensure(inventory.getAll()[0]).uid);
+        expect(inventory.getCharmDetachmentCharges()).toBe(CS2_CHARM_DETACHMENT_PACK_CHARGES - 1);
+    });
+
+    test("removeItemKeychain consumes a detachment charge and returns the keychain", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID, seed: 5 } } }
+        });
+        expect(() => inventory.removeItemKeychain(0, 0)).toThrow();
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        expect(inventory.getCharmDetachmentCharges()).toBe(2);
+        inventory.removeItemKeychain(0, 0);
+        expect(inventory.get(0).keychains).toBe(undefined);
+        expect(inventory.getCharmDetachmentCharges()).toBe(1);
+        const keychain = ensure(inventory.getAll().find((item) => item.id === LIL_AVA_ID));
+        expect(keychain.seed).toBe(5);
+        expect(() => inventory.removeItemKeychain(0, 0)).toThrow();
+        expect(inventory.getCharmDetachmentCharges()).toBe(1);
+    });
+
+    test("removeItemKeychain deletes the tool once its last charge is spent", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID } } }
+        });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.removeItemKeychain(0, 0);
+        expect(inventory.getCharmDetachmentCharges()).toBe(0);
+        expect(inventory.size()).toBe(2);
+        expect(inventory.getAll().some((item) => item.id === CHARM_DETACHMENT_ID)).toBe(false);
+    });
+
+    test("removeItemKeychain requires a free slot unless the tool is depleted", () => {
+        const inventory = new CS2Inventory({ maxItems: 2 });
+        inventory.add({ id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID } } });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        expect(inventory.size()).toBe(2);
+        expect(() => inventory.removeItemKeychain(0, 0)).toThrow();
+        expect(inventory.getCharmDetachmentCharges()).toBe(2);
+        inventory.consumeItemCharges(1);
+        inventory.removeItemKeychain(0, 0);
+        expect(inventory.size()).toBe(2);
+        expect(inventory.getCharmDetachmentCharges()).toBe(0);
     });
 
     test("adding a charm detachment bumps the single instance instead of taking a slot", () => {

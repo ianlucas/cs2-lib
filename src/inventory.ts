@@ -175,6 +175,11 @@ export class CS2Inventory {
         return Array.from(this.get(storageUid).storage?.values() ?? []);
     }
 
+    getCharmDetachmentCharges(): number {
+        const uid = this.findChargeableUid(this.economy.getCharmDetachment().id);
+        return uid !== undefined ? this.get(uid).getCharges() : 0;
+    }
+
     getData(): CS2InventoryData {
         return {
             items: this.toBaseInventoryItems(this.items),
@@ -279,11 +284,11 @@ export class CS2Inventory {
     addWithKeychain(
         keychainUid: number,
         id: number,
-        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id"> = {}
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed"> = {}
     ): this {
         const keychain = this.get(keychainUid).expectKeychain();
-        const { seed, x, y, z } = attributes;
-        const keychains = { 0: { id: keychain.id, seed, x, y, z } };
+        const { x, y, z } = attributes;
+        const keychains = { 0: { id: keychain.id, seed: keychain.seed, x, y, z } };
         assertKeychains(this.economy, keychains, this.economy.getById(id));
         this.items.delete(keychainUid);
         this.add({ id, keychains });
@@ -534,6 +539,60 @@ export class CS2Inventory {
             stickers[index] = { ...sticker, wear: nextWear };
         }
         target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    applyItemKeychain(
+        targetUid: number,
+        keychainUid: number,
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed"> = {}
+    ): this {
+        const target = this.get(targetUid);
+        const keychain = this.get(keychainUid).expectKeychain();
+        assert(target.hasKeychains());
+        assert(target.getKeychainsCount() < CS2_MAX_KEYCHAINS);
+        let slot = 0;
+        while (target.keychains?.has(slot)) {
+            slot++;
+        }
+        const { x, y, z } = attributes;
+        const value = { id: keychain.id, seed: keychain.seed, x, y, z };
+        const record = { ...Object.fromEntries(target.keychains ?? []), [slot]: value };
+        assertKeychains(this.economy, record, target);
+        (target.keychains ??= new Map()).set(slot, value);
+        target.updatedAt = getTimestamp();
+        this.items.delete(keychainUid);
+        return this;
+    }
+
+    removeItemKeychain(targetUid: number, slot: number): this {
+        const target = this.get(targetUid);
+        const keychains = ensure(target.keychains);
+        const keychain = ensure(keychains.get(slot));
+        const detachmentUid = ensure(this.findChargeableUid(this.economy.getCharmDetachment().id));
+        assert(!this.isFull() || this.get(detachmentUid).getCharges() === 1);
+        this.consumeItemCharges(detachmentUid);
+        keychains.delete(slot);
+        if (keychains.size === 0) {
+            target.keychains = undefined;
+        }
+        target.updatedAt = getTimestamp();
+        this.add({ id: keychain.id, seed: keychain.seed });
+        return this;
+    }
+
+    editItemKeychain(
+        targetUid: number,
+        slot: number,
+        patch: Partial<Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed">>
+    ): this {
+        const target = this.get(targetUid);
+        const keychains = ensure(target.keychains);
+        const value = { ...ensure(keychains.get(slot)), ...patch };
+        const record = { ...Object.fromEntries(keychains), [slot]: value };
+        assertKeychains(this.economy, record, target);
+        keychains.set(slot, value);
         target.updatedAt = getTimestamp();
         return this;
     }
