@@ -62,6 +62,7 @@ import {
     randomInt
 } from "./economy-container.ts";
 import {
+    type CS2Bounds,
     CS2ContainerType,
     type CS2Item,
     CS2ItemTeam,
@@ -732,58 +733,42 @@ export class CS2EconomyItem implements Interface<
 
     getStickerSchemaCount(): number {
         const item = this.parent ?? this;
-        const count = (this.isLegacyModel ? item.legacyStickerSchemaCount : undefined) ?? item.stickerSchemaCount;
+        const count = this.isLegacyModel ? item.legacyStickerSchemaCount : item.stickerSchemaCount;
         return count ?? CS2_MAX_STICKERS;
     }
 
-    getMinimumStickerOffsetX(): number | undefined {
+    getStickerOffsetBounds(): { x: CS2Bounds; y: CS2Bounds } {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyStickerOffsetXMin : undefined) ?? item.stickerOffsetXMin;
+        const legacy = this.isLegacyModel;
+        return {
+            x: {
+                min: legacy ? item.legacyStickerOffsetXMin : item.stickerOffsetXMin,
+                max: legacy ? item.legacyStickerOffsetXMax : item.stickerOffsetXMax
+            },
+            y: {
+                min: legacy ? item.legacyStickerOffsetYMin : item.stickerOffsetYMin,
+                max: legacy ? item.legacyStickerOffsetYMax : item.stickerOffsetYMax
+            }
+        };
     }
 
-    getMaximumStickerOffsetX(): number | undefined {
+    getKeychainPositionBounds(): { x: CS2Bounds; y: CS2Bounds; z: CS2Bounds } {
         const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyStickerOffsetXMax : undefined) ?? item.stickerOffsetXMax;
-    }
-
-    getMinimumStickerOffsetY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyStickerOffsetYMin : undefined) ?? item.stickerOffsetYMin;
-    }
-
-    getMaximumStickerOffsetY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
-    }
-
-    getMinimumKeychainPositionX(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainPositionXMin : undefined) ?? item.keychainPositionXMin;
-    }
-
-    getMaximumKeychainPositionX(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainPositionXMax : undefined) ?? item.keychainPositionXMax;
-    }
-
-    getMinimumKeychainPositionY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainPositionYMin : undefined) ?? item.keychainPositionYMin;
-    }
-
-    getMaximumKeychainPositionY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainPositionYMax : undefined) ?? item.keychainPositionYMax;
-    }
-
-    getMinimumKeychainPositionZ(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainPositionZMin : undefined) ?? item.keychainPositionZMin;
-    }
-
-    getMaximumKeychainPositionZ(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.isLegacyModel ? item.legacyKeychainPositionZMax : undefined) ?? item.keychainPositionZMax;
+        const legacy = this.isLegacyModel;
+        return {
+            x: {
+                min: legacy ? item.legacyKeychainPositionXMin : item.keychainPositionXMin,
+                max: legacy ? item.legacyKeychainPositionXMax : item.keychainPositionXMax
+            },
+            y: {
+                min: legacy ? item.legacyKeychainPositionYMin : item.keychainPositionYMin,
+                max: legacy ? item.legacyKeychainPositionYMax : item.keychainPositionYMax
+            },
+            z: {
+                min: legacy ? item.legacyKeychainPositionZMin : item.keychainPositionZMin,
+                max: legacy ? item.legacyKeychainPositionZMax : item.keychainPositionZMax
+            }
+        };
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {

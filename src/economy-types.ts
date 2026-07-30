@@ -60,6 +60,11 @@ export const CS2StatTrakMode = {
 
 export type CS2StatTrakMode = EnumValues<typeof CS2StatTrakMode>;
 
+export interface CS2Bounds {
+    min: number | undefined;
+    max: number | undefined;
+}
+
 export interface CS2Item {
     alternateName?: string | undefined;
     collectionImagePath?: string | undefined;

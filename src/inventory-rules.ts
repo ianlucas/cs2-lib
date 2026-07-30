@@ -21,6 +21,7 @@ import {
     CS2_STICKER_ROTATION_STEP,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
+import type { CS2Bounds } from "./economy-types.ts";
 import type { CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
 import type { CS2InventoryDrop, CS2InventoryDropReason } from "./inventory-format.ts";
 import type { CS2BaseInventoryItem, CS2InventoryOptions } from "./inventory-types.ts";
@@ -32,20 +33,13 @@ export interface CS2InventoryRule<T> {
     repair(value: T | undefined, item: CS2EconomyItem): T | undefined;
 }
 
-type CS2EconomyItemBound = (item: CS2EconomyItem) => number | undefined;
-
-function boundedRule(
-    factor: number,
-    getMinimum: CS2EconomyItemBound,
-    getMaximum: CS2EconomyItemBound
-): CS2InventoryRule<number> {
+function boundedRule(factor: number, getBounds: (item: CS2EconomyItem) => CS2Bounds): CS2InventoryRule<number> {
     return {
         check(value, item) {
             if (value === undefined) {
                 return true;
             }
-            const min = getMinimum(item);
-            const max = getMaximum(item);
+            const { min, max } = getBounds(item);
             return (
                 isFactorPrecise(value, factor) &&
                 (min === undefined || value >= min) &&
@@ -56,28 +50,28 @@ function boundedRule(
             if (value === undefined || !Number.isFinite(value)) {
                 return undefined;
             }
-            const min = getMinimum(item);
-            const max = getMaximum(item);
+            const { min, max } = getBounds(item);
             const truncated = truncateToFactor(value, factor);
             return clamp(truncated, min ?? truncated, max ?? truncated);
         }
     };
 }
 
-type CS2EconomyItemRange = (item: CS2EconomyItem) => number;
-
-function wholeNumberRule(getMinimum: CS2EconomyItemRange, getMaximum: CS2EconomyItemRange): CS2InventoryRule<number> {
+function wholeNumberRule(getBounds: (item: CS2EconomyItem) => { min: number; max: number }): CS2InventoryRule<number> {
     return {
         check(value, item) {
-            return (
-                value === undefined ||
-                (Number.isInteger(value) && value >= getMinimum(item) && value <= getMaximum(item))
-            );
+            if (value === undefined) {
+                return true;
+            }
+            const { min, max } = getBounds(item);
+            return Number.isInteger(value) && value >= min && value <= max;
         },
         repair(value, item) {
-            return value !== undefined && Number.isFinite(value)
-                ? clamp(Math.trunc(value), getMinimum(item), getMaximum(item))
-                : undefined;
+            if (value === undefined || !Number.isFinite(value)) {
+                return undefined;
+            }
+            const { min, max } = getBounds(item);
+            return clamp(Math.trunc(value), min, max);
         }
     };
 }
@@ -156,45 +150,18 @@ export const CS2_INVENTORY_RULES: Record<CS2InventoryRuleName, CS2InventoryRule<
             return item.economy.safeValidateWear(clamped, item) ? clamped : undefined;
         }
     },
-    keychainPositionX: boundedRule(
-        CS2_KEYCHAIN_POSITION_FACTOR,
-        (item) => item.getMinimumKeychainPositionX(),
-        (item) => item.getMaximumKeychainPositionX()
-    ),
-    keychainPositionY: boundedRule(
-        CS2_KEYCHAIN_POSITION_FACTOR,
-        (item) => item.getMinimumKeychainPositionY(),
-        (item) => item.getMaximumKeychainPositionY()
-    ),
-    keychainPositionZ: boundedRule(
-        CS2_KEYCHAIN_POSITION_FACTOR,
-        (item) => item.getMinimumKeychainPositionZ(),
-        (item) => item.getMaximumKeychainPositionZ()
-    ),
-    keychainSeed: wholeNumberRule(
-        () => CS2_MIN_KEYCHAIN_SEED,
-        () => CS2_MAX_KEYCHAIN_SEED
-    ),
+    keychainPositionX: boundedRule(CS2_KEYCHAIN_POSITION_FACTOR, (item) => item.getKeychainPositionBounds().x),
+    keychainPositionY: boundedRule(CS2_KEYCHAIN_POSITION_FACTOR, (item) => item.getKeychainPositionBounds().y),
+    keychainPositionZ: boundedRule(CS2_KEYCHAIN_POSITION_FACTOR, (item) => item.getKeychainPositionBounds().z),
+    keychainSeed: wholeNumberRule(() => ({ min: CS2_MIN_KEYCHAIN_SEED, max: CS2_MAX_KEYCHAIN_SEED })),
     stickerRotation: stickerRotationRule,
     stickerSchema: {
         check: (schema, item) => checkStickerSchema(schema, item.getStickerSchemaCount()),
         repair: (schema, item) => (checkStickerSchema(schema, item.getStickerSchemaCount()) ? schema : undefined)
     },
-    stickerWear: boundedRule(
-        CS2_STICKER_WEAR_FACTOR,
-        () => CS2_MIN_STICKER_WEAR,
-        () => CS2_MAX_STICKER_WEAR
-    ),
-    stickerX: boundedRule(
-        CS2_STICKER_OFFSET_FACTOR,
-        (item) => item.getMinimumStickerOffsetX(),
-        (item) => item.getMaximumStickerOffsetX()
-    ),
-    stickerY: boundedRule(
-        CS2_STICKER_OFFSET_FACTOR,
-        (item) => item.getMinimumStickerOffsetY(),
-        (item) => item.getMaximumStickerOffsetY()
-    )
+    stickerWear: boundedRule(CS2_STICKER_WEAR_FACTOR, () => ({ min: CS2_MIN_STICKER_WEAR, max: CS2_MAX_STICKER_WEAR })),
+    stickerX: boundedRule(CS2_STICKER_OFFSET_FACTOR, (item) => item.getStickerOffsetBounds().x),
+    stickerY: boundedRule(CS2_STICKER_OFFSET_FACTOR, (item) => item.getStickerOffsetBounds().y)
 };
 
 export function checkStickerSchema(schema: number | undefined, schemaCount: number): boolean {

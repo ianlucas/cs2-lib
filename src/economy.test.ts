@@ -195,3 +195,81 @@ test("display-case keychain resolves model and material through the slab parent"
     expect(displayCase.getModelDataUrl()).toBe(slab.getModelDataUrl());
     expect(displayCase.getMaterialUrl()).toBe(slab.getMaterialUrl());
 });
+
+test("getStickerOffsetBounds returns per-axis bounds; legacy models read only legacy fields", () => {
+    const items: CS2Item[] = [
+        {
+            id: 1,
+            rarityColor: CS2RarityColor.Common,
+            type: "weapon",
+            stickerOffsetXMin: -0.5,
+            stickerOffsetXMax: 0.5,
+            stickerOffsetYMin: -0.25,
+            stickerOffsetYMax: 0.25,
+            legacyStickerOffsetXMin: -1,
+            legacyStickerOffsetXMax: 1
+        },
+        { id: 2, rarityColor: CS2RarityColor.Common, type: "weapon", parentId: 1, isLegacyModel: true },
+        { id: 3, rarityColor: CS2RarityColor.Common, type: "weapon", parentId: 1 },
+        { id: 4, rarityColor: CS2RarityColor.Common, type: "weapon" }
+    ];
+    CS2Economy.load({
+        items,
+        language: { 1: { name: "Parent" }, 2: { name: "Legacy" }, 3: { name: "Child" }, 4: { name: "Bare" } }
+    });
+    expect(CS2Economy.getById(1).getStickerOffsetBounds()).toEqual({
+        x: { min: -0.5, max: 0.5 },
+        y: { min: -0.25, max: 0.25 }
+    });
+    expect(CS2Economy.getById(2).getStickerOffsetBounds()).toEqual({
+        x: { min: -1, max: 1 },
+        y: { min: undefined, max: undefined }
+    });
+    expect(CS2Economy.getById(3).getStickerOffsetBounds()).toEqual({
+        x: { min: -0.5, max: 0.5 },
+        y: { min: -0.25, max: 0.25 }
+    });
+    expect(CS2Economy.getById(4).getStickerOffsetBounds()).toEqual({
+        x: { min: undefined, max: undefined },
+        y: { min: undefined, max: undefined }
+    });
+});
+
+test("getKeychainPositionBounds returns per-axis bounds; legacy models read only legacy fields", () => {
+    const items: CS2Item[] = [
+        {
+            id: 1,
+            rarityColor: CS2RarityColor.Common,
+            type: "weapon",
+            keychainPositionXMin: 0,
+            keychainPositionXMax: 10,
+            keychainPositionYMin: -2,
+            keychainPositionYMax: 2,
+            keychainPositionZMin: -4,
+            keychainPositionZMax: 4,
+            legacyKeychainPositionZMin: -8,
+            legacyKeychainPositionZMax: 8
+        },
+        { id: 2, rarityColor: CS2RarityColor.Common, type: "weapon", parentId: 1, isLegacyModel: true },
+        { id: 3, rarityColor: CS2RarityColor.Common, type: "weapon" }
+    ];
+    CS2Economy.load({
+        items,
+        language: { 1: { name: "Parent" }, 2: { name: "Legacy" }, 3: { name: "Bare" } }
+    });
+    expect(CS2Economy.getById(1).getKeychainPositionBounds()).toEqual({
+        x: { min: 0, max: 10 },
+        y: { min: -2, max: 2 },
+        z: { min: -4, max: 4 }
+    });
+    expect(CS2Economy.getById(2).getKeychainPositionBounds()).toEqual({
+        x: { min: undefined, max: undefined },
+        y: { min: undefined, max: undefined },
+        z: { min: -8, max: 8 }
+    });
+    expect(CS2Economy.getById(3).getKeychainPositionBounds()).toEqual({
+        x: { min: undefined, max: undefined },
+        y: { min: undefined, max: undefined },
+        z: { min: undefined, max: undefined }
+    });
+});
