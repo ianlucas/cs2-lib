@@ -20,7 +20,7 @@ export interface CS2InventoryDecoded {
     migratedFrom: number | undefined;
 }
 
-export interface CS2InventoryLoadReport {
+export interface CS2InventoryLoadChanges {
     migratedFrom: number | undefined;
     dropped: CS2InventoryDrop[];
     repairedUids: number[];

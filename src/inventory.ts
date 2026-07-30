@@ -19,7 +19,7 @@ import {
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
-import { type CS2InventoryLoadReport, decodeInventoryData } from "./inventory-format.ts";
+import { type CS2InventoryLoadChanges, decodeInventoryData } from "./inventory-format.ts";
 import {
     assertInventoryItem,
     assertKeychains,
@@ -78,13 +78,13 @@ export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
     readonly options: Readonly<CS2InventoryOptions>;
-    readonly loadReport: CS2InventoryLoadReport | undefined;
+    readonly loadChanges: CS2InventoryLoadChanges | undefined;
 
     static load(raw: string, options: Partial<CS2InventorySpec> = {}): CS2Inventory {
         const economy = options.economy ?? CS2Economy;
         const { data, migratedFrom } = decodeInventoryData(raw, economy);
         const inventory = new CS2Inventory({ ...options, data, economy });
-        ensure(inventory.loadReport).migratedFrom = migratedFrom;
+        ensure(inventory.loadChanges).migratedFrom = migratedFrom;
         return inventory;
     }
 
@@ -101,14 +101,14 @@ export class CS2Inventory {
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
-        const report: CS2InventoryLoadReport = { migratedFrom: undefined, dropped: [], repairedUids: [] };
+        const report: CS2InventoryLoadChanges = { migratedFrom: undefined, dropped: [], repairedUids: [] };
         this.items = data !== undefined ? this.toInventoryItems(structuredClone(data.items), report) : new Map();
-        this.loadReport = data !== undefined ? report : undefined;
+        this.loadChanges = data !== undefined ? report : undefined;
     }
 
     private toInventoryItems(
         items: Record<number, CS2BaseInventoryItem>,
-        report: CS2InventoryLoadReport
+        report: CS2InventoryLoadChanges
     ): Map<number, CS2InventoryItem> {
         const arrived = new Map(Object.entries(items).map(([key, base]) => [parseInt(key, 10), JSON.stringify(base)]));
         for (const [key, base] of Object.entries(items)) {

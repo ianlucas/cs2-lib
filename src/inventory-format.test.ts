@@ -54,7 +54,7 @@ test("load runs the ladder, so a stored version 1 document arrives at the curren
 test("the report names the version a migrated document came from", () => {
     const inventory = CS2Inventory.load(JSON.stringify({ items: { 0: { id: AK47_ID } }, version: 1 }));
 
-    expect(inventory.loadReport?.migratedFrom).toBe(1);
+    expect(inventory.loadChanges?.migratedFrom).toBe(1);
 });
 
 test("an item whose id left the catalog is dropped, and the rest of the inventory survives", () => {
@@ -66,7 +66,7 @@ test("an item whose id left the catalog is dropped, and the rest of the inventor
     );
 
     expect(inventory.size()).toBe(2);
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
 test("an item no coercion can make valid is dropped as unrepairable, not thrown over", () => {
@@ -79,7 +79,7 @@ test("an item no coercion can make valid is dropped as unrepairable, not thrown 
 
     expect(inventory.size()).toBe(1);
     expect(inventory.get(1).id).toBe(AK47_ID);
-    expect(inventory.loadReport?.dropped).toStrictEqual([
+    expect(inventory.loadChanges?.dropped).toStrictEqual([
         { uid: 0, id: BROKEN_FANG_GLOVES_ID, reason: "unrepairable" }
     ]);
 });
@@ -96,8 +96,8 @@ test("an item whose id is in the catalog survives its own bad values, coerced an
     expect(inventory.get(0).seed).toBe(1000);
     expect(inventory.get(0).statTrak).toBe(999999);
     expect(inventory.get(0).nameTag).toBeUndefined();
-    expect(inventory.loadReport?.dropped).toStrictEqual([]);
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([]);
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([0]);
 });
 
 test("a stored item whose id left the catalog is dropped, and the unit it came out of is named", () => {
@@ -109,7 +109,7 @@ test("a stored item whose id left the catalog is dropped, and the unit it came o
     );
 
     expect(inventory.get(0).storage?.size).toBe(1);
-    expect(inventory.loadReport?.dropped).toStrictEqual([
+    expect(inventory.loadChanges?.dropped).toStrictEqual([
         { uid: 0, id: RETIRED_ID, reason: "unknown-item", storageUid: 0 }
     ]);
 });
@@ -123,7 +123,7 @@ test("a stored item no coercion can make valid is dropped, and the document surv
     );
 
     expect(inventory.size()).toBe(2);
-    expect(inventory.loadReport?.dropped).toStrictEqual([
+    expect(inventory.loadChanges?.dropped).toStrictEqual([
         { uid: 0, id: BROKEN_FANG_GLOVES_ID, reason: "unrepairable", storageUid: 0 }
     ]);
 });
@@ -150,7 +150,7 @@ test("an item a coercion had to change is reported by uid, and an untouched one 
     );
 
     expect(inventory.get(0).wear).toBe(0.7);
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([0]);
 });
 
 test("canonicalising an item is not a repair, and is not reported as one", () => {
@@ -167,7 +167,7 @@ test("canonicalising an item is not a repair, and is not reported as one", () =>
         })
     );
 
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([]);
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([]);
     expect(inventory.get(0).stickers?.get(0)?.schema).toBe(0);
 });
 
@@ -181,8 +181,8 @@ test("an edit reconcile made is reported as a repair, not left out of the report
 
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0).charges).toBe(6);
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
-    expect(inventory.loadReport?.dropped).toStrictEqual([]);
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([0]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([]);
 });
 
 test("a storage unit reconcile took the charges out of is reported as repaired", () => {
@@ -194,7 +194,7 @@ test("a storage unit reconcile took the charges out of is reported as repaired",
     );
 
     expect(inventory.get(0).storage?.get(0)?.charges).toBeUndefined();
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([0]);
 });
 
 test("an item a cap took away is a drop and not also a repair", () => {
@@ -206,8 +206,8 @@ test("an item a cap took away is a drop and not also a repair", () => {
         { maxItems: 1 }
     );
 
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: AWP_DRAGON_LORE_ID, reason: "policy" }]);
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([{ uid: 1, id: AWP_DRAGON_LORE_ID, reason: "policy" }]);
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([]);
 });
 
 test("loading what an inventory stringified reports nothing to change", () => {
@@ -225,8 +225,8 @@ test("loading what an inventory stringified reports nothing to change", () => {
     );
     const reloaded = CS2Inventory.load(inventory.stringify());
 
-    expect(reloaded.loadReport?.dropped).toStrictEqual([]);
-    expect(reloaded.loadReport?.repairedUids).toStrictEqual([]);
+    expect(reloaded.loadChanges?.dropped).toStrictEqual([]);
+    expect(reloaded.loadChanges?.repairedUids).toStrictEqual([]);
     expect(reloaded.stringify()).toBe(inventory.stringify());
 });
 
@@ -239,9 +239,9 @@ test("data handed straight to the constructor is repaired and reported, but not 
     });
 
     expect(inventory.get(0).wear).toBe(0.7);
-    expect(inventory.loadReport?.migratedFrom).toBeUndefined();
-    expect(inventory.loadReport?.repairedUids).toStrictEqual([0]);
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
+    expect(inventory.loadChanges?.migratedFrom).toBeUndefined();
+    expect(inventory.loadChanges?.repairedUids).toStrictEqual([0]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([{ uid: 1, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
 test("the constructor leaves the data it was handed exactly as it found it", () => {
@@ -269,7 +269,7 @@ test("dropEmptyDefaultItems takes the free items and records them under their ow
 
     const inventory = CS2Inventory.load(raw, { dropEmptyDefaultItems: true });
     expect(inventory.size()).toBe(2);
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: AK47_ID, reason: "policy" }]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([{ uid: 0, id: AK47_ID, reason: "policy" }]);
 });
 
 test("an inventory past its cap loses its newest items, and every one of them is named", () => {
@@ -277,7 +277,7 @@ test("an inventory past its cap loses its newest items, and every one of them is
     const inventory = CS2Inventory.load(JSON.stringify({ items, version: CS2_INVENTORY_VERSION }), { maxItems: 10 });
 
     expect(inventory.size()).toBe(10);
-    expect(inventory.loadReport?.dropped).toStrictEqual([
+    expect(inventory.loadChanges?.dropped).toStrictEqual([
         { uid: 10, id: AK47_ID, reason: "policy" },
         { uid: 11, id: AK47_ID, reason: "policy" }
     ]);
@@ -291,7 +291,7 @@ test("a storage unit past its cap loses its newest contents, named against the u
     );
 
     expect(inventory.get(0).storage?.size).toBe(3);
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 3, id: AK47_ID, reason: "policy", storageUid: 0 }]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([{ uid: 3, id: AK47_ID, reason: "policy", storageUid: 0 }]);
 });
 
 test("an inventory inside its cap is left alone", () => {
@@ -299,11 +299,11 @@ test("an inventory inside its cap is left alone", () => {
     const inventory = CS2Inventory.load(JSON.stringify({ items, version: CS2_INVENTORY_VERSION }), { maxItems: 10 });
 
     expect(inventory.size()).toBe(10);
-    expect(inventory.loadReport?.dropped).toStrictEqual([]);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([]);
 });
 
 test("an inventory that started empty has nothing to report", () => {
-    expect(new CS2Inventory().loadReport).toBeUndefined();
+    expect(new CS2Inventory().loadChanges).toBeUndefined();
 });
 
 test("bytes that are not JSON are refused as a decode failure", () => {
@@ -338,7 +338,7 @@ test("an empty version 0 inventory loads as an inventory holding nothing", () =>
     const inventory = CS2Inventory.load("[]");
 
     expect(inventory.size()).toBe(0);
-    expect(inventory.loadReport?.migratedFrom).toBe(0);
+    expect(inventory.loadChanges?.migratedFrom).toBe(0);
 });
 
 test("a rung that throws is reported as a migration failure, with the original error kept", () => {
@@ -362,8 +362,8 @@ test("a version 0 document holding an equipped id that left the catalog loses th
 
     expect(inventory.size()).toBe(1);
     expect(inventory.get(1).id).toBe(AK47_ID);
-    expect(inventory.loadReport?.migratedFrom).toBe(0);
-    expect(inventory.loadReport?.dropped).toStrictEqual([{ uid: 0, id: RETIRED_ID, reason: "unknown-item" }]);
+    expect(inventory.loadChanges?.migratedFrom).toBe(0);
+    expect(inventory.loadChanges?.dropped).toStrictEqual([{ uid: 0, id: RETIRED_ID, reason: "unknown-item" }]);
 });
 
 test("a document stamped below the oldest version still read is refused", () => {
