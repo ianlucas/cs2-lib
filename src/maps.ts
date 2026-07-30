@@ -60,16 +60,6 @@ export const CS2_CACHE_MAP: CS2Map = {
     name: "Cache"
 };
 
-export const CS2_ACTIVE_MAP_POOL: CS2Map[] = [
-    CS2_ANCIENT_MAP,
-    CS2_ANUBIS_MAP,
-    CS2_DUST2_MAP,
-    CS2_INFERNO_MAP,
-    CS2_MIRAGE_MAP,
-    CS2_NUKE_MAP,
-    CS2_TRAIN_MAP
-];
-
 export const CS2_ALL_MAPS: CS2Map[] = [
     CS2_ANCIENT_MAP,
     CS2_ANUBIS_MAP,
