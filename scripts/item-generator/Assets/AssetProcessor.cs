@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -783,7 +788,7 @@ public static partial class AssetProcessor
 
         if (encodeJobs.Count > 0)
         {
-            var manifestPath = Path.Combine(Config.ItemGeneratorBuildDir, "encode-webp-jobs.jsonl");
+            var manifestPath = Path.Combine(Config.ItemGeneratorBuildDir, "webp-jobs.jsonl");
             File.WriteAllLines(manifestPath, manifestLines);
             RunEncodeWebpBatch(manifestPath, encodeJobs.Count);
 
@@ -805,7 +810,7 @@ public static partial class AssetProcessor
             ctx.TextureFilenameByPath[resolvedVtexPath] = $"/textures/{filename}";
     }
 
-    // Texture PNGs are encoded by scripts/encode-webp.ts in one batch. sharp is pinned to an
+    // Texture PNGs are encoded by scripts/item-generator-webp.ts in one batch. sharp is pinned to an
     // exact version in package.json so texture bytes — and the content hashes embedded in their
     // filenames — are reproducible across machines (the former cwebp dependency came from apt
     // and drifted). The script passes `exact` to preserve RGB under fully-transparent pixels,
@@ -814,10 +819,10 @@ public static partial class AssetProcessor
     {
         if (!NodeAvailable.Value)
             throw new InvalidOperationException(
-                "node not found. Textures are encoded via scripts/encode-webp.ts (sharp). " +
+                "node not found. Textures are encoded via scripts/item-generator-webp.ts (sharp). " +
                 "Install Node.js 20+ and run `npm install`.");
 
-        var script = Path.Combine(Config.ScriptsDir, "encode-webp.ts");
+        var script = Path.Combine(Config.ScriptsDir, "item-generator-webp.ts");
         var info = new ProcessStartInfo("node")
         {
             ArgumentList = { "--import", "tsx", script, manifestPath },
@@ -840,7 +845,7 @@ public static partial class AssetProcessor
         }
         p.WaitForExit();
         if (p.ExitCode != 0)
-            throw new InvalidOperationException($"encode-webp.ts failed (exit {p.ExitCode}): {stderrTask.Result}");
+            throw new InvalidOperationException($"item-generator-webp.ts failed (exit {p.ExitCode}): {stderrTask.Result}");
     }
 
     private static void WriteMaterialMetadata(ItemGeneratorContext ctx)
@@ -1118,7 +1123,7 @@ public static partial class AssetProcessor
         await Depot.DepotDownloaderService.DownloadFiles([.. vpks], Config.WorkdirDir);
     }
 
-    // Geometry is exported uncompressed. We shell out to scripts/optimize-glb.ts (gltf-transform
+    // Geometry is exported uncompressed. We shell out to scripts/item-generator-glb.ts (gltf-transform
     // + the meshoptimizer codec) to add EXT_meshopt_compression. The codec is fully reversible, so
     // this only shrinks the file — meshes, nodes, skins, accessors, and float precision are left
     // bit-identical. One tsx process handles each model; they run in parallel.
@@ -1145,11 +1150,11 @@ public static partial class AssetProcessor
         if (!NodeAvailable.Value)
             throw new InvalidOperationException(
                 "node not found. GLB geometry is compressed with EXT_meshopt_compression via " +
-                "scripts/optimize-glb.ts (gltf-transform + meshoptimizer). Install Node.js 20+ " +
+                "scripts/item-generator-glb.ts (gltf-transform + meshoptimizer). Install Node.js 20+ " +
                 "and run `npm install`.");
 
         Log($"Compressing {FormatCount(glbPaths.Count, "model")} with EXT_meshopt_compression...");
-        var script = Path.Combine(Config.ScriptsDir, "optimize-glb.ts");
+        var script = Path.Combine(Config.ScriptsDir, "item-generator-glb.ts");
         var semaphore = new SemaphoreSlim(Config.ExternalConcurrency);
         var compressed = 0;
         var lastMilestone = 0;
@@ -1177,7 +1182,7 @@ public static partial class AssetProcessor
         var err = await p!.StandardError.ReadToEndAsync();
         await p.WaitForExitAsync();
         if (p.ExitCode != 0)
-            throw new InvalidOperationException($"optimize-glb.ts failed for {glbPath} (exit {p.ExitCode}): {err}");
+            throw new InvalidOperationException($"item-generator-glb.ts failed for {glbPath} (exit {p.ExitCode}): {err}");
     }
 
     private static bool ConvertToWebp(string srcPath, string outPath)

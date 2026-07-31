@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 using System.Text.RegularExpressions;
 
 namespace ItemGenerator;
@@ -53,7 +58,7 @@ public static partial class Config
     // Normal maps therefore use WebP near-lossless: still the lossless coder (no block
     // structure), with bounded per-pixel adjustment. Level 60 keeps the max per-channel
     // error at ±2 (vs ±91 measured at lossy q95 on ak47_normal) for ~2/3 the lossless size.
-    // Passed to scripts/encode-webp.ts as the near-lossless level (sharp reuses `quality`).
+    // Passed to scripts/item-generator-webp.ts as the near-lossless level (sharp reuses `quality`).
     public const int WebpNearLosslessNormals = 60;
     // Data-selector composite inputs (paint masks, AO/cavity — see
     // AssetProcessor.CollectDataSelectorTexturePaths) are sampled as data, not color, so
