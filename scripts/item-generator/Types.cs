@@ -32,96 +32,105 @@ public static class CS2ContainerType
     public const int SouvenirCase = 3;
 }
 
+// Null means the normal roll — see CS2_STATTRAK_ODD.
+public static class CS2StatTrakMode
+{
+    public const string Excluded = "excluded";
+    public const string Guaranteed = "guaranteed";
+}
+
 public class CS2Item
 {
-    [JsonPropertyName("altName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? AltName { get; set; }
+    [JsonPropertyName("alternateName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AlternateName { get; set; }
 
-    [JsonPropertyName("base"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Base { get; set; }
+    [JsonPropertyName("collectionImagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CollectionImagePath { get; set; }
 
-    [JsonPropertyName("baseId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? BaseId { get; set; }
-
-    [JsonPropertyName("category"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Category { get; set; }
-
-    // True when the model publishes a cloth collider beside its model data — the shapes a keychain
-    // is pushed out of. See MetadataExtractor.ExtractClothCollider.
-    [JsonPropertyName("clothCollider"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? ClothCollider { get; set; }
-
-    [JsonPropertyName("collection"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Collection { get; set; }
-
-    [JsonPropertyName("collectionImage"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? CollectionImage { get; set; }
+    // The schema's `item_sets` key, e.g. "set_weapons_i". The display name is the collectionName
+    // translation.
+    [JsonPropertyName("collectionKey"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CollectionKey { get; set; }
 
     [JsonPropertyName("containerType"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? ContainerType { get; set; }
 
-    [JsonPropertyName("contents"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<int>? Contents { get; set; }
+    [JsonPropertyName("contentIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? ContentIds { get; set; }
 
-    [JsonPropertyName("def"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Def { get; set; }
+    // The item's key into the schema's `items` table.
+    [JsonPropertyName("definitionIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DefinitionIndex { get; set; }
 
-    [JsonPropertyName("displaySeed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? DisplaySeed { get; set; }
+    // The sticker shown inside a display-case keychain.
+    [JsonPropertyName("displayedStickerId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DisplayedStickerId { get; set; }
 
-    [JsonPropertyName("free"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Free { get; set; }
+    // True when the model publishes a cloth collider beside its model data — the shapes a keychain
+    // is pushed out of. See MetadataExtractor.ExtractClothCollider.
+    [JsonPropertyName("hasColliderData"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? HasColliderData { get; set; }
 
     [JsonPropertyName("id")]
     public int Id { get; set; }
 
-    [JsonPropertyName("image"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Image { get; set; }
+    [JsonPropertyName("imagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ImagePath { get; set; }
 
-    [JsonPropertyName("index"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Index { get; set; }
+    // The finishless row a model's skins hang off — a paint-kit template, not the schema's
+    // `baseitem`, which this type calls IsDefault.
+    [JsonPropertyName("isBase"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsBase { get; set; }
 
-    [JsonPropertyName("keychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetXMax { get; set; }
+    // The schema's `baseitem`: the game hands it to you, so it carries no wear, seed or StatTrak.
+    [JsonPropertyName("isDefault"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsDefault { get; set; }
 
-    [JsonPropertyName("keychainOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetXMin { get; set; }
+    // The pre-CS2 body and markup generation, not a retired item.
+    [JsonPropertyName("isLegacyModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsLegacyModel { get; set; }
 
-    [JsonPropertyName("keychainOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetYMax { get; set; }
+    // The keychain bounds below are absolute coordinates in the model's markup space, which is why
+    // they run to 41.29 on an AWP. The sticker bounds further down are deltas from a slot's authored
+    // offset and stay inside ±0.5 — hence position for one and offset for the other.
+    [JsonPropertyName("keychainPositionXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionXMax { get; set; }
 
-    [JsonPropertyName("keychainOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetYMin { get; set; }
+    [JsonPropertyName("keychainPositionXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionXMin { get; set; }
 
-    [JsonPropertyName("keychainOffsetZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetZMax { get; set; }
+    [JsonPropertyName("keychainPositionYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionYMax { get; set; }
 
-    [JsonPropertyName("keychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? KeychainOffsetZMin { get; set; }
+    [JsonPropertyName("keychainPositionYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionYMin { get; set; }
 
-    [JsonPropertyName("keys"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<int>? Keys { get; set; }
+    [JsonPropertyName("keychainPositionZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionZMax { get; set; }
 
-    [JsonPropertyName("legacy"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Legacy { get; set; }
+    [JsonPropertyName("keychainPositionZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? KeychainPositionZMin { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetXMax { get; set; }
+    [JsonPropertyName("keyIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? KeyIds { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetXMin { get; set; }
+    [JsonPropertyName("legacyKeychainPositionXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionXMax { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetYMax { get; set; }
+    [JsonPropertyName("legacyKeychainPositionXMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionXMin { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetYMin { get; set; }
+    [JsonPropertyName("legacyKeychainPositionYMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionYMax { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetZMax { get; set; }
+    [JsonPropertyName("legacyKeychainPositionYMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionYMin { get; set; }
 
-    [JsonPropertyName("legacyKeychainOffsetZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LegacyKeychainOffsetZMin { get; set; }
+    [JsonPropertyName("legacyKeychainPositionZMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionZMax { get; set; }
+
+    [JsonPropertyName("legacyKeychainPositionZMin"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LegacyKeychainPositionZMin { get; set; }
 
     [JsonPropertyName("legacyStickerOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? LegacyStickerOffsetXMax { get; set; }
@@ -138,32 +147,42 @@ public class CS2Item
     [JsonPropertyName("legacyStickerSchemaCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyStickerSchemaCount { get; set; }
 
-    [JsonPropertyName("model"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Model { get; set; }
+    // The weapon's loadout slot, e.g. "rifle" or "secondary". A sticker's capsule name is the
+    // categoryName translation.
+    [JsonPropertyName("loadoutCategory"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LoadoutCategory { get; set; }
 
-    [JsonPropertyName("paintMaterial"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PaintMaterial { get; set; }
+    [JsonPropertyName("materialPath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MaterialPath { get; set; }
 
-    [JsonPropertyName("playerModel"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PlayerModel { get; set; }
+    // The model's identifier, e.g. "ak47" or "knife_karambit". Its .glb lives at ModelPath.
+    [JsonPropertyName("modelKey"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ModelKey { get; set; }
 
-    [JsonPropertyName("rarity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Rarity { get; set; }
+    [JsonPropertyName("modelPath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ModelPath { get; set; }
 
-    [JsonPropertyName("specials"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<int>? Specials { get; set; }
+    // The item this one inherits its model, material and placement data from.
+    [JsonPropertyName("parentId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ParentId { get; set; }
 
-    [JsonPropertyName("specialsImage"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SpecialsImage { get; set; }
+    // The seed this kit's own artwork is rendered at, not a default an instance inherits.
+    [JsonPropertyName("previewSeed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? PreviewSeed { get; set; }
 
-    [JsonPropertyName("statTrakless"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? StatTrakless { get; set; }
+    // The rarity's hex color, e.g. "#eb4b4b" — not the grade it stands for.
+    [JsonPropertyName("rarityColor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RarityColor { get; set; }
 
-    [JsonPropertyName("statTrakOnly"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? StatTrakOnly { get; set; }
+    [JsonPropertyName("specialIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? SpecialIds { get; set; }
 
-    [JsonPropertyName("stickerId"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? StickerId { get; set; }
+    [JsonPropertyName("specialsImagePath"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SpecialsImagePath { get; set; }
+
+    // See CS2StatTrakMode.
+    [JsonPropertyName("statTrakMode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StatTrakMode { get; set; }
 
     [JsonPropertyName("stickerOffsetXMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? StickerOffsetXMax { get; set; }
@@ -180,14 +199,21 @@ public class CS2Item
     [JsonPropertyName("stickerSchemaCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? StickerSchemaCount { get; set; }
 
-    [JsonPropertyName("teams"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Teams { get; set; }
+    // The one CS2ItemTeam that may use this item; Both covers the pair.
+    [JsonPropertyName("team"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Team { get; set; }
 
-    [JsonPropertyName("tint"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Tint { get; set; }
+    // The graffiti tint's key into the schema's tint table.
+    [JsonPropertyName("tintIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? TintIndex { get; set; }
 
     [JsonPropertyName("type")]
     public string Type { get; set; } = CS2ItemType.Stub;
+
+    // The kit's key into whichever table defines it: paint_kits, sticker_kits, music_definitions
+    // or keychain_definitions.
+    [JsonPropertyName("variantIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? VariantIndex { get; set; }
 
     [JsonPropertyName("wearMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? WearMax { get; set; }
@@ -196,29 +222,30 @@ public class CS2Item
     public double? WearMin { get; set; }
 
     [JsonIgnore] public string? ClassName { get; set; }
-    [JsonIgnore] public string? DescToken { get; set; }
+    [JsonIgnore] public string? DescriptionToken { get; set; }
     [JsonIgnore] public string? NameToken { get; set; }
 }
 
 public class CS2ItemTranslation
 {
-    [JsonPropertyName("category"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Category { get; set; }
+    // A sticker's capsule name. A weapon's loadout slot is the item's LoadoutCategory.
+    [JsonPropertyName("categoryName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CategoryName { get; set; }
 
-    [JsonPropertyName("collectionDesc"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? CollectionDesc { get; set; }
+    [JsonPropertyName("collectionDescription"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CollectionDescription { get; set; }
 
     [JsonPropertyName("collectionName"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CollectionName { get; set; }
 
-    [JsonPropertyName("desc"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Desc { get; set; }
+    [JsonPropertyName("description"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
 
     [JsonPropertyName("name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Name { get; set; }
 
-    [JsonPropertyName("tournamentDesc"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? TournamentDesc { get; set; }
+    [JsonPropertyName("tournamentDescription"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TournamentDescription { get; set; }
 }
 
 public record VpkIndexEntry(string Crc, string Fnumber, string EntryPath);
@@ -294,9 +321,9 @@ public class ItemGeneratorContext
     public Dictionary<int, CS2Item> Items { get; set; } = [];
     public List<PaintKitRecord> PaintKits { get; set; } = [];
     public List<GraffitiTintRecord> GraffitiTints { get; set; } = [];
-    public int? KeychainBaseId { get; set; }
-    // The "keychain_37" (sticker display case slab) item id: the base the per-sticker
-    // display-case keychains resolve their playerModel/paintMaterial through.
+    public int? KeychainParentId { get; set; }
+    // The "keychain_37" (sticker display case slab) item id: the parent the per-sticker
+    // display-case keychains resolve their modelPath/materialPath through.
     public int? StickerDisplayCaseKeychainId { get; set; }
     public List<string> AllIdentifiers { get; set; } = [];
     public List<string> UniqueIdentifiers { get; set; } = [];

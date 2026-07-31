@@ -16,7 +16,7 @@ stickers?: Record<
 
 These are independent, and the stack can outnumber the anchors. The AK-47's HD body, for example, publishes 4 anchors while the stack always holds up to 5 — so **two stickers may legitimately share an anchor**. Conversely, reordering the stack does not move any sticker on the model; it only changes draw order.
 
-`getStickerSchemaCount()` reads `stickerSchemaCount` (or `legacyStickerSchemaCount` for a legacy item) off `parent ?? this`, falling back to `CS2_MAX_STICKERS` when the model publishes no count.
+`getStickerSchemaCount()` reads `stickerSchemaCount` (or `legacyStickerSchemaCount` when `isLegacyModel` is set) off `parent ?? this`, falling back to `CS2_MAX_STICKERS` when the model publishes no count.
 
 ## Materialization
 
@@ -58,7 +58,7 @@ They sit on the `CS2_STICKER_OFFSET_FACTOR` grid (`0.0001`, four decimals) and m
 
 The envelope is per-model and per-mesh. The legacy AWP, for instance, allows X `[-0.4323, 0.4206]` and Y `[-0.0921, 0.1415]` — small numbers, because they are deltas.
 
-`healStickerOffset(value, min, max)` normalizes a stored offset: non-finite values are dropped, then the value is truncated onto the grid, then clamped into `[min, max]`. Truncation comes first so that clamping cannot reintroduce precision the grid does not allow.
+`repairInventoryItem(economy, item)` normalizes a stored offset against the item's own envelope: non-finite values are dropped, then the value is truncated onto the grid, then clamped into `[min, max]`. Truncation comes first so that clamping cannot reintroduce precision the grid does not allow.
 
 ## Rotation
 
@@ -67,7 +67,7 @@ The envelope is per-model and per-mesh. The legacy AWP, for instance, allows X `
 - `validateStickerRotation(rotation?)` — `true` when it is on the grid and in range.
 - `snapStickerRotation(rotation)` — rounds to the nearest half degree (`2.4` and `2.7` both become `2.5`). Half-degree values are exactly representable in binary, so this introduces no float noise. It does **not** range-wrap.
 
-Healing a stored rotation runs in a specific order, and the order is load-bearing:
+Repairing a stored rotation runs in a specific order, and the order is load-bearing:
 
 1. **snap** to the half-degree grid, so `2.7` heals to `2.5` instead of being thrown away;
 2. **wrap** anything still above 180 by subtracting 360. Inventories written against the old 0–359 convention become the equivalent negative angle (`270` → `-90`), preserving the visual rotation;

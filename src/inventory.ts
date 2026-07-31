@@ -5,93 +5,41 @@
 
 import {
     CS2_CHARM_DETACHMENT_PACK_CHARGES,
-    CS2_KEYCHAIN_OFFSET_FACTOR,
     CS2_MAX_KEYCHAINS,
-    CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_PATCHES,
     CS2_MAX_STATTRAK,
     CS2_MAX_STICKERS,
-    CS2_MAX_STICKER_ROTATION,
     CS2_MAX_STICKER_WEAR,
     CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
-    CS2_MIN_STICKER_ROTATION,
     CS2_MIN_STICKER_WEAR,
     CS2_MIN_WEAR,
-    CS2_STICKER_OFFSET_FACTOR,
-    CS2_STICKER_ROTATION_STEP,
     CS2_STICKER_SCRAPE_FACTOR,
     CS2_STICKER_WEAR_FACTOR
 } from "./economy-constants.ts";
 import { CS2ItemType, type CS2UnlockedItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
-import { resolveInventoryData } from "./inventory-upgrader.ts";
-import { CS2Team } from "./teams.ts";
+import { type CS2InventoryLoadChanges, decodeInventoryData } from "./inventory-format.ts";
+import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
 import {
-    type Interface,
-    type MapValue,
-    type RecordValue,
-    assert,
-    clamp,
-    ensure,
-    isFactorPrecise,
-    roundToFactor,
-    truncateToFactor
-} from "./utils.ts";
+    assertInventoryItem,
+    assertKeychains,
+    assertStickers,
+    checkStickerSchema,
+    getDropReason,
+    getNextStickerSchema,
+    reconcileInventoryItems,
+    repairInventoryItem
+} from "./inventory-rules.ts";
+import type {
+    CS2BaseInventoryItem,
+    CS2InventoryData,
+    CS2InventoryOptions,
+    CS2InventorySpec
+} from "./inventory-types.ts";
+import { CS2Team } from "./teams.ts";
+import { type Interface, type MapValue, type RecordValue, assert, ensure, roundToFactor } from "./utils.ts";
 
-export interface CS2BaseInventoryItem {
-    charges?: number;
-    containerId?: number;
-    equipped?: boolean;
-    equippedCT?: boolean;
-    equippedT?: boolean;
-    id: number;
-    keychains?: Record<
-        string,
-        {
-            id: number;
-            seed?: number;
-            x?: number;
-            y?: number;
-            z?: number;
-        }
-    >;
-    nameTag?: string;
-    patches?: Record<string, number>;
-    seed?: number;
-    statTrak?: number;
-    stickers?: Record<
-        string,
-        {
-            id: number;
-            rotation?: number;
-            schema?: number;
-            wear?: number;
-            x?: number;
-            y?: number;
-        }
-    >;
-    storage?: Record<number, CS2BaseInventoryItem>;
-    updatedAt?: number;
-    wear?: number;
-}
-
-export interface CS2InventoryData {
-    items: Record<number, CS2BaseInventoryItem>;
-    version: number;
-}
-
-export interface CS2InventoryOptions {
-    maxItems: number;
-    storageUnitMaxItems: number;
-}
-
-export interface CS2InventorySpec extends CS2InventoryOptions {
-    economy: CS2EconomyInstance;
-    data: CS2InventoryData;
-}
-
-export const CS2_INVENTORY_VERSION = 1;
 export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
 // prettier-ignore
 export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Weapon];
@@ -124,371 +72,59 @@ export function toStickerMap(
         : undefined;
 }
 
-function healOffset(
-    value: number | undefined,
-    min: number | undefined,
-    max: number | undefined,
-    factor: number
-): number | undefined {
-    if (value === undefined || !Number.isFinite(value)) {
-        return undefined;
-    }
-    value = truncateToFactor(value, factor);
-    if (min !== undefined && value < min) {
-        return min;
-    }
-    if (max !== undefined && value > max) {
-        return max;
-    }
-    return value;
-}
-
-export function healStickerOffset(
-    value: number | undefined,
-    min: number | undefined,
-    max: number | undefined
-): number | undefined {
-    return healOffset(value, min, max, CS2_STICKER_OFFSET_FACTOR);
-}
-
-export function healKeychainOffset(
-    value: number | undefined,
-    min: number | undefined,
-    max: number | undefined
-): number | undefined {
-    return healOffset(value, min, max, CS2_KEYCHAIN_OFFSET_FACTOR);
-}
-
-export function validateStickerRotation(rotation?: number): boolean {
-    return (
-        rotation === undefined ||
-        (Number.isInteger(rotation / CS2_STICKER_ROTATION_STEP) &&
-            rotation >= CS2_MIN_STICKER_ROTATION &&
-            rotation <= CS2_MAX_STICKER_ROTATION)
-    );
-}
-
-export function snapStickerRotation(rotation: number): number {
-    return Math.round(rotation / CS2_STICKER_ROTATION_STEP) * CS2_STICKER_ROTATION_STEP;
-}
-
-export function getNextStickerSchema(
-    stickers: RecordValue<CS2BaseInventoryItem["stickers"]>[],
-    schemaCount: number
-): number {
-    const used = new Set(stickers.map(({ schema }) => schema));
-    for (let schema = 0; schema < schemaCount; schema++) {
-        if (!used.has(schema)) {
-            return schema;
-        }
-    }
-    return 0;
-}
-
 export class CS2Inventory {
     private economy: CS2EconomyInstance;
     private items: Map<number, CS2InventoryItem>;
+    readonly loadChanges: CS2InventoryLoadChanges | undefined;
     readonly options: Readonly<CS2InventoryOptions>;
 
-    static parse(stringValue: string | undefined | null, economy?: CS2EconomyInstance): CS2InventoryData | undefined {
-        return resolveInventoryData(stringValue ?? undefined, economy);
+    static load(raw: string, options: Partial<CS2InventorySpec> = {}): CS2Inventory {
+        const economy = options.economy ?? CS2Economy;
+        const { data, migratedFrom } = decodeInventoryData(raw, economy);
+        const inventory = new CS2Inventory({ ...options, data, economy });
+        ensure(inventory.loadChanges).migratedFrom = migratedFrom;
+        return inventory;
     }
 
-    constructor({ economy, data, maxItems, storageUnitMaxItems }: Partial<CS2InventorySpec> = {}) {
+    constructor({
+        economy,
+        data,
+        dropEmptyDefaultItems,
+        maxItems,
+        storageUnitMaxItems
+    }: Partial<CS2InventorySpec> = {}) {
         this.economy = economy ?? CS2Economy;
-        this.items = data !== undefined ? this.toInventoryItems(data.items) : new Map();
         this.options = {
+            dropEmptyDefaultItems: dropEmptyDefaultItems ?? false,
             maxItems: maxItems ?? 256,
             storageUnitMaxItems: storageUnitMaxItems ?? 32
         };
+        const report: CS2InventoryLoadChanges = { migratedFrom: undefined, dropped: [], repairedUids: [] };
+        this.items = data !== undefined ? this.toInventoryItems(structuredClone(data.items), report) : new Map();
+        this.loadChanges = data !== undefined ? report : undefined;
     }
 
-    private validateAddable(item: CS2EconomyItem): void {
-        if (item.isGloves()) {
-            assert(item.free || !item.base);
-        }
-    }
-
-    private validateStickers(stickers?: CS2BaseInventoryItem["stickers"], item?: CS2EconomyItem): void {
-        if (stickers === undefined) {
-            return;
-        }
-        const entries = Object.values(stickers);
-        assert(entries.length <= CS2_MAX_STICKERS);
-        assert(item === undefined || item.hasStickers());
-        for (const { id: stickerId, wear, rotation, x, y, schema } of entries) {
-            this.economy.getById(stickerId).expectSticker();
-            if (wear !== undefined) {
-                assert(isFactorPrecise(wear, CS2_STICKER_WEAR_FACTOR));
-                assert(wear >= CS2_MIN_STICKER_WEAR && wear <= CS2_MAX_STICKER_WEAR);
-            }
-            if (rotation !== undefined) {
-                assert(validateStickerRotation(rotation));
-            }
-            if (x !== undefined) {
-                assert(isFactorPrecise(x, CS2_STICKER_OFFSET_FACTOR));
-                if (item !== undefined) {
-                    const min = item.getMinimumStickerOffsetX();
-                    const max = item.getMaximumStickerOffsetX();
-                    assert(min === undefined || x >= min);
-                    assert(max === undefined || x <= max);
-                }
-            }
-            if (y !== undefined) {
-                assert(isFactorPrecise(y, CS2_STICKER_OFFSET_FACTOR));
-                if (item !== undefined) {
-                    const min = item.getMinimumStickerOffsetY();
-                    const max = item.getMaximumStickerOffsetY();
-                    assert(min === undefined || y >= min);
-                    assert(max === undefined || y <= max);
-                }
-            }
-            if (schema !== undefined) {
-                assert(Number.isInteger(schema));
-                assert(schema >= 0 && schema < (item?.getStickerSchemaCount() ?? CS2_MAX_STICKERS));
-            }
-        }
-    }
-
-    private validateKeychains(keychains?: CS2BaseInventoryItem["keychains"], item?: CS2EconomyItem): void {
-        if (keychains === undefined) {
-            return;
-        }
-        const entries = Object.entries(keychains);
-        assert(entries.length <= CS2_MAX_KEYCHAINS);
-        assert(item === undefined || item.hasKeychains());
-        for (const [key, { id: keychainId, seed, x, y, z }] of entries) {
-            const slot = parseInt(key, 10);
-            assert(slot >= 0 && slot <= CS2_MAX_KEYCHAINS - 1);
-            this.economy.getById(keychainId).expectKeychain();
-            if (seed !== undefined) {
-                assert(Number.isFinite(seed));
-                assert(Number.isInteger(seed));
-                assert(seed >= CS2_MIN_KEYCHAIN_SEED && seed <= CS2_MAX_KEYCHAIN_SEED);
-            }
-            if (x !== undefined) {
-                assert(Number.isFinite(x));
-                assert(isFactorPrecise(x, CS2_KEYCHAIN_OFFSET_FACTOR));
-                if (item !== undefined) {
-                    const min = item.getMinimumKeychainOffsetX();
-                    const max = item.getMaximumKeychainOffsetX();
-                    assert(min === undefined || x >= min);
-                    assert(max === undefined || x <= max);
-                }
-            }
-            if (y !== undefined) {
-                assert(Number.isFinite(y));
-                assert(isFactorPrecise(y, CS2_KEYCHAIN_OFFSET_FACTOR));
-                if (item !== undefined) {
-                    const min = item.getMinimumKeychainOffsetY();
-                    const max = item.getMaximumKeychainOffsetY();
-                    assert(min === undefined || y >= min);
-                    assert(max === undefined || y <= max);
-                }
-            }
-            if (z !== undefined) {
-                assert(Number.isFinite(z));
-                assert(isFactorPrecise(z, CS2_KEYCHAIN_OFFSET_FACTOR));
-                if (item !== undefined) {
-                    const min = item.getMinimumKeychainOffsetZ();
-                    const max = item.getMaximumKeychainOffsetZ();
-                    assert(min === undefined || z >= min);
-                    assert(max === undefined || z <= max);
-                }
-            }
-        }
-    }
-
-    private validatePatches(patches?: CS2BaseInventoryItem["patches"], item?: CS2EconomyItem): void {
-        if (patches === undefined) {
-            return;
-        }
-        assert(item === undefined || item.isAgent());
-        for (const [key, patchId] of Object.entries(patches)) {
-            const slot = parseInt(key, 10);
-            assert(slot >= 0 && slot <= CS2_MAX_PATCHES - 1);
-            assert(patchId === undefined || this.economy.getById(patchId).isPatch());
-        }
-    }
-
-    public healBaseInventoryItem(item: CS2BaseInventoryItem): void {
-        if (!this.economy.items.has(item.id)) {
-            return;
-        }
-        const economyItem = this.economy.getById(item.id);
-        if (item.patches !== undefined) {
-            if (!economyItem.hasPatches()) {
-                item.patches = undefined;
-            } else {
-                for (const [slot, patchId] of Object.entries(item.patches)) {
-                    if (!this.economy.items.has(patchId)) {
-                        delete item.patches[slot];
-                    }
-                }
-            }
-        }
-        if (item.stickers !== undefined) {
-            if (!economyItem.hasStickers()) {
-                item.stickers = undefined;
-            } else {
-                for (const [slot, sticker] of Object.entries(item.stickers)) {
-                    if (!this.economy.items.has(sticker.id)) {
-                        delete item.stickers[slot];
-                        continue;
-                    }
-                    if (sticker.rotation !== undefined) {
-                        let rotation = snapStickerRotation(sticker.rotation);
-                        if (rotation > CS2_MAX_STICKER_ROTATION) {
-                            rotation -= 360;
-                        }
-                        sticker.rotation = validateStickerRotation(rotation) ? rotation : undefined;
-                    }
-                    sticker.x = healStickerOffset(
-                        sticker.x,
-                        economyItem.getMinimumStickerOffsetX(),
-                        economyItem.getMaximumStickerOffsetX()
-                    );
-                    sticker.y = healStickerOffset(
-                        sticker.y,
-                        economyItem.getMinimumStickerOffsetY(),
-                        economyItem.getMaximumStickerOffsetY()
-                    );
-                }
-                item.stickers = CS2InventoryItem.stickersFromArray(
-                    CS2InventoryItem.stickersToArray(item.stickers, economyItem.getStickerSchemaCount())
-                );
-            }
-        }
-        if (item.keychains !== undefined) {
-            if (!economyItem.hasKeychains()) {
-                item.keychains = undefined;
-            } else {
-                for (const [slot, keychain] of Object.entries(item.keychains)) {
-                    if (!this.economy.items.has(keychain.id)) {
-                        delete item.keychains[slot];
-                        continue;
-                    }
-                    keychain.x = healKeychainOffset(
-                        keychain.x,
-                        economyItem.getMinimumKeychainOffsetX(),
-                        economyItem.getMaximumKeychainOffsetX()
-                    );
-                    keychain.y = healKeychainOffset(
-                        keychain.y,
-                        economyItem.getMinimumKeychainOffsetY(),
-                        economyItem.getMaximumKeychainOffsetY()
-                    );
-                    keychain.z = healKeychainOffset(
-                        keychain.z,
-                        economyItem.getMinimumKeychainOffsetZ(),
-                        economyItem.getMaximumKeychainOffsetZ()
-                    );
-                }
-            }
-        }
-        if (!economyItem.hasCharges()) {
-            item.charges = undefined;
-        } else if (item.charges !== undefined) {
-            item.charges = Number.isFinite(item.charges)
-                ? clamp(Math.trunc(item.charges), CS2_MIN_CHARGES, economyItem.getMaximumCharges())
-                : undefined;
-        } else if (
-            economyItem.isGraffiti() &&
-            (item.equipped === true || item.equippedCT === true || item.equippedT === true)
-        ) {
-            item.charges = economyItem.getDefaultCharges();
-        }
-        if (item.wear !== undefined) {
-            if (!economyItem.hasWear()) {
-                item.wear = undefined;
-            } else {
-                item.wear = clamp(item.wear, economyItem.getMinimumWear(), economyItem.getMaximumWear());
-                if (!this.economy.safeValidateWear(item.wear, economyItem)) {
-                    item.wear = undefined;
-                }
-            }
-        }
-    }
-
-    public removeInvalidItemReferences(item: CS2BaseInventoryItem): void {
-        this.healBaseInventoryItem(item);
-    }
-
-    public validateBaseInventoryItem({
-        charges,
-        id,
-        keychains,
-        nameTag,
-        patches,
-        seed,
-        statTrak,
-        stickers,
-        wear
-    }: CS2BaseInventoryItem): void {
-        const item = this.economy.getById(id);
-        this.economy.validateWear(wear, item);
-        this.economy.validateSeed(seed, item);
-        this.economy.validateNameTag(nameTag, item);
-        this.economy.validateStatTrak(statTrak, item);
-        this.economy.validateCharges(charges, item);
-        this.validateAddable(item);
-        this.validatePatches(patches, item);
-        this.validateStickers(stickers, item);
-        this.validateKeychains(keychains, item);
-    }
-
-    private reconcileChargeableItems(items: Record<number, CS2BaseInventoryItem>): void {
-        for (const item of Object.values(items)) {
-            if (item.storage === undefined) {
-                continue;
-            }
-            for (const [slot, stored] of Object.entries(item.storage)) {
-                if (!this.economy.items.has(stored.id)) {
-                    continue;
-                }
-                const economyItem = this.economy.getById(stored.id);
-                if (economyItem.isCharmDetachment() || economyItem.isCharmDetachmentPack()) {
-                    delete item.storage[parseInt(slot, 10)];
-                } else if (economyItem.hasCharges()) {
-                    stored.charges = undefined;
-                }
-            }
-            if (Object.keys(item.storage).length === 0) {
-                item.storage = undefined;
-            }
-        }
-        const entries = Object.entries(items)
-            .map(([key, value]) => [parseInt(key, 10), value] as const)
-            .filter(([, { id }]) => this.economy.items.has(id) && this.economy.getById(id).isCharmDetachment())
-            .sort(([a], [b]) => a - b);
-        if (entries.length <= 1) {
-            return;
-        }
-        const [survivorUid, survivor] = ensure(entries[0]);
-        const economyItem = this.economy.getById(survivor.id);
-        let charges = 0;
-        for (const [uid, item] of entries) {
-            charges += item.charges ?? economyItem.getDefaultCharges();
-            if (uid !== survivorUid) {
+    private toInventoryItems(
+        items: Record<number, CS2BaseInventoryItem>,
+        report: CS2InventoryLoadChanges
+    ): Map<number, CS2InventoryItem> {
+        const arrived = new Map(Object.entries(items).map(([key, base]) => [parseInt(key, 10), JSON.stringify(base)]));
+        for (const [key, base] of Object.entries(items)) {
+            const uid = parseInt(key, 10);
+            if (!repairInventoryItem(this.economy, base, { dropped: report.dropped, storageUid: uid })) {
+                report.dropped.push({ uid, id: base.id, reason: getDropReason(this.economy, base.id) });
                 delete items[uid];
             }
         }
-        survivor.charges = Math.min(charges, economyItem.getMaximumCharges());
-        survivor.updatedAt = getTimestamp();
-    }
-
-    private toInventoryItems(items: Record<number, CS2BaseInventoryItem>): Map<number, CS2InventoryItem> {
-        for (const value of Object.values(items)) {
-            this.healBaseInventoryItem(value);
-        }
-        this.reconcileChargeableItems(items);
+        report.dropped.push(...reconcileInventoryItems(this.economy, items, this.options));
         return new Map(
-            Object.entries(items)
-                .filter(([, { id }]) => this.economy.items.has(id))
-                .map(([key, value]) => {
-                    const uid = parseInt(key, 10);
-                    return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
-                })
+            Object.entries(items).map(([key, value]) => {
+                const uid = parseInt(key, 10);
+                if (JSON.stringify(value) !== arrived.get(uid)) {
+                    report.repairedUids.push(uid);
+                }
+                return [uid, new CS2InventoryItem(this, uid, value, this.economy.getById(value.id))] as const;
+            })
         );
     }
 
@@ -496,12 +132,59 @@ export class CS2Inventory {
         return Object.fromEntries(Array.from(items).map(([key, value]) => [key, value.asBase()]));
     }
 
-    stringify(): string {
-        return JSON.stringify(this.getData());
-    }
-
     isFull(): boolean {
         return this.items.size >= this.options.maxItems;
+    }
+
+    isStorageUnitFull(storageUid: number): boolean {
+        return this.get(storageUid).storage?.size === this.options.storageUnitMaxItems;
+    }
+
+    isStorageUnitFilled(storageUid: number): boolean {
+        return this.getStorageUnitSize(storageUid) > 0;
+    }
+
+    canDepositToStorageUnit(storageUid: number, size = 1): boolean {
+        return (
+            this.get(storageUid).nameTag !== undefined &&
+            this.getStorageUnitSize(storageUid) + size <= this.options.storageUnitMaxItems
+        );
+    }
+
+    canRetrieveFromStorageUnit(storageUid: number, size = 1): boolean {
+        return this.getStorageUnitSize(storageUid) - size >= 0 && this.size() + size <= this.options.maxItems;
+    }
+
+    get(uid: number): CS2InventoryItem {
+        return ensure(this.items.get(uid));
+    }
+
+    getAll(): CS2InventoryItem[] {
+        return Array.from(this.items.values());
+    }
+
+    getAllAsBase(): CS2BaseInventoryItem[] {
+        return Object.values(this.toBaseInventoryItems(this.items));
+    }
+
+    getStorageUnitSize(storageUid: number): number {
+        return this.get(storageUid).storage?.size ?? 0;
+    }
+
+    getStorageUnitItems(storageUid: number): CS2InventoryItem[] {
+        return Array.from(this.get(storageUid).storage?.values() ?? []);
+    }
+
+    getCharmDetachmentCharges(): number {
+        const uid = this.findChargeableUid(this.economy.getCharmDetachment().id);
+        return uid !== undefined ? this.get(uid).getCharges() : 0;
+    }
+
+    getData(): CS2InventoryData {
+        return {
+            items: this.toBaseInventoryItems(this.items),
+            version: CS2_INVENTORY_VERSION
+        };
     }
 
     private findChargeableUid(id: number): number | undefined {
@@ -592,7 +275,7 @@ export class CS2Inventory {
         const sticker = this.get(stickerUid).expectSticker();
         const { schema, x, y, rotation, wear } = attributes;
         const stickers = { 0: { id: sticker.id, schema, x, y, rotation, wear } };
-        this.validateStickers(stickers, this.economy.getById(id));
+        assertStickers(this.economy, stickers, this.economy.getById(id));
         this.items.delete(stickerUid);
         this.add({ id, stickers });
         return this;
@@ -601,12 +284,12 @@ export class CS2Inventory {
     addWithKeychain(
         keychainUid: number,
         id: number,
-        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id"> = {}
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed"> = {}
     ): this {
         const keychain = this.get(keychainUid).expectKeychain();
-        const { seed, x, y, z } = attributes;
-        const keychains = { 0: { id: keychain.id, seed, x, y, z } };
-        this.validateKeychains(keychains, this.economy.getById(id));
+        const { x, y, z } = attributes;
+        const keychains = { 0: { id: keychain.id, seed: keychain.seed, x, y, z } };
+        assertKeychains(this.economy, keychains, this.economy.getById(id));
         this.items.delete(keychainUid);
         this.add({ id, keychains });
         return this;
@@ -635,7 +318,7 @@ export class CS2Inventory {
                 otherItem.equippedCT = team === CS2Team.CT ? true : otherItem.equippedCT;
                 otherItem.equippedT = team === CS2Team.T ? true : otherItem.equippedT;
             } else {
-                if (otherItem.type === item.type && (!item.isWeapon() || otherItem.model === item.model)) {
+                if (otherItem.type === item.type && (!item.isWeapon() || otherItem.modelKey === item.modelKey)) {
                     otherItem.equipped = team === undefined ? undefined : otherItem.equipped;
                     otherItem.equippedCT = team === CS2Team.CT ? undefined : otherItem.equippedCT;
                     otherItem.equippedT = team === CS2Team.T ? undefined : otherItem.equippedT;
@@ -721,33 +404,6 @@ export class CS2Inventory {
         return this;
     }
 
-    isStorageUnitFull(storageUid: number): boolean {
-        return this.get(storageUid).storage?.size === this.options.storageUnitMaxItems;
-    }
-
-    getStorageUnitSize(storageUid: number): number {
-        return this.get(storageUid).storage?.size ?? 0;
-    }
-
-    isStorageUnitFilled(storageUid: number): boolean {
-        return this.getStorageUnitSize(storageUid) > 0;
-    }
-
-    canDepositToStorageUnit(storageUid: number, size = 1): boolean {
-        return (
-            this.get(storageUid).nameTag !== undefined &&
-            this.getStorageUnitSize(storageUid) + size <= this.options.storageUnitMaxItems
-        );
-    }
-
-    canRetrieveFromStorageUnit(storageUid: number, size = 1): boolean {
-        return this.getStorageUnitSize(storageUid) - size >= 0 && this.size() + size <= this.options.maxItems;
-    }
-
-    getStorageUnitItems(storageUid: number): CS2InventoryItem[] {
-        return Array.from(this.get(storageUid).storage?.values() ?? []);
-    }
-
     depositToStorageUnit(storageUid: number, depositUids: number[]): this {
         const item = this.get(storageUid);
         item.expectStorageUnit();
@@ -818,7 +474,7 @@ export class CS2Inventory {
             wear
         });
         const record = CS2InventoryItem.stickersFromArray(stickers);
-        this.validateStickers(record, target);
+        assertStickers(this.economy, record, target);
         target.stickers = toStickerMap(record);
         target.updatedAt = getTimestamp();
         this.items.delete(stickerUid);
@@ -857,7 +513,7 @@ export class CS2Inventory {
         assert(stickers[index] !== undefined);
         stickers[index] = { ...stickers[index], ...patch };
         const record = CS2InventoryItem.stickersFromArray(stickers);
-        this.validateStickers(record, target);
+        assertStickers(this.economy, record, target);
         target.stickers = toStickerMap(record);
         target.updatedAt = getTimestamp();
         return this;
@@ -883,6 +539,60 @@ export class CS2Inventory {
             stickers[index] = { ...sticker, wear: nextWear };
         }
         target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
+        target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    applyItemKeychain(
+        targetUid: number,
+        keychainUid: number,
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed"> = {}
+    ): this {
+        const target = this.get(targetUid);
+        const keychain = this.get(keychainUid).expectKeychain();
+        assert(target.hasKeychains());
+        assert(target.getKeychainsCount() < CS2_MAX_KEYCHAINS);
+        let slot = 0;
+        while (target.keychains?.has(slot)) {
+            slot++;
+        }
+        const { x, y, z } = attributes;
+        const value = { id: keychain.id, seed: keychain.seed, x, y, z };
+        const record = { ...Object.fromEntries(target.keychains ?? []), [slot]: value };
+        assertKeychains(this.economy, record, target);
+        (target.keychains ??= new Map()).set(slot, value);
+        target.updatedAt = getTimestamp();
+        this.items.delete(keychainUid);
+        return this;
+    }
+
+    removeItemKeychain(targetUid: number, slot: number): this {
+        const target = this.get(targetUid);
+        const keychains = ensure(target.keychains);
+        const keychain = ensure(keychains.get(slot));
+        const detachmentUid = ensure(this.findChargeableUid(this.economy.getCharmDetachment().id));
+        assert(!this.isFull() || this.get(detachmentUid).getCharges() === 1);
+        this.consumeItemCharges(detachmentUid);
+        keychains.delete(slot);
+        if (keychains.size === 0) {
+            target.keychains = undefined;
+        }
+        target.updatedAt = getTimestamp();
+        this.add({ id: keychain.id, seed: keychain.seed });
+        return this;
+    }
+
+    editItemKeychain(
+        targetUid: number,
+        slot: number,
+        patch: Partial<Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed">>
+    ): this {
+        const target = this.get(targetUid);
+        const keychains = ensure(target.keychains);
+        const value = { ...ensure(keychains.get(slot)), ...patch };
+        const record = { ...Object.fromEntries(keychains), [slot]: value };
+        assertKeychains(this.economy, record, target);
+        keychains.set(slot, value);
         target.updatedAt = getTimestamp();
         return this;
     }
@@ -928,7 +638,7 @@ export class CS2Inventory {
         const toItem = this.get(toUid);
         assert(fromItem.statTrak !== undefined && toItem.statTrak !== undefined);
         assert(fromItem.type === toItem.type);
-        assert(fromItem.isMusicKit() || fromItem.def === toItem.def);
+        assert(fromItem.isMusicKit() || fromItem.definitionIndex === toItem.definitionIndex);
         const fromStattrak = fromItem.statTrak;
         fromItem.statTrak = toItem.statTrak;
         fromItem.updatedAt = getTimestamp();
@@ -948,32 +658,17 @@ export class CS2Inventory {
         return this;
     }
 
-    get(uid: number): CS2InventoryItem {
-        return ensure(this.items.get(uid));
-    }
-
-    getAll(): CS2InventoryItem[] {
-        return Array.from(this.items.values());
-    }
-
-    getAllAsBase(): CS2BaseInventoryItem[] {
-        return Object.values(this.toBaseInventoryItems(this.items));
-    }
-
     setAll(items: Map<number, CS2InventoryItem>): this {
         this.items = items;
         return this;
     }
 
-    getData(): CS2InventoryData {
-        return {
-            items: this.toBaseInventoryItems(this.items),
-            version: CS2_INVENTORY_VERSION
-        };
-    }
-
     size(): number {
         return this.items.size;
+    }
+
+    stringify(): string {
+        return JSON.stringify(this.getData());
     }
 
     move(options: Partial<CS2InventorySpec> = {}): CS2Inventory {
@@ -1004,70 +699,6 @@ export class CS2InventoryItem
     updatedAt: number | undefined;
     wear: number | undefined;
 
-    private assign({ keychains, patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
-        if (patches !== undefined) {
-            this.patches = new Map(
-                Object.entries(patches)
-                    .filter(([, patchId]) => this.economy.items.has(patchId))
-                    .map(([slot, patchId]) => [parseInt(slot, 10), patchId])
-            );
-        }
-        if (stickers !== undefined) {
-            this.stickers = toStickerMap(
-                CS2InventoryItem.stickersFromArray(
-                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount()).filter(({ id }) =>
-                        this.economy.items.has(id)
-                    )
-                )
-            );
-        }
-        if (keychains !== undefined) {
-            this.keychains = new Map(
-                Object.entries(keychains)
-                    .filter(([, { id }]) => this.economy.items.has(id))
-                    .map(([slot, keychain]) => [parseInt(slot, 10), keychain])
-            );
-        }
-        if (storage !== undefined) {
-            assert(this.isStorageUnit());
-            this.storage = new Map(
-                Object.entries(storage)
-                    .filter(([, { id }]) => this.economy.items.has(id))
-                    .map(([key, value]) => {
-                        this.inventory.healBaseInventoryItem(value);
-                        const economyItem = this.economy.getById(value.id);
-                        assert(value.storage === undefined);
-                        const uid = parseInt(key, 10);
-                        return [uid, new CS2InventoryItem(this.inventory, uid, value, economyItem)];
-                    })
-            );
-        }
-    }
-
-    constructor(
-        private inventory: CS2Inventory,
-        public uid: number,
-        baseInventoryItem: CS2BaseInventoryItem,
-        { economy, item, language }: CS2EconomyItem
-    ) {
-        super(economy, item, language);
-        inventory.validateBaseInventoryItem(baseInventoryItem);
-        Object.assign(this, baseInventoryItem);
-        this.assign(baseInventoryItem);
-    }
-
-    edit(...sources: Partial<CS2BaseInventoryItem>[]): void {
-        const merged: CS2BaseInventoryItem = this.asBase();
-        for (const source of sources) {
-            Object.assign(merged, source);
-        }
-        this.inventory.validateBaseInventoryItem(merged);
-        for (const source of sources) {
-            Object.assign(this, source);
-            this.assign(source);
-        }
-    }
-
     static stickersToArray(
         stickers: CS2BaseInventoryItem["stickers"],
         schemaCount?: number
@@ -1082,7 +713,7 @@ export class CS2InventoryItem
         const result: RecordValue<CS2BaseInventoryItem["stickers"]>[] = [];
         for (const [key, sticker] of sorted) {
             let schema = sticker.schema ?? key;
-            if (schemaCount !== undefined && (!Number.isInteger(schema) || schema < 0 || schema >= schemaCount)) {
+            if (schemaCount !== undefined && !checkStickerSchema(schema, schemaCount)) {
                 schema = getNextStickerSchema(result, schemaCount);
             }
             result.push({ ...sticker, schema });
@@ -1111,16 +742,82 @@ export class CS2InventoryItem
         );
     }
 
-    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
-        return stickerMapToArray(this.stickers).map((sticker, index) => [index, sticker]);
+    private assign({ keychains, patches, stickers, storage }: Partial<CS2BaseInventoryItem>): void {
+        if (patches !== undefined) {
+            this.patches = new Map(Object.entries(patches).map(([slot, patchId]) => [parseInt(slot, 10), patchId]));
+        }
+        if (stickers !== undefined) {
+            this.stickers = toStickerMap(
+                CS2InventoryItem.stickersFromArray(
+                    CS2InventoryItem.stickersToArray(stickers, this.getStickerSchemaCount())
+                )
+            );
+        }
+        if (keychains !== undefined) {
+            this.keychains = new Map(
+                Object.entries(keychains).map(([slot, keychain]) => [parseInt(slot, 10), keychain])
+            );
+        }
+        if (storage !== undefined) {
+            this.storage = new Map(
+                Object.entries(storage).map(([key, value]) => {
+                    const uid = parseInt(key, 10);
+                    return [uid, new CS2InventoryItem(this.inventory, uid, value, this.economy.getById(value.id))];
+                })
+            );
+        }
     }
 
-    someStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
-        return this.allStickers();
+    constructor(
+        private inventory: CS2Inventory,
+        public uid: number,
+        baseInventoryItem: CS2BaseInventoryItem,
+        { economy, item, language }: CS2EconomyItem
+    ) {
+        super(economy, item, language);
+        assertInventoryItem(this.economy, baseInventoryItem);
+        Object.assign(this, baseInventoryItem);
+        this.assign(baseInventoryItem);
+    }
+
+    isSealed(): boolean {
+        return this.hasCharges() && this.charges === undefined;
     }
 
     getStickersCount(): number {
         return this.stickers?.size ?? 0;
+    }
+
+    getStickerWear(slot: number): number {
+        return this.stickers?.get(slot)?.wear ?? CS2_MIN_STICKER_WEAR;
+    }
+
+    getKeychainsCount(): number {
+        return this.keychains?.size ?? 0;
+    }
+
+    getKeychainSeed(slot: number): number {
+        return this.keychains?.get(slot)?.seed ?? CS2_MIN_KEYCHAIN_SEED;
+    }
+
+    getPatchesCount(): number {
+        return this.patches?.size ?? 0;
+    }
+
+    getCharges(): number {
+        return this.charges ?? 0;
+    }
+
+    getWear(): number {
+        return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
+    }
+
+    override getImageUrl(wear?: number): string {
+        return super.getImageUrl(wear ?? this.getWear());
+    }
+
+    allStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
+        return stickerMapToArray(this.stickers).map((sticker, index) => [index, sticker]);
     }
 
     allKeychains(): [number, MapValue<CS2InventoryItem["keychains"]> | undefined][] {
@@ -1132,16 +829,6 @@ export class CS2InventoryItem
         return entries;
     }
 
-    someKeychains(): [number, MapValue<CS2InventoryItem["keychains"]>][] {
-        return this.allKeychains().filter(
-            (value): value is [number, MapValue<CS2InventoryItem["keychains"]>] => value[1] !== undefined
-        );
-    }
-
-    getKeychainsCount(): number {
-        return this.keychains?.size ?? 0;
-    }
-
     allPatches(): [number, number | undefined][] {
         const entries: [number, number | undefined][] = [];
         for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
@@ -1151,36 +838,30 @@ export class CS2InventoryItem
         return entries;
     }
 
+    someStickers(): [number, MapValue<CS2InventoryItem["stickers"]>][] {
+        return this.allStickers();
+    }
+
+    someKeychains(): [number, MapValue<CS2InventoryItem["keychains"]>][] {
+        return this.allKeychains().filter(
+            (value): value is [number, MapValue<CS2InventoryItem["keychains"]>] => value[1] !== undefined
+        );
+    }
+
     somePatches(): [number, number][] {
         return this.allPatches().filter((value): value is [number, number] => value[1] !== undefined);
     }
 
-    getPatchesCount(): number {
-        return this.patches?.size ?? 0;
-    }
-
-    getCharges(): number {
-        return this.charges ?? 0;
-    }
-
-    isSealed(): boolean {
-        return this.hasCharges() && this.charges === undefined;
-    }
-
-    getWear(): number {
-        return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
-    }
-
-    getStickerWear(slot: number): number {
-        return this.stickers?.get(slot)?.wear ?? CS2_MIN_STICKER_WEAR;
-    }
-
-    getKeychainSeed(slot: number): number {
-        return this.keychains?.get(slot)?.seed ?? CS2_MIN_KEYCHAIN_SEED;
-    }
-
-    override getImage(wear?: number): string {
-        return super.getImage(wear ?? this.getWear());
+    edit(...sources: Partial<CS2BaseInventoryItem>[]): void {
+        const merged: CS2BaseInventoryItem = this.asBase();
+        for (const source of sources) {
+            Object.assign(merged, source);
+        }
+        assertInventoryItem(this.economy, merged);
+        for (const source of sources) {
+            Object.assign(this, source);
+            this.assign(source);
+        }
     }
 
     asBase(): CS2BaseInventoryItem {

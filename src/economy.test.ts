@@ -13,9 +13,9 @@ import { CS2_ITEMS } from "./items.ts";
 describe("CS2Economy", () => {
     test("use should add items to the economy", () => {
         const items: CS2Item[] = [
-            { id: 1, rarity: CS2RarityColor.Common, type: "weapon" },
-            { id: 2, rarity: CS2RarityColor.Common, type: "weapon" },
-            { id: 3, rarity: CS2RarityColor.Common, type: "weapon" }
+            { id: 1, rarityColor: CS2RarityColor.Common, type: "weapon" },
+            { id: 2, rarityColor: CS2RarityColor.Common, type: "weapon" },
+            { id: 3, rarityColor: CS2RarityColor.Common, type: "weapon" }
         ];
         CS2Economy.load({
             items,
@@ -32,7 +32,7 @@ describe("CS2Economy", () => {
     });
 
     test("getById should return the item with the given id", () => {
-        const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
+        const item: CS2Item = { id: 1, rarityColor: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
         CS2Economy.load({
             items: [item],
@@ -45,7 +45,7 @@ describe("CS2Economy", () => {
     });
 
     test("get should return the item with the given id or item object", () => {
-        const item: CS2Item = { id: 1, rarity: CS2RarityColor.Common, type: "weapon" };
+        const item: CS2Item = { id: 1, rarityColor: CS2RarityColor.Common, type: "weapon" };
         const economyItem = new CS2EconomyItem(CS2Economy, item, { name: "Item 1" });
 
         CS2Economy.load({
@@ -63,12 +63,12 @@ describe("CS2Economy", () => {
     });
 });
 
-test("getModelData derives from playerModel (.glb -> .json) with base inheritance", () => {
-    const playerModel = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
+test("getModelDataUrl derives from modelPath (.glb -> .json) with base inheritance", () => {
+    const modelPath = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.glb";
     const modelData = "/models/weapon_knife_bayonet_ab9e13cc_331408bc.json";
     const items: CS2Item[] = [
-        { base: true, id: 1, playerModel, rarity: CS2RarityColor.Common, type: "weapon" },
-        { baseId: 1, id: 2, rarity: CS2RarityColor.Rare, type: "weapon" }
+        { id: 1, isBase: true, modelPath, rarityColor: CS2RarityColor.Common, type: "weapon" },
+        { parentId: 1, id: 2, rarityColor: CS2RarityColor.Rare, type: "weapon" }
     ];
     CS2Economy.load({
         items,
@@ -77,13 +77,13 @@ test("getModelData derives from playerModel (.glb -> .json) with base inheritanc
             2: { name: "Bayonet | Skin" }
         }
     });
-    expect(CS2Economy.get(1).getPlayerModel()).toBe(CS2Economy.resolveUrl(playerModel));
-    expect(CS2Economy.get(1).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+    expect(CS2Economy.get(1).getModelUrl()).toBe(CS2Economy.resolveUrl(modelPath));
+    expect(CS2Economy.get(1).getModelDataUrl()).toBe(CS2Economy.resolveUrl(modelData));
     // A skin inherits the base model and derives the same data path.
-    expect(CS2Economy.get(2).getModelData()).toBe(CS2Economy.resolveUrl(modelData));
+    expect(CS2Economy.get(2).getModelDataUrl()).toBe(CS2Economy.resolveUrl(modelData));
 });
 
-test("playerModel and paintMaterial resolve own-first, then through the parent", () => {
+test("modelPath and materialPath resolve own-first, then through the parent", () => {
     // Keychain-shaped data: the item carries its own model/material while its base (the shared
     // stub) carries none, and a display-case-shaped item carries none but its base carries both.
     const ownModel = "/models/kc_missinglink_ava_ab9e13cc_331408bc.glb";
@@ -91,25 +91,25 @@ test("playerModel and paintMaterial resolve own-first, then through the parent",
     const slabModel = "/models/kc_sticker_display_case_ab9e13cc_331408bc.glb";
     const slabMaterial = "/materials/kc_sticker_display_case_331408bc.vcompmat.json";
     const items: CS2Item[] = [
-        { id: 1, rarity: CS2RarityColor.Common, type: "stub" },
+        { id: 1, rarityColor: CS2RarityColor.Common, type: "stub" },
         {
-            baseId: 1,
+            parentId: 1,
             id: 2,
-            paintMaterial: ownMaterial,
-            playerModel: ownModel,
-            rarity: CS2RarityColor.Rare,
+            materialPath: ownMaterial,
+            modelPath: ownModel,
+            rarityColor: CS2RarityColor.Rare,
             type: "keychain"
         },
         {
-            baseId: 1,
-            free: true,
+            parentId: 1,
             id: 3,
-            paintMaterial: slabMaterial,
-            playerModel: slabModel,
-            rarity: CS2RarityColor.Common,
+            isDefault: true,
+            materialPath: slabMaterial,
+            modelPath: slabModel,
+            rarityColor: CS2RarityColor.Common,
             type: "keychain"
         },
-        { baseId: 3, id: 4, rarity: CS2RarityColor.Common, stickerId: 5, type: "keychain" }
+        { parentId: 3, id: 4, rarityColor: CS2RarityColor.Common, displayedStickerId: 5, type: "keychain" }
     ];
     CS2Economy.load({
         items,
@@ -121,12 +121,12 @@ test("playerModel and paintMaterial resolve own-first, then through the parent",
         }
     });
     // Own model/material win over the (empty) stub parent.
-    expect(CS2Economy.get(2).getPlayerModel()).toBe(CS2Economy.resolveUrl(ownModel));
-    expect(CS2Economy.get(2).getPaintMaterial()).toBe(CS2Economy.resolveUrl(ownMaterial));
+    expect(CS2Economy.get(2).getModelUrl()).toBe(CS2Economy.resolveUrl(ownModel));
+    expect(CS2Economy.get(2).getMaterialUrl()).toBe(CS2Economy.resolveUrl(ownMaterial));
     // The per-sticker display case falls back to the slab parent's model/material.
-    expect(CS2Economy.get(4).getPlayerModel()).toBe(CS2Economy.resolveUrl(slabModel));
-    expect(CS2Economy.get(4).getModelData()).toBe(CS2Economy.resolveUrl(slabModel.replace(/\.glb$/, ".json")));
-    expect(CS2Economy.get(4).getPaintMaterial()).toBe(CS2Economy.resolveUrl(slabMaterial));
+    expect(CS2Economy.get(4).getModelUrl()).toBe(CS2Economy.resolveUrl(slabModel));
+    expect(CS2Economy.get(4).getModelDataUrl()).toBe(CS2Economy.resolveUrl(slabModel.replace(/\.glb$/, ".json")));
+    expect(CS2Economy.get(4).getMaterialUrl()).toBe(CS2Economy.resolveUrl(slabMaterial));
 });
 
 test("nametag validation", () => {
@@ -151,7 +151,7 @@ test("wear validation", () => {
         CS2Economy,
         {
             id: 1,
-            rarity: CS2RarityColor.Common,
+            rarityColor: CS2RarityColor.Common,
             type: "weapon" as const,
             wearMin: 0.2,
             wearMax: 0.6
@@ -174,24 +174,102 @@ test("has seed", () => {
 test("default cdn url", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     const dragonLore = CS2Economy.getById(307);
-    assert(dragonLore.getImage().endsWith(".webp"));
-    assert(dragonLore.getImage(1 / 3 - 0.1).endsWith("_light.webp"));
-    assert(dragonLore.getImage(2 / 3 - 0.1).endsWith("_medium.webp"));
-    assert(dragonLore.getImage(3 / 3 - 0.1).endsWith("_heavy.webp"));
+    assert(dragonLore.getImageUrl().endsWith(".webp"));
+    assert(dragonLore.getImageUrl(1 / 3 - 0.1).endsWith("_light.webp"));
+    assert(dragonLore.getImageUrl(2 / 3 - 0.1).endsWith("_medium.webp"));
+    assert(dragonLore.getImageUrl(3 / 3 - 0.1).endsWith("_heavy.webp"));
 
     const baseGloves = CS2Economy.getById(56);
-    expect(baseGloves.getImage().startsWith("https://cdn.cstrike.app/images"));
+    expect(baseGloves.getImageUrl().startsWith("https://cdn.cstrike.app/images"));
 });
 
 test("display-case keychain resolves model and material through the slab parent", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     // 15200 is the Sticker Display Case slab (carries the shared model/material);
-    // 15407 is a per-sticker display-case keychain that carries neither and inherits via baseId.
+    // 15407 is a per-sticker display-case keychain that carries neither and inherits via parentId.
     const slab = CS2Economy.getById(15200);
     const displayCase = CS2Economy.getById(15407);
-    expect(displayCase.playerModel).toBe(undefined);
-    expect(displayCase.paintMaterial).toBe(undefined);
-    expect(displayCase.getPlayerModel()).toBe(slab.getPlayerModel());
-    expect(displayCase.getModelData()).toBe(slab.getModelData());
-    expect(displayCase.getPaintMaterial()).toBe(slab.getPaintMaterial());
+    expect(displayCase.modelPath).toBe(undefined);
+    expect(displayCase.materialPath).toBe(undefined);
+    expect(displayCase.getModelUrl()).toBe(slab.getModelUrl());
+    expect(displayCase.getModelDataUrl()).toBe(slab.getModelDataUrl());
+    expect(displayCase.getMaterialUrl()).toBe(slab.getMaterialUrl());
+});
+
+test("getStickerOffsetBounds returns per-axis bounds; legacy models read only legacy fields", () => {
+    const items: CS2Item[] = [
+        {
+            id: 1,
+            rarityColor: CS2RarityColor.Common,
+            type: "weapon",
+            stickerOffsetXMin: -0.5,
+            stickerOffsetXMax: 0.5,
+            stickerOffsetYMin: -0.25,
+            stickerOffsetYMax: 0.25,
+            legacyStickerOffsetXMin: -1,
+            legacyStickerOffsetXMax: 1
+        },
+        { id: 2, rarityColor: CS2RarityColor.Common, type: "weapon", parentId: 1, isLegacyModel: true },
+        { id: 3, rarityColor: CS2RarityColor.Common, type: "weapon", parentId: 1 },
+        { id: 4, rarityColor: CS2RarityColor.Common, type: "weapon" }
+    ];
+    CS2Economy.load({
+        items,
+        language: { 1: { name: "Parent" }, 2: { name: "Legacy" }, 3: { name: "Child" }, 4: { name: "Bare" } }
+    });
+    expect(CS2Economy.getById(1).getStickerOffsetBounds()).toEqual({
+        x: { min: -0.5, max: 0.5 },
+        y: { min: -0.25, max: 0.25 }
+    });
+    expect(CS2Economy.getById(2).getStickerOffsetBounds()).toEqual({
+        x: { min: -1, max: 1 },
+        y: { min: undefined, max: undefined }
+    });
+    expect(CS2Economy.getById(3).getStickerOffsetBounds()).toEqual({
+        x: { min: -0.5, max: 0.5 },
+        y: { min: -0.25, max: 0.25 }
+    });
+    expect(CS2Economy.getById(4).getStickerOffsetBounds()).toEqual({
+        x: { min: undefined, max: undefined },
+        y: { min: undefined, max: undefined }
+    });
+});
+
+test("getKeychainPositionBounds returns per-axis bounds; legacy models read only legacy fields", () => {
+    const items: CS2Item[] = [
+        {
+            id: 1,
+            rarityColor: CS2RarityColor.Common,
+            type: "weapon",
+            keychainPositionXMin: 0,
+            keychainPositionXMax: 10,
+            keychainPositionYMin: -2,
+            keychainPositionYMax: 2,
+            keychainPositionZMin: -4,
+            keychainPositionZMax: 4,
+            legacyKeychainPositionZMin: -8,
+            legacyKeychainPositionZMax: 8
+        },
+        { id: 2, rarityColor: CS2RarityColor.Common, type: "weapon", parentId: 1, isLegacyModel: true },
+        { id: 3, rarityColor: CS2RarityColor.Common, type: "weapon" }
+    ];
+    CS2Economy.load({
+        items,
+        language: { 1: { name: "Parent" }, 2: { name: "Legacy" }, 3: { name: "Bare" } }
+    });
+    expect(CS2Economy.getById(1).getKeychainPositionBounds()).toEqual({
+        x: { min: 0, max: 10 },
+        y: { min: -2, max: 2 },
+        z: { min: -4, max: 4 }
+    });
+    expect(CS2Economy.getById(2).getKeychainPositionBounds()).toEqual({
+        x: { min: undefined, max: undefined },
+        y: { min: undefined, max: undefined },
+        z: { min: -8, max: 8 }
+    });
+    expect(CS2Economy.getById(3).getKeychainPositionBounds()).toEqual({
+        x: { min: undefined, max: undefined },
+        y: { min: undefined, max: undefined },
+        z: { min: undefined, max: undefined }
+    });
 });

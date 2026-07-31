@@ -10,23 +10,35 @@ Only weapons can hold a keychain (`hasKeychains()`: keychainable types minus the
 
 ## Setting one
 
-There is no dedicated apply/remove pair. A keychain is set through `add`, `edit`, or:
+A keychain can be set through `add`, `edit`, or one of the dedicated operations:
 
 ```typescript
-inventory.addWithKeychain(keychainUid, AK47_ID, { seed: 1234, x: 40, y: 1.3, z: 11 });
+inventory.addWithKeychain(keychainUid, AK47_ID, { x: 40, y: 1.3, z: 11 });
+inventory.applyItemKeychain(targetUid, keychainUid, { x: 40, y: 1.3, z: 11 });
 ```
 
-which consumes the keychain item and creates the new weapon carrying it in slot 0. Everything is validated against the new item before any mutation, so an invalid attribute throws without consuming the keychain.
+`addWithKeychain` consumes the keychain item and creates the new weapon carrying it in slot 0. `applyItemKeychain` attaches it to an existing item, using the first free slot (which, with `CS2_MAX_KEYCHAINS` at 1, means slot 0 on an item with none). In both cases the attributes accept only `x`, `y`, `z` - `id` and `seed` are taken from the consumed keychain item itself, so the loose item's seed travels with it onto the weapon. Everything is validated against the target before any mutation, so an invalid attribute throws without consuming the keychain.
+
+## Editing and removing
+
+```typescript
+inventory.editItemKeychain(targetUid, 0, { x: 41, z: 10.5 });
+inventory.removeItemKeychain(targetUid, 0);
+```
+
+`editItemKeychain` patches position only - the `Partial` excludes `id` and `seed`, so a repositioned keychain can never change identity. The merged record is validated before it is written.
+
+`removeItemKeychain` is not free: it requires a charm detachment tool in the inventory and consumes one charge from it (the lowest-uid chargeable is used; `getCharmDetachmentCharges()` reads the balance, and `unpackItem` on a detachment pack refills it). The detached keychain returns to the inventory as a loose item with its `seed` preserved. A full inventory is allowed only when the detachment tool sits at exactly 1 charge - consuming that last charge deletes the tool, which frees the slot the keychain lands in.
 
 ## Position
 
-`x`, `y` and `z` are **absolute coordinates in the model's markup space** — not deltas from a default position, which is how sticker offsets work. That is why the numbers are large: the legacy AWP's envelope is X `[-10.13, 41.29]`, Y `[-0.02, 1.37]`, Z `[2.64, 11.76]`, where a sticker offset on the same weapon lives inside ±0.5.
+`x`, `y` and `z` are **absolute coordinates in the model's markup space** - not deltas from a default position, which is how sticker offsets work. That is why the numbers are large: the legacy AWP's envelope is X `[-10.13, 41.29]`, Y `[-0.02, 1.37]`, Z `[2.64, 11.76]`, where a sticker offset on the same weapon lives inside ±0.5.
 
-Bounds come from `getMinimumKeychainOffsetX()` / `getMaximumKeychainOffsetX()` and the `Y` and `Z` pairs, resolved off `parent ?? this` with the `legacy*` fields preferred for a legacy item. Any bound may be `undefined`, meaning unbounded on that side.
+Bounds come from `getMinimumKeychainPositionX()` / `getMaximumKeychainPositionX()` and the `Y` and `Z` pairs, resolved off `parent ?? this` with the `legacy*` fields preferred when `isLegacyModel` is set. Any bound may be `undefined`, meaning unbounded on that side.
 
-Values must be finite and sit on the `CS2_KEYCHAIN_OFFSET_FACTOR` grid (`0.0001`, four decimals). Validation checks finiteness explicitly, so `NaN` on any axis — `z` included — is rejected rather than silently accepted.
+Values must be finite and sit on the `CS2_KEYCHAIN_POSITION_FACTOR` grid (`0.0001`, four decimals). Validation checks finiteness explicitly, so `NaN` on any axis - `z` included - is rejected rather than silently accepted.
 
-`healKeychainOffset(value, min, max)` normalizes a stored coordinate: non-finite values are dropped, the value is truncated onto the grid, then clamped into `[min, max]`. Raw coordinates read out of the game carry more precision than the grid allows, so truncating (rather than rejecting) is deliberate — `0.123456789` heals to `0.1234`.
+`repairInventoryItem(economy, item)` normalizes a stored coordinate against the item's own bounds: non-finite values are dropped, the value is truncated onto the grid, then clamped into `[min, max]`. Raw coordinates read out of the game carry more precision than the grid allows, so truncating (rather than rejecting) is deliberate - `0.123456789` repairs to `0.1234`.
 
 ## Seed
 
@@ -43,10 +55,10 @@ Two different seeds are in play and they are stored in different places:
 
 ## Reading
 
-- `allKeychains()` — every slot, including empty ones, as `[slot, keychain | undefined]`. Use it to render a fixed grid.
-- `someKeychains()` — only the filled slots.
-- `getKeychainsCount()` — number attached.
+- `allKeychains()` - every slot, including empty ones, as `[slot, keychain | undefined]`. Use it to render a fixed grid.
+- `someKeychains()` - only the filled slots.
+- `getKeychainsCount()` - number attached.
 
 ## Models and materials
 
-Keychains carry their own `playerModel` and `paintMaterial` when they have one, and otherwise inherit from `parent`. The sticker display case is the case that motivates this: the "slab" item holds the shared model and material, and each per-sticker display-case keychain carries neither, resolving both through `baseId`. `getModelData()` derives the `.json` path from whichever `.glb` won.
+Keychains carry their own `modelPath` and `materialPath` when they have one, and otherwise inherit from `parent`. The sticker display case is the case that motivates this: the "slab" item holds the shared model and material, and each per-sticker display-case keychain carries neither, resolving both through `parentId`. `getModelDataUrl()` derives the `.json` path from whichever `.glb` won.

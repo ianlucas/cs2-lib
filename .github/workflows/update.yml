@@ -15,6 +15,10 @@ on:
         description: "Skip CDN upload?"
         type: boolean
         default: false
+      skip_release:
+        description: "Skip assets release?"
+        type: boolean
+        default: false
 
 jobs:
   update:
@@ -97,21 +101,27 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           if git ls-remote --heads origin "${{ steps.version.outputs.branch }}" | grep -q .; then
-            echo "Branch ${{ steps.version.outputs.branch }} already exists, skipping."
+            echo "Branch ${{ steps.version.outputs.branch }} already exists."
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Commit and push changes
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
+        if: steps.changes.outputs.changed == 'true' && (steps.check_branch.outputs.exists != 'true' || inputs.force)
         id: commit_main
         run: |
           MANIFEST_ID="$(cat scripts/cs2.manifest)"
           git checkout -b "${{ steps.version.outputs.branch }}"
           git add .
           git commit -m "Update items (CS2 v${{ steps.version.outputs.number }})"
-          git push origin "${{ steps.version.outputs.branch }}"
+          if [ "${{ steps.check_branch.outputs.exists }}" = "true" ]; then
+            # Force run against an existing branch: replace it with the freshly
+            # generated data; an open PR for it picks up the new commit.
+            git push --force origin "${{ steps.version.outputs.branch }}"
+          else
+            git push origin "${{ steps.version.outputs.branch }}"
+          fi
 
           echo "manifest=${MANIFEST_ID}" >> $GITHUB_OUTPUT
           echo "Committed changes to branch ${{ steps.version.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
@@ -132,7 +142,7 @@ jobs:
         run: rm -rf scripts/workdir/decompiled scripts/workdir/game
 
       - name: Package assets
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
+        if: steps.changes.outputs.changed == 'true' && (steps.check_branch.outputs.exists != 'true' || inputs.force) && !inputs.skip_release
         run: |
           mkdir -p assets-release
           # Release assets are capped at 2 GiB each, so stream the output tree into
@@ -142,21 +152,22 @@ jobs:
           ls -lh assets-release
 
       - name: Publish assets release
-        if: steps.changes.outputs.changed == 'true' && steps.check_branch.outputs.exists != 'true'
+        if: steps.changes.outputs.changed == 'true' && (steps.check_branch.outputs.exists != 'true' || inputs.force) && !inputs.skip_release
         env:
           GH_TOKEN: ${{ secrets.ASSETS_TOKEN }}
           VERSION: ${{ steps.version.outputs.number }}
+          MANIFEST: ${{ steps.commit_main.outputs.manifest }}
         run: |
-          TAG="cs2-v${VERSION}"
+          # Releases on cs2-lib-assets are immutable and a tag name can never be
+          # reused once published, so every run gets a unique tag.
+          TAG="cs2-v${VERSION}-${GITHUB_RUN_ID}"
           printf '%s\n' \
-            "Generated assets for CS2 v${VERSION}." \
+            "Generated assets for CS2 v${VERSION} (manifest ${MANIFEST})." \
             "" \
             "Download every .tar.part* file, then reassemble and extract:" \
             '```' \
             "cat cs2-assets-v${VERSION}.tar.part* | tar -xf -" \
             '```' > release-notes.md
-          # Re-run idempotency: drop this version's release + tag if it already exists.
-          gh release delete "$TAG" --repo ianlucas/cs2-lib-assets --cleanup-tag --yes 2>/dev/null || true
           gh release create "$TAG" \
             --repo ianlucas/cs2-lib-assets \
             --title "CS2 v${VERSION}" \
@@ -164,7 +175,8 @@ jobs:
             --latest \
             assets-release/*
           # Host only one asset set at a time: now that the new release is up, delete every
-          # other release (and its tag) so old ~10 GB sets don't accumulate on GitHub.
+          # other release so old ~10 GB sets don't accumulate on GitHub. Deleting immutable
+          # releases is allowed; their tag names just stay reserved forever.
           mapfile -t OLD_TAGS < <(gh release list --repo ianlucas/cs2-lib-assets --limit 1000 --json tagName --jq '.[].tagName')
           for t in "${OLD_TAGS[@]}"; do
             [ -n "$t" ] && [ "$t" != "$TAG" ] && gh release delete "$t" --repo ianlucas/cs2-lib-assets --cleanup-tag --yes || true

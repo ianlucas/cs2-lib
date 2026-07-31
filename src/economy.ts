@@ -4,15 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    CS2_CHARM_DETACHMENT_PACK_TOOL_DEF,
-    CS2_CHARM_DETACHMENT_TOOL_DEF,
+    CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX,
+    CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX,
     CS2_CONTAINER_ITEMS,
-    CS2_CONTRACT_TOOL_DEF,
+    CS2_CONTRACT_TOOL_DEFINITION_INDEX,
     CS2_DISPLAY_ITEMS,
     CS2_EQUIPMENT_ITEMS,
+    CS2_FALLBACK_PREVIEW_SEED,
     CS2_GRAPHIC_ART_ITEMS,
     CS2_KEYCHAINABLE_ITEMS,
-    CS2_MACHINEGUN_MODELS,
+    CS2_MACHINEGUN_MODEL_KEYS,
     CS2_MAX_CHARM_DETACHMENT_CHARGES,
     CS2_MAX_FACTORY_NEW_WEAR,
     CS2_MAX_FIELD_TESTED_WEAR,
@@ -24,25 +25,25 @@ import {
     CS2_MAX_STICKERS,
     CS2_MAX_WEAR,
     CS2_MAX_WELL_WORN_WEAR,
-    CS2_MIDTIER_CATEGORIES,
+    CS2_MIDTIER_LOADOUT_CATEGORIES,
     CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
     CS2_MIN_WEAR,
-    CS2_MISC_CATEGORIES,
+    CS2_MISC_LOADOUT_CATEGORIES,
     CS2_NAMETAGGABLE_ITEMS,
     CS2_NAMETAG_RE,
-    CS2_NAMETAG_TOOL_DEF,
+    CS2_NAMETAG_TOOL_DEFINITION_INDEX,
     CS2_PAINTABLE_ITEMS,
     CS2_PATCHABLE_ITEMS,
-    CS2_RIFLE_CATEGORIES,
+    CS2_RIFLE_LOADOUT_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
-    CS2_SNIPER_RIFLE_MODELS,
+    CS2_SNIPER_RIFLE_MODEL_KEYS,
     CS2_STATTRAKABLE_ITEMS,
-    CS2_STATTRAK_SWAP_TOOL_DEF,
+    CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX,
     CS2_STICKERABLE_ITEMS,
-    CS2_STORAGE_UNIT_TOOL_DEF,
+    CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX,
     CS2_TEAMS_BOTH,
     CS2_TEAMS_CT,
     CS2_TEAMS_T,
@@ -61,6 +62,7 @@ import {
     randomInt
 } from "./economy-container.ts";
 import {
+    type CS2Bounds,
     CS2ContainerType,
     type CS2Item,
     CS2ItemTeam,
@@ -68,22 +70,25 @@ import {
     type CS2ItemTranslationMap,
     CS2ItemType,
     CS2ItemWear,
+    CS2StatTrakMode,
     type CS2UnlockedItem
 } from "./economy-types.ts";
 import { type CS2Team } from "./teams.ts";
 import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
 
-type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { team?: CS2Team };
+type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { usableByTeam?: CS2Team };
 
 function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem) => boolean {
     return function filter(item: CS2EconomyItem) {
         return (
             compare(predicate.type, item.type) &&
-            compare(predicate.free, item.free) &&
-            compare(predicate.model, item.model) &&
-            compare(predicate.base, item.base) &&
-            compare(predicate.category, item.category) &&
-            (predicate.team === undefined || item.teams === undefined || item.teams.includes(predicate.team))
+            compare(predicate.isDefault, item.isDefault) &&
+            compare(predicate.modelKey, item.modelKey) &&
+            compare(predicate.isBase, item.isBase) &&
+            compare(predicate.loadoutCategory, item.loadoutCategory) &&
+            (predicate.usableByTeam === undefined ||
+                item.teams === undefined ||
+                item.teams.includes(predicate.usableByTeam))
         );
     };
 }
@@ -122,7 +127,7 @@ export class CS2EconomyInstance {
             if (economyItem.isSticker()) {
                 this.stickers.add(economyItem);
                 if (language !== undefined) {
-                    this.categories.add(ensure(economyItem.category));
+                    this.categories.add(ensure(economyItem.categoryName));
                 }
             }
             this.itemsAsArray.push(economyItem);
@@ -234,6 +239,24 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
+    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
+        containerItem = this.get(containerItem);
+        containerItem.expectContainer();
+        keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
+        if (keyItem !== undefined) {
+            keyItem.expectKey();
+            assert(containerItem.keyIds !== undefined);
+            assert(containerItem.keyIds.includes(keyItem.id));
+        } else {
+            assert(containerItem.keyIds === undefined);
+        }
+        return true;
+    }
+
+    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
+        return safe(() => this.validateContainerAndKey(containerItem, keyItem));
+    }
+
     getWearFromValue(value: number): CS2ItemWear {
         switch (true) {
             case value <= CS2_MAX_FACTORY_NEW_WEAR:
@@ -262,103 +285,84 @@ export class CS2EconomyInstance {
         return this.charmDetachment;
     }
 
-    validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
-        containerItem = this.get(containerItem);
-        containerItem.expectContainer();
-        keyItem = keyItem !== undefined ? this.get(keyItem) : undefined;
-        if (keyItem !== undefined) {
-            keyItem.expectKey();
-            assert(containerItem.keys !== undefined);
-            assert(containerItem.keys.includes(keyItem.id));
-        } else {
-            assert(containerItem.keys === undefined);
-        }
-        return true;
-    }
-
-    safeValidateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
-        return safe(() => this.validateContainerAndKey(containerItem, keyItem));
-    }
-
     expectUnlockedItem(
         item: number | CS2EconomyItem,
         { id }: ReturnType<InstanceType<typeof CS2EconomyItem>["unlockContainer"]>
     ): void {
         item = this.get(item).expectContainer();
-        assert(item.rawContents?.includes(id) || item.rawSpecials?.includes(id));
+        assert(item.contentIds?.includes(id) || item.specialIds?.includes(id));
     }
 
-    resolveUrl(uri?: string): string {
-        return `${this.baseUrl}${uri}`;
+    resolveUrl(path?: string): string {
+        return `${this.baseUrl}${path}`;
     }
 }
 
 export class CS2EconomyItem implements Interface<
-    Omit<CS2Item, "contents" | "specials" | "teams"> &
+    CS2Item &
         CS2ItemTranslation & {
             contents: CS2EconomyItem[] | undefined;
             teams: CS2Team[] | undefined;
         }
 > {
-    altName: string | undefined;
-    base: boolean | undefined;
-    baseId: number | undefined;
-    category: string | undefined;
-    clothCollider: boolean | undefined;
-    collection: string | undefined;
-    collectionDesc: string | undefined;
-    collectionImage: string | undefined;
+    alternateName: string | undefined;
+    categoryName: string | undefined;
+    collectionDescription: string | undefined;
+    collectionImagePath: string | undefined;
+    collectionKey: string | undefined;
     collectionName: string | undefined;
     containerType: CS2ContainerType | undefined;
-    def: number | undefined;
-    desc: string | undefined;
-    displaySeed: number | undefined;
-    free: boolean | undefined;
+    contentIds: number[] | undefined;
+    definitionIndex: number | undefined;
+    description: string | undefined;
+    displayedStickerId: number | undefined;
+    hasColliderData: boolean | undefined;
     id: number = null!;
-    image: string | undefined;
-    index: number | undefined;
-    keychainOffsetXMax: number | undefined;
-    keychainOffsetXMin: number | undefined;
-    keychainOffsetYMax: number | undefined;
-    keychainOffsetYMin: number | undefined;
-    keychainOffsetZMax: number | undefined;
-    keychainOffsetZMin: number | undefined;
-    keys: number[] | undefined;
-    legacy: boolean | undefined;
-    legacyKeychainOffsetXMax: number | undefined;
-    legacyKeychainOffsetXMin: number | undefined;
-    legacyKeychainOffsetYMax: number | undefined;
-    legacyKeychainOffsetYMin: number | undefined;
-    legacyKeychainOffsetZMax: number | undefined;
-    legacyKeychainOffsetZMin: number | undefined;
+    imagePath: string | undefined;
+    isBase: boolean | undefined;
+    isDefault: boolean | undefined;
+    isLegacyModel: boolean | undefined;
+    keychainPositionXMax: number | undefined;
+    keychainPositionXMin: number | undefined;
+    keychainPositionYMax: number | undefined;
+    keychainPositionYMin: number | undefined;
+    keychainPositionZMax: number | undefined;
+    keychainPositionZMin: number | undefined;
+    keyIds: number[] | undefined;
+    legacyKeychainPositionXMax: number | undefined;
+    legacyKeychainPositionXMin: number | undefined;
+    legacyKeychainPositionYMax: number | undefined;
+    legacyKeychainPositionYMin: number | undefined;
+    legacyKeychainPositionZMax: number | undefined;
+    legacyKeychainPositionZMin: number | undefined;
     legacyStickerOffsetXMax: number | undefined;
     legacyStickerOffsetXMin: number | undefined;
     legacyStickerOffsetYMax: number | undefined;
     legacyStickerOffsetYMin: number | undefined;
     legacyStickerSchemaCount: number | undefined;
-    model: string | undefined;
+    loadoutCategory: string | undefined;
+    materialPath: string | undefined;
+    modelKey: string | undefined;
+    modelPath: string | undefined;
     name: string = null!;
-    paintMaterial: string | undefined;
-    playerModel: string | undefined;
-    rarity: CS2RarityColor = null!;
-    specialsImage: string | undefined;
-    statTrakless: boolean | undefined;
-    statTrakOnly: boolean | undefined;
-    stickerId: number | undefined;
+    parentId: number | undefined;
+    previewSeed: number | undefined;
+    rarityColor: CS2RarityColor = null!;
+    specialIds: number[] | undefined;
+    specialsImagePath: string | undefined;
+    statTrakMode: CS2StatTrakMode | undefined;
     stickerOffsetXMax: number | undefined;
     stickerOffsetXMin: number | undefined;
     stickerOffsetYMax: number | undefined;
     stickerOffsetYMin: number | undefined;
     stickerSchemaCount: number | undefined;
-    tint: number | undefined;
-    tournamentDesc: string | undefined;
+    team: CS2ItemTeam | undefined;
+    tintIndex: number | undefined;
+    tournamentDescription: string | undefined;
     type: CS2ItemType = null!;
+    variantIndex: number | undefined;
     wearMax: number | undefined;
     wearMin: number | undefined;
-
-    private _contents: number[] | undefined;
-    private _specials: number[] | undefined;
-    private _teams: CS2ItemTeam | undefined;
 
     constructor(
         public economy: CS2EconomyInstance,
@@ -370,49 +374,33 @@ export class CS2EconomyItem implements Interface<
         assert(typeof this.id === "number");
         assert(this.name);
         assert(this.type);
-        assert(item.type === CS2ItemType.Stub || typeof this.rarity === "string");
-    }
-
-    set contents(value: number[] | undefined) {
-        this._contents = value;
+        assert(item.type === CS2ItemType.Stub || typeof this.rarityColor === "string");
     }
 
     get contents(): CS2EconomyItem[] {
         this.expectContainer();
-        return ensure(this._contents).map((id) => this.economy.get(id));
+        return ensure(this.contentIds).map((id) => this.economy.get(id));
+    }
+
+    get displayedSticker(): CS2EconomyItem | undefined {
+        return this.displayedStickerId !== undefined ? this.economy.get(this.displayedStickerId) : undefined;
     }
 
     get parent(): CS2EconomyItem | undefined {
-        return this.baseId !== undefined
-            ? this.economy.items.has(this.baseId)
-                ? this.economy.get(this.baseId)
+        return this.parentId !== undefined
+            ? this.economy.items.has(this.parentId)
+                ? this.economy.get(this.parentId)
                 : undefined
             : undefined;
     }
 
-    get rawContents(): number[] | undefined {
-        return this._contents;
-    }
-
-    get rawSpecials(): number[] | undefined {
-        return this._specials;
-    }
-
-    set specials(value: number[] | undefined) {
-        this._specials = value;
-    }
-
     get specials(): CS2EconomyItem[] | undefined {
         this.expectContainer();
-        return this._specials?.map((id) => this.economy.get(id));
-    }
-
-    set teams(value: CS2ItemTeam) {
-        this._teams = value;
+        return this.specialIds?.map((id) => this.economy.get(id));
     }
 
     get teams(): CS2Team[] | undefined {
-        switch (this._teams) {
+        switch (this.team) {
             case CS2ItemTeam.Both:
                 return CS2_TEAMS_BOTH;
             case CS2ItemTeam.T:
@@ -424,52 +412,68 @@ export class CS2EconomyItem implements Interface<
         }
     }
 
-    get wrappedSticker(): CS2EconomyItem | undefined {
-        return this.stickerId !== undefined ? this.economy.get(this.stickerId) : undefined;
-    }
-
     isC4(): boolean {
-        return this.category === "c4";
+        return this.loadoutCategory === "c4";
     }
 
     isPistol(): boolean {
-        return this.category === "secondary";
+        return this.loadoutCategory === "secondary";
     }
 
     isSMG(): boolean {
-        return this.category === "smg";
+        return this.loadoutCategory === "smg";
     }
 
     isRifle(): boolean {
-        return this.category === "rifle";
-    }
-
-    isSniperRifle(): boolean {
-        return this.model !== undefined && CS2_SNIPER_RIFLE_MODELS.includes(this.model);
-    }
-
-    isMachinegun(): boolean {
-        return this.model !== undefined && CS2_MACHINEGUN_MODELS.includes(this.model);
+        return this.loadoutCategory === "rifle";
     }
 
     isHeavy(): boolean {
-        return this.category === "heavy";
+        return this.loadoutCategory === "heavy";
     }
 
     isEquipment(): boolean {
-        return this.category === "equipment";
+        return this.loadoutCategory === "equipment";
+    }
+
+    isSniperRifle(): boolean {
+        return this.modelKey !== undefined && CS2_SNIPER_RIFLE_MODEL_KEYS.includes(this.modelKey);
+    }
+
+    isMachinegun(): boolean {
+        return this.modelKey !== undefined && CS2_MACHINEGUN_MODEL_KEYS.includes(this.modelKey);
     }
 
     isInMidTiers(): boolean {
-        return this.category !== undefined && CS2_MIDTIER_CATEGORIES.includes(this.category);
+        return this.loadoutCategory !== undefined && CS2_MIDTIER_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
     }
 
     isInRifles(): boolean {
-        return this.category !== undefined && CS2_RIFLE_CATEGORIES.includes(this.category);
+        return this.loadoutCategory !== undefined && CS2_RIFLE_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
     }
 
     isInMisc(): boolean {
-        return this.category !== undefined && CS2_MISC_CATEGORIES.includes(this.category);
+        return this.loadoutCategory !== undefined && CS2_MISC_LOADOUT_CATEGORIES.includes(this.loadoutCategory);
+    }
+
+    isInEquipments(): boolean {
+        return CS2_EQUIPMENT_ITEMS.includes(this.type);
+    }
+
+    isInGraphicArts(): boolean {
+        return CS2_GRAPHIC_ART_ITEMS.includes(this.type);
+    }
+
+    isInContainers(): boolean {
+        return CS2_CONTAINER_ITEMS.includes(this.type);
+    }
+
+    isInDisplay(): boolean {
+        return CS2_DISPLAY_ITEMS.includes(this.type);
+    }
+
+    isPaintable(): boolean {
+        return CS2_PAINTABLE_ITEMS.includes(this.type);
     }
 
     isAgent(): boolean {
@@ -484,16 +488,20 @@ export class CS2EconomyItem implements Interface<
         return this.type === CS2ItemType.Container;
     }
 
-    isKey(): boolean {
-        return this.type === CS2ItemType.Key;
-    }
-
     isGloves(): boolean {
         return this.type === CS2ItemType.Gloves;
     }
 
     isGraffiti(): boolean {
         return this.type === CS2ItemType.Graffiti;
+    }
+
+    isKey(): boolean {
+        return this.type === CS2ItemType.Key;
+    }
+
+    isKeychain(): boolean {
+        return this.type === CS2ItemType.Keychain;
     }
 
     isMelee(): boolean {
@@ -512,10 +520,6 @@ export class CS2EconomyItem implements Interface<
         return this.type === CS2ItemType.Sticker;
     }
 
-    isKeychain(): boolean {
-        return this.type === CS2ItemType.Keychain;
-    }
-
     isStub(): boolean {
         return this.type === CS2ItemType.Stub;
     }
@@ -529,31 +533,62 @@ export class CS2EconomyItem implements Interface<
     }
 
     isStorageUnit(): boolean {
-        return this.isTool() && this.def === CS2_STORAGE_UNIT_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX;
     }
 
     isNameTag(): boolean {
-        return this.isTool() && this.def === CS2_NAMETAG_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_NAMETAG_TOOL_DEFINITION_INDEX;
     }
 
     isStatTrakSwapTool(): boolean {
-        return this.isTool() && this.def === CS2_STATTRAK_SWAP_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX;
     }
 
     isContract(): boolean {
-        return this.isTool() && this.def === CS2_CONTRACT_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_CONTRACT_TOOL_DEFINITION_INDEX;
     }
 
     isCharmDetachment(): boolean {
-        return this.isTool() && this.def === CS2_CHARM_DETACHMENT_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX;
     }
 
     isCharmDetachmentPack(): boolean {
-        return this.isTool() && this.def === CS2_CHARM_DETACHMENT_PACK_TOOL_DEF;
+        return this.isTool() && this.definitionIndex === CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX;
+    }
+
+    isWeaponCase(): boolean {
+        return this.containerType === CS2ContainerType.WeaponCase;
+    }
+
+    isStickerCapsule(): boolean {
+        return this.containerType === CS2ContainerType.StickerCapsule;
+    }
+
+    isGraffitiBox(): boolean {
+        return this.containerType === CS2ContainerType.GraffitiBox;
+    }
+
+    isSouvenirCase(): boolean {
+        return this.containerType === CS2ContainerType.SouvenirCase;
     }
 
     expectAgent(): this {
         assert(this.isAgent());
+        return this;
+    }
+
+    expectContainer(): this {
+        assert(this.isContainer());
+        return this;
+    }
+
+    expectKey(): this {
+        assert(this.isKey());
+        return this;
+    }
+
+    expectKeychain(): this {
+        assert(this.isKeychain());
         return this;
     }
 
@@ -564,11 +599,6 @@ export class CS2EconomyItem implements Interface<
 
     expectSticker(): this {
         assert(this.isSticker());
-        return this;
-    }
-
-    expectKeychain(): this {
-        assert(this.isKeychain());
         return this;
     }
 
@@ -592,22 +622,12 @@ export class CS2EconomyItem implements Interface<
         return this;
     }
 
-    expectContainer(): this {
-        assert(this.isContainer());
-        return this;
-    }
-
-    expectKey(): this {
-        assert(this.isKey());
-        return this;
-    }
-
     hasWear(): boolean {
-        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
 
     hasSeed(): boolean {
-        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.free && this.index !== 0;
+        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
 
     hasStickers(): boolean {
@@ -627,60 +647,16 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasStatTrak(): boolean {
-        return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.free;
+        return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
 
     hasCharges(): boolean {
         return this.isGraffiti() || this.isCharmDetachment();
     }
 
-    getDefaultCharges(): number {
-        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MIN_CHARGES;
-    }
-
-    getMaximumCharges(): number {
-        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MAX_CHARM_DETACHMENT_CHARGES;
-    }
-
-    isWeaponCase(): boolean {
-        return this.containerType === CS2ContainerType.WeaponCase;
-    }
-
-    isStickerCapsule(): boolean {
-        return this.containerType === CS2ContainerType.StickerCapsule;
-    }
-
-    isGraffitiBox(): boolean {
-        return this.containerType === CS2ContainerType.GraffitiBox;
-    }
-
-    isSouvenirCase(): boolean {
-        return this.containerType === CS2ContainerType.SouvenirCase;
-    }
-
-    isInEquipments(): boolean {
-        return CS2_EQUIPMENT_ITEMS.includes(this.type);
-    }
-
-    isInGraphicArts(): boolean {
-        return CS2_GRAPHIC_ART_ITEMS.includes(this.type);
-    }
-
-    isInContainers(): boolean {
-        return CS2_CONTAINER_ITEMS.includes(this.type);
-    }
-
-    isInDisplay(): boolean {
-        return CS2_DISPLAY_ITEMS.includes(this.type);
-    }
-
-    isPaintable(): boolean {
-        return CS2_PAINTABLE_ITEMS.includes(this.type);
-    }
-
-    getImage(wear?: number): string {
-        assert(this.image);
-        const url = this.economy.resolveUrl(this.image);
+    getImageUrl(wear?: number): string {
+        assert(this.imagePath);
+        const url = this.economy.resolveUrl(this.imagePath);
         if (this.hasWear() && wear !== undefined) {
             switch (true) {
                 case wear < 1 / 3:
@@ -694,37 +670,37 @@ export class CS2EconomyItem implements Interface<
         return url;
     }
 
-    getCollectionImage(): string {
-        return this.economy.resolveUrl(this.collectionImage);
+    getCollectionImageUrl(): string {
+        return this.economy.resolveUrl(this.collectionImagePath);
     }
 
-    getSpecialsImage(): string {
+    getSpecialsImageUrl(): string {
         this.expectContainer();
-        assert(this.rawSpecials);
-        assert(this.specialsImage);
-        return this.economy.resolveUrl(this.specialsImage);
+        assert(this.specialIds);
+        assert(this.specialsImagePath);
+        return this.economy.resolveUrl(this.specialsImagePath);
     }
 
-    getPaintMaterial(): string {
-        return this.economy.resolveUrl(this.paintMaterial ?? this.parent?.paintMaterial);
+    getMaterialUrl(): string {
+        return this.economy.resolveUrl(this.materialPath ?? this.parent?.materialPath);
     }
 
-    getPlayerModel(): string {
-        const playerModel = this.playerModel ?? this.parent?.playerModel;
-        return this.economy.resolveUrl(playerModel);
+    getModelUrl(): string {
+        const modelPath = this.modelPath ?? this.parent?.modelPath;
+        return this.economy.resolveUrl(modelPath);
     }
 
-    getModelData(): string {
-        const playerModel = this.playerModel ?? this.parent?.playerModel;
-        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".json"));
+    getModelDataUrl(): string {
+        const modelPath = this.modelPath ?? this.parent?.modelPath;
+        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".json"));
     }
 
-    getClothCollider(): string | undefined {
-        if (!(this.clothCollider ?? this.parent?.clothCollider)) {
+    getColliderDataUrl(): string | undefined {
+        if (!(this.hasColliderData ?? this.parent?.hasColliderData)) {
             return undefined;
         }
-        const playerModel = this.playerModel ?? this.parent?.playerModel;
-        return this.economy.resolveUrl(playerModel?.replace(/\.glb$/, ".collider.json"));
+        const modelPath = this.modelPath ?? this.parent?.modelPath;
+        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".collider.json"));
     }
 
     getMinimumWear(): number {
@@ -743,67 +719,63 @@ export class CS2EconomyItem implements Interface<
         return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
     }
 
+    getPreviewSeed(): number {
+        return this.previewSeed ?? CS2_FALLBACK_PREVIEW_SEED;
+    }
+
+    getDefaultCharges(): number {
+        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MIN_CHARGES;
+    }
+
+    getMaximumCharges(): number {
+        return this.isGraffiti() ? CS2_MAX_GRAFFITI_CHARGES : CS2_MAX_CHARM_DETACHMENT_CHARGES;
+    }
+
     getStickerSchemaCount(): number {
         const item = this.parent ?? this;
-        const count = (this.legacy ? item.legacyStickerSchemaCount : undefined) ?? item.stickerSchemaCount;
+        const count = this.isLegacyModel ? item.legacyStickerSchemaCount : item.stickerSchemaCount;
         return count ?? CS2_MAX_STICKERS;
     }
 
-    getMinimumStickerOffsetX(): number | undefined {
+    getStickerOffsetBounds(): { x: CS2Bounds; y: CS2Bounds } {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetXMin : undefined) ?? item.stickerOffsetXMin;
+        const legacy = this.isLegacyModel;
+        return {
+            x: {
+                min: legacy ? item.legacyStickerOffsetXMin : item.stickerOffsetXMin,
+                max: legacy ? item.legacyStickerOffsetXMax : item.stickerOffsetXMax
+            },
+            y: {
+                min: legacy ? item.legacyStickerOffsetYMin : item.stickerOffsetYMin,
+                max: legacy ? item.legacyStickerOffsetYMax : item.stickerOffsetYMax
+            }
+        };
     }
 
-    getMaximumStickerOffsetX(): number | undefined {
+    getKeychainPositionBounds(): { x: CS2Bounds; y: CS2Bounds; z: CS2Bounds } {
         const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetXMax : undefined) ?? item.stickerOffsetXMax;
-    }
-
-    getMinimumStickerOffsetY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetYMin : undefined) ?? item.stickerOffsetYMin;
-    }
-
-    getMaximumStickerOffsetY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyStickerOffsetYMax : undefined) ?? item.stickerOffsetYMax;
-    }
-
-    getMinimumKeychainOffsetX(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetXMin : undefined) ?? item.keychainOffsetXMin;
-    }
-
-    getMaximumKeychainOffsetX(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetXMax : undefined) ?? item.keychainOffsetXMax;
-    }
-
-    getMinimumKeychainOffsetY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetYMin : undefined) ?? item.keychainOffsetYMin;
-    }
-
-    getMaximumKeychainOffsetY(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetYMax : undefined) ?? item.keychainOffsetYMax;
-    }
-
-    getMinimumKeychainOffsetZ(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetZMin : undefined) ?? item.keychainOffsetZMin;
-    }
-
-    getMaximumKeychainOffsetZ(): number | undefined {
-        const item = this.parent ?? this;
-        return (this.legacy ? item.legacyKeychainOffsetZMax : undefined) ?? item.keychainOffsetZMax;
+        const legacy = this.isLegacyModel;
+        return {
+            x: {
+                min: legacy ? item.legacyKeychainPositionXMin : item.keychainPositionXMin,
+                max: legacy ? item.legacyKeychainPositionXMax : item.keychainPositionXMax
+            },
+            y: {
+                min: legacy ? item.legacyKeychainPositionYMin : item.keychainPositionYMin,
+                max: legacy ? item.legacyKeychainPositionYMax : item.keychainPositionYMax
+            },
+            z: {
+                min: legacy ? item.legacyKeychainPositionZMin : item.keychainPositionZMin,
+                max: legacy ? item.legacyKeychainPositionZMax : item.keychainPositionZMax
+            }
+        };
     }
 
     groupContents(): Record<string, CS2EconomyItem[]> {
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
         for (const item of this.contents) {
-            const rarity = CS2RarityColorName[item.rarity];
+            const rarity = CS2RarityColorName[item.rarityColor];
             if (!items[rarity]) {
                 items[rarity] = [];
             }
@@ -826,8 +798,8 @@ export class CS2EconomyItem implements Interface<
         const items = [...this.contents, ...(!hideSpecials && specials !== undefined ? specials : [])];
         return items.sort((a, b) => {
             return (
-                (CS2RarityColorOrder[a.rarity] ?? CS2_RARITY_COLOR_DEFAULT) -
-                (CS2RarityColorOrder[b.rarity] ?? CS2_RARITY_COLOR_DEFAULT)
+                (CS2RarityColorOrder[a.rarityColor] ?? CS2_RARITY_COLOR_DEFAULT) -
+                (CS2RarityColorOrder[b.rarityColor] ?? CS2_RARITY_COLOR_DEFAULT)
             );
         });
     }
@@ -854,19 +826,16 @@ export class CS2EconomyItem implements Interface<
         }
         const stack = ensure(contents[rollRarity]);
         const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
-        const hasStatTrak = this.statTrakless !== true;
-        const alwaysStatTrak = this.statTrakOnly === true;
         return {
             attributes: {
                 containerId: this.id,
                 seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
-                statTrak: hasStatTrak
-                    ? unlocked.hasStatTrak()
-                        ? alwaysStatTrak || Math.random() <= CS2_STATTRAK_ODD
+                statTrak:
+                    unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
+                        ? this.statTrakMode === CS2StatTrakMode.Guaranteed || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
                             : undefined
-                        : undefined
-                    : undefined,
+                        : undefined,
                 wear: unlocked.hasWear()
                     ? truncateToFactor(
                           randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR),
@@ -875,7 +844,7 @@ export class CS2EconomyItem implements Interface<
                     : undefined
             },
             id: unlocked.id,
-            rarity: CS2RaritySoundName[unlocked.rarity],
+            rarity: CS2RaritySoundName[unlocked.rarityColor],
             special: rollRarity === "special"
         };
     }

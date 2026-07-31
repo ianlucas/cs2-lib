@@ -110,11 +110,11 @@ public static class Translations
         switch (property)
         {
             case "name": translation.Name = value; break;
-            case "desc": translation.Desc = value; break;
-            case "category": translation.Category = value; break;
+            case "description": translation.Description = value; break;
+            case "categoryName": translation.CategoryName = value; break;
             case "collectionName": translation.CollectionName = value; break;
-            case "collectionDesc": translation.CollectionDesc = value; break;
-            case "tournamentDesc": translation.TournamentDesc = value; break;
+            case "collectionDescription": translation.CollectionDescription = value; break;
+            case "tournamentDescription": translation.TournamentDescription = value; break;
         }
     }
 

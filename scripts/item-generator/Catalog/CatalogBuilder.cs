@@ -43,33 +43,33 @@ public static class CatalogBuilder
             if (prefabData == null) continue;
 
             var usedByClasses = KvHelper.GetChild(prefabData, "used_by_classes");
-            var teams = GetTeams(usedByClasses);
+            var team = GetTeam(usedByClasses);
             var id = GetItemId(ctx, $"weapon_{GetTeamsString(usedByClasses)}_{itemDef}");
             var itemName = KvHelper.GetString(prefabData, "item_name");
             var itemDescription = KvHelper.GetString(prefabData, "item_description");
             var playerModel = KvHelper.GetString(prefabData, "model_player");
 
             Translations.AddTranslation(ctx, id, "name", itemName);
-            Translations.AddTranslation(ctx, id, "desc", itemDescription);
+            Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
-                Base = true,
-                Category = GetBaseWeaponCategory(name, category),
                 ClassName = name,
-                Def = int.Parse(itemDef),
-                DescToken = itemDescription,
-                Free = true,
+                DefinitionIndex = int.Parse(itemDef),
+                DescriptionToken = itemDescription,
                 Id = id,
-                Image = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
-                Index = null,
-                Model = name.Replace("weapon_", ""),
-                PlayerModel = modelInfo,
+                ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
+                IsBase = true,
+                IsDefault = true,
+                LoadoutCategory = GetBaseWeaponCategory(name, category),
+                ModelKey = name.Replace("weapon_", ""),
+                ModelPath = modelInfo,
                 NameToken = itemName,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
-                Teams = (int)teams,
-                Type = CS2ItemType.Weapon
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
+                Team = (int)team,
+                Type = CS2ItemType.Weapon,
+                VariantIndex = null
             });
         }
     }
@@ -94,11 +94,11 @@ public static class CatalogBuilder
             if (prefab.Contains("noncustomizable")) continue;
             if (!Translations.HasTranslation(ctx, itemName)) continue;
 
-            var teams = GetTeams(usedByClasses);
+            var team = GetTeam(usedByClasses);
             var id = GetItemId(ctx, $"melee_{GetTeamsString(usedByClasses)}_{itemDef}");
 
             Translations.AddTranslation(ctx, id, "name", itemName);
-            Translations.AddTranslation(ctx, id, "desc", itemDescription);
+            Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             var prefabData = GetPrefab(ctx, prefab);
             var prefabRarity = KvHelper.GetString(prefabData, "item_rarity") ?? "default";
@@ -107,20 +107,20 @@ public static class CatalogBuilder
             var modelInfo = CatalogAssets.GetModel(ctx, playerModel, id);
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 ClassName = name,
-                Def = int.Parse(itemDef),
-                DescToken = itemDescription,
-                Free = baseitem == "1" ? true : null,
+                DefinitionIndex = int.Parse(itemDef),
+                DescriptionToken = itemDescription,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = baseitem == "1" ? null : 0,
-                Model = name.Replace("weapon_", ""),
-                PlayerModel = modelInfo,
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
+                IsBase = true,
+                IsDefault = baseitem == "1" ? true : null,
+                ModelKey = name.Replace("weapon_", ""),
+                ModelPath = modelInfo,
                 NameToken = itemName,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
-                Teams = (int)teams,
-                Type = CS2ItemType.Melee
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [prefabRarity], "default"),
+                Team = (int)team,
+                Type = CS2ItemType.Melee,
+                VariantIndex = baseitem == "1" ? null : 0
             });
         }
     }
@@ -140,11 +140,11 @@ public static class CatalogBuilder
             var imageInventory = KvHelper.GetString(item, "image_inventory");
             var itemDescription = KvHelper.GetString(item, "item_description");
             var usedByClasses = KvHelper.GetChild(item, "used_by_classes");
-            var teams = GetTeams(usedByClasses, CS2ItemTeam.Both);
+            var team = GetTeam(usedByClasses, CS2ItemTeam.Both);
             var id = GetItemId(ctx, $"glove_{GetTeamsString(usedByClasses, "3_2")}_{itemDef}");
 
             Translations.AddTranslation(ctx, id, "name", itemName);
-            Translations.AddTranslation(ctx, id, "desc", itemDescription);
+            Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             string image;
             if (imageInventory != null)
@@ -154,19 +154,19 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 ClassName = name,
-                Def = int.Parse(itemDef),
-                DescToken = itemDescription,
-                Free = baseitem == "1" ? true : null,
+                DefinitionIndex = int.Parse(itemDef),
+                DescriptionToken = itemDescription,
                 Id = id,
-                Image = image,
-                Index = baseitem == "1" ? null : 0,
-                Model = name,
+                ImagePath = image,
+                IsBase = true,
+                IsDefault = baseitem == "1" ? true : null,
+                ModelKey = name,
                 NameToken = itemName,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [baseitem == "1" ? "default" : "ancient"]),
-                Teams = (int)teams,
-                Type = CS2ItemType.Gloves
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [baseitem == "1" ? "default" : "ancient"]),
+                Team = (int)team,
+                Type = CS2ItemType.Gloves,
+                VariantIndex = baseitem == "1" ? null : 0
             });
         }
     }
@@ -191,23 +191,23 @@ public static class CatalogBuilder
             var id = GetItemId(ctx, $"utility_{itemDef}");
 
             Translations.AddTranslation(ctx, id, "name", itemName);
-            Translations.AddTranslation(ctx, id, "desc", itemDescription);
+            Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             AddItem(ctx, new CS2Item
             {
-                Base = true,
                 ClassName = name,
-                Def = int.Parse(itemDef),
-                DescToken = itemDescription,
-                Free = true,
+                DefinitionIndex = int.Parse(itemDef),
+                DescriptionToken = itemDescription,
                 Id = id,
-                Image = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
-                Index = null,
-                Model = name.Replace("weapon_", ""),
+                ImagePath = imageInventory != null ? CatalogAssets.GetImage(ctx, imageInventory) : CatalogAssets.GetBaseImage(ctx, name),
+                IsBase = true,
+                IsDefault = true,
+                ModelKey = name.Replace("weapon_", ""),
                 NameToken = itemName,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
-                Teams = (int)CS2ItemTeam.Both,
-                Type = CS2ItemType.Utility
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["default"]),
+                Team = (int)CS2ItemTeam.Both,
+                Type = CS2ItemType.Utility,
+                VariantIndex = null
             });
         }
     }
@@ -225,10 +225,10 @@ public static class CatalogBuilder
                 if (baseItem.Type == CS2ItemType.Weapon && !ctx.GameItemsAsText.Contains(itemKey))
                     continue;
 
-                var id = GetItemId(ctx, $"paint_{baseItem.Def}_{paintKit.Index}");
+                var id = GetItemId(ctx, $"paint_{baseItem.DefinitionIndex}_{paintKit.Index}");
                 Collections.AddContainerItem(ctx, itemKey, id);
                 Translations.AddTranslation(ctx, id, "name", baseItem.NameToken, " | ", paintKit.NameToken);
-                Translations.AddTranslation(ctx, id, "desc", paintKit.DescToken);
+                Translations.AddTranslation(ctx, id, "description", paintKit.DescToken);
 
                 var compositeMaterialPath = MaterialPaths.GetPaintCompositeMaterialPath(
                     paintKit.ClassName, paintKit.CompositeMaterialPath);
@@ -246,28 +246,28 @@ public static class CatalogBuilder
 
                 var (collection, collectionImage) = Collections.GetItemCollection(ctx, id, itemKey);
                 var rarity = MeleeOrGlovesTypes.Contains(baseItem.Type)
-                    ? SourceDataLoader.GetRarityColorHex(ctx, [baseItem.Rarity, paintKit.RarityColorHex])
+                    ? SourceDataLoader.GetRarityColorHex(ctx, [baseItem.RarityColor, paintKit.RarityColorHex])
                     : SourceDataLoader.GetRarityColorHex(ctx, [itemKey, paintKit.RarityColorHex]);
 
                 AddItem(ctx, new CS2Item
                 {
-                    AltName = GetPaintAltName(paintKit.ClassName),
-                    BaseId = baseItem.Id,
-                    Category = baseItem.Category,
+                    AlternateName = GetPaintAlternateName(paintKit.ClassName),
                     ClassName = baseItem.ClassName,
-                    Collection = collection,
-                    CollectionImage = collectionImage,
-                    Def = baseItem.Def,
+                    CollectionImagePath = collectionImage,
+                    CollectionKey = collection,
+                    DefinitionIndex = baseItem.DefinitionIndex,
                     Id = id,
-                    Image = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
-                    Index = paintKit.Index,
-                    Legacy = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
-                    Model = baseItem.Model,
+                    ImagePath = CatalogAssets.GetPaintImage(ctx, baseItem.ClassName, paintKit.ClassName),
+                    IsLegacyModel = (baseItem.Type == CS2ItemType.Weapon && paintKit.IsLegacy) ? true : null,
+                    LoadoutCategory = baseItem.LoadoutCategory,
+                    MaterialPath = paintMaterial,
+                    ModelKey = baseItem.ModelKey,
                     NameToken = baseItem.NameToken,
-                    PaintMaterial = paintMaterial,
-                    Rarity = rarity,
-                    Teams = baseItem.Teams,
+                    ParentId = baseItem.Id,
+                    RarityColor = rarity,
+                    Team = baseItem.Team,
                     Type = baseItem.Type,
+                    VariantIndex = paintKit.Index,
                     WearMax = paintKit.WearMax,
                     WearMin = paintKit.WearMin
                 });
@@ -277,7 +277,7 @@ public static class CatalogBuilder
 
     private static void ParseMusicKits(ItemGeneratorContext ctx)
     {
-        var baseId = CreateStub(ctx, "musickit", "#CSGO_musickit_desc");
+        var parentId = CreateStub(ctx, "musickit", "#CSGO_musickit_desc");
         foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "music_definitions"))
         {
             var index = entry.Key;
@@ -290,23 +290,25 @@ public static class CatalogBuilder
 
             var itemKey = $"[{name}]musickit";
             var id = GetItemId(ctx, $"musickit_{index}");
-            var isBase = Config.FreeMusicKits.Contains(index) ? true : (bool?)null;
+            // The two Valve music kits come out with both flags set: for this type IsBase means "the
+            // free one" rather than "the template one".
+            var isFreeMusicKit = Config.FreeMusicKits.Contains(index) ? true : (bool?)null;
 
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_MusicKit", " | ", locName);
-            Translations.AddTranslation(ctx, id, "desc", locDescription);
+            Translations.AddTranslation(ctx, id, "description", locDescription);
 
             AddItem(ctx, new CS2Item
             {
-                Base = isBase,
-                BaseId = baseId,
-                Def = 1314,
-                Free = isBase,
+                DefinitionIndex = 1314,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = int.Parse(index),
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["rare"]),
-                Type = CS2ItemType.MusicKit
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
+                IsBase = isFreeMusicKit,
+                IsDefault = isFreeMusicKit,
+                ParentId = parentId,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["rare"]),
+                Type = CS2ItemType.MusicKit,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[id] = $"music_kit-{index}";
         }
@@ -314,7 +316,7 @@ public static class CatalogBuilder
 
     private static void ParseKeychains(ItemGeneratorContext ctx)
     {
-        ctx.KeychainBaseId = CreateStub(ctx, "keychain", "#CSGO_Tool_Keychain_Desc");
+        ctx.KeychainParentId = CreateStub(ctx, "keychain", "#CSGO_Tool_Keychain_Desc");
         foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "keychain_definitions"))
         {
             var index = entry.Key;
@@ -330,8 +332,8 @@ public static class CatalogBuilder
             var keychainMaterial = KvHelper.GetString(entry.Value, "keychain_material");
             // Per-kit default seed for the charm's "hero"/preview look, used when an instance carries
             // no seed of its own. Absent for most kits; the client falls back to 50000 when unset.
-            int? displaySeed = int.TryParse(KvHelper.GetString(entry.Value, "display_seed"), out var parsedDisplaySeed)
-                ? parsedDisplaySeed
+            int? previewSeed = int.TryParse(KvHelper.GetString(entry.Value, "display_seed"), out var parsedPreviewSeed)
+                ? parsedPreviewSeed
                 : null;
 
             if (!Translations.HasTranslation(ctx, locName)) continue;
@@ -341,21 +343,21 @@ public static class CatalogBuilder
             var itemKey = $"[{name}]keychain";
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Tool_Keychain", " | ", locName);
-            Translations.TryAddTranslation(ctx, id, "desc", locDescription);
+            Translations.TryAddTranslation(ctx, id, "description", locDescription);
 
             AddItem(ctx, new CS2Item
             {
-                BaseId = ctx.KeychainBaseId,
-                Free = index == "37" ? true : null,
-                Def = 1355,
-                DisplaySeed = displaySeed,
+                DefinitionIndex = 1355,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = int.Parse(index),
-                PaintMaterial = GetKeychainMaterial(ctx, name, keychainMaterial),
-                PlayerModel = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Keychain
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
+                IsDefault = index == "37" ? true : null,
+                MaterialPath = GetKeychainMaterial(ctx, name, keychainMaterial),
+                ModelPath = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
+                ParentId = ctx.KeychainParentId,
+                PreviewSeed = previewSeed,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
+                Type = CS2ItemType.Keychain,
+                VariantIndex = int.Parse(index)
             });
 
             if (index == "37")
@@ -365,7 +367,7 @@ public static class CatalogBuilder
 
     private static async Task ParseStickers(ItemGeneratorContext ctx)
     {
-        var baseId = CreateStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc", "stickers/dev/sticker_preview_mesh.vmdl");
+        var parentId = CreateStub(ctx, "sticker", "#CSGO_Tool_Sticker_Desc", "stickers/dev/sticker_preview_mesh.vmdl");
         foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "sticker_kits"))
         {
             var index = entry.Key;
@@ -390,23 +392,23 @@ public static class CatalogBuilder
 
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Tool_Sticker", " | ", itemName);
-            Translations.AddTranslation(ctx, id, "category", categoryToken ?? category);
-            Translations.TryAddTranslation(ctx, id, "desc", descriptionString);
+            Translations.AddTranslation(ctx, id, "categoryName", categoryToken ?? category);
+            Translations.TryAddTranslation(ctx, id, "description", descriptionString);
 
             if (tournamentEventId != null)
-                Translations.AddFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc",
+                Translations.AddFormattedTranslation(ctx, id, "tournamentDescription", "#CSGO_Event_Desc",
                     $"#CSGO_Tournament_Event_Name_{tournamentEventId}");
 
             AddItem(ctx, new CS2Item
             {
-                BaseId = baseId,
-                Def = 1209,
+                DefinitionIndex = 1209,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
-                Index = int.Parse(index),
-                PaintMaterial = paintMaterial,
-                Rarity = rarity,
-                Type = CS2ItemType.Sticker
+                ImagePath = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
+                MaterialPath = paintMaterial,
+                ParentId = parentId,
+                RarityColor = rarity,
+                Type = CS2ItemType.Sticker,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[id] = $"sticker-{index}";
 
@@ -420,28 +422,28 @@ public static class CatalogBuilder
             if (keychainImage == null) continue;
 
             Translations.AddTranslation(ctx, keychainId, "name", "#keychain_kc_sticker_display_case", " | ", itemName);
-            Translations.TryAddTranslation(ctx, keychainId, "desc", "#keychain_kc_sticker_display_case_desc");
+            Translations.TryAddTranslation(ctx, keychainId, "description", "#keychain_kc_sticker_display_case_desc");
 
             AddItem(ctx, new CS2Item
             {
-                // The slab item (keychain_37) is the parent so getPlayerModel/getPaintMaterial
-                // resolve the shared display-case model and compositing recipe through baseId
-                // instead of duplicating them on every per-sticker item.
-                BaseId = ctx.StickerDisplayCaseKeychainId ?? ctx.KeychainBaseId,
-                Def = 1355,
+                DefinitionIndex = 1355,
+                DisplayedStickerId = id,
                 Id = keychainId,
-                Image = keychainImage,
-                Index = 37,
-                Rarity = rarity,
-                StickerId = id,
-                Type = CS2ItemType.Keychain
+                ImagePath = keychainImage,
+                // The slab item (keychain_37) is the parent so getModelUrl/getMaterialUrl
+                // resolve the shared display-case model and compositing recipe through parentId
+                // instead of duplicating them on every per-sticker item.
+                ParentId = ctx.StickerDisplayCaseKeychainId ?? ctx.KeychainParentId,
+                RarityColor = rarity,
+                Type = CS2ItemType.Keychain,
+                VariantIndex = 37
             });
         }
     }
 
     private static void ParseGraffiti(ItemGeneratorContext ctx)
     {
-        var baseId = CreateStub(ctx, "graffiti", "#CSGO_Tool_SprayPaint_Desc");
+        var parentId = CreateStub(ctx, "graffiti", "#CSGO_Tool_SprayPaint_Desc");
         foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "sticker_kits"))
         {
             var index = entry.Key;
@@ -468,17 +470,17 @@ public static class CatalogBuilder
                     var id = GetItemId(ctx, $"spray_{index}_{tint.Id}");
                     Collections.AddContainerItem(ctx, itemKey, id);
                     Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_Spray", " | ", itemName, " (", tint.NameToken, ")");
-                    Translations.AddTranslation(ctx, id, "desc", descriptionString);
+                    Translations.AddTranslation(ctx, id, "description", descriptionString);
 
                     AddItem(ctx, new CS2Item
                     {
-                        BaseId = baseId,
                         Id = id,
-                        Image = CatalogAssets.GetDefaultGraffitiImage(ctx, stickerMaterial, tint.HexColor),
-                        Index = int.Parse(index),
-                        Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity]),
-                        Tint = tint.Id,
-                        Type = CS2ItemType.Graffiti
+                        ImagePath = CatalogAssets.GetDefaultGraffitiImage(ctx, stickerMaterial, tint.HexColor),
+                        ParentId = parentId,
+                        RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity]),
+                        TintIndex = tint.Id,
+                        Type = CS2ItemType.Graffiti,
+                        VariantIndex = int.Parse(index)
                     });
                     ctx.ItemNames[id] = $"graffiti-{index}";
                 }
@@ -488,20 +490,20 @@ public static class CatalogBuilder
             var graffitiId = GetItemId(ctx, $"spray_{index}");
             Collections.AddContainerItem(ctx, itemKey, graffitiId);
             Translations.AddTranslation(ctx, graffitiId, "name", "#CSGO_Type_Spray", " | ", itemName);
-            Translations.AddTranslation(ctx, graffitiId, "desc", descriptionString);
+            Translations.AddTranslation(ctx, graffitiId, "description", descriptionString);
             if (tournamentEventId != null)
-                Translations.AddFormattedTranslation(ctx, graffitiId, "tournamentDesc", "#CSGO_Event_Desc",
+                Translations.AddFormattedTranslation(ctx, graffitiId, "tournamentDescription", "#CSGO_Event_Desc",
                     $"#CSGO_Tournament_Event_Name_{tournamentEventId}");
 
             AddItem(ctx, new CS2Item
             {
-                BaseId = baseId,
-                Def = 1348,
+                DefinitionIndex = 1348,
                 Id = graffitiId,
-                Image = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
-                Index = int.Parse(index),
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Graffiti
+                ImagePath = CatalogAssets.GetImage(ctx, $"econ/stickers/{stickerMaterial}"),
+                ParentId = parentId,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
+                Type = CS2ItemType.Graffiti,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[graffitiId] = $"graffiti-{index}";
         }
@@ -509,7 +511,7 @@ public static class CatalogBuilder
 
     private static void ParsePatches(ItemGeneratorContext ctx)
     {
-        var baseId = CreateStub(ctx, "patch", "#CSGO_Tool_Patch_Desc");
+        var parentId = CreateStub(ctx, "patch", "#CSGO_Tool_Patch_Desc");
         foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "sticker_kits"))
         {
             var index = entry.Key;
@@ -527,20 +529,20 @@ public static class CatalogBuilder
             var itemKey = $"[{name}]patch";
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Tool_Patch", " | ", itemName);
-            Translations.AddTranslation(ctx, id, "desc", descriptionString);
+            Translations.AddTranslation(ctx, id, "description", descriptionString);
             if (tournamentEventId != null)
-                Translations.AddFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc",
+                Translations.AddFormattedTranslation(ctx, id, "tournamentDescription", "#CSGO_Event_Desc",
                     $"#CSGO_Tournament_Event_Name_{tournamentEventId}");
 
             AddItem(ctx, new CS2Item
             {
-                BaseId = baseId,
-                Def = 4609,
+                DefinitionIndex = 4609,
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, $"econ/patches/{patchMaterial}"),
-                Index = int.Parse(index),
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Patch
+                ImagePath = CatalogAssets.GetImage(ctx, $"econ/patches/{patchMaterial}"),
+                ParentId = parentId,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
+                Type = CS2ItemType.Patch,
+                VariantIndex = int.Parse(index)
             });
             ctx.ItemNames[id] = $"patch-{index}";
         }
@@ -565,26 +567,26 @@ public static class CatalogBuilder
                 playerModel == null || prefab != "customplayertradable")
                 continue;
 
-            var teams = GetTeams(usedByClasses);
+            var team = GetTeam(usedByClasses);
             var id = GetItemId(ctx, $"agent_{GetTeamsString(usedByClasses)}_{index}");
-            var model = playerModel.Replace("characters/models/", "").Replace(".vmdl", "");
+            var modelKey = playerModel.Replace("characters/models/", "").Replace(".vmdl", "");
 
             Translations.AddTranslation(ctx, id, "name", "#Type_CustomPlayer", " | ", itemName);
-            Translations.AddTranslation(ctx, id, "desc", itemDescription);
+            Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             var (collection, collectionImage) = Collections.GetItemCollection(ctx, id, name);
             AddItem(ctx, new CS2Item
             {
-                Collection = collection,
-                CollectionImage = collectionImage,
-                Def = int.Parse(index),
+                CollectionImagePath = collectionImage,
+                CollectionKey = collection,
+                DefinitionIndex = int.Parse(index),
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, imageInventory),
-                Index = null,
-                Model = model,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [name, itemRarity]),
-                Teams = (int)teams,
-                Type = CS2ItemType.Agent
+                ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
+                ModelKey = modelKey,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [name, itemRarity]),
+                Team = (int)team,
+                Type = CS2ItemType.Agent,
+                VariantIndex = null
             });
         }
     }
@@ -622,26 +624,26 @@ public static class CatalogBuilder
 
             Collections.AddContainerItem(ctx, name, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_Collectible", " | ", itemName);
-            Translations.TryAddTranslation(ctx, id, "desc", itemDescription ?? $"{itemName}_Desc");
+            Translations.TryAddTranslation(ctx, id, "description", itemDescription ?? $"{itemName}_Desc");
 
             var tournamentEvent = KvHelper.GetChild(attributes, "tournament event id");
             if (tournamentEvent != null)
             {
                 var eventValue = KvHelper.GetString(tournamentEvent, "value");
                 if (eventValue != null)
-                    Translations.AddFormattedTranslation(ctx, id, "tournamentDesc", "#CSGO_Event_Desc",
+                    Translations.AddFormattedTranslation(ctx, id, "tournamentDescription", "#CSGO_Event_Desc",
                         $"#CSGO_Tournament_Event_Name_{eventValue}");
             }
 
             AddItem(ctx, new CS2Item
             {
-                AltName = name,
-                Def = int.Parse(index),
+                AlternateName = name,
+                DefinitionIndex = int.Parse(index),
                 Id = id,
-                Image = image,
-                Index = null,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity, "ancient"]),
-                Type = CS2ItemType.Collectible
+                ImagePath = image,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity, "ancient"]),
+                Type = CS2ItemType.Collectible,
+                VariantIndex = null
             });
             ctx.ItemNames[id] = $"collectible-{index}";
         }
@@ -672,17 +674,17 @@ public static class CatalogBuilder
 
             Collections.AddContainerItem(ctx, name, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_Tool", " | ", itemName);
-            Translations.AddTranslation(ctx, id, "desc", itemDescription);
+            Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             AddItem(ctx, new CS2Item
             {
-                Def = int.Parse(index),
-                Free = baseitem == "1" ? true : null,
+                DefinitionIndex = int.Parse(index),
                 Id = id,
-                Image = CatalogAssets.GetImage(ctx, image),
-                Index = null,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
-                Type = CS2ItemType.Tool
+                ImagePath = CatalogAssets.GetImage(ctx, image),
+                IsDefault = baseitem == "1" ? true : null,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
+                Type = CS2ItemType.Tool,
+                VariantIndex = null
             });
         }
     }
@@ -722,33 +724,33 @@ public static class CatalogBuilder
             if (clientLootListKey == null) continue;
 
             string? contentsType = null;
-            var contents = new List<int>();
+            var contentIds = new List<int>();
             foreach (var itemKey in Collections.GetClientLootListItems(ctx, clientLootListKey))
             {
                 if (!ctx.ContainerItems.TryGetValue(itemKey, out var containedId)) continue;
                 if (!ctx.Items.TryGetValue(containedId, out var contained)) continue;
                 contentsType = contained.Type;
-                if (contained.Tint != null && contained.Index != null)
+                if (contained.TintIndex != null && contained.VariantIndex != null)
                 {
                     foreach (var other in ctx.Items.Values)
                     {
-                        if (other.Tint != null && other.Index == contained.Index)
-                            contents.Add(other.Id);
+                        if (other.TintIndex != null && other.VariantIndex == contained.VariantIndex)
+                            contentIds.Add(other.Id);
                     }
                 }
                 else
                 {
-                    contents.Add(containedId);
+                    contentIds.Add(containedId);
                 }
             }
 
-            var specials = new List<int>();
-            await Sources.External.PopulateContainerContents(itemName, contents, ctx.ItemNames);
-            await Sources.External.PopulateContainerSpecials(itemName, specials, ctx.ItemNames);
-            if (contents.Count == 0) continue;
+            var specialIds = new List<int>();
+            await Sources.External.PopulateContainerContents(itemName, contentIds, ctx.ItemNames);
+            await Sources.External.PopulateContainerSpecials(itemName, specialIds, ctx.ItemNames);
+            if (contentIds.Count == 0) continue;
 
             // Parse keys
-            var keys = new List<int>();
+            var keyIds = new List<int>();
             if (associatedItems != null)
             {
                 foreach (var assoc in associatedItems)
@@ -756,7 +758,7 @@ public static class CatalogBuilder
                     var keyItemDef = assoc.Key;
                     if (keyItems.TryGetValue(keyItemDef, out var existingKeyId))
                     {
-                        keys.Add(existingKeyId);
+                        keyIds.Add(existingKeyId);
                         continue;
                     }
                     var keyItem = KvHelper.FindInMergedSection(ctx.GameItems!, "items", keyItemDef);
@@ -768,17 +770,17 @@ public static class CatalogBuilder
                     var keyNameToken = KvHelper.GetString(keyItem, "item_name") ?? "#CSGO_base_crate_key";
                     keyItems[keyItemDef] = keyId;
                     Translations.AddTranslation(ctx, keyId, "name", "#CSGO_Tool_WeaponCase_KeyTag", " | ", keyNameToken);
-                    Translations.TryAddTranslation(ctx, keyId, "desc", KvHelper.GetString(keyItem, "item_description"));
+                    Translations.TryAddTranslation(ctx, keyId, "description", KvHelper.GetString(keyItem, "item_description"));
 
                     AddItem(ctx, new CS2Item
                     {
-                        Def = int.Parse(keyItemDef),
+                        DefinitionIndex = int.Parse(keyItemDef),
                         Id = keyId,
-                        Image = CatalogAssets.GetImage(ctx, keyImageInventory),
-                        Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
+                        ImagePath = CatalogAssets.GetImage(ctx, keyImageInventory),
+                        RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                         Type = CS2ItemType.Key
                     });
-                    keys.Add(keyId);
+                    keyIds.Add(keyId);
                 }
             }
 
@@ -795,7 +797,7 @@ public static class CatalogBuilder
             var containsStatTrak = containerName.Contains("StatTrak");
 
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_WeaponCase", " | ", itemName);
-            Translations.TryAddTranslation(ctx, id, "desc", itemDescription);
+            Translations.TryAddTranslation(ctx, id, "description", itemDescription);
 
             var itemSetTag = KvHelper.GetChild(tags, "ItemSet");
             var tagValue = KvHelper.GetString(itemSetTag, "tag_value");
@@ -803,20 +805,21 @@ public static class CatalogBuilder
 
             AddItem(ctx, new CS2Item
             {
-                Collection = collection,
-                CollectionImage = collectionImage,
+                CollectionImagePath = collectionImage,
+                CollectionKey = collection,
                 ContainerType = Collections.GetContainerType(containerName, contentsType),
-                Contents = contents,
-                Def = int.Parse(containerIndex),
+                ContentIds = contentIds,
+                DefinitionIndex = int.Parse(containerIndex),
                 Id = id,
-                Image = containerImage,
-                Keys = keys.Count > 0 ? keys : null,
-                Rarity = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
-                Specials = specials.Count > 0 ? specials
-                    : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.Specials : null,
-                SpecialsImage = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
-                StatTrakless = containsMusicKit && !containsStatTrak ? true : null,
-                StatTrakOnly = containsMusicKit && containsStatTrak ? true : null,
+                ImagePath = containerImage,
+                KeyIds = keyIds.Count > 0 ? keyIds : null,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
+                SpecialIds = specialIds.Count > 0 ? specialIds
+                    : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.SpecialIds : null,
+                SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
+                StatTrakMode = containsMusicKit
+                    ? containsStatTrak ? CS2StatTrakMode.Guaranteed : CS2StatTrakMode.Excluded
+                    : null,
                 Type = CS2ItemType.Container
             });
         }
@@ -842,7 +845,7 @@ public static class CatalogBuilder
     private static void AddItem(ItemGeneratorContext ctx, CS2Item item)
     {
         HydrateExistingModelFields(ctx, item);
-        if (item.Base == true)
+        if (item.IsBase == true)
             ctx.BaseItems.Add(item);
         ctx.Items[item.Id] = item;
     }
@@ -852,27 +855,27 @@ public static class CatalogBuilder
         if (ctx.Mode != ItemGeneratorMode.Limited) return;
         if (!ctx.ExistingItemsById.TryGetValue(item.Id, out var previous)) return;
 
-        item.ClothCollider ??= previous.ClothCollider;
-        item.DisplaySeed ??= previous.DisplaySeed;
-        item.KeychainOffsetXMax ??= previous.KeychainOffsetXMax;
-        item.KeychainOffsetXMin ??= previous.KeychainOffsetXMin;
-        item.KeychainOffsetYMax ??= previous.KeychainOffsetYMax;
-        item.KeychainOffsetYMin ??= previous.KeychainOffsetYMin;
-        item.KeychainOffsetZMax ??= previous.KeychainOffsetZMax;
-        item.KeychainOffsetZMin ??= previous.KeychainOffsetZMin;
-        item.LegacyKeychainOffsetXMax ??= previous.LegacyKeychainOffsetXMax;
-        item.LegacyKeychainOffsetXMin ??= previous.LegacyKeychainOffsetXMin;
-        item.LegacyKeychainOffsetYMax ??= previous.LegacyKeychainOffsetYMax;
-        item.LegacyKeychainOffsetYMin ??= previous.LegacyKeychainOffsetYMin;
-        item.LegacyKeychainOffsetZMax ??= previous.LegacyKeychainOffsetZMax;
-        item.LegacyKeychainOffsetZMin ??= previous.LegacyKeychainOffsetZMin;
+        item.HasColliderData ??= previous.HasColliderData;
+        item.KeychainPositionXMax ??= previous.KeychainPositionXMax;
+        item.KeychainPositionXMin ??= previous.KeychainPositionXMin;
+        item.KeychainPositionYMax ??= previous.KeychainPositionYMax;
+        item.KeychainPositionYMin ??= previous.KeychainPositionYMin;
+        item.KeychainPositionZMax ??= previous.KeychainPositionZMax;
+        item.KeychainPositionZMin ??= previous.KeychainPositionZMin;
+        item.LegacyKeychainPositionXMax ??= previous.LegacyKeychainPositionXMax;
+        item.LegacyKeychainPositionXMin ??= previous.LegacyKeychainPositionXMin;
+        item.LegacyKeychainPositionYMax ??= previous.LegacyKeychainPositionYMax;
+        item.LegacyKeychainPositionYMin ??= previous.LegacyKeychainPositionYMin;
+        item.LegacyKeychainPositionZMax ??= previous.LegacyKeychainPositionZMax;
+        item.LegacyKeychainPositionZMin ??= previous.LegacyKeychainPositionZMin;
         item.LegacyStickerOffsetXMax ??= previous.LegacyStickerOffsetXMax;
         item.LegacyStickerOffsetXMin ??= previous.LegacyStickerOffsetXMin;
         item.LegacyStickerOffsetYMax ??= previous.LegacyStickerOffsetYMax;
         item.LegacyStickerOffsetYMin ??= previous.LegacyStickerOffsetYMin;
         item.LegacyStickerSchemaCount ??= previous.LegacyStickerSchemaCount;
-        item.PaintMaterial ??= previous.PaintMaterial;
-        item.PlayerModel ??= previous.PlayerModel;
+        item.MaterialPath ??= previous.MaterialPath;
+        item.ModelPath ??= previous.ModelPath;
+        item.PreviewSeed ??= previous.PreviewSeed;
         item.StickerOffsetXMax ??= previous.StickerOffsetXMax;
         item.StickerOffsetXMin ??= previous.StickerOffsetXMin;
         item.StickerOffsetYMax ??= previous.StickerOffsetYMax;
@@ -880,17 +883,17 @@ public static class CatalogBuilder
         item.StickerSchemaCount ??= previous.StickerSchemaCount;
     }
 
-    private static int CreateStub(ItemGeneratorContext ctx, string name, string descToken, string? model = null)
+    private static int CreateStub(ItemGeneratorContext ctx, string name, string descriptionToken, string? model = null)
     {
         var id = GetItemId(ctx, $"stub_{name}");
         Translations.AddTranslation(ctx, id, "name", "#Rarity_Default");
-        Translations.AddTranslation(ctx, id, "desc", descToken);
+        Translations.AddTranslation(ctx, id, "description", descriptionToken);
 
         var modelInfo = CatalogAssets.GetModel(ctx, model, id);
         var item = new CS2Item
         {
             Id = id,
-            PlayerModel = modelInfo,
+            ModelPath = modelInfo,
             Type = CS2ItemType.Stub
         };
         AddItem(ctx, item);
@@ -903,7 +906,7 @@ public static class CatalogBuilder
         return KvHelper.FindInMergedSection(ctx.GameItems!, "prefabs", prefab);
     }
 
-    private static CS2ItemTeam GetTeams(ValveKeyValue.KVObject? teams, CS2ItemTeam fallback = CS2ItemTeam.Both)
+    private static CS2ItemTeam GetTeam(ValveKeyValue.KVObject? teams, CS2ItemTeam fallback = CS2ItemTeam.Both)
     {
         if (teams == null) return fallback;
         var keys = teams.Select(kv => kv.Key).ToList();
@@ -938,7 +941,7 @@ public static class CatalogBuilder
         return Config.HeavyWeapons.Contains(name) ? "heavy" : category;
     }
 
-    private static string? GetPaintAltName(string className)
+    private static string? GetPaintAlternateName(string className)
     {
         if (className.Contains("_phase"))
         {
@@ -952,7 +955,7 @@ public static class CatalogBuilder
         return null;
     }
 
-    private static (string Category, string? CategoryToken) GetStickerCategory(
+    private static (string CategoryName, string? CategoryToken) GetStickerCategory(
         ItemGeneratorContext ctx, string stickerMaterial, string? tournamentEventId)
     {
         string? category = null;
