@@ -1,13 +1,20 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 // Encodes a batch of PNG textures to WebP. Invoked once per run by the C# item-generator
-// (AssetProcessor.ProcessMaterialTextures) with a JSONL manifest of jobs. sharp is pinned to an
-// exact version so texture bytes — and therefore the content hashes embedded in CDN filenames —
-// are reproducible across machines; the previous cwebp dependency came from apt and drifted.
-// `exact` preserves RGB under fully-transparent pixels (read by shader logic) and must stay on.
-// For near-lossless jobs (normal maps), `quality` is libwebp's near-lossless level, not lossy Q.
-// For lossless jobs (data-selector textures: paint masks, AO), `quality` is VP8L's compression
-// effort — bytes are bit-exact regardless. The flag is only forwarded when true so lossy and
-// near-lossless outputs stay byte-identical to previous runs (their content hashes must not move).
-import { readFile, mkdir } from "node:fs/promises";
+// (AssetProcessor.ProcessMaterialTextures) with a JSONL manifest of jobs. Output bytes feed the
+// content hashes embedded in CDN filenames, so sharp is pinned exact and nothing here may change
+// encoded bytes. Constraints:
+// - `exact` must stay on: shader logic reads RGB under fully-transparent pixels.
+// - `quality` is overloaded: the near-lossless level for near-lossless jobs (normal maps), VP8L
+//   compression effort for lossless jobs (paint masks, AO — bytes are bit-exact regardless),
+//   and lossy Q otherwise.
+// - `lossless` is only forwarded when true so lossy and near-lossless outputs stay
+//   byte-identical to previous runs.
+
+import { mkdir, readFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
 import sharp from "sharp";
@@ -22,7 +29,7 @@ interface EncodeJob {
 
 const manifestPath = process.argv[2];
 if (manifestPath === undefined) {
-    console.error("usage: tsx encode-webp.ts <jobs.jsonl>");
+    console.error("usage: tsx item-generator-webp.ts <jobs.jsonl>");
     process.exit(1);
 }
 
