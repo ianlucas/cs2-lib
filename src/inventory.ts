@@ -597,6 +597,24 @@ export class CS2Inventory {
         return this;
     }
 
+    sealStickerSlab(slabUid: number, stickerUid: number): this {
+        this.get(slabUid).expectStickerSlab();
+        const sticker = this.get(stickerUid).expectSticker();
+        const displayCase = sticker.getDisplayCase();
+        this.items.delete(slabUid);
+        this.items.delete(stickerUid);
+        this.add({ id: displayCase.id });
+        return this;
+    }
+
+    unsealStickerSlab(displayCaseUid: number): this {
+        const displayCase = this.get(displayCaseUid).expectStickerDisplayCase();
+        const stickerId = ensure(displayCase.displayedStickerId);
+        this.items.delete(displayCaseUid);
+        this.add({ id: stickerId });
+        return this;
+    }
+
     applyItemPatch(targetUid: number, patchUid: number, slot: number): this {
         assert(slot >= 0 && slot <= CS2_MAX_PATCHES - 1);
         const target = this.get(targetUid).expectAgent();

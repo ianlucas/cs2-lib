@@ -43,6 +43,7 @@ import {
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX,
     CS2_STICKERABLE_ITEMS,
+    CS2_STICKER_SLAB_TOOL_DEFINITION_INDEX,
     CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX,
     CS2_TEAMS_BOTH,
     CS2_TEAMS_CT,
@@ -101,6 +102,7 @@ export class CS2EconomyInstance {
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
     private charmDetachment: CS2EconomyItem | undefined;
+    private stickerDisplayCases: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
 
     load({
         assetsBaseUrl,
@@ -117,6 +119,7 @@ export class CS2EconomyInstance {
         this.stickers.clear();
         this.itemsAsArray = [];
         this.charmDetachment = undefined;
+        this.stickerDisplayCases.clear();
         for (const item of items) {
             const economyItem = new CS2EconomyItem(
                 this,
@@ -129,6 +132,9 @@ export class CS2EconomyInstance {
                 if (language !== undefined) {
                     this.categories.add(ensure(economyItem.categoryName));
                 }
+            }
+            if (economyItem.isStickerDisplayCase()) {
+                this.stickerDisplayCases.set(ensure(economyItem.displayedStickerId), economyItem);
             }
             this.itemsAsArray.push(economyItem);
         }
@@ -283,6 +289,14 @@ export class CS2EconomyInstance {
     getCharmDetachment(): CS2EconomyItem {
         this.charmDetachment ??= ensure(this.itemsAsArray.find((item) => item.isCharmDetachment()));
         return this.charmDetachment;
+    }
+
+    getStickerDisplayCase(sticker: number | CS2EconomyItem): CS2EconomyItem {
+        return ensure(this.stickerDisplayCases.get(this.get(sticker).expectSticker().id));
+    }
+
+    hasStickerDisplayCase(sticker: number | CS2EconomyItem): boolean {
+        return this.stickerDisplayCases.has(this.get(sticker).expectSticker().id);
     }
 
     expectUnlockedItem(
@@ -556,6 +570,14 @@ export class CS2EconomyItem implements Interface<
         return this.isTool() && this.definitionIndex === CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX;
     }
 
+    isStickerSlab(): boolean {
+        return this.isTool() && this.definitionIndex === CS2_STICKER_SLAB_TOOL_DEFINITION_INDEX;
+    }
+
+    isStickerDisplayCase(): boolean {
+        return this.isKeychain() && this.displayedStickerId !== undefined;
+    }
+
     isWeaponCase(): boolean {
         return this.containerType === CS2ContainerType.WeaponCase;
     }
@@ -622,6 +644,16 @@ export class CS2EconomyItem implements Interface<
         return this;
     }
 
+    expectStickerSlab(): this {
+        assert(this.isStickerSlab());
+        return this;
+    }
+
+    expectStickerDisplayCase(): this {
+        assert(this.isStickerDisplayCase());
+        return this;
+    }
+
     hasWear(): boolean {
         return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
@@ -652,6 +684,14 @@ export class CS2EconomyItem implements Interface<
 
     hasCharges(): boolean {
         return this.isGraffiti() || this.isCharmDetachment();
+    }
+
+    hasDisplayCase(): boolean {
+        return this.economy.hasStickerDisplayCase(this);
+    }
+
+    getDisplayCase(): CS2EconomyItem {
+        return this.economy.getStickerDisplayCase(this);
     }
 
     getImageUrl(wear?: number): string {
