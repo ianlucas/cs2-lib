@@ -60,6 +60,8 @@ const GRAFFITI_ACE_ID = 9543;
 const CHARM_DETACHMENT_ID = 12450;
 const CHARM_DETACHMENT_PACK_ID = 12451;
 const STICKER_SLAB_ID = 15200;
+const SHOOTER_2013_DREAMHACK_ID = 1847;
+const SHOOTER_STICKER_SLAB_ID = 15407;
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
@@ -95,6 +97,50 @@ describe("CS2Inventory methods", () => {
         const item = ensure(inventory.getAll()[0]);
         expect(item.isTool()).toBe(true);
         expect(item.isDefault).toBeUndefined();
+    });
+
+    test("sealStickerSlab should consume the slab and sticker and add the display case", () => {
+        inventory.add({ id: STICKER_SLAB_ID });
+        inventory.add({ id: SHOOTER_2013_DREAMHACK_ID });
+        inventory.sealStickerSlab(0, 1);
+        expect(inventory.size()).toBe(1);
+        const item = ensure(inventory.getAll()[0]);
+        expect(item.id).toBe(SHOOTER_STICKER_SLAB_ID);
+        expect(item.isStickerDisplayCase()).toBe(true);
+        expect(item.displayedStickerId).toBe(SHOOTER_2013_DREAMHACK_ID);
+    });
+
+    test("sealStickerSlab should throw if the tool is not a slab or the item is not a sticker", () => {
+        inventory.add({ id: NAMETAG_ID });
+        inventory.add({ id: SHOOTER_2013_DREAMHACK_ID });
+        inventory.add({ id: STICKER_SLAB_ID });
+        expect(() => inventory.sealStickerSlab(0, 1)).toThrow();
+        expect(() => inventory.sealStickerSlab(2, 0)).toThrow();
+        expect(inventory.size()).toBe(3);
+    });
+
+    test("sealStickerSlab should work when the inventory is full", () => {
+        inventory.add({ id: STICKER_SLAB_ID });
+        inventory.add({ id: SHOOTER_2013_DREAMHACK_ID });
+        for (let i = inventory.size(); i < inventory.options.maxItems; i++) {
+            inventory.add({ id: AWP_DRAGON_LORE_ID });
+        }
+        inventory.sealStickerSlab(0, 1);
+        expect(inventory.size()).toBe(inventory.options.maxItems - 1);
+    });
+
+    test("unsealStickerSlab should return the sticker and discard the slab", () => {
+        inventory.add({ id: SHOOTER_STICKER_SLAB_ID });
+        inventory.unsealStickerSlab(0);
+        expect(inventory.size()).toBe(1);
+        const item = ensure(inventory.getAll()[0]);
+        expect(item.id).toBe(SHOOTER_2013_DREAMHACK_ID);
+        expect(item.isSticker()).toBe(true);
+    });
+
+    test("unsealStickerSlab should throw for a regular keychain", () => {
+        inventory.add({ id: LIL_AVA_ID });
+        expect(() => inventory.unsealStickerSlab(0)).toThrow();
     });
 
     test("add should throw an error if the inventory is full", () => {
