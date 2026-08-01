@@ -1570,3 +1570,79 @@ describe("charges", () => {
         expect(restored.get(1).getCharges()).toBe(42);
     });
 });
+
+describe("dropEmptyDefaultItems runtime drops", () => {
+    function makeInventory(items: Record<number, CS2BaseInventoryItem>, dropEmptyDefaultItems = true) {
+        return new CS2Inventory({
+            data: { items, version: CS2_INVENTORY_VERSION },
+            dropEmptyDefaultItems,
+            maxItems: 16
+        });
+    }
+
+    test("removeItemSticker drops a default item once its last sticker is gone", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } });
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("removeItemSticker keeps a default item that still has a sticker", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID }, 1: { id: ALLU_COLOGNE_2015_ID } } }
+        });
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.get(0).stickers?.size).toBe(1);
+    });
+
+    test("removeItemSticker keeps a non-default item that ends up plain", () => {
+        const inventory = makeInventory({
+            0: { id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } }
+        });
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.size()).toBe(1);
+    });
+
+    test("nothing is dropped when the option is off", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } }, false);
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.size()).toBe(1);
+    });
+
+    test("scrapeItemSticker drops the default item when the sticker is destroyed", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } });
+        inventory.scrapeItemSticker(0, 0, 1);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("removeItemKeychain drops the default item and still returns the keychain", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID, seed: 5 } } }
+        });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.removeItemKeychain(0, 0);
+        expect(inventory.getAll().some((item) => item.id === AK47_ID)).toBe(false);
+        const keychain = ensure(inventory.getAll().find((item) => item.id === LIL_AVA_ID));
+        expect(keychain.seed).toBe(5);
+    });
+
+    test("renameItem clearing the name drops the default item", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, nameTag: "My Rifle" },
+            1: { id: NAMETAG_ID }
+        });
+        inventory.renameItem(1, 0);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("edit drops the default item it emptied", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, nameTag: "My Rifle" } });
+        inventory.edit(0, { nameTag: undefined });
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("removeItemPatch keeps a non-default agent", () => {
+        const inventory = makeInventory({ 0: { id: BLOODY_DARRYL_THE_STRAPPED_ID, patches: { 0: BLOODHOUND_ID } } });
+        inventory.removeItemPatch(0, 0);
+        expect(inventory.size()).toBe(1);
+    });
+});
