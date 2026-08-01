@@ -60,6 +60,8 @@ const GRAFFITI_ACE_ID = 9543;
 const CHARM_DETACHMENT_ID = 12450;
 const CHARM_DETACHMENT_PACK_ID = 12451;
 const STICKER_SLAB_ID = 15200;
+const SHOOTER_2013_DREAMHACK_ID = 1847;
+const SHOOTER_STICKER_SLAB_ID = 15407;
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
@@ -95,6 +97,50 @@ describe("CS2Inventory methods", () => {
         const item = ensure(inventory.getAll()[0]);
         expect(item.isTool()).toBe(true);
         expect(item.isDefault).toBeUndefined();
+    });
+
+    test("sealStickerSlab should consume the slab and sticker and add the display case", () => {
+        inventory.add({ id: STICKER_SLAB_ID });
+        inventory.add({ id: SHOOTER_2013_DREAMHACK_ID });
+        inventory.sealStickerSlab(0, 1);
+        expect(inventory.size()).toBe(1);
+        const item = ensure(inventory.getAll()[0]);
+        expect(item.id).toBe(SHOOTER_STICKER_SLAB_ID);
+        expect(item.isStickerDisplayCase()).toBe(true);
+        expect(item.displayedStickerId).toBe(SHOOTER_2013_DREAMHACK_ID);
+    });
+
+    test("sealStickerSlab should throw if the tool is not a slab or the item is not a sticker", () => {
+        inventory.add({ id: NAMETAG_ID });
+        inventory.add({ id: SHOOTER_2013_DREAMHACK_ID });
+        inventory.add({ id: STICKER_SLAB_ID });
+        expect(() => inventory.sealStickerSlab(0, 1)).toThrow();
+        expect(() => inventory.sealStickerSlab(2, 0)).toThrow();
+        expect(inventory.size()).toBe(3);
+    });
+
+    test("sealStickerSlab should work when the inventory is full", () => {
+        inventory.add({ id: STICKER_SLAB_ID });
+        inventory.add({ id: SHOOTER_2013_DREAMHACK_ID });
+        for (let i = inventory.size(); i < inventory.options.maxItems; i++) {
+            inventory.add({ id: AWP_DRAGON_LORE_ID });
+        }
+        inventory.sealStickerSlab(0, 1);
+        expect(inventory.size()).toBe(inventory.options.maxItems - 1);
+    });
+
+    test("unsealStickerSlab should return the sticker and discard the slab", () => {
+        inventory.add({ id: SHOOTER_STICKER_SLAB_ID });
+        inventory.unsealStickerSlab(0);
+        expect(inventory.size()).toBe(1);
+        const item = ensure(inventory.getAll()[0]);
+        expect(item.id).toBe(SHOOTER_2013_DREAMHACK_ID);
+        expect(item.isSticker()).toBe(true);
+    });
+
+    test("unsealStickerSlab should throw for a regular keychain", () => {
+        inventory.add({ id: LIL_AVA_ID });
+        expect(() => inventory.unsealStickerSlab(0)).toThrow();
     });
 
     test("add should throw an error if the inventory is full", () => {
@@ -1522,5 +1568,81 @@ describe("charges", () => {
         const restored = CS2Inventory.load(inventory.stringify());
         expect(restored.get(0).isSealed()).toBe(true);
         expect(restored.get(1).getCharges()).toBe(42);
+    });
+});
+
+describe("dropEmptyDefaultItems runtime drops", () => {
+    function makeInventory(items: Record<number, CS2BaseInventoryItem>, dropEmptyDefaultItems = true) {
+        return new CS2Inventory({
+            data: { items, version: CS2_INVENTORY_VERSION },
+            dropEmptyDefaultItems,
+            maxItems: 16
+        });
+    }
+
+    test("removeItemSticker drops a default item once its last sticker is gone", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } });
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("removeItemSticker keeps a default item that still has a sticker", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID }, 1: { id: ALLU_COLOGNE_2015_ID } } }
+        });
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.get(0).stickers?.size).toBe(1);
+    });
+
+    test("removeItemSticker keeps a non-default item that ends up plain", () => {
+        const inventory = makeInventory({
+            0: { id: AWP_DRAGON_LORE_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } }
+        });
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.size()).toBe(1);
+    });
+
+    test("nothing is dropped when the option is off", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } }, false);
+        inventory.removeItemSticker(0, 0);
+        expect(inventory.size()).toBe(1);
+    });
+
+    test("scrapeItemSticker drops the default item when the sticker is destroyed", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } } });
+        inventory.scrapeItemSticker(0, 0, 1);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("removeItemKeychain drops the default item and still returns the keychain", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID, seed: 5 } } }
+        });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.removeItemKeychain(0, 0);
+        expect(inventory.getAll().some((item) => item.id === AK47_ID)).toBe(false);
+        const keychain = ensure(inventory.getAll().find((item) => item.id === LIL_AVA_ID));
+        expect(keychain.seed).toBe(5);
+    });
+
+    test("renameItem clearing the name drops the default item", () => {
+        const inventory = makeInventory({
+            0: { id: AK47_ID, nameTag: "My Rifle" },
+            1: { id: NAMETAG_ID }
+        });
+        inventory.renameItem(1, 0);
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("edit drops the default item it emptied", () => {
+        const inventory = makeInventory({ 0: { id: AK47_ID, nameTag: "My Rifle" } });
+        inventory.edit(0, { nameTag: undefined });
+        expect(inventory.size()).toBe(0);
+    });
+
+    test("removeItemPatch keeps a non-default agent", () => {
+        const inventory = makeInventory({ 0: { id: BLOODY_DARRYL_THE_STRAPPED_ID, patches: { 0: BLOODHOUND_ID } } });
+        inventory.removeItemPatch(0, 0);
+        expect(inventory.size()).toBe(1);
     });
 });

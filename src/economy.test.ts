@@ -199,6 +199,30 @@ test("display-case keychain resolves model and material through the slab parent"
     expect(displayCase.getMaterialUrl()).toBe(slab.getMaterialUrl());
 });
 
+test("sticker slab predicates and display-case lookup", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const slab = CS2Economy.getById(15200);
+    const displayCase = CS2Economy.getById(15407);
+    const sticker = CS2Economy.getById(1847);
+    expect(slab.isStickerSlab()).toBe(true);
+    expect(displayCase.isStickerSlab()).toBe(false);
+    expect(displayCase.isStickerDisplayCase()).toBe(true);
+    expect(slab.isStickerDisplayCase()).toBe(false);
+    expect(sticker.hasDisplayCase()).toBe(true);
+    expect(sticker.getDisplayCase()).toBe(displayCase);
+    // Only stickers can be looked up.
+    expect(() => slab.getDisplayCase()).toThrow();
+    expect(() => displayCase.hasDisplayCase()).toThrow();
+});
+
+test("getDisplayCase throws for a sticker without a display case", () => {
+    const items: CS2Item[] = [{ id: 1, rarityColor: CS2RarityColor.Common, type: "sticker" }];
+    CS2Economy.load({ items });
+    const sticker = CS2Economy.getById(1);
+    expect(sticker.hasDisplayCase()).toBe(false);
+    expect(() => sticker.getDisplayCase()).toThrow();
+});
+
 test("getStickerOffsetBounds returns per-axis bounds; legacy models read only legacy fields", () => {
     const items: CS2Item[] = [
         {

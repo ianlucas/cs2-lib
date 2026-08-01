@@ -651,16 +651,17 @@ describe("reconcileInventoryItems", () => {
             2: { id: AK47_ID, nameTag: "Mine" },
             3: { id: AK47_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID } } },
             4: { id: AK47_ID, keychains: { 0: { id: LIL_AVA_ID } } },
-            5: { id: CHARM_DETACHMENT_ID, charges: 3 }
+            5: { id: CHARM_DETACHMENT_ID, charges: 3 },
+            6: { id: AK47_ID, patches: { 0: BLOODHOUND_ID } }
         });
         const untouched = makeItems();
         expect(reconcileInventoryItems(CS2Economy, untouched, noPolicy)).toEqual([]);
-        expect(Object.keys(untouched)).toEqual(["0", "1", "2", "3", "4", "5"]);
+        expect(Object.keys(untouched)).toEqual(["0", "1", "2", "3", "4", "5", "6"]);
 
         const items = makeItems();
         const dropped = reconcileInventoryItems(CS2Economy, items, { ...noPolicy, dropEmptyDefaultItems: true });
         expect(dropped).toEqual([{ uid: 0, id: AK47_ID, reason: "policy" }]);
-        expect(Object.keys(items)).toEqual(["1", "2", "3", "4", "5"]);
+        expect(Object.keys(items)).toEqual(["1", "2", "3", "4", "5", "6"]);
     });
 
     test("counts the cap after every other rule, so room a policy drop freed is room the cap has", () => {

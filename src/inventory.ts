@@ -295,11 +295,26 @@ export class CS2Inventory {
         return this;
     }
 
+    private dropIfEmptyDefaultItem(item: CS2InventoryItem): void {
+        if (
+            this.options.dropEmptyDefaultItems === true &&
+            item.isDefault === true &&
+            item.nameTag === undefined &&
+            item.charges === undefined &&
+            (item.stickers?.size ?? 0) === 0 &&
+            (item.keychains?.size ?? 0) === 0 &&
+            (item.patches?.size ?? 0) === 0
+        ) {
+            this.items.delete(item.uid);
+        }
+    }
+
     edit(itemUid: number, properties: Partial<CS2BaseInventoryItem>): this {
         const item = this.get(itemUid);
         assert(properties.id === undefined || properties.id === item.id);
         assert(properties.charges === undefined || properties.charges === item.charges);
         item.edit(properties, { updatedAt: getTimestamp() });
+        this.dropIfEmptyDefaultItem(item);
         return this;
     }
 
@@ -391,6 +406,7 @@ export class CS2Inventory {
         renameable.nameTag = nameTag;
         renameable.updatedAt = getTimestamp();
         this.items.delete(nameTagUid);
+        this.dropIfEmptyDefaultItem(renameable);
         return this;
     }
 
@@ -488,6 +504,7 @@ export class CS2Inventory {
         stickers.splice(index, 1);
         target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
         target.updatedAt = getTimestamp();
+        this.dropIfEmptyDefaultItem(target);
         return this;
     }
 
@@ -540,6 +557,7 @@ export class CS2Inventory {
         }
         target.stickers = toStickerMap(CS2InventoryItem.stickersFromArray(stickers));
         target.updatedAt = getTimestamp();
+        this.dropIfEmptyDefaultItem(target);
         return this;
     }
 
@@ -579,6 +597,7 @@ export class CS2Inventory {
         }
         target.updatedAt = getTimestamp();
         this.add({ id: keychain.id, seed: keychain.seed });
+        this.dropIfEmptyDefaultItem(target);
         return this;
     }
 
@@ -594,6 +613,24 @@ export class CS2Inventory {
         assertKeychains(this.economy, record, target);
         keychains.set(slot, value);
         target.updatedAt = getTimestamp();
+        return this;
+    }
+
+    sealStickerSlab(slabUid: number, stickerUid: number): this {
+        this.get(slabUid).expectStickerSlab();
+        const sticker = this.get(stickerUid).expectSticker();
+        const displayCase = sticker.getDisplayCase();
+        this.items.delete(slabUid);
+        this.items.delete(stickerUid);
+        this.add({ id: displayCase.id });
+        return this;
+    }
+
+    unsealStickerSlab(displayCaseUid: number): this {
+        const displayCase = this.get(displayCaseUid).expectStickerDisplayCase();
+        const stickerId = ensure(displayCase.displayedStickerId);
+        this.items.delete(displayCaseUid);
+        this.add({ id: stickerId });
         return this;
     }
 
@@ -618,6 +655,7 @@ export class CS2Inventory {
             target.patches = undefined;
         }
         target.updatedAt = getTimestamp();
+        this.dropIfEmptyDefaultItem(target);
         return this;
     }
 
