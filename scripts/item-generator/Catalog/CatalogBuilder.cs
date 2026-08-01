@@ -348,7 +348,8 @@ public static class CatalogBuilder
             var itemKey = $"[{name}]keychain";
             Collections.AddContainerItem(ctx, itemKey, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Tool_Keychain", " | ", locName);
-            Translations.TryAddTranslation(ctx, id, "description", locDescription);
+            Translations.TryAddTranslation(ctx, id, "description",
+                index == "37" ? "#CSGO_Tool_StickerDisplayCase_Desc" : locDescription);
 
             AddItem(ctx, new CS2Item
             {
