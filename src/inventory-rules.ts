@@ -504,7 +504,8 @@ function checkEmptyDefaultItem(economy: CS2EconomyInstance, item: CS2BaseInvento
         item.nameTag === undefined &&
         item.charges === undefined &&
         Object.keys(item.stickers ?? {}).length === 0 &&
-        Object.keys(item.keychains ?? {}).length === 0
+        Object.keys(item.keychains ?? {}).length === 0 &&
+        Object.keys(item.patches ?? {}).length === 0
     );
 }
 
