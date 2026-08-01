@@ -185,10 +185,13 @@ test("default cdn url", () => {
 
 test("display-case keychain resolves model and material through the slab parent", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
-    // 15200 is the Sticker Display Case slab (carries the shared model/material);
+    // 15200 is the Sticker Slab, a paid tool that carries the shared model/material;
     // 15407 is a per-sticker display-case keychain that carries neither and inherits via parentId.
     const slab = CS2Economy.getById(15200);
     const displayCase = CS2Economy.getById(15407);
+    expect(slab.isTool()).toBe(true);
+    expect(slab.isDefault).toBeUndefined();
+    expect(displayCase.isKeychain()).toBe(true);
     expect(displayCase.modelPath).toBe(undefined);
     expect(displayCase.materialPath).toBe(undefined);
     expect(displayCase.getModelUrl()).toBe(slab.getModelUrl());

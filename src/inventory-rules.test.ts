@@ -73,11 +73,11 @@ unmarkedEconomy.load({
     ]
 });
 
-const DEFAULT_KEYCHAIN_ID = 15200;
 const AGENT_ID = 5;
 const DEFAULT_STICKER_ID = 6;
 const DEFAULT_PATCH_ID = 7;
 const PATCH_ID = 8;
+const DEFAULT_KEYCHAIN_ID = 9;
 const defaultAttachmentEconomy = new CS2EconomyInstance();
 defaultAttachmentEconomy.load({
     items: [
@@ -86,7 +86,8 @@ defaultAttachmentEconomy.load({
         { id: AGENT_ID, type: CS2ItemType.Agent, rarityColor: CS2RarityColor.Common },
         { id: DEFAULT_STICKER_ID, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Common, isDefault: true },
         { id: DEFAULT_PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common, isDefault: true },
-        { id: PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common }
+        { id: PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common },
+        { id: DEFAULT_KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Common, isDefault: true }
     ]
 });
 
@@ -521,7 +522,10 @@ describe("an item whose id is in the catalog is always repairable", () => {
 describe("a default item cannot be applied as an attachment", () => {
     test("assert rejects a default sticker, keychain or patch", () => {
         expect(() =>
-            assertInventoryItem(CS2Economy, { id: AK47_ID, keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } } })
+            assertInventoryItem(defaultAttachmentEconomy, {
+                id: UNBOUNDED_ID,
+                keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } }
+            })
         ).toThrow();
         expect(() =>
             assertInventoryItem(defaultAttachmentEconomy, {
@@ -549,8 +553,11 @@ describe("a default item cannot be applied as an attachment", () => {
 
 describe("a default attachment is stripped rather than costing the item", () => {
     test("repair drops the default attachment and keeps the item and its ordinary ones", () => {
-        const keychained: CS2BaseInventoryItem = { id: AK47_ID, keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } } };
-        expect(repairInventoryItem(CS2Economy, keychained)).toBe(true);
+        const keychained: CS2BaseInventoryItem = {
+            id: UNBOUNDED_ID,
+            keychains: { 0: { id: DEFAULT_KEYCHAIN_ID } }
+        };
+        expect(repairInventoryItem(defaultAttachmentEconomy, keychained)).toBe(true);
         expect(keychained.keychains?.[0]).toBeUndefined();
 
         const stickered: CS2BaseInventoryItem = {

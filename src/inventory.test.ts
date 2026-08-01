@@ -59,6 +59,7 @@ const LIL_AVA_ID = 13113;
 const GRAFFITI_ACE_ID = 9543;
 const CHARM_DETACHMENT_ID = 12450;
 const CHARM_DETACHMENT_PACK_ID = 12451;
+const STICKER_SLAB_ID = 15200;
 
 CS2Economy.load({ items: CS2_ITEMS, language: english });
 
@@ -87,6 +88,13 @@ describe("CS2Inventory methods", () => {
         inventory.add({ id: BROKEN_FANG_GLOVES_JADE_ID });
         inventory.add({ id: CT_GLOVE_ID });
         expect(inventory.size()).toBe(3);
+    });
+
+    test("add should store the Sticker Slab tool", () => {
+        inventory.add({ id: STICKER_SLAB_ID });
+        const item = ensure(inventory.getAll()[0]);
+        expect(item.isTool()).toBe(true);
+        expect(item.isDefault).toBeUndefined();
     });
 
     test("add should throw an error if the inventory is full", () => {

@@ -355,13 +355,14 @@ public static class CatalogBuilder
                 DefinitionIndex = 1355,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
-                IsDefault = index == "37" ? true : null,
                 MaterialPath = GetKeychainMaterial(ctx, name, keychainMaterial),
                 ModelPath = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
                 ParentId = ctx.KeychainParentId,
                 PreviewSeed = previewSeed,
                 RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
-                Type = CS2ItemType.Keychain,
+                // The keychain_37 slab is a paid tool that seals a sticker; the per-sticker
+                // display-case items it parents are the actual keychains.
+                Type = index == "37" ? CS2ItemType.Tool : CS2ItemType.Keychain,
                 VariantIndex = int.Parse(index)
             });
 
