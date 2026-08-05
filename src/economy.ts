@@ -667,7 +667,7 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasKeychains(): boolean {
-        return CS2_KEYCHAINABLE_ITEMS.includes(this.type) && !this.isC4();
+        return CS2_KEYCHAINABLE_ITEMS.includes(this.type);
     }
 
     hasPatches(): boolean {

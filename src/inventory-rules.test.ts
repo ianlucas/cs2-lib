@@ -39,6 +39,7 @@ const AK47_ID = 4;
 const AWP_DRAGON_LORE_ID = 307;
 const BLOODHOUND_ID = 8569;
 const BROKEN_FANG_GLOVES_ID = 56;
+const C4_ID = 30;
 const CHARM_DETACHMENT_ID = 12450;
 const CHARM_DETACHMENT_PACK_ID = 12451;
 const FALLEN_COLOGNE_2015_ID = 2226;
@@ -263,6 +264,15 @@ describe("repairInventoryItem attributes with nothing to coerce them into", () =
         };
         expect(repairInventoryItem(CS2Economy, patched)).toBe(true);
         expect(patched.patches).toEqual({ 0: BLOODHOUND_ID, 4: BLOODHOUND_ID });
+    });
+
+    test("keeps keychains attached to C4 when repairing an inventory item", () => {
+        const c4: CS2BaseInventoryItem = { id: C4_ID, keychains: { 0: { id: LIL_AVA_ID, seed: 1 } } };
+
+        expect(repairInventoryItem(CS2Economy, c4)).toBe(true);
+        expect(c4.keychains).toEqual({
+            0: { id: LIL_AVA_ID, seed: 1, x: undefined, y: undefined, z: undefined }
+        });
     });
 
     test("drops an attachment of a kind its slot was never able to hold", () => {

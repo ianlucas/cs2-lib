@@ -43,6 +43,7 @@ const ZZ_NATION_RIO_2022_HOLO_ID = 7307;
 const ZZ_NATION_RIO_2022_ID = 7305;
 const BUTTERFLY_KNIFE_CASE_HARDNED_ID = 1501;
 const BUTTERFLY_KNIFE_BLUE_STEEL_ID = 1499;
+const C4_ID = 30;
 const KARAMBIT_BOREAL_FOREST_ID = 1334;
 const KARAMBIT_AUTOTRONIC_ID = 1356;
 const USP_KILL_CONFIRMED_ID = 1139;
@@ -253,6 +254,16 @@ describe("CS2Inventory methods", () => {
         expect(Object.fromEntries(ensure(result.keychains))).toEqual({ 0: { id: LIL_AVA_ID } });
         expect(result.uid).toBe(0);
         expect(result.updatedAt).not.toBe(undefined);
+    });
+
+    test("addWithKeychain should add a keychain to C4", () => {
+        expect(CS2Economy.getById(C4_ID).hasKeychains()).toBe(true);
+        inventory.add({ id: LIL_AVA_ID, seed: 1234 });
+        inventory.addWithKeychain(0, C4_ID);
+
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).id).toBe(C4_ID);
+        expect(inventory.get(0).keychains?.get(0)).toEqual({ id: LIL_AVA_ID, seed: 1234 });
     });
 
     test("addWithKeychain takes the seed from the keychain item and validates attributes", () => {
