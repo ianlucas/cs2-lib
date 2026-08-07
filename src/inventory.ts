@@ -27,6 +27,7 @@ import {
     assertStickers,
     checkStickerSchema,
     getDropReason,
+    isStorableInStorageUnit,
     getNextStickerSchema,
     reconcileInventoryItems,
     repairInventoryItem
@@ -427,9 +428,7 @@ export class CS2Inventory {
         assert(this.canDepositToStorageUnit(storageUid, depositUids.length));
         for (const sourceUid of depositUids) {
             const source = this.get(sourceUid);
-            assert(!source.isStorageUnit());
-            assert(!source.isCharmDetachment() && !source.isCharmDetachmentPack());
-            assert(!source.hasCharges() || source.isSealed());
+            assert(source.isStorableInStorageUnit());
         }
         const storage = item.storage ?? new Map<number, CS2InventoryItem>();
         for (const sourceUid of depositUids) {
@@ -820,6 +819,10 @@ export class CS2InventoryItem
 
     isSealed(): boolean {
         return this.hasCharges() && this.charges === undefined;
+    }
+
+    isStorableInStorageUnit(): boolean {
+        return isStorableInStorageUnit(this, this);
     }
 
     getStickersCount(): number {

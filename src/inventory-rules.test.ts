@@ -602,6 +602,24 @@ describe("storage is a rule like any other attribute", () => {
         ).toBe(false);
     });
 
+    test("check rejects items that cannot be stored", () => {
+        expect(
+            checkInventoryItem(CS2Economy, {
+                id: STORAGE_UNIT_ID,
+                storage: { 0: { id: GRAFFITI_ACE_ID } }
+            })
+        ).toBe(true);
+        expect(
+            checkInventoryItem(CS2Economy, {
+                id: STORAGE_UNIT_ID,
+                storage: { 0: { id: GRAFFITI_ACE_ID, charges: 12 } }
+            })
+        ).toBe(false);
+        for (const id of [STORAGE_UNIT_ID, CHARM_DETACHMENT_ID, CHARM_DETACHMENT_PACK_ID]) {
+            expect(checkInventoryItem(CS2Economy, { id: STORAGE_UNIT_ID, storage: { 0: { id } } })).toBe(false);
+        }
+    });
+
     test("repair takes storage off an item that cannot hold one, and unnests a unit inside a unit", () => {
         const weapon: CS2BaseInventoryItem = { id: AK47_ID, storage: { 0: { id: AK47_ID } } };
         expect(repairInventoryItem(CS2Economy, weapon)).toBe(true);
@@ -694,7 +712,7 @@ describe("reconcileInventoryItems", () => {
         expect(Object.keys(items)).toEqual(["2", "3"]);
     });
 
-    test("wipes detachments out of storage, re-seals what is left and empties a unit it emptied", () => {
+    test("drops invalid stored items and empties a unit it emptied", () => {
         const items: Record<number, CS2BaseInventoryItem> = {
             0: {
                 id: STORAGE_UNIT_ID,
@@ -709,11 +727,11 @@ describe("reconcileInventoryItems", () => {
         };
         expect(reconcileInventoryItems(CS2Economy, items, noPolicy)).toEqual([
             { uid: 0, id: CHARM_DETACHMENT_ID, reason: "policy", storageUid: 0 },
+            { uid: 1, id: GRAFFITI_ACE_ID, reason: "policy", storageUid: 0 },
             { uid: 2, id: CHARM_DETACHMENT_PACK_ID, reason: "policy", storageUid: 0 },
             { uid: 0, id: CHARM_DETACHMENT_ID, reason: "policy", storageUid: 1 }
         ]);
-        expect(Object.keys(ensure(items[0]?.storage))).toEqual(["1"]);
-        expect(items[0]?.storage?.[1]?.charges).toBeUndefined();
+        expect(items[0]?.storage).toBeUndefined();
         expect(items[1]?.storage).toBeUndefined();
         expect(Object.keys(items)).toEqual(["0", "1"]);
     });

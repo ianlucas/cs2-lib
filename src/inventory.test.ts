@@ -1518,7 +1518,7 @@ describe("charges", () => {
         expect(inventory.get(0).storage).toBeUndefined();
     });
 
-    test("reconcile re-seals a stored graffiti instead of discarding it", () => {
+    test("reconcile drops used graffiti from a storage unit", () => {
         const inventory = makeInventory({
             0: {
                 id: STORAGE_UNIT_ID,
@@ -1526,10 +1526,8 @@ describe("charges", () => {
                 storage: { 0: { id: GRAFFITI_ACE_ID, charges: 12 } }
             }
         });
-        expect(inventory.getStorageUnitSize(0)).toBe(1);
-        const stored = ensure(inventory.getStorageUnitItems(0)[0]);
-        expect(stored.isSealed()).toBe(true);
-        expect(stored.getCharges()).toBe(0);
+        expect(inventory.getStorageUnitSize(0)).toBe(0);
+        expect(inventory.get(0).storage).toBeUndefined();
     });
 
     test("reconcile leaves charm detachment packs alone", () => {
@@ -1556,6 +1554,53 @@ describe("charges", () => {
         expect(() => inventory.depositToStorageUnit(0, [4])).toThrow();
         inventory.depositToStorageUnit(0, [1]);
         expect(inventory.getStorageUnitSize(0)).toBe(1);
+    });
+
+    test("identifies the items that may be stored in a storage unit", () => {
+        const inventory = makeInventory();
+        inventory.add({ id: KILOWATT_CASE_ID });
+        inventory.add({ id: KILOWATT_CASE_KEY_ID });
+        inventory.add({ id: NAMETAG_ID });
+        inventory.add({ id: STATTRAK_SWAP_TOOL_ID });
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, equippedCT: true });
+        inventory.add({ id: STORAGE_UNIT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_ID });
+        inventory.add({ id: CHARM_DETACHMENT_PACK_ID });
+        inventory.add({ id: GRAFFITI_ACE_ID });
+        inventory.unsealItem(9);
+
+        for (const uid of [0, 1, 2, 3, 4, 5]) {
+            expect(inventory.get(uid).isStorableInStorageUnit()).toBe(true);
+        }
+        for (const uid of [6, 7, 8, 9]) {
+            expect(inventory.get(uid).isStorableInStorageUnit()).toBe(false);
+        }
+    });
+
+    test("loading a full inventory keeps valid stored items nested", () => {
+        const fullInventory = new CS2Inventory({
+            data: {
+                version: CS2_INVENTORY_VERSION,
+                items: {
+                    0: {
+                        id: STORAGE_UNIT_ID,
+                        nameTag: "My Storage Unit",
+                        storage: { 0: { id: KILOWATT_CASE_ID }, 1: { id: KILOWATT_CASE_KEY_ID } }
+                    },
+                    1: { id: AWP_DRAGON_LORE_ID }
+                }
+            },
+            maxItems: 2,
+            storageUnitMaxItems: 2
+        });
+
+        expect(fullInventory.size()).toBe(2);
+        expect(fullInventory.getStorageUnitSize(0)).toBe(2);
+        expect(fullInventory.getStorageUnitItems(0).map(({ id }) => id)).toEqual([
+            KILOWATT_CASE_ID,
+            KILOWATT_CASE_KEY_ID
+        ]);
     });
 
     test("validation rejects malformed charges", () => {
