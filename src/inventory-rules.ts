@@ -337,11 +337,28 @@ export function checkStorage(
         return false;
     }
     for (const stored of Object.values(storage)) {
-        if (stored.storage !== undefined || !checkInventoryItem(economy, stored)) {
+        if (
+            stored.storage !== undefined ||
+            !economy.items.has(stored.id) ||
+            !isStorableInStorageUnit(stored, economy.getById(stored.id)) ||
+            !checkInventoryItem(economy, stored)
+        ) {
             return false;
         }
     }
     return true;
+}
+
+export function isStorableInStorageUnit(
+    { charges }: Pick<CS2BaseInventoryItem, "charges">,
+    item: CS2EconomyItem
+): boolean {
+    return (
+        !item.isStorageUnit() &&
+        !item.isCharmDetachment() &&
+        !item.isCharmDetachmentPack() &&
+        (!item.hasCharges() || charges === undefined)
+    );
 }
 
 export function checkInventoryItem(
@@ -465,6 +482,16 @@ export function repairInventoryItem(
             for (const [slot, stored] of Object.entries(item.storage)) {
                 const uid = parseInt(slot, 10);
                 stored.storage = undefined;
+                if (economy.items.has(stored.id) && !isStorableInStorageUnit(stored, economy.getById(stored.id))) {
+                    storageDrops?.dropped.push({
+                        uid,
+                        id: stored.id,
+                        reason: "policy",
+                        storageUid: storageDrops.storageUid
+                    });
+                    delete item.storage[uid];
+                    continue;
+                }
                 if (!repairInventoryItem(economy, stored)) {
                     storageDrops?.dropped.push({
                         uid,
@@ -544,12 +571,10 @@ export function reconcileInventoryItems(
                 continue;
             }
             const economyItem = economy.getById(stored.id);
-            if (economyItem.isCharmDetachment() || economyItem.isCharmDetachmentPack()) {
+            if (!isStorableInStorageUnit(stored, economyItem)) {
                 const uid = parseInt(slot, 10);
                 dropped.push({ uid, id: stored.id, reason: "policy", storageUid });
                 delete item.storage[uid];
-            } else if (economyItem.hasCharges()) {
-                stored.charges = undefined;
             }
         }
         if (Object.keys(item.storage).length === 0) {
