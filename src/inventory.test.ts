@@ -489,6 +489,36 @@ describe("CS2Inventory methods", () => {
         expect(result.nameTag).toBe("My New Nametag");
     });
 
+    test("normalizes names when applying a Name Tag", () => {
+        inventory.add({ id: NAMETAG_ID });
+        inventory.addWithNameTag(0, AK47_ID, " My Rifle ");
+        expect(inventory.get(0).nameTag).toBe("My Rifle");
+    });
+
+    test("does not allow Name Tags to target Storage Units", () => {
+        inventory.add({ id: NAMETAG_ID });
+        expect(() => inventory.addWithNameTag(0, STORAGE_UNIT_ID, "Storage Unit")).toThrow();
+        inventory.add({ id: STORAGE_UNIT_ID });
+        expect(() => inventory.renameItem(0, 1, "Storage Unit")).toThrow();
+        expect(inventory.get(0).isNameTag()).toBe(true);
+    });
+
+    test("rejects whitespace-only names without consuming the Name Tag", () => {
+        inventory.add({ id: NAMETAG_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, nameTag: "Dragon Lore" });
+        expect(() => inventory.renameItem(0, 1, "   ")).toThrow();
+        expect(inventory.get(0).isNameTag()).toBe(true);
+        expect(inventory.get(1).nameTag).toBe("Dragon Lore");
+    });
+
+    test("clearNameTag removes a name without consuming a Name Tag", () => {
+        inventory.add({ id: NAMETAG_ID });
+        inventory.add({ id: AWP_DRAGON_LORE_ID, nameTag: "Dragon Lore" });
+        inventory.clearNameTag(1);
+        expect(inventory.get(0).isNameTag()).toBe(true);
+        expect(inventory.get(1).nameTag).toBeUndefined();
+    });
+
     test("renameStorageUnit should rename the storage unit with the given id", () => {
         inventory.add({ id: STORAGE_UNIT_ID });
         expect(inventory.get(0).nameTag).toBe(undefined);
@@ -497,6 +527,7 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(0).nameTag).toBe("Storage Unit");
         inventory.renameStorageUnit(0, "New Storage Unit");
         expect(inventory.get(0).nameTag).toBe("New Storage Unit");
+        expect(() => inventory.clearNameTag(0)).toThrow();
     });
 
     test("storage unit interactions", () => {

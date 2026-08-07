@@ -131,13 +131,23 @@ test("modelPath and materialPath resolve own-first, then through the parent", ()
 
 test("nametag validation", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
-    expect(CS2Economy.safeValidateNameTag(" fail")).toBeFalsy();
-    expect(CS2Economy.safeValidateNameTag("小島 秀夫")).toBeTruthy();
-    expect(CS2Economy.safeValidateNameTag("孔子")).toBeTruthy();
-    expect(CS2Economy.safeValidateNameTag("千古风流今在此，万里功名莫放休")).toBeTruthy();
-    expect(CS2Economy.safeValidateNameTag("中文，句号。分号；感叹！")).toBeTruthy();
-    expect(CS2Economy.safeValidateNameTag("bo$$u")).toBeTruthy();
-    expect(CS2Economy.safeValidateNameTag("toolongnametagtoolongnametag")).toBeFalsy();
+    for (const nameTag of [
+        "小島 秀夫",
+        "Калашников",
+        "안녕하세요",
+        "مرحبا",
+        "🎉",
+        "\u00a0name",
+        "name\u00a0",
+        "🎉".repeat(20)
+    ]) {
+        expect(CS2Economy.safeValidateNameTag(nameTag), `validating ${nameTag}`).toBeTruthy();
+    }
+    for (const nameTag of [" fail", "fail ", "\tname", "name\n", "name\u007f", "name\u0085", "🎉".repeat(21)]) {
+        expect(CS2Economy.safeValidateNameTag(nameTag), `validating ${nameTag}`).toBeFalsy();
+    }
+    expect(CS2Economy.safeValidateNameTag("")).toBeTruthy();
+    expect(CS2Economy.safeRequireNameTag("")).toBeFalsy();
 });
 
 test("wear validation", () => {

@@ -197,9 +197,9 @@ export class CS2EconomyInstance {
     }
 
     validateNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
-        if (nameTag !== undefined) {
+        if (nameTag !== undefined && nameTag !== "") {
             assert(item === undefined || item.hasNameTag());
-            assert(nameTag[0] !== " " && CS2_NAMETAG_RE.test(nameTag));
+            assert(CS2_NAMETAG_RE.test(nameTag));
         }
         return true;
     }
@@ -209,7 +209,7 @@ export class CS2EconomyInstance {
     }
 
     requireNameTag(nameTag?: string, item?: CS2EconomyItem): boolean {
-        assert(nameTag === undefined || nameTag.trim().length > 0);
+        assert(nameTag === undefined || nameTag.length > 0);
         return this.validateNameTag(nameTag, item);
     }
 
