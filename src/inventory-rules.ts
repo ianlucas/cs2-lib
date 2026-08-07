@@ -374,7 +374,7 @@ export function checkInventoryItem(
         CS2_INVENTORY_RULES.itemCharges.check(charges, item) &&
         CS2_INVENTORY_RULES.itemSeed.check(seed, item) &&
         CS2_INVENTORY_RULES.itemStatTrak.check(statTrak, item) &&
-        economy.safeValidateNameTag(nameTag, item) &&
+        economy.safeRequireNameTag(nameTag, item) &&
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&
         checkStickers(economy, stickers, item) &&
@@ -507,7 +507,8 @@ export function repairInventoryItem(
             }
         }
     }
-    if (!economy.safeValidateNameTag(item.nameTag, economyItem)) {
+    item.nameTag = economy.trimNameTag(item.nameTag);
+    if (!economy.safeRequireNameTag(item.nameTag, economyItem)) {
         item.nameTag = undefined;
     }
     item.seed = CS2_INVENTORY_RULES.itemSeed.repair(item.seed, economyItem);

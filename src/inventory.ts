@@ -262,9 +262,13 @@ export class CS2Inventory {
 
     addWithNameTag(nameTagUid: number, id: number, nameTag: string): this {
         this.get(nameTagUid).expectNameTag();
-        this.economy.requireNameTag(nameTag);
+        const renameable = this.economy.getById(id);
+        assert(!renameable.isStorageUnit());
+        const trimmed = this.economy.trimNameTag(nameTag);
+        assert(trimmed !== undefined);
+        this.economy.requireNameTag(trimmed, renameable);
         this.items.delete(nameTagUid);
-        this.add({ id, nameTag });
+        this.add({ id, nameTag: trimmed });
         return this;
     }
 
@@ -400,13 +404,25 @@ export class CS2Inventory {
     }
 
     renameItem(nameTagUid: number, renameableUid: number, nameTag?: string): this {
-        nameTag = this.economy.trimNameTag(nameTag);
+        const trimmed = this.economy.trimNameTag(nameTag);
         this.get(nameTagUid).expectNameTag();
         const renameable = this.get(renameableUid);
-        this.economy.validateNameTag(nameTag, renameable);
-        renameable.nameTag = nameTag;
+        assert(!renameable.isStorageUnit());
+        assert(nameTag === undefined || trimmed !== undefined);
+        this.economy.requireNameTag(trimmed, renameable);
+        renameable.nameTag = trimmed;
         renameable.updatedAt = getTimestamp();
         this.items.delete(nameTagUid);
+        this.dropIfEmptyDefaultItem(renameable);
+        return this;
+    }
+
+    clearNameTag(renameableUid: number): this {
+        const renameable = this.get(renameableUid);
+        assert(!renameable.isStorageUnit());
+        assert(renameable.nameTag !== undefined);
+        renameable.nameTag = undefined;
+        renameable.updatedAt = getTimestamp();
         this.dropIfEmptyDefaultItem(renameable);
         return this;
     }
@@ -415,6 +431,7 @@ export class CS2Inventory {
         const trimmed = this.economy.trimNameTag(nameTag);
         const storageUnit = this.get(storageUid);
         storageUnit.expectStorageUnit();
+        assert(trimmed !== undefined);
         this.economy.requireNameTag(trimmed);
         storageUnit.nameTag = trimmed;
         storageUnit.updatedAt = getTimestamp();

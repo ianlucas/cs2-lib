@@ -95,7 +95,7 @@ test("an item whose id is in the catalog survives its own bad values, coerced an
     expect(inventory.size()).toBe(1);
     expect(inventory.get(0).seed).toBe(1000);
     expect(inventory.get(0).statTrak).toBe(999999);
-    expect(inventory.get(0).nameTag).toBeUndefined();
+    expect(inventory.get(0).nameTag).toBe("bad name");
     expect(inventory.loadChanges?.dropped).toStrictEqual([]);
     expect(inventory.loadChanges?.repairedUids).toStrictEqual([0]);
 });

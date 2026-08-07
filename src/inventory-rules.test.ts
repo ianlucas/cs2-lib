@@ -233,8 +233,8 @@ describe("repairInventoryItem attributes with no model bounds", () => {
 });
 
 describe("repairInventoryItem attributes with nothing to coerce them into", () => {
-    test("drops a name the pattern rejects instead of inventing one the owner did not choose", () => {
-        for (const nameTag of [" leading space", "x".repeat(30), "🎉", 'he said "hi"']) {
+    test("normalizes recoverable names and drops ones the pattern rejects", () => {
+        for (const nameTag of ["x".repeat(21), "name\u007f", "name\u0085", ""]) {
             const item: CS2BaseInventoryItem = { id: AK47_ID, nameTag };
             expect(repairInventoryItem(CS2Economy, item), `repairing ${nameTag}`).toBe(true);
             expect(item.nameTag).toBeUndefined();
@@ -246,6 +246,18 @@ describe("repairInventoryItem attributes with nothing to coerce them into", () =
         const named: CS2BaseInventoryItem = { id: AK47_ID, nameTag: "my rifle" };
         expect(repairInventoryItem(CS2Economy, named)).toBe(true);
         expect(named.nameTag).toBe("my rifle");
+
+        const trimmed: CS2BaseInventoryItem = { id: AK47_ID, nameTag: " my rifle " };
+        expect(repairInventoryItem(CS2Economy, trimmed)).toBe(true);
+        expect(trimmed.nameTag).toBe("my rifle");
+
+        const trimmedControl: CS2BaseInventoryItem = { id: AK47_ID, nameTag: "\tmy rifle" };
+        expect(repairInventoryItem(CS2Economy, trimmedControl)).toBe(true);
+        expect(trimmedControl.nameTag).toBe("my rifle");
+
+        const unicode: CS2BaseInventoryItem = { id: AK47_ID, nameTag: 'he said "hi" 🎉' };
+        expect(repairInventoryItem(CS2Economy, unicode)).toBe(true);
+        expect(unicode.nameTag).toBe('he said "hi" 🎉');
     });
 
     test("trims attachments to the slots the model has, keeping the lowest", () => {
@@ -492,7 +504,6 @@ describe("an item whose id is in the catalog is always repairable", () => {
         { statTrak: NaN },
         { nameTag: " leading space" },
         { nameTag: "x".repeat(30) },
-        { nameTag: "🎉" },
         { nameTag: "" },
         { keychains: { 0: { id: LIL_AVA_ID }, 1: { id: LIL_AVA_ID } } },
         { keychains: { 5: { id: LIL_AVA_ID } } },
