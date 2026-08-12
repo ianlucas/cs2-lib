@@ -125,6 +125,11 @@ public static partial class Config
         return Environment.GetEnvironmentVariable("INPUT_SKIP_UPLOAD") == "true";
     }
 
+    public static bool IsAssetReuseEnabled()
+    {
+        return Environment.GetEnvironmentVariable("INPUT_REUSE_ASSETS") == "true";
+    }
+
     [GeneratedRegex(@"%s(\d+)")]
     private static partial Regex FormattedStringRegex();
 

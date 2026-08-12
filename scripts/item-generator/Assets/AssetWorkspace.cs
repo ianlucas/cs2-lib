@@ -19,7 +19,9 @@ public static class AssetWorkspace
             Directory.Delete(Config.ItemGeneratorBuildDir, true);
         Directory.CreateDirectory(Config.ItemGeneratorBuildDir);
 
-        if (Directory.Exists(Config.OutputDir))
+        // A local resume keeps the completed, content-addressed assets from the previous run.
+        // Individual processors only reuse unambiguous complete files and regenerate misses.
+        if (!Config.IsAssetReuseEnabled() && Directory.Exists(Config.OutputDir))
             Directory.Delete(Config.OutputDir, true);
 
         foreach (var folder in new[] { "images", "materials", "models", "textures" })
