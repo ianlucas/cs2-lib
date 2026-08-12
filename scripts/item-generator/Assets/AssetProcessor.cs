@@ -199,6 +199,7 @@ public static partial class AssetProcessor
 
     private static void PrepareModels(ItemGeneratorContext ctx)
     {
+        HydrateReusedModelData(ctx);
         if (ctx.ModelsToProcess.Count == 0) return;
         Log($"Preparing {FormatCount(ctx.ModelsToProcess.Count, "model")}...");
         ResourceDecompiler.DecompileModelAssets(ctx, ctx.ModelsToProcess.Keys);
@@ -297,78 +298,8 @@ public static partial class AssetProcessor
                 File.WriteAllText(outPath, json);
 
                 var playerModelPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
-                if (result.Data is Dictionary<string, object?> dataDict &&
-                    dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
-                    modelInfoObj is Dictionary<string, object?> modelInfo &&
-                    modelInfo.TryGetValue("m_keyValueText", out var kvTextObj) &&
-                    kvTextObj is Dictionary<string, object?> kvText)
-                {
-                    if (kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
-                        stickerMarkupObj is List<object?> stickerMarkup)
-                    {
-                        var stickerSchemaCount = stickerMarkup.Count(s =>
-                            s is Dictionary<string, object?> d &&
-                            d.TryGetValue("Mesh", out var mesh) &&
-                            mesh?.ToString() == "body_hd");
-                        var legacyStickerSchemaCount = stickerMarkup.Count - stickerSchemaCount;
-                        var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
-                        var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
-
-                        foreach (var item in ctx.Items.Values)
-                        {
-                            if (item.ModelPath == playerModelPath)
-                            {
-                                item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
-                                item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
-                                if (hdOffsetBounds is { } hd)
-                                {
-                                    item.StickerOffsetXMin = hd.XMin;
-                                    item.StickerOffsetXMax = hd.XMax;
-                                    item.StickerOffsetYMin = hd.YMin;
-                                    item.StickerOffsetYMax = hd.YMax;
-                                }
-                                if (legacyOffsetBounds is { } legacy)
-                                {
-                                    item.LegacyStickerOffsetXMin = legacy.XMin;
-                                    item.LegacyStickerOffsetXMax = legacy.XMax;
-                                    item.LegacyStickerOffsetYMin = legacy.YMin;
-                                    item.LegacyStickerOffsetYMax = legacy.YMax;
-                                }
-                            }
-                        }
-                    }
-
-                    if (kvText.TryGetValue("KeychainMarkup", out var keychainMarkupObj) &&
-                        keychainMarkupObj is List<object?> keychainMarkup)
-                    {
-                        var hdKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: false);
-                        var legacyKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: true);
-
-                        if (hdKeychainBounds != null || legacyKeychainBounds != null)
-                            foreach (var item in ctx.Items.Values)
-                            {
-                                if (item.ModelPath != playerModelPath) continue;
-                                if (hdKeychainBounds is { } hd)
-                                {
-                                    item.KeychainPositionXMin = hd.XMin;
-                                    item.KeychainPositionXMax = hd.XMax;
-                                    item.KeychainPositionYMin = hd.YMin;
-                                    item.KeychainPositionYMax = hd.YMax;
-                                    item.KeychainPositionZMin = hd.ZMin;
-                                    item.KeychainPositionZMax = hd.ZMax;
-                                }
-                                if (legacyKeychainBounds is { } legacy)
-                                {
-                                    item.LegacyKeychainPositionXMin = legacy.XMin;
-                                    item.LegacyKeychainPositionXMax = legacy.XMax;
-                                    item.LegacyKeychainPositionYMin = legacy.YMin;
-                                    item.LegacyKeychainPositionYMax = legacy.YMax;
-                                    item.LegacyKeychainPositionZMin = legacy.ZMin;
-                                    item.LegacyKeychainPositionZMax = legacy.ZMax;
-                                }
-                            }
-                    }
-                }
+                if (result.Data is Dictionary<string, object?> dataDict)
+                    ApplyModelMetadata(ctx, playerModelPath, dataDict);
             }
 
             if (result.ClothCollider != null)
@@ -382,11 +313,121 @@ public static partial class AssetProcessor
                 // Most models have no collider — knives carry no FeModel at all — and a keychain
                 // hangs uncollided on those rather than the fetch 404ing.
                 var playerModelPath = $"/models/{Path.ChangeExtension(result.Filename, ".glb")}";
+                ApplyColliderMetadata(ctx, playerModelPath);
+            }
+        }
+    }
+
+    private static void HydrateReusedModelData(ItemGeneratorContext ctx)
+    {
+        foreach (var playerModelPath in ctx.ReusedModelPaths)
+        {
+            var dataPath = Path.Combine(Config.OutputDir,
+                Path.ChangeExtension(playerModelPath.TrimStart('/'), ".json"));
+            if (!File.Exists(dataPath))
+                throw new FileNotFoundException($"Cached model data not found: {dataPath}");
+
+            using var document = JsonDocument.Parse(File.ReadAllText(dataPath));
+            if (ConvertJsonElement(document.RootElement) is Dictionary<string, object?> data)
+                ApplyModelMetadata(ctx, playerModelPath, data);
+
+            var colliderPath = ClothColliderPathOf(dataPath);
+            if (File.Exists(colliderPath)) ApplyColliderMetadata(ctx, playerModelPath);
+        }
+    }
+
+    private static object? ConvertJsonElement(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.Object => element.EnumerateObject().ToDictionary(
+            property => property.Name, property => ConvertJsonElement(property.Value)),
+        JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+        JsonValueKind.String => element.GetString(),
+        JsonValueKind.Number when element.TryGetInt64(out var integer) => integer,
+        JsonValueKind.Number => element.GetDouble(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        _ => null
+    };
+
+    private static void ApplyModelMetadata(
+        ItemGeneratorContext ctx, string playerModelPath, Dictionary<string, object?> dataDict)
+    {
+        if (dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
+            modelInfoObj is Dictionary<string, object?> modelInfo &&
+            modelInfo.TryGetValue("m_keyValueText", out var kvTextObj) &&
+            kvTextObj is Dictionary<string, object?> kvText)
+        {
+            if (kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
+                stickerMarkupObj is List<object?> stickerMarkup)
+            {
+                var stickerSchemaCount = stickerMarkup.Count(s =>
+                    s is Dictionary<string, object?> d &&
+                    d.TryGetValue("Mesh", out var mesh) &&
+                    mesh?.ToString() == "body_hd");
+                var legacyStickerSchemaCount = stickerMarkup.Count - stickerSchemaCount;
+                var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
+                var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
+
                 foreach (var item in ctx.Items.Values)
                 {
-                    if (item.ModelPath == playerModelPath) item.HasColliderData = true;
+                    if (item.ModelPath != playerModelPath) continue;
+                    item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
+                    item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
+                    if (hdOffsetBounds is { } hd)
+                    {
+                        item.StickerOffsetXMin = hd.XMin;
+                        item.StickerOffsetXMax = hd.XMax;
+                        item.StickerOffsetYMin = hd.YMin;
+                        item.StickerOffsetYMax = hd.YMax;
+                    }
+                    if (legacyOffsetBounds is { } legacy)
+                    {
+                        item.LegacyStickerOffsetXMin = legacy.XMin;
+                        item.LegacyStickerOffsetXMax = legacy.XMax;
+                        item.LegacyStickerOffsetYMin = legacy.YMin;
+                        item.LegacyStickerOffsetYMax = legacy.YMax;
+                    }
                 }
             }
+
+            if (kvText.TryGetValue("KeychainMarkup", out var keychainMarkupObj) &&
+                keychainMarkupObj is List<object?> keychainMarkup)
+            {
+                var hdKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: false);
+                var legacyKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: true);
+
+                if (hdKeychainBounds == null && legacyKeychainBounds == null) return;
+                foreach (var item in ctx.Items.Values)
+                {
+                    if (item.ModelPath != playerModelPath) continue;
+                    if (hdKeychainBounds is { } hd)
+                    {
+                        item.KeychainPositionXMin = hd.XMin;
+                        item.KeychainPositionXMax = hd.XMax;
+                        item.KeychainPositionYMin = hd.YMin;
+                        item.KeychainPositionYMax = hd.YMax;
+                        item.KeychainPositionZMin = hd.ZMin;
+                        item.KeychainPositionZMax = hd.ZMax;
+                    }
+                    if (legacyKeychainBounds is { } legacy)
+                    {
+                        item.LegacyKeychainPositionXMin = legacy.XMin;
+                        item.LegacyKeychainPositionXMax = legacy.XMax;
+                        item.LegacyKeychainPositionYMin = legacy.YMin;
+                        item.LegacyKeychainPositionYMax = legacy.YMax;
+                        item.LegacyKeychainPositionZMin = legacy.ZMin;
+                        item.LegacyKeychainPositionZMax = legacy.ZMax;
+                    }
+                }
+            }
+        }
+    }
+
+    private static void ApplyColliderMetadata(ItemGeneratorContext ctx, string playerModelPath)
+    {
+        foreach (var item in ctx.Items.Values)
+        {
+            if (item.ModelPath == playerModelPath) item.HasColliderData = true;
         }
     }
 

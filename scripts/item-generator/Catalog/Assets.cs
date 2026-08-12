@@ -156,10 +156,10 @@ public static class CatalogAssets
             if (existingId.HasValue &&
                 ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing) &&
                 ExistingOutputExists(existing.ModelPath))
-                return existing.ModelPath;
+                return ReuseModel(ctx, existing.ModelPath!);
 
             var cached = FindCachedModel(baseName);
-            if (cached != null) return cached;
+            if (cached != null) return ReuseModel(ctx, cached);
         }
 
         var playerModel = $"/models/{baseName}_{entry.Crc}.glb";
@@ -177,6 +177,12 @@ public static class CatalogAssets
 
     private static bool ExistingOutputExists(string? assetPath) => assetPath != null &&
         File.Exists(Path.Combine(Config.OutputDir, assetPath.TrimStart('/')));
+
+    private static string ReuseModel(ItemGeneratorContext ctx, string modelPath)
+    {
+        ctx.ReusedModelPaths.Add(modelPath);
+        return modelPath;
+    }
 
     private static string? FindCachedModel(string baseName)
     {

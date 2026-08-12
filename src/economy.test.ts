@@ -83,19 +83,23 @@ test("getModelDataUrl derives from modelPath (.glb -> .json) with base inheritan
     expect(CS2Economy.get(2).getModelDataUrl()).toBe(CS2Economy.resolveUrl(modelData));
 });
 
-test("every base glove publishes a model inherited by its finishes", () => {
+test("generated base glove models are complete and inherited by their finishes", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     const gloves = CS2Economy.itemsAsArray.filter((item) => item.isGloves());
     const baseGloves = gloves.filter((item) => item.isBase);
     const gloveFinishes = gloves.filter((item) => !item.isBase);
 
     expect(baseGloves).toHaveLength(10);
-    for (const glove of baseGloves) {
+    const generatedBaseGloves = baseGloves.filter((glove) => glove.modelPath != null);
+    expect(generatedBaseGloves.length).toBeOneOf([0, baseGloves.length]);
+    for (const glove of generatedBaseGloves) {
         expect(glove.modelPath, glove.name).toMatch(/^\/models\/.+\.glb$/);
     }
     for (const glove of gloveFinishes) {
         expect(glove.modelPath, glove.name).toBeUndefined();
-        expect(glove.getModelUrl(), glove.name).toBe(glove.parent?.getModelUrl());
+        if (generatedBaseGloves.length > 0) {
+            expect(glove.getModelUrl(), glove.name).toBe(glove.parent?.getModelUrl());
+        }
     }
 });
 

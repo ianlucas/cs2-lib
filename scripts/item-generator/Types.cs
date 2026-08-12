@@ -333,6 +333,9 @@ public class ItemGeneratorContext
     public List<string> AllIdentifiers { get; set; } = [];
     public List<string> UniqueIdentifiers { get; set; } = [];
     public Dictionary<int, CS2Item> ExistingItemsById { get; set; } = [];
+    // Final model URLs reused from OutputDir. Their sibling JSON still needs to hydrate placement
+    // metadata onto the newly-built catalog even though the GLBs skip extraction/finalization.
+    public HashSet<string> ReusedModelPaths { get; set; } = [];
 
     // Parsed game items (KV1)
     public ValveKeyValue.KVObject? GameItems { get; set; }
