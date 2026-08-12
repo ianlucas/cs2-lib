@@ -67,6 +67,11 @@ public static partial class AssetProcessor
 
         foreach (var task in ctx.ImagesToProcess.Values)
         {
+            if (TryReuseImageTask(task, out var cached))
+            {
+                ctx.AssetRenames[task.Provisional] = cached;
+                continue;
+            }
             tasks.Add(Task.Run(async () =>
             {
                 await semaphore.WaitAsync();
@@ -83,6 +88,30 @@ public static partial class AssetProcessor
 
         await Task.WhenAll(tasks);
         Log($"Processed {FormatCount(ctx.ImagesToProcess.Count, "image task")}.");
+    }
+
+    private static bool TryReuseImageTask(PendingImageTask task, out string final)
+    {
+        final = "";
+        if (!Config.IsAssetReuseEnabled()) return false;
+
+        var imagesDir = Path.Combine(Config.OutputDir, "images");
+        if (!Directory.Exists(imagesDir)) return false;
+        var baseName = Path.GetFileName(task.FinalBase);
+        var suffix = task.FinalSuffix != null ? $"_{task.FinalSuffix}" : "";
+        var matches = Directory.GetFiles(imagesDir, $"{baseName}_????????{suffix}.webp");
+        if (matches.Length != 1) return false;
+
+        if (task is PaintImageTask)
+        {
+            var stem = Path.GetFileNameWithoutExtension(matches[0]);
+            if (!Config.PaintImageSuffixes.All(s =>
+                File.Exists(Path.Combine(imagesDir, $"{stem}_{s}.webp"))))
+                return false;
+        }
+
+        final = $"/images/{Path.GetFileName(matches[0])}";
+        return true;
     }
 
     // Encodes one image task into the staging dir, hashes the output, and moves it to its final
@@ -728,6 +757,12 @@ public static partial class AssetProcessor
 
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
     {
+        if (Config.IsAssetReuseEnabled())
+        {
+            foreach (var vtexPath in ctx.TexturesToProcess)
+                TryReuseMaterialTexture(ctx, vtexPath);
+        }
+
         var pending = ctx.TexturesToProcess
             .Where(p => !ctx.TextureFilenameByPath.ContainsKey(p)).ToList();
         if (pending.Count == 0) return;
@@ -798,6 +833,23 @@ public static partial class AssetProcessor
         }
 
         Log($"Processed {FormatCount(pending.Count, "material texture")}.");
+    }
+
+    private static void TryReuseMaterialTexture(ItemGeneratorContext ctx, string vtexPath)
+    {
+        string resolved;
+        try { resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath); }
+        catch { return; }
+
+        var dir = Path.Combine(Config.OutputDir, "textures");
+        if (!Directory.Exists(dir)) return;
+        var baseName = Path.GetFileNameWithoutExtension(resolved);
+        if (baseName.EndsWith(".vtex")) baseName = baseName[..^5];
+        var matches = Directory.GetFiles(dir, $"{baseName}_????????.*")
+            .Where(path => Path.GetExtension(path) is ".webp" or ".exr")
+            .ToArray();
+        if (matches.Length != 1) return;
+        ctx.TextureFilenameByPath[resolved] = $"/textures/{Path.GetFileName(matches[0])}";
     }
 
     private static void PromoteTexture(ItemGeneratorContext ctx, string resolvedVtexPath, string srcPath, string extension)

@@ -150,6 +150,18 @@ public static class CatalogAssets
             return null;
 
         var baseName = Path.GetFileNameWithoutExtension(path);
+
+        if (Config.IsAssetReuseEnabled())
+        {
+            if (existingId.HasValue &&
+                ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing) &&
+                ExistingOutputExists(existing.ModelPath))
+                return existing.ModelPath;
+
+            var cached = FindCachedModel(baseName);
+            if (cached != null) return cached;
+        }
+
         var playerModel = $"/models/{baseName}_{entry.Crc}.glb";
         var modelData = $"/models/{baseName}_{entry.Crc}.json";
         ctx.ModelsToProcess[vpkPath] = new PendingModelTask
@@ -161,6 +173,20 @@ public static class CatalogAssets
             DirectMaterials = []
         };
         return playerModel;
+    }
+
+    private static bool ExistingOutputExists(string? assetPath) => assetPath != null &&
+        File.Exists(Path.Combine(Config.OutputDir, assetPath.TrimStart('/')));
+
+    private static string? FindCachedModel(string baseName)
+    {
+        var dir = Path.Combine(Config.OutputDir, "models");
+        if (!Directory.Exists(dir)) return null;
+        var matches = Directory.GetFiles(dir, $"{baseName}_????????.glb");
+        if (matches.Length != 1) return null;
+        var dataPath = Path.ChangeExtension(matches[0], ".json");
+        if (!File.Exists(dataPath)) return null;
+        return $"/models/{Path.GetFileName(matches[0])}";
     }
 
     public static string? GetCollectionImage(ItemGeneratorContext ctx, string name)
