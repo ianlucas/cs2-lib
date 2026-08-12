@@ -144,6 +144,7 @@ public static class CatalogBuilder
             var name = KvHelper.GetString(item, "name") ?? "";
             var imageInventory = KvHelper.GetString(item, "image_inventory");
             var itemDescription = KvHelper.GetString(item, "item_description");
+            var playerModel = KvHelper.GetString(item, "model_player");
             var usedByClasses = KvHelper.GetChild(item, "used_by_classes");
             var team = GetTeam(usedByClasses, CS2ItemTeam.Both);
             var id = GetItemId(ctx, $"glove_{GetTeamsString(usedByClasses, "3_2")}_{itemDef}");
@@ -157,6 +158,10 @@ public static class CatalogBuilder
             else
                 image = CatalogAssets.RequireStaticAsset(ctx, $"/images/{name}.png");
 
+            var modelPath = CatalogAssets.GetModel(ctx, playerModel, id)
+                ?? throw new InvalidOperationException(
+                    $"Unable to resolve model '{playerModel}' for base glove '{name}' ({itemDef}).");
+
             AddItem(ctx, new CS2Item
             {
                 ClassName = name,
@@ -167,6 +172,7 @@ public static class CatalogBuilder
                 IsBase = true,
                 IsDefault = baseitem == "1" ? true : null,
                 ModelKey = name,
+                ModelPath = modelPath,
                 NameToken = itemName,
                 RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [baseitem == "1" ? "default" : "ancient"]),
                 Team = (int)team,
