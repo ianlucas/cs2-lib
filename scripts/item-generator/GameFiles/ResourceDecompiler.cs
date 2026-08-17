@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using SteamDatabase.ValvePak;
 using ValveResourceFormat;
 using ValveResourceFormat.IO;
+using ValveResourceFormat.TextureDecoders;
 using static ItemGenerator.Logging;
 
 namespace ItemGenerator.GameFiles;
@@ -254,6 +255,11 @@ public static class ResourceDecompiler
         resource.Read(new MemoryStream(data));
 
         var textureExtract = new TextureExtract(resource);
+        // BC7 HemiOctAnisoRoughness maps pack four independent channels and VRF's default decode
+        // destroys one of them, so export the block-decompressed texels verbatim and leave the
+        // decode to the consumer. See TextureCodecPolicy.
+        if (TextureCodecPolicy.IsRawFourChannelNormal(resource))
+            textureExtract.DecodeFlags = TextureCodec.None;
         var ext = textureExtract.ImageOutputExtension;
         var outPath = Path.Combine(dir, $"{baseName}{ext}");
 
