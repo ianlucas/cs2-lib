@@ -813,6 +813,21 @@ public static partial class AssetProcessor
         var dataSelectorTextures = CollectDataSelectorTexturePaths(ctx);
 
         var compiledPaths = pending.Select(MaterialPaths.ToCompiledMaterialResourcePath).ToList();
+        // Keyed on the RESOLVED vpk path, because that is what the encode loop below compares
+        // against. ResolveMaterialResourcePath falls back to matching the filename anywhere in
+        // the index, so the resolved path is not always the string we started from, and keying
+        // on the unresolved one would silently drop the lossless flag for anything relocated.
+        var resolvedCompiledPaths = new List<string>(pending.Count);
+        foreach (var vtexPath in pending)
+        {
+            try
+            {
+                resolvedCompiledPaths.Add(MaterialPaths.ToCompiledMaterialResourcePath(
+                    MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath)));
+            }
+            catch { }
+        }
+        var rawFourChannelNormals = TextureCodecPolicy.Collect(ctx, resolvedCompiledPaths);
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
 
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
@@ -838,8 +853,13 @@ public static partial class AssetProcessor
                 var stagedPath = Path.Combine(stagingDir, $"{encodeJobs.Count}.webp");
                 var normalizedResolved = MaterialPaths.NormalizeMaterialResourcePath(resolvedVtexPath);
                 // Lossless (data selectors) wins over near-lossless (normals) when both match.
+                // Raw four-channel normals are data too: their channels are a packed
+                // hemi-octahedral pair and an anisotropic roughness pair, decoded non-linearly
+                // downstream, so near-lossless preprocessing would perturb the decoded normal
+                // rather than the stored value. See TextureCodecPolicy.
                 var lossless = dataSelectorTextures.Contains(vtexPath) ||
-                    dataSelectorTextures.Contains(normalizedResolved);
+                    dataSelectorTextures.Contains(normalizedResolved) ||
+                    rawFourChannelNormals.Contains(vpkPath);
                 var nearLossless = !lossless && (normalMapTextures.Contains(vtexPath) ||
                     normalMapTextures.Contains(normalizedResolved));
                 manifestLines.Add(JsonSerializer.Serialize(new
