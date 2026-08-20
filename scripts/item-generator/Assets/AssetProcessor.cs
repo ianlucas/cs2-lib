@@ -708,12 +708,18 @@ public static partial class AssetProcessor
         return result;
     }
 
-    // Params the weapon compositor reads as DATA, not color: paint zone/coverage masks
-    // (g_tMasks, g_tPaintByNumberMasks) and cavity/AO (g_tAmbientOcclusion,
-    // g_tFinalAmbientOcclusion). Deliberately excludes sticker sfx masks (g_tSfxMaskSticker*)
-    // and pearlescence/layer masks — different pipelines, unmeasured benefit.
+    // Params a compositor reads as DATA, not color: paint zone/coverage masks (g_tMasks,
+    // g_tPaintByNumberMasks), cavity/AO (g_tAmbientOcclusion, g_tFinalAmbientOcclusion) and the
+    // glove compositor's ID maps (g_tLayerId, g_tTintId). Deliberately excludes sticker sfx
+    // masks (g_tSfxMaskSticker*) and pearlescence masks — different pipelines, unmeasured
+    // benefit.
+    //
+    // "Id" is matched case-sensitively. g_tLayerId and g_tTintId are the only texture params
+    // game-wide ending in it; the all-caps F_TINT_ID is a feature flag that also reaches this
+    // predicate through WalkLooseVariables, and only its missing texture path keeps it out.
     private static bool IsDataSelectorParamName(string name) =>
         name.EndsWith("Masks", StringComparison.OrdinalIgnoreCase) ||
+        name.EndsWith("Id", StringComparison.Ordinal) ||
         name.Contains("AmbientOcclusion", StringComparison.OrdinalIgnoreCase);
 
     private static bool HasDataSelectorFilename(string vtexPath)
@@ -721,6 +727,8 @@ public static partial class AssetProcessor
         var stem = Path.GetFileNameWithoutExtension(vtexPath);
         return stem.Contains("_masks", StringComparison.OrdinalIgnoreCase) ||
             stem.Contains("paintmask", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("tintid", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("materialid", StringComparison.OrdinalIgnoreCase) ||
             stem.Contains("_ao_", StringComparison.OrdinalIgnoreCase) ||
             stem.EndsWith("_ao", StringComparison.OrdinalIgnoreCase) ||
             stem.Contains("paintao", StringComparison.OrdinalIgnoreCase) ||
@@ -728,10 +736,11 @@ public static partial class AssetProcessor
             stem.Contains("cavity", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Texture paths the customweapon compositor samples as data selectors — masks and AO —
-    // collected from vmat texture params, composite-material loose variables (per-skin masks/AO
-    // bind through m_strName + m_strTextureRuntimeResourcePath, not m_textureParams), plus a
-    // filename fallback for the ones that reach TexturesToProcess through model materials only.
+    // Texture paths the customweapon and customglove compositors sample as data selectors —
+    // masks, AO and ID maps — collected from vmat texture params, composite-material loose
+    // variables (per-skin masks/AO bind through m_strName + m_strTextureRuntimeResourcePath,
+    // not m_textureParams), plus a filename fallback for the ones that reach TexturesToProcess
+    // through model materials only.
     // Membership selects fully-lossless WebP (see Config.WebpLosslessQuality): lossy VP8 (even
     // q95) dips flat macroblocks by 1-8/255 on a sparse 16px lattice and rings far deeper (to
     // ±238) along mask-zone borders. The shaders amplify that: (1 - g_tMasks.x) directly blends
@@ -739,6 +748,16 @@ public static partial class AssetProcessor
     // dark skins (Desert Eagle | Blaze body), and AO error shifts wear chip edges inside the
     // 0.58..0.68 reveal band (AK-47 Asiimov). Near-binary masks also compress far BETTER
     // lossless (pist_deagle_masks: 16 KB lossy VP8 → 1.6 KB VP8L).
+    //
+    // The glove ID maps fail the same way but harder, because a classifier reads them instead
+    // of a blend: g_tTintId decodes as ceil(r * 7) into eight buckets and g_tLayerId normalizes
+    // into per-layer weights, so a dipped macroblock crosses a bucket edge WHOLESALE and the
+    // whole block adopts a neighbouring layer's wear response. They are authored on discrete
+    // levels sitting right under those edges — glove_slick_half_back_tintid is 57% level 0 and
+    // 8% level 36, with 0 and 1 units of headroom — against a measured lossy error of up to
+    // 7/255. That map alone lands 5,362 texels (0.51%) in the wrong bucket, which renders as
+    // unworn squares on the ID maps' 16px lattice (Driver Gloves | Brocade Flowers past wear
+    // 0.30). Lossless drops it to zero, and all 37 ID maps shrink: 2177 KB VP8 → 628 KB VP8L.
     private static HashSet<string> CollectDataSelectorTexturePaths(ItemGeneratorContext ctx)
     {
         var result = new HashSet<string>();
