@@ -51,20 +51,25 @@ public static partial class Config
         "community_mix01", "community02", "danger_zone",
         "standard", "stickers2", "tournament_assets"
     ];
+    // Every texture takes the same lossy VP8 encode. The old carve-outs -- fully-lossless VP8L
+    // for data selectors (masks, AO, glove ID maps) and near-lossless for normal maps -- were
+    // not an optimization at all on this corpus: measured over a 60-texture stratified sample,
+    // near-lossless level 60 is byte-for-byte the lossless size, and dropping it to level 20
+    // buys 2.8% on normals and 0.0% on data selectors. They were carrying 6,084 of the 11,038 MB
+    // we ship (55%) essentially uncompressed. At q95 the same files land 73% (normals) and 65%
+    // (data selectors) smaller, taking the corpus to ~6.7 GB.
+    //
+    // What that costs is real and worth knowing before lowering this further. VP8 is YUV 4:2:0,
+    // so any texture whose channels are independent data rather than a color loses the most:
+    // measured max per-channel error is 177 on normal maps, 223 on packed ORM (occlusion,
+    // roughness, metalness in r/g/b) and 255 along the hard borders of paint-by-number masks,
+    // versus 8-11 on plain grayscale AO. That is the error budget the previous carve-outs
+    // existed to avoid -- see git history for the artifacts it produced in cs2-3d-viewer
+    // (pixelated squares on Desert Eagle | Blaze, mis-bucketed wear on Driver Gloves | Brocade
+    // Flowers, a faint mosaic on metallic normals).
+    //
+    // Also used for the SkiaSharp-encoded item images in Catalog/Assets.cs.
     public const int WebpQuality = 95;
-    // Lossy WebP (even at q95) quantizes away the ±1 dither in normal maps, collapsing them
-    // into flat DCT plateaus; on metallic skins every plateau mirrors a slightly different
-    // patch of the environment and the surface reads as a faint square mosaic in cs2-3d-viewer.
-    // Normal maps therefore use WebP near-lossless: still the lossless coder (no block
-    // structure), with bounded per-pixel adjustment. Level 60 keeps the max per-channel
-    // error at ±2 (vs ±91 measured at lossy q95 on ak47_normal) for ~2/3 the lossless size.
-    // Passed to scripts/item-generator-webp.ts as the near-lossless level (sharp reuses `quality`).
-    public const int WebpNearLosslessNormals = 60;
-    // Data-selector composite inputs (paint masks, AO/cavity, glove ID maps — see
-    // AssetProcessor.CollectDataSelectorTexturePaths) are sampled as data, not color, so
-    // they encode fully lossless (VP8L). In lossless mode libwebp's quality knob trades
-    // encode time for size with zero fidelity impact; 100 = smallest files.
-    public const int WebpLosslessQuality = 100;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 

@@ -7,12 +7,13 @@
 // (AssetProcessor.ProcessMaterialTextures) with a JSONL manifest of jobs. Output bytes feed the
 // content hashes embedded in CDN filenames, so sharp is pinned exact and nothing here may change
 // encoded bytes. Constraints:
-// - `exact` must stay on: shader logic reads RGB under fully-transparent pixels.
-// - `quality` is overloaded: the near-lossless level for near-lossless jobs (normal maps), VP8L
-//   compression effort for lossless jobs (paint masks, AO — bytes are bit-exact regardless),
-//   and lossy Q otherwise.
-// - `lossless` is only forwarded when true so lossy and near-lossless outputs stay
-//   byte-identical to previous runs.
+// - Every job takes the same lossy VP8 encode; there are no lossless or near-lossless paths.
+//   See Config.WebpQuality for what that costs and why the carve-outs were not worth it.
+// - `exact` must stay on: 9,422 textures (2.4 GB) still carry a genuine varying alpha with
+//   fully-transparent pixels, and shader logic reads the RGB underneath. Dropping alpha where
+//   the game format has none did not retire this — it only removed the fabricated planes.
+//   Turning `exact` off saves 0.43% on exactly those files while raising their max RGB error
+//   under alpha=0 from 49 to 147 (measured, q95, 25-texture sample).
 // - `dropAlpha` marks a texture whose game format has no alpha channel, so the exported one is
 //   ValveResourceFormat's invention. Nothing may be chained after `removeAlpha()`: sharp orders
 //   its pipeline internally, not by call order, and puts `resize` FIRST — so `.removeAlpha()
@@ -29,8 +30,6 @@ interface EncodeJob {
     src: string;
     dest: string;
     quality: number;
-    nearLossless: boolean;
-    lossless?: boolean;
     dropAlpha?: boolean;
 }
 
@@ -61,13 +60,13 @@ async function assertAlphaIsConstant(src: string) {
     }
 }
 
-async function encode({ src, dest, quality, nearLossless, lossless, dropAlpha }: EncodeJob) {
+async function encode({ src, dest, quality, dropAlpha }: EncodeJob) {
     try {
         await mkdir(dirname(dest), { recursive: true });
         if (dropAlpha) await assertAlphaIsConstant(src);
         const pipeline = sharp(src);
         await (dropAlpha ? pipeline.removeAlpha() : pipeline)
-            .webp({ quality, nearLossless, ...(lossless ? { lossless: true } : {}), exact: true })
+            .webp({ quality, exact: true })
             .toFile(dest);
         console.log(`done ${dest}`);
     } catch (error) {

@@ -15,7 +15,9 @@ namespace ItemGenerator.GameFiles;
 /// Two independent questions, both answered from the compiled header alone:
 /// <see cref="IsRawFourChannelNormal"/> asks whether VRF's HemiOct decode would destroy a
 /// channel the game stores, and <see cref="HasSyntheticAlpha"/> asks whether VRF's decode
-/// invents one the game does not.
+/// invents one the game does not. The first is asked per resource as it is decompiled
+/// (<see cref="ResourceDecompiler"/>); the second in a batch up front (<see cref="Collect"/>),
+/// because the encoder needs the answer for every texture before any of them is encoded.
 ///
 /// The first case: the textures whose four channels must be exported verbatim instead of
 /// through ValveResourceFormat's HemiOct decode.
@@ -106,16 +108,8 @@ public static class TextureCodecPolicy
     }
 
     /// <summary>
-    /// The subsets of <paramref name="vpkPaths"/> that <see cref="IsRawFourChannelNormal"/> and
-    /// <see cref="HasSyntheticAlpha"/> hold for. Disjoint by construction: the former requires
-    /// BC7, which <see cref="AlphaFreeFormats"/> excludes.
-    /// </summary>
-    public readonly record struct Sets(
-        HashSet<string> RawFourChannelNormals,
-        HashSet<string> SyntheticAlpha);
-
-    /// <summary>
-    /// Classifies <paramref name="vpkPaths"/>, as normalized VPK paths.
+    /// The subset of <paramref name="vpkPaths"/>, as normalized VPK paths, that
+    /// <see cref="HasSyntheticAlpha"/> holds for.
     ///
     /// Deliberately re-reads the vtex_c headers rather than recording what
     /// <see cref="ResourceDecompiler"/> saw: decompilation skips textures already present in the
@@ -126,16 +120,16 @@ public static class TextureCodecPolicy
     /// Costs one extra pass over the vtex_c entries. Reading is ordered by (archive, offset) so
     /// that pass stays sequential, and only the headers are parsed -- no pixels are decoded.
     /// </summary>
-    public static Sets Collect(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
+    public static HashSet<string> Collect(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
         var package = ctx.VpkPackage;
-        if (package == null) return new Sets([], []);
+        if (package == null) return [];
 
         var work = vpkPaths
             .Select(p => (VpkPath: p, Entry: package.FindEntry(p)))
             .Where(t => t.Entry != null)
             .ToArray();
-        if (work.Length == 0) return new Sets([], []);
+        if (work.Length == 0) return [];
 
         Array.Sort(work, static (a, b) =>
         {
@@ -146,7 +140,6 @@ public static class TextureCodecPolicy
         // Entries inlined in pak01_dir.vpk (ArchiveIndex 0x7FFF) share Package.Reader's base
         // stream and seek on it, so they cannot be read concurrently.
         var dirVpkLock = new object();
-        var rawFourChannel = new ConcurrentBag<string>();
         var syntheticAlpha = new ConcurrentBag<string>();
         var po = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount) };
 
@@ -167,12 +160,10 @@ public static class TextureCodecPolicy
             using var resource = new Resource();
             resource.FileName = vpkPath;
             resource.Read(new MemoryStream(data));
-            if (IsRawFourChannelNormal(resource))
-                rawFourChannel.Add(vpkPath);
-            else if (HasSyntheticAlpha(resource))
+            if (HasSyntheticAlpha(resource))
                 syntheticAlpha.Add(vpkPath);
         });
 
-        return new Sets([.. rawFourChannel], [.. syntheticAlpha]);
+        return [.. syntheticAlpha];
     }
 }
