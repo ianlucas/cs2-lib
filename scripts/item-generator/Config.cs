@@ -51,24 +51,24 @@ public static partial class Config
         "community_mix01", "community02", "danger_zone",
         "standard", "stickers2", "tournament_assets"
     ];
-    // Every texture takes the same lossy VP8 encode. The old carve-outs -- fully-lossless VP8L
-    // for data selectors (masks, AO, glove ID maps) and near-lossless for normal maps -- were
-    // not an optimization at all on this corpus: measured over a 60-texture stratified sample,
-    // near-lossless level 60 is byte-for-byte the lossless size, and dropping it to level 20
-    // buys 2.8% on normals and 0.0% on data selectors. They were carrying 6,084 of the 11,038 MB
-    // we ship (55%) essentially uncompressed. At q95 the same files land 73% (normals) and 65%
-    // (data selectors) smaller, taking the corpus to ~6.7 GB.
+    // The lossy Q for the VP8 half of the encoder's two candidates. Every texture is encoded both
+    // this way and fully-lossless VP8L, and the smaller output ships; see item-generator-webp.ts.
     //
-    // What that costs is real and worth knowing before lowering this further. VP8 is YUV 4:2:0,
-    // so any texture whose channels are independent data rather than a color loses the most:
-    // measured max per-channel error is 177 on normal maps, 223 on packed ORM (occlusion,
-    // roughness, metalness in r/g/b) and 255 along the hard borders of paint-by-number masks,
-    // versus 8-11 on plain grayscale AO. That is the error budget the previous carve-outs
-    // existed to avoid -- see git history for the artifacts it produced in cs2-3d-viewer
-    // (pixelated squares on Desert Eagle | Blaze, mis-bucketed wear on Driver Gloves | Brocade
-    // Flowers, a faint mosaic on metallic normals).
+    // Lowering this is not the free win it looks like. VP8 is YUV 4:2:0, so any texture whose
+    // channels are independent data rather than a color loses the most: measured max per-channel
+    // error at q95 is 177 on normal maps, 223 on packed ORM (occlusion, roughness, metalness in
+    // r/g/b) and 255 along the hard borders of paint-by-number masks, versus 8-11 on plain
+    // grayscale AO. Dropping Q widens that budget on exactly the textures a shader reads as data.
     //
-    // Also used for the SkiaSharp-encoded item images in Catalog/Assets.cs.
+    // Min-pick already covers the worst of it: the textures that break most visibly under lossy
+    // are low-entropy, so VP8L both wins on bytes and is bit-exact for them. That is what fixed
+    // the pixelated squares on Desert Eagle | Blaze -- its g_tMasks is 27.9 KB lossy vs 10.3 KB
+    // lossless. It is NOT a general safety net: a high-entropy texture that a shader still reads
+    // as data (the large paint-by-number masks, most normals) keeps the lossy encode because
+    // VP8L is bigger for it, and keeps this error budget with it.
+    //
+    // Also used for the SkiaSharp-encoded item images in Catalog/Assets.cs, which are single-path
+    // lossy and do not go through min-pick.
     public const int WebpQuality = 95;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
