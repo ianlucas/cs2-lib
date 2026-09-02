@@ -846,7 +846,8 @@ public static partial class AssetProcessor
             }
             catch { }
         }
-        var rawFourChannelNormals = TextureCodecPolicy.Collect(ctx, resolvedCompiledPaths);
+        var (rawFourChannelNormals, syntheticAlphaTextures) =
+            TextureCodecPolicy.Collect(ctx, resolvedCompiledPaths);
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
 
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
@@ -881,6 +882,9 @@ public static partial class AssetProcessor
                     rawFourChannelNormals.Contains(vpkPath);
                 var nearLossless = !lossless && (normalMapTextures.Contains(vtexPath) ||
                     normalMapTextures.Contains(normalizedResolved));
+                // The game's format for this texture has no alpha channel, so whatever VRF put
+                // in the exported one is its decoder's invention. See TextureCodecPolicy.
+                var dropAlpha = syntheticAlphaTextures.Contains(vpkPath);
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
@@ -891,7 +895,8 @@ public static partial class AssetProcessor
                         : nearLossless ? Config.WebpNearLosslessNormals
                         : Config.WebpQuality,
                     nearLossless,
-                    lossless
+                    lossless,
+                    dropAlpha
                 }));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }

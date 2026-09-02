@@ -10,7 +10,14 @@ using ValveResourceFormat.ResourceTypes;
 namespace ItemGenerator.GameFiles;
 
 /// <summary>
-/// Identifies the textures whose four channels must be exported verbatim instead of
+/// Reads vtex_c headers to decide, per texture, which of its channels are real.
+///
+/// Two independent questions, both answered from the compiled header alone:
+/// <see cref="IsRawFourChannelNormal"/> asks whether VRF's HemiOct decode would destroy a
+/// channel the game stores, and <see cref="HasSyntheticAlpha"/> asks whether VRF's decode
+/// invents one the game does not.
+///
+/// The first case: the textures whose four channels must be exported verbatim instead of
 /// through ValveResourceFormat's HemiOct decode.
 ///
 /// A BC7 normal map compiled with "Mip HemiOctAnisoRoughness" and WITHOUT
@@ -43,6 +50,43 @@ public static class TextureCodecPolicy
     private const string HemiOctIsoRoughnessRgB = "Texture Compiler Version Mip HemiOctIsoRoughness_RG_B";
 
     /// <summary>
+    /// Formats that carry no alpha channel in the game data at all. Every alpha value VRF
+    /// reports for one of these is invented by its decoder, so none of it may ship.
+    ///
+    /// BC4/BC5 store one and two channels; VRF's block decoder fills the rest with 0 and the
+    /// alpha with 255. I8 is single-channel and expands to gray. DXT1 decodes through
+    /// TinyBCSharp's BC1NoAlpha, which is opaque by definition -- VRF never reads BC1's
+    /// one-bit alpha mode, so a DXT1 texture cannot reach us with alpha either.
+    ///
+    /// IA88 is deliberately absent: its second channel IS alpha. So is BC7, which is the only
+    /// block format here that can carry a genuine fourth channel.
+    /// </summary>
+    private static readonly VTexFormat[] AlphaFreeFormats =
+        [VTexFormat.ATI1N, VTexFormat.ATI2N, VTexFormat.DXT1, VTexFormat.I8];
+
+    /// <summary>
+    /// Whether every alpha value VRF will report for this texture is an artifact of its
+    /// decoder rather than data from the game.
+    ///
+    /// Two shapes reach us. The plain one is a format with fewer than four channels, where
+    /// VRF pads the alpha to 255; libwebp already drops a fully-opaque alpha, so those ship
+    /// clean today and this predicate only makes that explicit. The one that actually leaks is
+    /// a BC5 normal carrying a HemiOct dependency: <c>Decode_HemiOct</c> ends with
+    /// <c>color.a = color.b</c>, and BC5 has no blue, so 592 textures ship a fabricated
+    /// all-zero alpha plane over meaningful RGB. That is the pattern that forces `exact` on the
+    /// encoder and that silently destroys the image in any tool which premultiplies -- sharp's
+    /// own resize included.
+    ///
+    /// Gated on format alone, never on pixels: a BC7 texture whose alpha happens to be constant
+    /// still has a real fourth channel, and flipping it would change what a shader samples.
+    /// </summary>
+    public static bool HasSyntheticAlpha(Resource resource)
+    {
+        return resource.DataBlock is Texture texture
+            && Array.IndexOf(AlphaFreeFormats, texture.Format) >= 0;
+    }
+
+    /// <summary>
     /// Whether this texture's four raw channels must survive export intact.
     /// </summary>
     public static bool IsRawFourChannelNormal(Resource resource)
@@ -62,8 +106,16 @@ public static class TextureCodecPolicy
     }
 
     /// <summary>
-    /// The subset of <paramref name="vpkPaths"/> that <see cref="IsRawFourChannelNormal"/> holds
-    /// for, as normalized VPK paths.
+    /// The subsets of <paramref name="vpkPaths"/> that <see cref="IsRawFourChannelNormal"/> and
+    /// <see cref="HasSyntheticAlpha"/> hold for. Disjoint by construction: the former requires
+    /// BC7, which <see cref="AlphaFreeFormats"/> excludes.
+    /// </summary>
+    public readonly record struct Sets(
+        HashSet<string> RawFourChannelNormals,
+        HashSet<string> SyntheticAlpha);
+
+    /// <summary>
+    /// Classifies <paramref name="vpkPaths"/>, as normalized VPK paths.
     ///
     /// Deliberately re-reads the vtex_c headers rather than recording what
     /// <see cref="ResourceDecompiler"/> saw: decompilation skips textures already present in the
@@ -74,16 +126,16 @@ public static class TextureCodecPolicy
     /// Costs one extra pass over the vtex_c entries. Reading is ordered by (archive, offset) so
     /// that pass stays sequential, and only the headers are parsed -- no pixels are decoded.
     /// </summary>
-    public static HashSet<string> Collect(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
+    public static Sets Collect(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
         var package = ctx.VpkPackage;
-        if (package == null) return [];
+        if (package == null) return new Sets([], []);
 
         var work = vpkPaths
             .Select(p => (VpkPath: p, Entry: package.FindEntry(p)))
             .Where(t => t.Entry != null)
             .ToArray();
-        if (work.Length == 0) return [];
+        if (work.Length == 0) return new Sets([], []);
 
         Array.Sort(work, static (a, b) =>
         {
@@ -94,7 +146,8 @@ public static class TextureCodecPolicy
         // Entries inlined in pak01_dir.vpk (ArchiveIndex 0x7FFF) share Package.Reader's base
         // stream and seek on it, so they cannot be read concurrently.
         var dirVpkLock = new object();
-        var found = new ConcurrentBag<string>();
+        var rawFourChannel = new ConcurrentBag<string>();
+        var syntheticAlpha = new ConcurrentBag<string>();
         var po = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount) };
 
         Parallel.ForEach(work, po, item =>
@@ -115,9 +168,11 @@ public static class TextureCodecPolicy
             resource.FileName = vpkPath;
             resource.Read(new MemoryStream(data));
             if (IsRawFourChannelNormal(resource))
-                found.Add(vpkPath);
+                rawFourChannel.Add(vpkPath);
+            else if (HasSyntheticAlpha(resource))
+                syntheticAlpha.Add(vpkPath);
         });
 
-        return [.. found];
+        return new Sets([.. rawFourChannel], [.. syntheticAlpha]);
     }
 }
