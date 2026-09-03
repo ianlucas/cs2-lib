@@ -94,6 +94,28 @@ public static partial class Config
     // smooth mirror-like surface. Raise this if that shows up. Note the encoder pins 127/128
     // onto the ladder whatever this is set to, so a flat surface never picks up a uniform tilt.
     public const int WebpNormalQuantizeBits = 4;
+    // Bits per pixel kept in the ALPHA plane of every texture that goes through min-pick. RGB is
+    // untouched; this is only the separate ALPH chunk, which WebP always compresses losslessly and
+    // which `WebpQuality` therefore cannot reach. See item-generator-webp.ts for why quantizing is
+    // preferred over libwebp's own alphaQuality.
+    //
+    // This is the size/fidelity dial for 11,263 textures, 3.52 GiB of the 6.95 GiB corpus, of
+    // which 1.17 GiB is the alpha planes themselves. Cost against that baseline, measured on a
+    // 60-texture sample stratified by size rank:
+    //
+    //   6 bits (max err 2)   84.1%     5 bits (max err 4)   75.4%     4 bits (max err 8)   69.6%
+    //
+    // The saving is far larger than that average on the files that actually hurt, because it
+    // scales with how dithered the plane is: at 5 bits, ak47_autoexec_camo albedo 4.21 -> 1.59 MB,
+    // p2000_deep_red 6.76 -> 3.75 MB, mp5_statics_blue 6.81 -> 3.01 MB.
+    //
+    // 5 bits is the deliberate pick. Alpha in this corpus is a mask read through smoothstep, not a
+    // colour, so max err 4 (1.6% of range) moves a wear threshold by far less than the wear slider
+    // itself does, and unlike the normals ladder there is no unbounded decode downstream to
+    // amplify it. Going to 4 buys another 6 points for double the error, which is not worth it on
+    // the one place alpha is a genuine gradient -- a sticker's transparency ramp, where the
+    // failure mode if this is too aggressive is banding on a soft edge. Raise it if that shows up.
+    public const int WebpAlphaQuantizeBits = 5;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 

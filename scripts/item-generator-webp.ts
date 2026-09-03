@@ -66,6 +66,29 @@
 //
 //   Alpha is never quantized. A sticker's g_tNormalRoughnessSticker0 packs roughness into it,
 //   and a shader reads that as data.
+// - `alphaQuantizeBits` snaps the alpha plane onto the same ladder before min-pick runs, and is
+//   the biggest remaining win in the corpus. WebP stores a lossy image's alpha in a separate ALPH
+//   chunk that is always compressed LOSSLESSLY, so `quality` never touches it: measured over the
+//   11,263 lossy textures that carry one, ALPH is 1.17 GiB of the 6.95 GiB corpus, and on the
+//   worst files it is nearly all of them (mp5_statics_blue albedo: 6.29 MB alpha, 6.81 MB total).
+//
+//   What makes those planes incompressible is dither, not detail -- the same thing that made
+//   normals incompressible. AK-47 | AUTOEXEC's g_tPattern alpha holds 72 distinct values, but
+//   90% of its pixels are 87 or 88 and 7% are 42 or 43: it is a two-plateau wear mask with an LSB
+//   rattle laid over it. Snapping that rattle away takes the file from 4.21 MB to 1.59 MB.
+//
+//   Quantizing is deliberate in preference to libwebp's own `alphaQuality`, which reaches similar
+//   sizes (4.21 MB -> 1.54 MB on the same texture) by running the alpha plane through the LOSSY
+//   VP8 encoder. That is the 16px-macroblock artifact this file already routes normals and masks
+//   around, and pattern alpha feeds `smoothstep` wear thresholds in csgo_customweapon_ps_style6,
+//   where a lattice-aligned dip reads as square patches of wear. Quantization error follows the
+//   mask's own gradients instead and is bounded at 255/(2^bits-1)/2. Note also that `alphaQuality`
+//   is a cliff, not a dial -- 100/95/90 were byte-identical in every texture measured, and the
+//   drop only lands somewhere below 90 -- so it is not tunable even if the artifact were tolerable.
+//
+//   Only the min-pick path takes this. The quantized path leaves alpha alone on purpose (a
+//   sticker's g_tNormalRoughnessSticker0 packs roughness into it), and `dropAlpha` discards the
+//   plane outright, so neither has an alpha worth snapping.
 // - `exact` must stay on: 9,422 textures (2.4 GB) still carry a genuine varying alpha with
 //   fully-transparent pixels, and shader logic reads the RGB underneath. Dropping alpha where
 //   the game format has none did not retire this — it only removed the fabricated planes.
@@ -89,6 +112,7 @@ interface EncodeJob {
     quality: number;
     dropAlpha?: boolean;
     quantizeBits?: number;
+    alphaQuantizeBits?: number;
 }
 
 const manifestPath = process.argv[2];
@@ -133,8 +157,20 @@ async function assertAlphaIsConstant(src: string) {
 //
 // Both encodes of a job run sequentially inside one worker so the pool below still bounds total
 // concurrency and peak memory (two full-size buffers per worker, not per job).
-async function encodeBoth(src: string, quality: number, dropAlpha: boolean) {
+async function encodeBoth(
+    src: string,
+    quality: number,
+    dropAlpha: boolean,
+    alphaQuantizeBits: number | undefined
+) {
+    // Decoded once and shared by both candidates when the alpha plane needs quantizing, because
+    // the quantized pixels are the input to both. sharp treats a raw input buffer as read-only,
+    // so handing the same one to two pipelines is safe; it is the *instance* that cannot be
+    // reused (see the note above). Peak memory is unchanged in kind -- one decoded surface plus
+    // the two encoded buffers, still per worker rather than per job.
+    const source = await quantizeAlpha(src, dropAlpha, alphaQuantizeBits);
     const open = () => {
+        if (source !== undefined) return sharp(source.data, { raw: source.info });
         const pipeline = sharp(src);
         return dropAlpha ? pipeline.removeAlpha() : pipeline;
     };
@@ -143,24 +179,41 @@ async function encodeBoth(src: string, quality: number, dropAlpha: boolean) {
     return { lossy, lossless };
 }
 
-// Quantize each colour channel onto a ladder of 2^bits evenly spaced levels, then encode VP8L.
-// Alpha is copied through untouched. bits=8 is the identity ladder, which is how a texture asks
-// for a bit-exact lossless encode without opting into min-pick.
-async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
+// Snaps the alpha plane onto the quantization ladder and leaves RGB alone, or returns undefined
+// when there is nothing to do (no request, alpha being dropped, or no alpha channel) so the
+// caller keeps its cheaper file-input pipeline.
+async function quantizeAlpha(src: string, dropAlpha: boolean, bits: number | undefined) {
+    if (bits === undefined || dropAlpha) return undefined;
+    const table = quantizationTable(bits);
+    const { data, info } = await sharp(src).raw().toBuffer({ resolveWithObject: true });
+    if (info.channels !== 4 && info.channels !== 2) return undefined;
+    for (let index = info.channels - 1; index < data.length; index += info.channels) {
+        data[index] = table[data[index]!]!;
+    }
+    return { data, info };
+}
+
+// A 256-entry lookup mapping every byte to its nearest rung on a ladder of 2^bits evenly spaced
+// levels, PLUS the two neutral values. Evenly spaced across the full range means 0 and 255 map to
+// themselves. Pinning 127/128 is for normal maps, whose neutral is "pointing straight out": on a
+// uniform 16-rung ladder it falls exactly between rungs (127 -> 119), which tilts every flat
+// surface in the texture by a uniform ~5 degrees rather than adding noise. It costs two extra
+// rungs and nothing measurable in bytes, and it is harmless for the alpha ladder.
+//
+// Cached per bit depth: a job runs one of at most a handful of depths, and rebuilding the 256x18
+// nearest-rung search per texture is pure waste in the pool.
+const ladderCache = new Map<number, Buffer>();
+
+function quantizationTable(bits: number) {
     // Validated rather than trusted. A bad value here does not fail loudly, it silently ships:
     // `levels` of 0 divides by zero, the NaN coerces to 0 on the way into a Buffer, and every
     // texture encodes as solid black in ~200 bytes. That is what a null `quantizeBits` reaching
     // this function once did to every non-normal in the corpus.
     if (!Number.isInteger(bits) || bits < 1 || bits > 8) {
-        throw new Error(`quantizeBits must be an integer in 1..8, received ${bits}`);
+        throw new Error(`quantize bits must be an integer in 1..8, received ${bits}`);
     }
-    const pipeline = dropAlpha ? sharp(src).removeAlpha() : sharp(src);
-    const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
-    // Evenly spaced rungs across the full range, so 0 and 255 map to themselves, PLUS the two
-    // neutral values. A normal map's neutral is 127/128 -- "pointing straight out" -- and on a
-    // uniform 16-rung ladder it falls exactly between rungs (127 -> 119), which tilts every flat
-    // surface in the texture by a uniform ~5 degrees rather than adding noise. Pinning it costs
-    // two extra rungs and nothing measurable in bytes.
+    const cached = ladderCache.get(bits);
+    if (cached !== undefined) return cached;
     const levels = (1 << bits) - 1;
     const rungs = new Set<number>([127, 128]);
     for (let step = 0; step <= levels; step += 1) {
@@ -175,6 +228,17 @@ async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
         }
         table[value] = best;
     }
+    ladderCache.set(bits, table);
+    return table;
+}
+
+// Quantize each colour channel onto the ladder, then encode VP8L. Alpha is copied through
+// untouched. bits=8 is the identity ladder, which is how a texture asks for a bit-exact lossless
+// encode without opting into min-pick.
+async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
+    const table = quantizationTable(bits);
+    const pipeline = dropAlpha ? sharp(src).removeAlpha() : sharp(src);
+    const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
     const hasAlpha = info.channels === 4 || info.channels === 2;
     for (let index = 0; index < data.length; index += 1) {
         if (hasAlpha && index % info.channels === info.channels - 1) continue;
@@ -183,7 +247,14 @@ async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
     return sharp(data, { raw: info }).webp({ lossless: true, quality: 100, exact: true }).toBuffer();
 }
 
-async function encode({ src, dest, quality, dropAlpha, quantizeBits }: EncodeJob) {
+async function encode({
+    src,
+    dest,
+    quality,
+    dropAlpha,
+    quantizeBits,
+    alphaQuantizeBits
+}: EncodeJob) {
     try {
         await mkdir(dirname(dest), { recursive: true });
         if (dropAlpha) await assertAlphaIsConstant(src);
@@ -193,7 +264,12 @@ async function encode({ src, dest, quality, dropAlpha, quantizeBits }: EncodeJob
             console.log(`done ${dest}`);
             return;
         }
-        const { lossy, lossless } = await encodeBoth(src, quality, dropAlpha === true);
+        const { lossy, lossless } = await encodeBoth(
+            src,
+            quality,
+            dropAlpha === true,
+            alphaQuantizeBits ?? undefined
+        );
         // Ties go to lossy: it is the status quo, and preferring it keeps the winner stable for
         // any texture where the two happen to land on the same byte count.
         const winner = lossless.length < lossy.length ? lossless : lossy;

@@ -814,6 +814,12 @@ public static partial class AssetProcessor
                         normalMapTextures.Contains(normalizedResolved)
                         ? Config.WebpNormalQuantizeBits
                     : null;
+                // Only min-pick textures get their alpha plane snapped. A quantized texture is
+                // either a normal (whose alpha may pack sticker roughness) or a raw four-channel
+                // normal (whose alpha is half a hemi-octahedral pair), and both must keep it
+                // verbatim; see item-generator-webp.ts.
+                int? alphaQuantizeBits =
+                    quantizeBits == null ? Config.WebpAlphaQuantizeBits : null;
                 // Null must be OMITTED, not written: the encoder selects the quantized path on
                 // the key's presence, and a null there means "quantize to null bits".
                 manifestLines.Add(JsonSerializer.Serialize(new
@@ -822,7 +828,8 @@ public static partial class AssetProcessor
                     dest = stagedPath,
                     quality = Config.WebpQuality,
                     dropAlpha,
-                    quantizeBits
+                    quantizeBits,
+                    alphaQuantizeBits
                 }, EncodeJobJsonOptions));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }
