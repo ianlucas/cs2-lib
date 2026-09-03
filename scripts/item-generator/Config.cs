@@ -70,7 +70,30 @@ public static partial class Config
     //
     // Also used for the SkiaSharp-encoded item images in Catalog/Assets.cs, which are single-path
     // lossy and do not go through min-pick.
+    // NOTE this is the quality the min-pick COMPARISON candidate is encoded at, and it is
+    // deliberately not the quality a lossy winner ships at -- see WebpLossyQualityCeiling. Pinning
+    // the comparison here keeps the codec choice identical to what it was before the ceiling
+    // existed, so no texture can trade a bit-exact VP8L encode for a cheaper lossy one.
     public const int WebpQuality = 95;
+    // The highest quality a texture that ALREADY WON min-pick may ship at. `WebpQuality` decides
+    // which codec a texture gets; this decides what the lossy winners cost, and the per-texture
+    // search descends from here toward `WebpQualityFloor`.
+    //
+    // The two are separate because they answer different questions, and answering both with one
+    // number is what made this expensive. Lowering `WebpQuality` to 85 outright would also shrink
+    // the comparison candidate, and the lossy candidate winning more often is precisely the
+    // outcome min-pick exists to prevent: measured on a 40-texture sample of the non-normal VP8L
+    // winners (the masks and ID maps), 14 of 40 flip to lossy at a comparison quality of 85. Those
+    // are the textures whose lossy encode brings back the 16px mosaic. Comparing at 95 and
+    // shipping at 85 takes the size and leaves the codec decision untouched.
+    //
+    // 85 is the deliberate pick. It is the point where the search's own reference moves: the
+    // budget is measured on THIS texture at the ceiling, so a lower ceiling both caps the top rung
+    // and loosens the relative tolerance below it. Measured over a 24-texture sample drawn
+    // probability-proportional-to-size from the lossy textures that carry an alpha plane, a
+    // ceiling of 85 lands the corpus at 46.3% of its q95 bytes, with most textures settling at 80
+    // or 85 rather than at the ceiling itself. Raise it if a lossy texture looks soft.
+    public const int WebpLossyQualityCeiling = 85;
     // Bits per colour channel kept for normal maps, which are quantized onto a 2^n level ladder
     // and then encoded lossless instead of going through min-pick (see item-generator-webp.ts for
     // why no lossy setting can serve them, and AssetProcessor.CollectNormalMapTexturePaths for
@@ -109,13 +132,22 @@ public static partial class Config
     // scales with how dithered the plane is: at 5 bits, ak47_autoexec_camo albedo 4.21 -> 1.59 MB,
     // p2000_deep_red 6.76 -> 3.75 MB, mp5_statics_blue 6.81 -> 3.01 MB.
     //
-    // 5 bits is the deliberate pick. Alpha in this corpus is a mask read through smoothstep, not a
-    // colour, so max err 4 (1.6% of range) moves a wear threshold by far less than the wear slider
-    // itself does, and unlike the normals ladder there is no unbounded decode downstream to
-    // amplify it. Going to 4 buys another 6 points for double the error, which is not worth it on
-    // the one place alpha is a genuine gradient -- a sticker's transparency ramp, where the
-    // failure mode if this is too aggressive is banding on a soft edge. Raise it if that shows up.
-    public const int WebpAlphaQuantizeBits = 5;
+    // Alpha in this corpus is a mask read through smoothstep, not a colour, so the error moves a
+    // wear threshold by far less than the wear slider itself does, and unlike the normals ladder
+    // there is no unbounded decode downstream to amplify it. The one place alpha is a genuine
+    // gradient is a sticker's transparency ramp.
+    //
+    // Note the saving is bounded by how DITHERED the plane is, not by how large it is. A plane
+    // that is genuine per-pixel noise rather than a dithered plateau barely responds at any depth:
+    // gun_grunge_psd's alpha costs 1.51 MiB at 5 bits, 1.28 at 4, and still 0.67 at ONE bit. No
+    // setting of this makes such a texture cheap; only fewer pixels would.
+    // 4 is the pick as of the ceiling change. 5 was chosen when the alpha ladder was the only
+    // lever on these files; now that the RGB side moves too, the extra bit is a bigger share of
+    // what is left. It costs max err 8 instead of 4 (3.1% of range) and buys ~7% of the bytes of
+    // every texture that carries an alpha plane, measured over the same 24-texture sample. The
+    // failure mode is unchanged -- banding on a sticker's transparency ramp -- so go back to 5 if
+    // that shows up.
+    public const int WebpAlphaQuantizeBits = 4;
     // Floor and budget for the per-texture quality search that re-rates a lossy min-pick winner.
     // `WebpQuality` sets what a texture may spend; these decide whether spending it buys anything
     // on THAT texture. See item-generator-webp.ts for the mechanism and for why the search runs

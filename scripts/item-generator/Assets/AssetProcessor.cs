@@ -823,6 +823,8 @@ public static partial class AssetProcessor
                 // Same gate as the alpha ladder, for the same reason: only a min-pick texture has
                 // a lossy encode to re-rate. A quantized one is already lossless, and the search
                 // has nothing to trade.
+                int? qualityCeiling =
+                    quantizeBits == null ? Config.WebpLossyQualityCeiling : null;
                 int? qualityFloor = quantizeBits == null ? Config.WebpQualityFloor : null;
                 double? distortionTolerance =
                     quantizeBits == null ? Config.WebpDistortionTolerance : null;
@@ -838,6 +840,7 @@ public static partial class AssetProcessor
                     dropAlpha,
                     quantizeBits,
                     alphaQuantizeBits,
+                    qualityCeiling,
                     qualityFloor,
                     distortionTolerance,
                     distortionCeiling

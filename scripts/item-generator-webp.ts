@@ -8,8 +8,11 @@
 // content hashes embedded in CDN filenames, so sharp is pinned exact and nothing here may change
 // encoded bytes. Constraints:
 // - Every job is encoded BOTH ways -- lossy VP8 at Config.WebpQuality and fully-lossless VP8L --
-//   and the smaller output wins. This replaces the param-name carve-outs that selected a codec
-//   from the material binding; see below for why picking on bytes is both smaller and safer.
+//   and the smaller output wins, with near-ties going to VP8L (see WEBP_LOSSLESS_MARGIN). This
+//   replaces the param-name carve-outs that selected a codec from the material binding; see below
+//   for why picking on bytes is both smaller and safer. Note the lossy candidate is encoded at
+//   Config.WebpQuality even though a lossy winner ships at Config.WebpLossyQualityCeiling: the
+//   comparison picks a codec, and making its lossy side cheaper would hand masks to VP8.
 //
 //   Size: min-pick can never exceed the all-lossy size, because all-lossy is one of the two
 //   candidates. It is strictly smaller in practice -- low-entropy data textures (masks, ID maps)
@@ -36,8 +39,10 @@
 //   what the workdir already had. Ties go to lossy, so the choice is total.
 //
 //   Cost: a second encode per texture. See the timing note in encode().
-// - `qualityFloor`/`distortionTolerance` re-rate the lossy winner AFTER min-pick has chosen the
-//   codec. `quality` is a single global number, but what a texture gets for those bits is not
+// - `qualityCeiling`/`qualityFloor`/`distortionTolerance` re-rate the lossy winner AFTER min-pick
+//   has chosen the codec, and the winner is re-encoded from `qualityCeiling` down -- the
+//   comparison encode is discarded. `quality` is a single global number, but what a texture gets
+//   for those bits is not
 //   global at all: lossy VP8 is YUV 4:2:0, so a texture whose channels are independent data
 //   carries a chroma-subsampling error that `quality` cannot touch, and the DCT quantization
 //   error it CAN touch is a rounding difference on top of it. Measured over a 42-texture sample
@@ -55,8 +60,13 @@
 //   rule is measured per texture rather than declared: take the LOWEST quality whose distortion
 //   stays within `distortionTolerance` of what full quality achieves ON THIS TEXTURE, bounded by
 //   an absolute ceiling so a texture that starts out badly damaged cannot be damaged without
-//   limit. Bits are spent only where they measurably buy fidelity. On that sample it is 24.1% of
-//   the lossy bytes at a tolerance of 10%, and it leaves 15 of 42 textures at full quality.
+//   limit. Bits are spent only where they measurably buy fidelity.
+//
+//   "Full quality" here means `qualityCeiling`, not `quality`. The budget is measured on the
+//   ceiling encode, so lowering the ceiling both caps the top rung and loosens the tolerance below
+//   it -- the two compound, and a texture typically lands 0-10 points under the ceiling rather
+//   than at it. Measured over 24 textures sampled probability-proportional-to-size from the lossy
+//   population that carries alpha, ceiling 85 ships 46.3% of the q95 bytes.
 //
 //   Distortion is per-channel RMSE, worst channel, against the same pixels the encoder was fed
 //   (so alpha quantization is already applied and does not count as error). Per-channel because
@@ -117,7 +127,10 @@
 //   worst files it is nearly all of them (mp5_statics_blue albedo: 6.29 MB alpha, 6.81 MB total).
 //
 //   What makes those planes incompressible is dither, not detail -- the same thing that made
-//   normals incompressible. AK-47 | AUTOEXEC's g_tPattern alpha holds 72 distinct values, but
+//   normals incompressible, and the reason the saving does not scale with file size. A plane that
+//   is genuine per-pixel noise has no rattle to snap and barely responds at any depth:
+//   gun_grunge_psd's alpha is 1.51 MiB at 5 bits, 1.28 at 4, and still 0.67 at ONE bit, against
+//   2.17 unquantized. A dithered plane collapses; that one does not, and no setting here fixes it. AK-47 | AUTOEXEC's g_tPattern alpha holds 72 distinct values, but
 //   90% of its pixels are 87 or 88 and 7% are 42 or 43: it is a two-plateau wear mask with an LSB
 //   rattle laid over it. Snapping that rattle away takes the file from 4.21 MB to 1.59 MB.
 //
@@ -157,6 +170,7 @@ interface EncodeJob {
     dropAlpha?: boolean;
     quantizeBits?: number;
     alphaQuantizeBits?: number;
+    qualityCeiling?: number;
     qualityFloor?: number;
     distortionTolerance?: number;
     distortionCeiling?: number;
@@ -236,8 +250,15 @@ function distortion(
     return worst;
 }
 
-// The lowest quality on the ladder whose distortion stays within budget of what full quality
-// achieves on this same texture, encoded. Returns the full-quality buffer when nothing qualifies.
+// The lowest quality on the ladder whose distortion stays within budget of what the CEILING
+// quality achieves on this same texture, encoded. Returns the ceiling encode when nothing below it
+// qualifies -- so a texture that resists the search still ships at the ceiling, never at the
+// comparison quality that min-pick was decided on.
+//
+// The reference is the ceiling and not `quality` on purpose. The tolerance is relative, so it only
+// ever means "within 10% of some anchor"; anchoring it at the quality a texture SHIPS at is what
+// makes the ladder below it reachable, and anchoring it at the comparison quality would hold every
+// texture to a budget measured on an encode none of them ship.
 //
 // Timing: the VP8L pass is the expensive half of a job -- measured 5.3x the lossy encode's wall
 // time over a 60-texture stratified sample of the corpus (26.3s vs 5.0s). The ladder is searched
@@ -251,30 +272,30 @@ async function selectQuality(
     open: () => Sharp,
     reference: Buffer,
     info: { width: number; height: number; channels: number },
-    fullQuality: Buffer,
-    quality: number,
+    qualityCeiling: number,
     floor: number,
     tolerance: number,
-    ceiling: number
+    distortionCeiling: number
 ) {
+    const atCeiling = await open().webp({ quality: qualityCeiling, exact: true, effort: WEBP_EFFORT }).toBuffer();
     const ladder: number[] = [];
-    for (let step = quality - QUALITY_LADDER_STEP; step >= floor; step -= QUALITY_LADDER_STEP) {
+    for (let step = qualityCeiling - QUALITY_LADDER_STEP; step >= floor; step -= QUALITY_LADDER_STEP) {
         ladder.push(step);
     }
-    if (ladder.length === 0) return fullQuality;
+    if (ladder.length === 0) return atCeiling;
 
     const pixels = info.width * info.height;
     const measure = async (buffer: Buffer) => {
         const { data, info: decoded } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
         return distortion(reference, info.channels, data, decoded.channels, pixels);
     };
-    const budget = await measure(fullQuality);
+    const budget = await measure(atCeiling);
     const encoded = new Map<number, Buffer>();
     const fits = async (candidate: number) => {
-        const buffer = await open().webp({ quality: candidate, exact: true }).toBuffer();
+        const buffer = await open().webp({ quality: candidate, exact: true, effort: WEBP_EFFORT }).toBuffer();
         encoded.set(candidate, buffer);
         const measured = await measure(buffer);
-        return measured <= budget * (1 + tolerance) && measured - budget <= ceiling;
+        return measured <= budget * (1 + tolerance) && measured - budget <= distortionCeiling;
     };
 
     // The ladder descends and acceptance is monotone, so the qualities that fit are a prefix of
@@ -291,12 +312,43 @@ async function selectQuality(
             high = middle - 1;
         }
     }
-    return best === -1 ? fullQuality : encoded.get(ladder[best]!)!;
+    return best === -1 ? atCeiling : encoded.get(ladder[best]!)!;
 }
 
 // Quality points between rungs of the search ladder. Five is the granularity libwebp's own
 // quality scale is meaningful at; finer steps cost encodes to land on sizes a percent apart.
 const QUALITY_LADDER_STEP = 5;
+
+// libwebp's compression effort, on every encode in this file. 6 buys ~1.5% of the LOSSY bytes for
+// more encoder time; it buys the VP8L candidate nothing, because sharp maps `effort` to the VP8
+// method only and a lossless encode at `quality: 100` already runs libwebp's most expensive path
+// (measured over 40 VP8L winners: every one byte-identical at effort 4 and 6).
+//
+// That asymmetry is one of the two reasons WEBP_LOSSLESS_MARGIN exists. See there.
+const WEBP_EFFORT = 6;
+
+// How much larger the VP8L candidate may be and still win min-pick.
+//
+// Without it, every knob that makes the lossy candidate cheaper is a one-directional thumb on a
+// scale that decides FIDELITY, not just size. WEBP_EFFORT shrinks only the lossy side (~1.5%), and
+// the alpha ladder shrinks it faster than the lossless side too -- VP8L carries alpha inside its
+// own entropy coding, where a shallower ladder buys much less than it does in a separate ALPH
+// chunk. Between them they move a near-tie by 5-6%: sig_karrigan_glitter_mask goes from 0.972 to
+// 1.054 lossless/lossy purely from settings, with its pixels unchanged. Measured on 60 of the
+// non-normal VP8L winners, 5 cross to lossy on that alone -- and those winners are the masks and
+// ID maps whose lossy artifacts min-pick was built to retire, so the flips land exactly where
+// they hurt.
+//
+// 6% is measured, not guessed, and it is cheap because the two populations barely overlap. Across
+// those 60 VP8L winners the ratio distribution runs 0.015 to 1.050, with only five files above
+// 1.00; a 6% margin keeps all 60 bit-exact for 13,490 total bytes. Across 60 of today's LOSSY
+// winners the smallest ratio is 1.32 -- lossless is never within reach for a texture that genuinely
+// wants VP8 -- so the margin costs that population exactly nothing. It binds only on near-ties, and
+// near-ties belong on the bit-exact side of the line.
+//
+// Raise it if a future knob makes lossy cheaper again and masks start flipping; the cost of raising
+// it is bounded by the margin itself, on files that are small by construction.
+const WEBP_LOSSLESS_MARGIN = 1.06;
 
 // A 256-entry lookup mapping every byte to its nearest rung on a ladder of 2^bits evenly spaced
 // levels, PLUS the two neutral values. Evenly spaced across the full range means 0 and 255 map to
@@ -349,7 +401,9 @@ async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
         if (hasAlpha && index % info.channels === info.channels - 1) continue;
         data[index] = table[data[index]!]!;
     }
-    return sharp(data, { raw: info }).webp({ lossless: true, quality: 100, exact: true }).toBuffer();
+    return sharp(data, { raw: info })
+        .webp({ lossless: true, quality: 100, exact: true, effort: WEBP_EFFORT })
+        .toBuffer();
 }
 
 async function encode({
@@ -359,6 +413,7 @@ async function encode({
     dropAlpha,
     quantizeBits,
     alphaQuantizeBits,
+    qualityCeiling,
     qualityFloor,
     distortionTolerance,
     distortionCeiling
@@ -373,26 +428,32 @@ async function encode({
             return;
         }
         const source = await prepareSource(src, dropAlpha === true, alphaQuantizeBits ?? undefined);
-        const lossy = await source.open().webp({ quality, exact: true }).toBuffer();
-        const lossless = await source.open().webp({ lossless: true, quality: 100, exact: true }).toBuffer();
-        // Ties go to lossy: it is the status quo, and preferring it keeps the winner stable for
-        // any texture where the two happen to land on the same byte count.
+        // The comparison candidate is encoded at `quality`, NOT at `qualityCeiling`. It exists to
+        // pick a codec, not to ship: a cheaper lossy candidate wins min-pick more often, and the
+        // textures it would win are the masks whose lossy artifacts min-pick exists to retire.
+        const lossy = await source.open().webp({ quality, exact: true, effort: WEBP_EFFORT }).toBuffer();
+        const lossless = await source
+            .open()
+            .webp({ lossless: true, quality: 100, exact: true, effort: WEBP_EFFORT })
+            .toBuffer();
+        // Ties, and near-ties inside WEBP_LOSSLESS_MARGIN, go to lossless -- it is bit-exact, and
+        // the margin is what keeps WEBP_EFFORT from walking marginal textures across the line on
+        // its own. See WEBP_LOSSLESS_MARGIN.
         //
         // A VP8L winner is written exactly as it was encoded. Re-rating happens only on the other
         // branch, so no texture can trade a bit-exact encode for a cheaper lossy one.
-        if (lossless.length < lossy.length) {
+        if (lossless.length <= lossy.length * WEBP_LOSSLESS_MARGIN) {
             await writeFile(dest, lossless);
             console.log(`done ${dest}`);
             return;
         }
         const rated =
-            qualityFloor != null && distortionTolerance != null && distortionCeiling != null
+            qualityCeiling != null && qualityFloor != null && distortionTolerance != null && distortionCeiling != null
                 ? await selectQuality(
                       source.open,
                       source.data,
                       source.info,
-                      lossy,
-                      quality,
+                      qualityCeiling,
                       qualityFloor,
                       distortionTolerance,
                       distortionCeiling
