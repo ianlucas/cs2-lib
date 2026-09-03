@@ -77,17 +77,22 @@ public static partial class Config
     // how they are identified).
     //
     // This is the size/fidelity dial for ~5,400 textures, 1.86 GB of the corpus at the lossy
-    // encode they must stop using. Measured over 22 normals, against that baseline:
+    // encode they must stop using. Cost against that baseline, by bit depth:
     //
     //   8 bits (bit-exact)     x5.97     7 bits (max err 1)   x3.88
     //   6 bits (max err 2)     x2.85     5 bits (max err 4)   x2.11
-    //   4 bits (max err 8)     x1.62
+    //   4 bits (max err 8)     x2.14
+    //
+    // Ratios come from samples of ~20 normals and vary by several points between samples, so
+    // read them as the shape of the curve rather than exact figures; 4 bits is the one measured
+    // through the shipped encoder, and puts corpus normals near 3.98 GB.
     //
     // For reference the near-lossless path this replaces was x5.08 at max err 2, so 6 bits is
     // strictly better than what shipped before this branch. 4 bits is the deliberate choice to
     // spend fidelity on size: max err 8 is 3.6 degrees of normal tilt, and quantization bias
     // follows the surface gradient, so the failure mode if it is too aggressive is banding on a
-    // smooth mirror-like surface. Raise this if that shows up.
+    // smooth mirror-like surface. Raise this if that shows up. Note the encoder pins 127/128
+    // onto the ladder whatever this is set to, so a flat surface never picks up a uniform tilt.
     public const int WebpNormalQuantizeBits = 4;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);

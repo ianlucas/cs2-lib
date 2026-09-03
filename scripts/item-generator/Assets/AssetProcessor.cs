@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ItemGenerator.GameFiles;
 using SharpGLTF.Schema2;
@@ -739,6 +740,9 @@ public static partial class AssetProcessor
         return result;
     }
 
+    private static readonly JsonSerializerOptions EncodeJobJsonOptions =
+        new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
     {
         if (Config.IsAssetReuseEnabled())
@@ -810,6 +814,8 @@ public static partial class AssetProcessor
                         normalMapTextures.Contains(normalizedResolved)
                         ? Config.WebpNormalQuantizeBits
                     : null;
+                // Null must be OMITTED, not written: the encoder selects the quantized path on
+                // the key's presence, and a null there means "quantize to null bits".
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
@@ -817,7 +823,7 @@ public static partial class AssetProcessor
                     quality = Config.WebpQuality,
                     dropAlpha,
                     quantizeBits
-                }));
+                }, EncodeJobJsonOptions));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }
             else if (File.Exists(exrPath))

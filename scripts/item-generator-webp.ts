@@ -147,12 +147,33 @@ async function encodeBoth(src: string, quality: number, dropAlpha: boolean) {
 // Alpha is copied through untouched. bits=8 is the identity ladder, which is how a texture asks
 // for a bit-exact lossless encode without opting into min-pick.
 async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
+    // Validated rather than trusted. A bad value here does not fail loudly, it silently ships:
+    // `levels` of 0 divides by zero, the NaN coerces to 0 on the way into a Buffer, and every
+    // texture encodes as solid black in ~200 bytes. That is what a null `quantizeBits` reaching
+    // this function once did to every non-normal in the corpus.
+    if (!Number.isInteger(bits) || bits < 1 || bits > 8) {
+        throw new Error(`quantizeBits must be an integer in 1..8, received ${bits}`);
+    }
     const pipeline = dropAlpha ? sharp(src).removeAlpha() : sharp(src);
     const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
+    // Evenly spaced rungs across the full range, so 0 and 255 map to themselves, PLUS the two
+    // neutral values. A normal map's neutral is 127/128 -- "pointing straight out" -- and on a
+    // uniform 16-rung ladder it falls exactly between rungs (127 -> 119), which tilts every flat
+    // surface in the texture by a uniform ~5 degrees rather than adding noise. Pinning it costs
+    // two extra rungs and nothing measurable in bytes.
     const levels = (1 << bits) - 1;
+    const rungs = new Set<number>([127, 128]);
+    for (let step = 0; step <= levels; step += 1) {
+        rungs.add(Math.round((step * 255) / levels));
+    }
+    const ladder = [...rungs].sort((a, b) => a - b);
     const table = Buffer.alloc(256);
     for (let value = 0; value < 256; value += 1) {
-        table[value] = Math.round((Math.round((value / 255) * levels) * 255) / levels);
+        let best = ladder[0]!;
+        for (const rung of ladder) {
+            if (Math.abs(rung - value) < Math.abs(best - value)) best = rung;
+        }
+        table[value] = best;
     }
     const hasAlpha = info.channels === 4 || info.channels === 2;
     for (let index = 0; index < data.length; index += 1) {
@@ -166,7 +187,8 @@ async function encode({ src, dest, quality, dropAlpha, quantizeBits }: EncodeJob
     try {
         await mkdir(dirname(dest), { recursive: true });
         if (dropAlpha) await assertAlphaIsConstant(src);
-        if (quantizeBits !== undefined) {
+        // Loose inequality on purpose: this must reject null as well as undefined.
+        if (quantizeBits != null) {
             await writeFile(dest, await encodeQuantized(src, quantizeBits, dropAlpha === true));
             console.log(`done ${dest}`);
             return;
