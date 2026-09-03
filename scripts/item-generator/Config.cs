@@ -64,12 +64,31 @@ public static partial class Config
     // are low-entropy, so VP8L both wins on bytes and is bit-exact for them. That is what fixed
     // the pixelated squares on Desert Eagle | Blaze -- its g_tMasks is 27.9 KB lossy vs 10.3 KB
     // lossless. It is NOT a general safety net: a high-entropy texture that a shader still reads
-    // as data (the large paint-by-number masks, most normals) keeps the lossy encode because
-    // VP8L is bigger for it, and keeps this error budget with it.
+    // as data (the large paint-by-number masks) keeps the lossy encode because VP8L is bigger
+    // for it, and keeps this error budget with it. Normal maps are the case where that went
+    // visibly wrong, and they are routed around min-pick entirely; see WebpNormalQuantizeBits.
     //
     // Also used for the SkiaSharp-encoded item images in Catalog/Assets.cs, which are single-path
     // lossy and do not go through min-pick.
     public const int WebpQuality = 95;
+    // Bits per colour channel kept for normal maps, which are quantized onto a 2^n level ladder
+    // and then encoded lossless instead of going through min-pick (see item-generator-webp.ts for
+    // why no lossy setting can serve them, and AssetProcessor.CollectNormalMapTexturePaths for
+    // how they are identified).
+    //
+    // This is the size/fidelity dial for ~5,400 textures, 1.86 GB of the corpus at the lossy
+    // encode they must stop using. Measured over 22 normals, against that baseline:
+    //
+    //   8 bits (bit-exact)     x5.97     7 bits (max err 1)   x3.88
+    //   6 bits (max err 2)     x2.85     5 bits (max err 4)   x2.11
+    //   4 bits (max err 8)     x1.62
+    //
+    // For reference the near-lossless path this replaces was x5.08 at max err 2, so 6 bits is
+    // strictly better than what shipped before this branch. 4 bits is the deliberate choice to
+    // spend fidelity on size: max err 8 is 3.6 degrees of normal tilt, and quantization bias
+    // follows the surface gradient, so the failure mode if it is too aggressive is banding on a
+    // smooth mirror-like surface. Raise this if that shows up.
+    public const int WebpNormalQuantizeBits = 4;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 

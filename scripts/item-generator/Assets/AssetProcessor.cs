@@ -671,6 +671,74 @@ public static partial class AssetProcessor
         Log($"Extracted {FormatCount(processed.Count, "material")} and found {FormatCount(ctx.TexturesToProcess.Count, "texture reference")}.");
     }
 
+    // Texture paths bound to a *Normal* material param, collected from the material graph only:
+    // vmat m_textureParams (g_tNormal, g_tGlitterNormal, g_tDamageNormal1, ...) plus the
+    // composite-material loose variables that per-skin paint normals bind through
+    // (m_strName + m_strTextureRuntimeResourcePath). A declared m_nTextureType of
+    // INPUT_TEXTURE_TYPE_NORMALMAP counts on its own, since it states the role outright.
+    // Membership selects the quantized-lossless path (see Config.WebpNormalQuantizeBits).
+    //
+    // Deliberately has NO filename fallback. Filenames misdescribe the corpus in both
+    // directions: 198 textures bound as g_tNormalRoughnessSticker0 by csgo_weapon_sticker.vfx
+    // are named *_selfillum_mask (their RGB is a flat 127/127/255 normal with roughness packed
+    // into alpha, so the binding is right and the name is wrong), and the only path a "_normal"
+    // stem finds that the graph does not is a 1x1 36-byte default no material references.
+    // Matching the binding gets all 198 and costs nothing.
+    private static HashSet<string> CollectNormalMapTexturePaths(ItemGeneratorContext ctx)
+    {
+        var result = new HashSet<string>();
+
+        void AddResolved(string value)
+        {
+            try
+            {
+                var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, value);
+                result.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
+            }
+            catch { }
+        }
+
+        static bool IsNormalParamName(string name) =>
+            name.Contains("Normal", StringComparison.OrdinalIgnoreCase);
+
+        foreach (var data in ctx.MaterialDataByPath.Values)
+        {
+            if (data is not Dictionary<string, object?> vmat ||
+                !vmat.TryGetValue("m_textureParams", out var paramsObj) ||
+                paramsObj is not List<object?> textureParams)
+                continue;
+            foreach (var entry in textureParams)
+            {
+                if (entry is not Dictionary<string, object?> param ||
+                    param.GetValueOrDefault("m_name") is not string name ||
+                    !IsNormalParamName(name) ||
+                    param.GetValueOrDefault("m_pValue") is not string value)
+                    continue;
+                AddResolved(value);
+            }
+        }
+
+        void WalkLooseVariables(object? node)
+        {
+            if (node is Dictionary<string, object?> dict)
+            {
+                if (dict.GetValueOrDefault("m_strTextureRuntimeResourcePath") is string path &&
+                    path.Length > 0 &&
+                    ((dict.GetValueOrDefault("m_strName") is string name && IsNormalParamName(name)) ||
+                        dict.GetValueOrDefault("m_nTextureType") is "INPUT_TEXTURE_TYPE_NORMALMAP"))
+                    AddResolved(path);
+                foreach (var value in dict.Values) WalkLooseVariables(value);
+            }
+            else if (node is List<object?> list)
+            {
+                foreach (var value in list) WalkLooseVariables(value);
+            }
+        }
+        foreach (var data in ctx.CompositeMaterialDataByPath.Values) WalkLooseVariables(data);
+
+        return result;
+    }
+
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
     {
         if (Config.IsAssetReuseEnabled())
@@ -699,7 +767,9 @@ public static partial class AssetProcessor
             }
             catch { }
         }
-        var syntheticAlphaTextures = TextureCodecPolicy.Collect(ctx, resolvedCompiledPaths);
+        var (rawFourChannelNormals, syntheticAlphaTextures) =
+            TextureCodecPolicy.Collect(ctx, resolvedCompiledPaths);
+        var normalMapTextures = CollectNormalMapTexturePaths(ctx);
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
 
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
@@ -726,12 +796,27 @@ public static partial class AssetProcessor
                 // The game's format for this texture has no alpha channel, so whatever VRF put
                 // in the exported one is its decoder's invention. See TextureCodecPolicy.
                 var dropAlpha = syntheticAlphaTextures.Contains(vpkPath);
+                var normalizedResolved =
+                    MaterialPaths.NormalizeMaterialResourcePath(resolvedVtexPath);
+                // A raw four-channel normal is packed data, not a vector: its channels are a
+                // hemi-octahedral pair and an anisotropic roughness pair, decoded non-linearly
+                // downstream, so quantizing the stored value perturbs the decoded normal by an
+                // unbounded amount. Those take the identity ladder -- bit-exact lossless, and
+                // still out of min-pick, whose lossy candidate would wreck them. See
+                // TextureCodecPolicy.
+                int? quantizeBits =
+                    rawFourChannelNormals.Contains(vpkPath) ? 8
+                    : normalMapTextures.Contains(vtexPath) ||
+                        normalMapTextures.Contains(normalizedResolved)
+                        ? Config.WebpNormalQuantizeBits
+                    : null;
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
                     dest = stagedPath,
                     quality = Config.WebpQuality,
-                    dropAlpha
+                    dropAlpha,
+                    quantizeBits
                 }));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }

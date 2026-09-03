@@ -108,8 +108,8 @@ public static class TextureCodecPolicy
     }
 
     /// <summary>
-    /// The subset of <paramref name="vpkPaths"/>, as normalized VPK paths, that
-    /// <see cref="HasSyntheticAlpha"/> holds for.
+    /// The subsets of <paramref name="vpkPaths"/>, as normalized VPK paths, that
+    /// <see cref="IsRawFourChannelNormal"/> and <see cref="HasSyntheticAlpha"/> hold for.
     ///
     /// Deliberately re-reads the vtex_c headers rather than recording what
     /// <see cref="ResourceDecompiler"/> saw: decompilation skips textures already present in the
@@ -120,16 +120,17 @@ public static class TextureCodecPolicy
     /// Costs one extra pass over the vtex_c entries. Reading is ordered by (archive, offset) so
     /// that pass stays sequential, and only the headers are parsed -- no pixels are decoded.
     /// </summary>
-    public static HashSet<string> Collect(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
+    public static (HashSet<string> RawFourChannelNormals, HashSet<string> SyntheticAlpha) Collect(
+        ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
         var package = ctx.VpkPackage;
-        if (package == null) return [];
+        if (package == null) return ([], []);
 
         var work = vpkPaths
             .Select(p => (VpkPath: p, Entry: package.FindEntry(p)))
             .Where(t => t.Entry != null)
             .ToArray();
-        if (work.Length == 0) return [];
+        if (work.Length == 0) return ([], []);
 
         Array.Sort(work, static (a, b) =>
         {
@@ -140,6 +141,7 @@ public static class TextureCodecPolicy
         // Entries inlined in pak01_dir.vpk (ArchiveIndex 0x7FFF) share Package.Reader's base
         // stream and seek on it, so they cannot be read concurrently.
         var dirVpkLock = new object();
+        var rawFourChannelNormals = new ConcurrentBag<string>();
         var syntheticAlpha = new ConcurrentBag<string>();
         var po = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount) };
 
@@ -160,10 +162,12 @@ public static class TextureCodecPolicy
             using var resource = new Resource();
             resource.FileName = vpkPath;
             resource.Read(new MemoryStream(data));
+            if (IsRawFourChannelNormal(resource))
+                rawFourChannelNormals.Add(vpkPath);
             if (HasSyntheticAlpha(resource))
                 syntheticAlpha.Add(vpkPath);
         });
 
-        return [.. syntheticAlpha];
+        return ([.. rawFourChannelNormals], [.. syntheticAlpha]);
     }
 }

@@ -36,6 +36,36 @@
 //   what the workdir already had. Ties go to lossy, so the choice is total.
 //
 //   Cost: a second encode per texture. See the timing note in encode().
+// - `quantizeBits` overrides min-pick for normal maps, which min-pick cannot serve. A normal's
+//   three channels are an independent vector, not a color, and lossy VP8 is YUV 4:2:0 -- so the
+//   chroma planes carry X and Y at half resolution and the downsample/upsample shifts local means.
+//   Measured on ak47_normal that biases 923 of 16,384 blocks by up to 4 levels; on
+//   ak47_autoexec_camo_normal, 6,284 of 16,384. Every biased block mirrors a slightly different
+//   patch of the environment, which renders as the square mosaic on AK-47 | AUTOEXEC's blue paint.
+//
+//   Quality does not fix it, because it is resolution loss and not quantization: at q100 the
+//   count only falls to 703 and 4,503 for 1.6x and 1.4x the bytes, with the bias unchanged at
+//   ~4 levels. Any chroma-free encode sits at 0 biased blocks -- the same encoder at the same
+//   quality, fed one channel at a time as grayscale, measures maxerr 6/7/8 against 91/54/45.
+//   Min-pick cannot reach one: VP8L is 4-6x the lossy size for a dithered normal, so lossy wins
+//   on bytes every time and ships the mosaic with it.
+//
+//   So normals skip the comparison and take a fixed path: quantize the LSB dither away, then
+//   VP8L. The dither is what makes a normal incompressible losslessly, and dropping it is what
+//   buys back the size -- 4 bits per channel lands at 1.6x lossy, against 5.1x for the
+//   near-lossless path this replaces (measured over 22 normals). Endpoints are preserved (the
+//   ladder is round(v/255*(L-1)) * 255/(L-1), so 0 and 255 map to themselves), which matters
+//   because flat normal regions sit at exactly 255 and the default normal is (127,127,255):
+//   against a plain bit-mask that halves the residual bias for free.
+//
+//   The tradeoff is a different artifact, not the absence of one. Quantization error follows the
+//   surface's own gradients rather than a 16px grid, so it reads as banding instead of mosaic,
+//   and at 4 bits a block's mean can shift by 8 levels (3.6 degrees of normal tilt). That is
+//   larger than the lossy bias it replaces; it is preferred because it is not lattice-aligned.
+//   Raising Config.WebpNormalQuantizeBits is the knob if banding shows up on a mirror surface.
+//
+//   Alpha is never quantized. A sticker's g_tNormalRoughnessSticker0 packs roughness into it,
+//   and a shader reads that as data.
 // - `exact` must stay on: 9,422 textures (2.4 GB) still carry a genuine varying alpha with
 //   fully-transparent pixels, and shader logic reads the RGB underneath. Dropping alpha where
 //   the game format has none did not retire this — it only removed the fabricated planes.
@@ -58,6 +88,7 @@ interface EncodeJob {
     dest: string;
     quality: number;
     dropAlpha?: boolean;
+    quantizeBits?: number;
 }
 
 const manifestPath = process.argv[2];
@@ -112,10 +143,34 @@ async function encodeBoth(src: string, quality: number, dropAlpha: boolean) {
     return { lossy, lossless };
 }
 
-async function encode({ src, dest, quality, dropAlpha }: EncodeJob) {
+// Quantize each colour channel onto a ladder of 2^bits evenly spaced levels, then encode VP8L.
+// Alpha is copied through untouched. bits=8 is the identity ladder, which is how a texture asks
+// for a bit-exact lossless encode without opting into min-pick.
+async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
+    const pipeline = dropAlpha ? sharp(src).removeAlpha() : sharp(src);
+    const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
+    const levels = (1 << bits) - 1;
+    const table = Buffer.alloc(256);
+    for (let value = 0; value < 256; value += 1) {
+        table[value] = Math.round((Math.round((value / 255) * levels) * 255) / levels);
+    }
+    const hasAlpha = info.channels === 4 || info.channels === 2;
+    for (let index = 0; index < data.length; index += 1) {
+        if (hasAlpha && index % info.channels === info.channels - 1) continue;
+        data[index] = table[data[index]!]!;
+    }
+    return sharp(data, { raw: info }).webp({ lossless: true, quality: 100, exact: true }).toBuffer();
+}
+
+async function encode({ src, dest, quality, dropAlpha, quantizeBits }: EncodeJob) {
     try {
         await mkdir(dirname(dest), { recursive: true });
         if (dropAlpha) await assertAlphaIsConstant(src);
+        if (quantizeBits !== undefined) {
+            await writeFile(dest, await encodeQuantized(src, quantizeBits, dropAlpha === true));
+            console.log(`done ${dest}`);
+            return;
+        }
         const { lossy, lossless } = await encodeBoth(src, quality, dropAlpha === true);
         // Ties go to lossy: it is the status quo, and preferring it keeps the winner stable for
         // any texture where the two happen to land on the same byte count.
