@@ -116,6 +116,38 @@ public static partial class Config
     // the one place alpha is a genuine gradient -- a sticker's transparency ramp, where the
     // failure mode if this is too aggressive is banding on a soft edge. Raise it if that shows up.
     public const int WebpAlphaQuantizeBits = 5;
+    // Floor and budget for the per-texture quality search that re-rates a lossy min-pick winner.
+    // `WebpQuality` sets what a texture may spend; these decide whether spending it buys anything
+    // on THAT texture. See item-generator-webp.ts for the mechanism and for why the search runs
+    // after min-pick rather than before it.
+    //
+    // This is the size/fidelity dial for the ~11,900 textures that ship a lossy encode, 3.48 GB of
+    // the 6.10 GB corpus. Measured over a 42-texture sample stratified by size rank, against
+    // their q95 bytes:
+    //
+    //   tolerance 5%    88.7%  (26 of 42 stay at full quality)
+    //   tolerance 10%   75.9%  (15 of 42)
+    //   tolerance 15%   70.5%  (13 of 42)
+    //   tolerance 20%   68.8%  (12 of 42)
+    //
+    // Confirmed on an unbiased 112-texture random sample at 10%: 22.7% of the lossy bytes, with
+    // 25 of 112 left at full quality, and no texture over budget (worst distortion ratio 1.100).
+    //
+    // 10% is the deliberate pick: it is where the curve turns over, and the textures it moves are
+    // the ones whose q95 error is dominated by 4:2:0 chroma subsampling -- which quality does not
+    // control, so the quality points were buying them a rounding difference on an error they
+    // already carry. Past 10% the rule starts taking bits from clean colour textures, where they
+    // buy real fidelity, for a few more points of size.
+    //
+    // The tolerance is RELATIVE, so a texture that q95 already encodes cleanly is held to a tight
+    // budget and a distorted one to a loose one. `WebpDistortionCeiling` bounds the loose end in
+    // absolute levels, so an already-damaged texture cannot be damaged without limit; at 10% it
+    // binds only above an RMSE of 20, which in this corpus is the large paint-by-number masks.
+    // Both are what to raise if a lossy texture looks soft, and `WebpQualityFloor` is what to
+    // raise if one looks blocky.
+    public const int WebpQualityFloor = 70;
+    public const double WebpDistortionTolerance = 0.10;
+    public const double WebpDistortionCeiling = 2.0;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 

@@ -820,6 +820,14 @@ public static partial class AssetProcessor
                 // verbatim; see item-generator-webp.ts.
                 int? alphaQuantizeBits =
                     quantizeBits == null ? Config.WebpAlphaQuantizeBits : null;
+                // Same gate as the alpha ladder, for the same reason: only a min-pick texture has
+                // a lossy encode to re-rate. A quantized one is already lossless, and the search
+                // has nothing to trade.
+                int? qualityFloor = quantizeBits == null ? Config.WebpQualityFloor : null;
+                double? distortionTolerance =
+                    quantizeBits == null ? Config.WebpDistortionTolerance : null;
+                double? distortionCeiling =
+                    quantizeBits == null ? Config.WebpDistortionCeiling : null;
                 // Null must be OMITTED, not written: the encoder selects the quantized path on
                 // the key's presence, and a null there means "quantize to null bits".
                 manifestLines.Add(JsonSerializer.Serialize(new
@@ -829,7 +837,10 @@ public static partial class AssetProcessor
                     quality = Config.WebpQuality,
                     dropAlpha,
                     quantizeBits,
-                    alphaQuantizeBits
+                    alphaQuantizeBits,
+                    qualityFloor,
+                    distortionTolerance,
+                    distortionCeiling
                 }, EncodeJobJsonOptions));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }

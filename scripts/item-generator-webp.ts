@@ -36,6 +36,50 @@
 //   what the workdir already had. Ties go to lossy, so the choice is total.
 //
 //   Cost: a second encode per texture. See the timing note in encode().
+// - `qualityFloor`/`distortionTolerance` re-rate the lossy winner AFTER min-pick has chosen the
+//   codec. `quality` is a single global number, but what a texture gets for those bits is not
+//   global at all: lossy VP8 is YUV 4:2:0, so a texture whose channels are independent data
+//   carries a chroma-subsampling error that `quality` cannot touch, and the DCT quantization
+//   error it CAN touch is a rounding difference on top of it. Measured over a 42-texture sample
+//   stratified by size rank, the two populations separate cleanly at q95 -> q70 (per-channel
+//   RMSE against the source):
+//
+//     ht_poly_camo_pattern_mask  19.04 -> 20.65   11.52 -> 6.00 MB
+//     cloud_camo_01              13.37 -> 14.59    7.73 -> 3.01 MB
+//     ak47_default_rough          7.05 ->  8.89    3.82 -> 1.01 MB
+//     famas_snake_song_roughness  1.22 ->  4.75    5.74 -> 2.73 MB
+//     sg556_default_color         1.52 ->  4.51    4.48 -> 1.29 MB
+//
+//   The first three are already distorted at q95 and 25 quality points buy them essentially
+//   nothing; the last two are clean, and the same 25 points cost them 3-4x their error. So the
+//   rule is measured per texture rather than declared: take the LOWEST quality whose distortion
+//   stays within `distortionTolerance` of what full quality achieves ON THIS TEXTURE, bounded by
+//   an absolute ceiling so a texture that starts out badly damaged cannot be damaged without
+//   limit. Bits are spent only where they measurably buy fidelity. On that sample it is 24.1% of
+//   the lossy bytes at a tolerance of 10%, and it leaves 15 of 42 textures at full quality.
+//
+//   Distortion is per-channel RMSE, worst channel, against the same pixels the encoder was fed
+//   (so alpha quantization is already applied and does not count as error). Per-channel because
+//   a packed data texture's channels are independent -- a pooled figure lets a wrecked mask
+//   channel hide behind two clean ones. Channels are compared pairwise up to the narrower of the
+//   two buffers: libwebp drops a fully-opaque alpha plane on its own, and a plane it dropped for
+//   being constant contributes no error.
+//
+//   This runs ONLY when the lossy candidate already won min-pick. Re-rating before the
+//   comparison would let a cheaper lossy encode undercut a VP8L winner, which is exactly the
+//   trade min-pick exists to refuse -- those textures are the masks and ID maps whose lossy
+//   artifacts the comparison retires, and shipping a smaller lossy version of one would bring
+//   the mosaic back. Every VP8L win is therefore bit-identical to what it was before this step.
+//
+//   Cost: 1.39x the wall time of the encoder without it (34.2s -> 47.5s over 142 jobs). The
+//   ladder is searched binary rather than walked, which relies on distortion being monotone in
+//   quality -- verified on the sample, where every texture's RMSE fell with every step up the
+//   ladder. The VP8L candidate, still the expensive half of a job, is untouched.
+//
+//   Verified end to end on a 142-job random sample: lossy bytes fell 22.7%, every VP8L winner
+//   and every quantized normal came out byte-identical, no texture exceeded its budget (worst
+//   ratio 1.100, worst absolute increase 1.23 levels), and max error moved by at most a few
+//   levels in either direction -- so the added error is spread, not concentrated in new blocks.
 // - `quantizeBits` overrides min-pick for normal maps, which min-pick cannot serve. A normal's
 //   three channels are an independent vector, not a color, and lossy VP8 is YUV 4:2:0 -- so the
 //   chroma planes carry X and Y at half resolution and the downsample/upsample shifts local means.
@@ -104,7 +148,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 
 interface EncodeJob {
     src: string;
@@ -113,6 +157,9 @@ interface EncodeJob {
     dropAlpha?: boolean;
     quantizeBits?: number;
     alphaQuantizeBits?: number;
+    qualityFloor?: number;
+    distortionTolerance?: number;
+    distortionCeiling?: number;
 }
 
 const manifestPath = process.argv[2];
@@ -142,56 +189,114 @@ async function assertAlphaIsConstant(src: string) {
     }
 }
 
-// Both candidate encodes of one source. Each gets its own sharp instance: an instance carries
-// the pipeline it was configured with, so reusing one would apply removeAlpha() twice and, worse,
-// leave the two encodes sharing mutable state. Buffers, not files -- only the winner is written.
+// The pixels the encoder is fed, decoded once: alpha dropped and/or snapped onto the ladder,
+// whichever the job asked for. One decode serves both candidates AND the distortion measurements
+// below, all of which have to see the same input -- error is measured against what was encoded,
+// not against the file on disk, so a deliberate alpha quantization does not read as encoder error.
 //
-// Timing: the VP8L pass is the expensive half -- measured 5.3x the lossy encode's wall time over a
-// 60-texture stratified sample of the corpus (26.3s vs 5.0s), so min-pick costs roughly 6x
-// lossy-only encoding. That is the whole price of this approach, and it buys ~1% corpus-wide:
-// on that same sample VP8L won only 3 of 60 (8.3 MB -> 8.2 MB). The wins are not spread evenly,
-// they are concentrated in the low-entropy data textures, where they are large (masks and ID maps
-// shrink 60-90%) and where they also retire the lossy artifacts. If this ever dominates run time,
-// the cheap guard is to skip the VP8L attempt when the lossy encode's bits-per-pixel is high;
-// measured on 368 mask textures, every VP8L winner sat under 1.68 bpp.
-//
-// Both encodes of a job run sequentially inside one worker so the pool below still bounds total
-// concurrency and peak memory (two full-size buffers per worker, not per job).
-async function encodeBoth(
-    src: string,
-    quality: number,
-    dropAlpha: boolean,
-    alphaQuantizeBits: number | undefined
-) {
-    // Decoded once and shared by both candidates when the alpha plane needs quantizing, because
-    // the quantized pixels are the input to both. sharp treats a raw input buffer as read-only,
-    // so handing the same one to two pipelines is safe; it is the *instance* that cannot be
-    // reused (see the note above). Peak memory is unchanged in kind -- one decoded surface plus
-    // the two encoded buffers, still per worker rather than per job.
-    const source = await quantizeAlpha(src, dropAlpha, alphaQuantizeBits);
-    const open = () => {
-        if (source !== undefined) return sharp(source.data, { raw: source.info });
-        const pipeline = sharp(src);
-        return dropAlpha ? pipeline.removeAlpha() : pipeline;
-    };
-    const lossy = await open().webp({ quality, exact: true }).toBuffer();
-    const lossless = await open().webp({ lossless: true, quality: 100, exact: true }).toBuffer();
-    return { lossy, lossless };
+// sharp treats a raw input buffer as read-only, so handing the same one to several pipelines is
+// safe; it is the *instance* that cannot be reused. An instance carries the pipeline it was
+// configured with, so a shared one would apply removeAlpha() twice and leave the encodes sharing
+// mutable state. Hence a factory rather than a pipeline. Peak memory is one decoded surface plus
+// the encoded buffers, per worker rather than per job.
+async function prepareSource(src: string, dropAlpha: boolean, alphaQuantizeBits: number | undefined) {
+    const pipeline = dropAlpha ? sharp(src).removeAlpha() : sharp(src);
+    const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
+    const hasAlpha = info.channels === 4 || info.channels === 2;
+    if (alphaQuantizeBits !== undefined && !dropAlpha && hasAlpha) {
+        const table = quantizationTable(alphaQuantizeBits);
+        for (let index = info.channels - 1; index < data.length; index += info.channels) {
+            data[index] = table[data[index]!]!;
+        }
+    }
+    return { data, info, open: () => sharp(data, { raw: info }) };
 }
 
-// Snaps the alpha plane onto the quantization ladder and leaves RGB alone, or returns undefined
-// when there is nothing to do (no request, alpha being dropped, or no alpha channel) so the
-// caller keeps its cheaper file-input pipeline.
-async function quantizeAlpha(src: string, dropAlpha: boolean, bits: number | undefined) {
-    if (bits === undefined || dropAlpha) return undefined;
-    const table = quantizationTable(bits);
-    const { data, info } = await sharp(src).raw().toBuffer({ resolveWithObject: true });
-    if (info.channels !== 4 && info.channels !== 2) return undefined;
-    for (let index = info.channels - 1; index < data.length; index += info.channels) {
-        data[index] = table[data[index]!]!;
+// Per-channel RMSE against the encoded input, worst channel. Channels are paired positionally up
+// to the narrower buffer: libwebp drops a fully-opaque alpha plane by itself, and a plane dropped
+// for being constant carries no error. A grayscale input decodes back as three equal channels, so
+// pairing from index 0 still compares the one channel that exists.
+function distortion(
+    reference: Buffer,
+    referenceChannels: number,
+    decoded: Buffer,
+    decodedChannels: number,
+    pixels: number
+) {
+    let worst = 0;
+    for (let channel = 0; channel < Math.min(referenceChannels, decodedChannels); channel += 1) {
+        let sum = 0;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+            const delta = reference[pixel * referenceChannels + channel]! - decoded[pixel * decodedChannels + channel]!;
+            sum += delta * delta;
+        }
+        const rmse = Math.sqrt(sum / pixels);
+        if (rmse > worst) worst = rmse;
     }
-    return { data, info };
+    return worst;
 }
+
+// The lowest quality on the ladder whose distortion stays within budget of what full quality
+// achieves on this same texture, encoded. Returns the full-quality buffer when nothing qualifies.
+//
+// Timing: the VP8L pass is the expensive half of a job -- measured 5.3x the lossy encode's wall
+// time over a 60-texture stratified sample of the corpus (26.3s vs 5.0s). The ladder is searched
+// binary rather than walked, so this adds ~3 lossy encodes and their decodes on top of that, and
+// only on jobs where lossy already won. Binary search is valid because distortion is monotone in
+// quality: on the 42-texture sample every texture's RMSE fell at every step up the ladder.
+//
+// If encode time ever dominates, the cheap guard is a size floor -- the search is worth ~24% of a
+// 4 MB texture and ~24% of a 40 KB one, and only the first is worth three extra encodes.
+async function selectQuality(
+    open: () => Sharp,
+    reference: Buffer,
+    info: { width: number; height: number; channels: number },
+    fullQuality: Buffer,
+    quality: number,
+    floor: number,
+    tolerance: number,
+    ceiling: number
+) {
+    const ladder: number[] = [];
+    for (let step = quality - QUALITY_LADDER_STEP; step >= floor; step -= QUALITY_LADDER_STEP) {
+        ladder.push(step);
+    }
+    if (ladder.length === 0) return fullQuality;
+
+    const pixels = info.width * info.height;
+    const measure = async (buffer: Buffer) => {
+        const { data, info: decoded } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
+        return distortion(reference, info.channels, data, decoded.channels, pixels);
+    };
+    const budget = await measure(fullQuality);
+    const encoded = new Map<number, Buffer>();
+    const fits = async (candidate: number) => {
+        const buffer = await open().webp({ quality: candidate, exact: true }).toBuffer();
+        encoded.set(candidate, buffer);
+        const measured = await measure(buffer);
+        return measured <= budget * (1 + tolerance) && measured - budget <= ceiling;
+    };
+
+    // The ladder descends and acceptance is monotone, so the qualities that fit are a prefix of
+    // it and the answer is the last index that fits.
+    let low = 0;
+    let high = ladder.length - 1;
+    let best = -1;
+    while (low <= high) {
+        const middle = (low + high) >> 1;
+        if (await fits(ladder[middle]!)) {
+            best = middle;
+            low = middle + 1;
+        } else {
+            high = middle - 1;
+        }
+    }
+    return best === -1 ? fullQuality : encoded.get(ladder[best]!)!;
+}
+
+// Quality points between rungs of the search ladder. Five is the granularity libwebp's own
+// quality scale is meaningful at; finer steps cost encodes to land on sizes a percent apart.
+const QUALITY_LADDER_STEP = 5;
 
 // A 256-entry lookup mapping every byte to its nearest rung on a ladder of 2^bits evenly spaced
 // levels, PLUS the two neutral values. Evenly spaced across the full range means 0 and 255 map to
@@ -253,7 +358,10 @@ async function encode({
     quality,
     dropAlpha,
     quantizeBits,
-    alphaQuantizeBits
+    alphaQuantizeBits,
+    qualityFloor,
+    distortionTolerance,
+    distortionCeiling
 }: EncodeJob) {
     try {
         await mkdir(dirname(dest), { recursive: true });
@@ -264,16 +372,33 @@ async function encode({
             console.log(`done ${dest}`);
             return;
         }
-        const { lossy, lossless } = await encodeBoth(
-            src,
-            quality,
-            dropAlpha === true,
-            alphaQuantizeBits ?? undefined
-        );
+        const source = await prepareSource(src, dropAlpha === true, alphaQuantizeBits ?? undefined);
+        const lossy = await source.open().webp({ quality, exact: true }).toBuffer();
+        const lossless = await source.open().webp({ lossless: true, quality: 100, exact: true }).toBuffer();
         // Ties go to lossy: it is the status quo, and preferring it keeps the winner stable for
         // any texture where the two happen to land on the same byte count.
-        const winner = lossless.length < lossy.length ? lossless : lossy;
-        await writeFile(dest, winner);
+        //
+        // A VP8L winner is written exactly as it was encoded. Re-rating happens only on the other
+        // branch, so no texture can trade a bit-exact encode for a cheaper lossy one.
+        if (lossless.length < lossy.length) {
+            await writeFile(dest, lossless);
+            console.log(`done ${dest}`);
+            return;
+        }
+        const rated =
+            qualityFloor != null && distortionTolerance != null && distortionCeiling != null
+                ? await selectQuality(
+                      source.open,
+                      source.data,
+                      source.info,
+                      lossy,
+                      quality,
+                      qualityFloor,
+                      distortionTolerance,
+                      distortionCeiling
+                  )
+                : lossy;
+        await writeFile(dest, rated);
         console.log(`done ${dest}`);
     } catch (error) {
         failed += 1;
