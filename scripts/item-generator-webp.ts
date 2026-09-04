@@ -260,14 +260,20 @@ function distortion(
 // makes the ladder below it reachable, and anchoring it at the comparison quality would hold every
 // texture to a budget measured on an encode none of them ship.
 //
+// Returns the QUALITY, not the buffer: every encode in here is a probe at WEBP_EFFORT_CANDIDATE
+// and none of them ship, so the caller re-encodes the answer once at WEBP_EFFORT_SHIP. Effort does
+// not move the decision -- it changes how hard the encoder searches at a given quality, not the
+// quantization the distortion is measured against -- so probing cheap and shipping expensive picks
+// the same rung.
+//
 // Timing: the VP8L pass is the expensive half of a job -- measured 5.3x the lossy encode's wall
 // time over a 60-texture stratified sample of the corpus (26.3s vs 5.0s). The ladder is searched
 // binary rather than walked, so this adds ~3 lossy encodes and their decodes on top of that, and
 // only on jobs where lossy already won. Binary search is valid because distortion is monotone in
 // quality: on the 42-texture sample every texture's RMSE fell at every step up the ladder.
 //
-// If encode time ever dominates, the cheap guard is a size floor -- the search is worth ~24% of a
-// 4 MB texture and ~24% of a 40 KB one, and only the first is worth three extra encodes.
+// If encode time ever dominates further, the cheap guard is a size floor -- the search is worth
+// ~24% of a 4 MB texture and ~24% of a 40 KB one, and only the first is worth three extra encodes.
 async function selectQuality(
     open: () => Sharp,
     reference: Buffer,
@@ -277,24 +283,21 @@ async function selectQuality(
     tolerance: number,
     distortionCeiling: number
 ) {
-    const atCeiling = await open().webp({ quality: qualityCeiling, exact: true, effort: WEBP_EFFORT }).toBuffer();
     const ladder: number[] = [];
     for (let step = qualityCeiling - QUALITY_LADDER_STEP; step >= floor; step -= QUALITY_LADDER_STEP) {
         ladder.push(step);
     }
-    if (ladder.length === 0) return atCeiling;
+    if (ladder.length === 0) return qualityCeiling;
 
+    const probe = (quality: number) => open().webp({ quality, exact: true, effort: WEBP_EFFORT_CANDIDATE }).toBuffer();
     const pixels = info.width * info.height;
     const measure = async (buffer: Buffer) => {
         const { data, info: decoded } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
         return distortion(reference, info.channels, data, decoded.channels, pixels);
     };
-    const budget = await measure(atCeiling);
-    const encoded = new Map<number, Buffer>();
+    const budget = await measure(await probe(qualityCeiling));
     const fits = async (candidate: number) => {
-        const buffer = await open().webp({ quality: candidate, exact: true, effort: WEBP_EFFORT }).toBuffer();
-        encoded.set(candidate, buffer);
-        const measured = await measure(buffer);
+        const measured = await measure(await probe(candidate));
         return measured <= budget * (1 + tolerance) && measured - budget <= distortionCeiling;
     };
 
@@ -312,43 +315,66 @@ async function selectQuality(
             high = middle - 1;
         }
     }
-    return best === -1 ? atCeiling : encoded.get(ladder[best]!)!;
+    return best === -1 ? qualityCeiling : ladder[best]!;
 }
 
 // Quality points between rungs of the search ladder. Five is the granularity libwebp's own
 // quality scale is meaningful at; finer steps cost encodes to land on sizes a percent apart.
 const QUALITY_LADDER_STEP = 5;
 
-// libwebp's compression effort, on every encode in this file. 6 buys ~1.5% of the LOSSY bytes for
-// more encoder time; it buys the VP8L candidate nothing, because sharp maps `effort` to the VP8
-// method only and a lossless encode at `quality: 100` already runs libwebp's most expensive path
-// (measured over 40 VP8L winners: every one byte-identical at effort 4 and 6).
+// libwebp's compression effort, split by what the encode is FOR. Effort is worth real bytes and
+// costs a great deal of time, so it is spent only on the encode whose bytes actually ship.
 //
-// That asymmetry is one of the two reasons WEBP_LOSSLESS_MARGIN exists. See there.
-const WEBP_EFFORT = 6;
+// Measured on a 14-texture sample drawn probability-proportional-to-size across the whole job
+// manifest (single-threaded seconds, effort 4 -> 6):
+//
+//   lossy encode      6.3s -> 61.5s   (10x)      lossless encode  31.4s -> 189.9s  (6x)
+//
+// against what those seconds buy, on 16 textures sampled the same way:
+//
+//   quantized VP8L (normals)  92.4%      lossy  94.4%      min-pick lossless candidate  99.4%
+//
+// Most of a job's encodes are throwaway: the two min-pick candidates exist to pick a codec, and
+// every rung of the search ladder but one is discarded. Running those at 6 was measured at ~19
+// hours for the 19,049-job corpus, with the large majority of it spent on bytes nobody ships.
+//
+// So: candidates and ladder rungs at 4, and one final encode of the winner at 6. The quantized
+// path has no candidates -- its single encode ships -- so it runs at 6 throughout, and it is where
+// effort pays best anyway (7.6% of 2.53 GiB of normals).
+//
+// Set both to 4 if run time matters more than ~265 MiB of corpus; nothing else has to change.
+const WEBP_EFFORT_CANDIDATE = 4;
+const WEBP_EFFORT_SHIP = 6;
 
 // How much larger the VP8L candidate may be and still win min-pick.
 //
 // Without it, every knob that makes the lossy candidate cheaper is a one-directional thumb on a
-// scale that decides FIDELITY, not just size. WEBP_EFFORT shrinks only the lossy side (~1.5%), and
-// the alpha ladder shrinks it faster than the lossless side too -- VP8L carries alpha inside its
-// own entropy coding, where a shallower ladder buys much less than it does in a separate ALPH
-// chunk. Between them they move a near-tie by 5-6%: sig_karrigan_glitter_mask goes from 0.972 to
-// 1.054 lossless/lossy purely from settings, with its pixels unchanged. Measured on 60 of the
-// non-normal VP8L winners, 5 cross to lossy on that alone -- and those winners are the masks and
-// ID maps whose lossy artifacts min-pick was built to retire, so the flips land exactly where
-// they hurt.
+// scale that decides FIDELITY, not just size. The alpha ladder is one: it shrinks a separate ALPH
+// chunk faster than it shrinks alpha carried inside VP8L's own entropy coding, so taking it from 5
+// bits to 4 moves near-ties toward lossy with the pixels unchanged. Measured on 40 of the
+// non-normal VP8L winners, that alone crosses one of them -- and those winners are the masks and
+// ID maps whose lossy artifacts min-pick was built to retire, so a flip lands exactly where it
+// hurts. Running the candidates at different efforts would be another such thumb, which is why
+// both are encoded at WEBP_EFFORT_CANDIDATE; at effort 6 on both, five of those 40 cross instead.
 //
-// 6% is measured, not guessed, and it is cheap because the two populations barely overlap. Across
-// those 60 VP8L winners the ratio distribution runs 0.015 to 1.050, with only five files above
-// 1.00; a 6% margin keeps all 60 bit-exact for 13,490 total bytes. Across 60 of today's LOSSY
-// winners the smallest ratio is 1.32 -- lossless is never within reach for a texture that genuinely
-// wants VP8 -- so the margin costs that population exactly nothing. It binds only on near-ties, and
-// near-ties belong on the bit-exact side of the line.
+// The ladder can also make a VP8L candidate BIGGER, which is the same thumb pressing harder.
+// sig_z4kr_holo_color goes 155,244 -> 179,492 bytes lossless when its alpha is snapped, while its
+// lossy candidate shrinks -- a 0.948 -> 1.169 swing in the ratio from a change to neither codec.
+// (Dropping the ladder from the lossless path is not the answer: measured over 60 VP8L winners it
+// makes them 18.2% bigger in aggregate, larger on 48 of 60, and flips 26 of 60. The holo textures
+// are the minority case, so the ladder stays and the margin absorbs them.)
+//
+// 25% is measured, not guessed, and it is nearly free because the two populations are bimodal with
+// a wide gap between them. Across 60 VP8L winners the ratio runs 0.015 to 1.179 -- 57 of them below
+// 0.99, then nothing until three holo textures at 1.169-1.179. Across 60 of today's LOSSY winners
+// the SMALLEST ratio is 1.379; lossless is never within reach for a texture that genuinely wants
+// VP8. So anything in (1.18, 1.38) separates the populations perfectly, and the margin costs the
+// lossy population exactly nothing: keeping all 60 VP8L winners bit-exact costs 76,758 bytes in
+// total, all of it on the three holo files.
 //
 // Raise it if a future knob makes lossy cheaper again and masks start flipping; the cost of raising
 // it is bounded by the margin itself, on files that are small by construction.
-const WEBP_LOSSLESS_MARGIN = 1.06;
+const WEBP_LOSSLESS_MARGIN = 1.25;
 
 // A 256-entry lookup mapping every byte to its nearest rung on a ladder of 2^bits evenly spaced
 // levels, PLUS the two neutral values. Evenly spaced across the full range means 0 and 255 map to
@@ -402,7 +428,7 @@ async function encodeQuantized(src: string, bits: number, dropAlpha: boolean) {
         data[index] = table[data[index]!]!;
     }
     return sharp(data, { raw: info })
-        .webp({ lossless: true, quality: 100, exact: true, effort: WEBP_EFFORT })
+        .webp({ lossless: true, quality: 100, exact: true, effort: WEBP_EFFORT_SHIP })
         .toBuffer();
 }
 
@@ -428,21 +454,26 @@ async function encode({
             return;
         }
         const source = await prepareSource(src, dropAlpha === true, alphaQuantizeBits ?? undefined);
-        // The comparison candidate is encoded at `quality`, NOT at `qualityCeiling`. It exists to
-        // pick a codec, not to ship: a cheaper lossy candidate wins min-pick more often, and the
-        // textures it would win are the masks whose lossy artifacts min-pick exists to retire.
-        const lossy = await source.open().webp({ quality, exact: true, effort: WEBP_EFFORT }).toBuffer();
+        // Both candidates exist to pick a codec, not to ship, so both are probes: encoded at
+        // `quality` rather than `qualityCeiling`, and at WEBP_EFFORT_CANDIDATE rather than the
+        // shipping effort. A cheaper lossy candidate wins min-pick more often, and the textures it
+        // would win are the masks whose lossy artifacts min-pick exists to retire -- so neither
+        // knob is allowed to make one side of the comparison cheaper than it was.
+        const lossy = await source.open().webp({ quality, exact: true, effort: WEBP_EFFORT_CANDIDATE }).toBuffer();
         const lossless = await source
             .open()
-            .webp({ lossless: true, quality: 100, exact: true, effort: WEBP_EFFORT })
+            .webp({ lossless: true, quality: 100, exact: true, effort: WEBP_EFFORT_CANDIDATE })
             .toBuffer();
         // Ties, and near-ties inside WEBP_LOSSLESS_MARGIN, go to lossless -- it is bit-exact, and
-        // the margin is what keeps WEBP_EFFORT from walking marginal textures across the line on
-        // its own. See WEBP_LOSSLESS_MARGIN.
+        // the margin is what keeps the alpha ladder from walking marginal textures across the line.
+        // See WEBP_LOSSLESS_MARGIN.
         //
         // A VP8L winner is written exactly as it was encoded. Re-rating happens only on the other
         // branch, so no texture can trade a bit-exact encode for a cheaper lossy one.
         if (lossless.length <= lossy.length * WEBP_LOSSLESS_MARGIN) {
+            // Not re-encoded at WEBP_EFFORT_SHIP: effort is worth only ~0.6% to a lossless encode,
+            // against ~6x its time. It is the one place the probe/ship split does not pay, so the
+            // probe is written as-is and a VP8L winner stays exactly what min-pick saw.
             await writeFile(dest, lossless);
             console.log(`done ${dest}`);
             return;
@@ -458,8 +489,12 @@ async function encode({
                       distortionTolerance,
                       distortionCeiling
                   )
-                : lossy;
-        await writeFile(dest, rated);
+                : quality;
+        // The only lossy encode that ships, and the only one that pays for WEBP_EFFORT_SHIP.
+        await writeFile(
+            dest,
+            await source.open().webp({ quality: rated, exact: true, effort: WEBP_EFFORT_SHIP }).toBuffer()
+        );
         console.log(`done ${dest}`);
     } catch (error) {
         failed += 1;
