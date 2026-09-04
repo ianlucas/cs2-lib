@@ -51,20 +51,135 @@ public static partial class Config
         "community_mix01", "community02", "danger_zone",
         "standard", "stickers2", "tournament_assets"
     ];
+    // The lossy Q for the VP8 half of the encoder's two candidates. Every texture is encoded both
+    // this way and fully-lossless VP8L, and the smaller output ships; see item-generator-webp.ts.
+    //
+    // Lowering this is not the free win it looks like. VP8 is YUV 4:2:0, so any texture whose
+    // channels are independent data rather than a color loses the most: measured max per-channel
+    // error at q95 is 177 on normal maps, 223 on packed ORM (occlusion, roughness, metalness in
+    // r/g/b) and 255 along the hard borders of paint-by-number masks, versus 8-11 on plain
+    // grayscale AO. Dropping Q widens that budget on exactly the textures a shader reads as data.
+    //
+    // Min-pick already covers the worst of it: the textures that break most visibly under lossy
+    // are low-entropy, so VP8L both wins on bytes and is bit-exact for them. That is what fixed
+    // the pixelated squares on Desert Eagle | Blaze -- its g_tMasks is 27.9 KB lossy vs 10.3 KB
+    // lossless. It is NOT a general safety net: a high-entropy texture that a shader still reads
+    // as data (the large paint-by-number masks) keeps the lossy encode because VP8L is bigger
+    // for it, and keeps this error budget with it. Normal maps are the case where that went
+    // visibly wrong, and they are routed around min-pick entirely; see WebpNormalQuantizeBits.
+    //
+    // Also used for the SkiaSharp-encoded item images in Catalog/Assets.cs, which are single-path
+    // lossy and do not go through min-pick.
+    // NOTE this is the quality the min-pick COMPARISON candidate is encoded at, and it is
+    // deliberately not the quality a lossy winner ships at -- see WebpLossyQualityCeiling. Pinning
+    // the comparison here keeps the codec choice identical to what it was before the ceiling
+    // existed, so no texture can trade a bit-exact VP8L encode for a cheaper lossy one.
     public const int WebpQuality = 95;
-    // Lossy WebP (even at q95) quantizes away the ±1 dither in normal maps, collapsing them
-    // into flat DCT plateaus; on metallic skins every plateau mirrors a slightly different
-    // patch of the environment and the surface reads as a faint square mosaic in cs2-3d-viewer.
-    // Normal maps therefore use WebP near-lossless: still the lossless coder (no block
-    // structure), with bounded per-pixel adjustment. Level 60 keeps the max per-channel
-    // error at ±2 (vs ±91 measured at lossy q95 on ak47_normal) for ~2/3 the lossless size.
-    // Passed to scripts/item-generator-webp.ts as the near-lossless level (sharp reuses `quality`).
-    public const int WebpNearLosslessNormals = 60;
-    // Data-selector composite inputs (paint masks, AO/cavity, glove ID maps — see
-    // AssetProcessor.CollectDataSelectorTexturePaths) are sampled as data, not color, so
-    // they encode fully lossless (VP8L). In lossless mode libwebp's quality knob trades
-    // encode time for size with zero fidelity impact; 100 = smallest files.
-    public const int WebpLosslessQuality = 100;
+    // The highest quality a texture that ALREADY WON min-pick may ship at. `WebpQuality` decides
+    // which codec a texture gets; this decides what the lossy winners cost, and the per-texture
+    // search descends from here toward `WebpQualityFloor`.
+    //
+    // The two are separate because they answer different questions, and answering both with one
+    // number is what made this expensive. Lowering `WebpQuality` to 85 outright would also shrink
+    // the comparison candidate, and the lossy candidate winning more often is precisely the
+    // outcome min-pick exists to prevent: measured on a 40-texture sample of the non-normal VP8L
+    // winners (the masks and ID maps), 14 of 40 flip to lossy at a comparison quality of 85. Those
+    // are the textures whose lossy encode brings back the 16px mosaic. Comparing at 95 and
+    // shipping at 85 takes the size and leaves the codec decision untouched.
+    //
+    // 85 is the deliberate pick. It is the point where the search's own reference moves: the
+    // budget is measured on THIS texture at the ceiling, so a lower ceiling both caps the top rung
+    // and loosens the relative tolerance below it. Measured over a 24-texture sample drawn
+    // probability-proportional-to-size from the lossy textures that carry an alpha plane, a
+    // ceiling of 85 lands the corpus at 46.3% of its q95 bytes, with most textures settling at 80
+    // or 85 rather than at the ceiling itself. Raise it if a lossy texture looks soft.
+    public const int WebpLossyQualityCeiling = 85;
+    // Bits per colour channel kept for normal maps, which are quantized onto a 2^n level ladder
+    // and then encoded lossless instead of going through min-pick (see item-generator-webp.ts for
+    // why no lossy setting can serve them, and AssetProcessor.CollectNormalMapTexturePaths for
+    // how they are identified).
+    //
+    // This is the size/fidelity dial for ~5,400 textures, 1.86 GB of the corpus at the lossy
+    // encode they must stop using. Cost against that baseline, by bit depth:
+    //
+    //   8 bits (bit-exact)     x5.97     7 bits (max err 1)   x3.88
+    //   6 bits (max err 2)     x2.85     5 bits (max err 4)   x2.11
+    //   4 bits (max err 8)     x2.14
+    //
+    // Ratios come from samples of ~20 normals and vary by several points between samples, so
+    // read them as the shape of the curve rather than exact figures; 4 bits is the one measured
+    // through the shipped encoder, and puts corpus normals near 3.98 GB.
+    //
+    // For reference the near-lossless path this replaces was x5.08 at max err 2, so 6 bits is
+    // strictly better than what shipped before this branch. 4 bits is the deliberate choice to
+    // spend fidelity on size: max err 8 is 3.6 degrees of normal tilt, and quantization bias
+    // follows the surface gradient, so the failure mode if it is too aggressive is banding on a
+    // smooth mirror-like surface. Raise this if that shows up. Note the encoder pins 127/128
+    // onto the ladder whatever this is set to, so a flat surface never picks up a uniform tilt.
+    public const int WebpNormalQuantizeBits = 4;
+    // Bits per pixel kept in the ALPHA plane of every texture that goes through min-pick. RGB is
+    // untouched; this is only the separate ALPH chunk, which WebP always compresses losslessly and
+    // which `WebpQuality` therefore cannot reach. See item-generator-webp.ts for why quantizing is
+    // preferred over libwebp's own alphaQuality.
+    //
+    // This is the size/fidelity dial for 11,263 textures, 3.52 GiB of the 6.95 GiB corpus, of
+    // which 1.17 GiB is the alpha planes themselves. Cost against that baseline, measured on a
+    // 60-texture sample stratified by size rank:
+    //
+    //   6 bits (max err 2)   84.1%     5 bits (max err 4)   75.4%     4 bits (max err 8)   69.6%
+    //
+    // The saving is far larger than that average on the files that actually hurt, because it
+    // scales with how dithered the plane is: at 5 bits, ak47_autoexec_camo albedo 4.21 -> 1.59 MB,
+    // p2000_deep_red 6.76 -> 3.75 MB, mp5_statics_blue 6.81 -> 3.01 MB.
+    //
+    // Alpha in this corpus is a mask read through smoothstep, not a colour, so the error moves a
+    // wear threshold by far less than the wear slider itself does, and unlike the normals ladder
+    // there is no unbounded decode downstream to amplify it. The one place alpha is a genuine
+    // gradient is a sticker's transparency ramp.
+    //
+    // Note the saving is bounded by how DITHERED the plane is, not by how large it is. A plane
+    // that is genuine per-pixel noise rather than a dithered plateau barely responds at any depth:
+    // gun_grunge_psd's alpha costs 1.51 MiB at 5 bits, 1.28 at 4, and still 0.67 at ONE bit. No
+    // setting of this makes such a texture cheap; only fewer pixels would.
+    // 4 is the pick as of the ceiling change. 5 was chosen when the alpha ladder was the only
+    // lever on these files; now that the RGB side moves too, the extra bit is a bigger share of
+    // what is left. It costs max err 8 instead of 4 (3.1% of range) and buys ~7% of the bytes of
+    // every texture that carries an alpha plane, measured over the same 24-texture sample. The
+    // failure mode is unchanged -- banding on a sticker's transparency ramp -- so go back to 5 if
+    // that shows up.
+    public const int WebpAlphaQuantizeBits = 4;
+    // Floor and budget for the per-texture quality search that re-rates a lossy min-pick winner.
+    // `WebpQuality` sets what a texture may spend; these decide whether spending it buys anything
+    // on THAT texture. See item-generator-webp.ts for the mechanism and for why the search runs
+    // after min-pick rather than before it.
+    //
+    // This is the size/fidelity dial for the ~11,900 textures that ship a lossy encode, 3.48 GB of
+    // the 6.10 GB corpus. Measured over a 42-texture sample stratified by size rank, against
+    // their q95 bytes:
+    //
+    //   tolerance 5%    88.7%  (26 of 42 stay at full quality)
+    //   tolerance 10%   75.9%  (15 of 42)
+    //   tolerance 15%   70.5%  (13 of 42)
+    //   tolerance 20%   68.8%  (12 of 42)
+    //
+    // Confirmed on an unbiased 112-texture random sample at 10%: 22.7% of the lossy bytes, with
+    // 25 of 112 left at full quality, and no texture over budget (worst distortion ratio 1.100).
+    //
+    // 10% is the deliberate pick: it is where the curve turns over, and the textures it moves are
+    // the ones whose q95 error is dominated by 4:2:0 chroma subsampling -- which quality does not
+    // control, so the quality points were buying them a rounding difference on an error they
+    // already carry. Past 10% the rule starts taking bits from clean colour textures, where they
+    // buy real fidelity, for a few more points of size.
+    //
+    // The tolerance is RELATIVE, so a texture that q95 already encodes cleanly is held to a tight
+    // budget and a distorted one to a loose one. `WebpDistortionCeiling` bounds the loose end in
+    // absolute levels, so an already-damaged texture cannot be damaged without limit; at 10% it
+    // binds only above an RMSE of 20, which in this corpus is the large paint-by-number masks.
+    // Both are what to raise if a lossy texture looks soft, and `WebpQualityFloor` is what to
+    // raise if one looks blocky.
+    public const int WebpQualityFloor = 70;
+    public const double WebpDistortionTolerance = 0.10;
+    public const double WebpDistortionCeiling = 2.0;
     public const int CdnUploadConcurrency = 40;
     public static readonly int ExternalConcurrency = Math.Max(2, Environment.ProcessorCount);
 
