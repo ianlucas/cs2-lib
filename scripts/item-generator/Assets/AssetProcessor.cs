@@ -866,9 +866,10 @@ public static partial class AssetProcessor
             RecordMaterialRename(ctx, path, isComposite, filename);
         }
 
-        void WriteMaterialFile(string filename, byte[] jsonBytes)
+        void WriteMaterialFile(string filename, byte[] jsonBytes, object? data)
         {
             AssertMaterialReferencesRewritten(System.Text.Encoding.UTF8.GetString(jsonBytes), filename);
+            AssertTextureReferencingPropertiesKnown(data, filename);
             var outPath = Path.Combine(Config.OutputDir, "materials", filename);
             Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
             File.WriteAllBytes(outPath, jsonBytes);
@@ -919,7 +920,7 @@ public static partial class AssetProcessor
                 var jsonBytes = SerializeMaterial(data, null);
                 var filename = GetMaterialFilename(path, isComposite, ContentVersion.HashBytes(jsonBytes));
                 AssignFilename(path, isComposite, filename);
-                WriteMaterialFile(filename, jsonBytes);
+                WriteMaterialFile(filename, jsonBytes, data);
                 continue;
             }
 
@@ -949,7 +950,7 @@ public static partial class AssetProcessor
                 var filename = isComposite
                     ? ctx.CompositeMaterialFilenameByPath[path]
                     : ctx.MaterialFilenameByPath[path];
-                WriteMaterialFile(filename, SerializeMaterial(dataByPath[path]!, null));
+                WriteMaterialFile(filename, SerializeMaterial(dataByPath[path]!, null), dataByPath[path]);
             }
         }
     }
@@ -1268,6 +1269,68 @@ public static partial class AssetProcessor
         if (match.Success)
             throw new InvalidOperationException($"Unrewritten material reference '{match.Value}' found in '{filename}'.");
     }
+
+    // Every material parameter that points at a texture must be a known one (see
+    // MaterialTextureProperties.Known). A parameter names its texture in one of two shapes: an
+    // `m_textureParams` entry (name in `m_name`, texture in `m_pValue`) or a composite loose
+    // variable (name in `m_strName`, texture in `m_strTextureRuntimeResourcePath`). This fails on a
+    // texture-bearing parameter whose name is unknown, and on any texture reference it cannot
+    // attribute to a parameter name at all — so a new CS2 shape stops the build rather than shipping
+    // an unrecognized reference. Validates the raw (pre-patch) data, where textures are `.vtex`.
+    private static void AssertTextureReferencingPropertiesKnown(object? data, string filename)
+    {
+        var unknown = new SortedSet<string>(StringComparer.Ordinal);
+        var unattributed = new SortedSet<string>(StringComparer.Ordinal);
+        CollectUnknownTextureProperties(data, unknown, unattributed);
+        if (unknown.Count == 0 && unattributed.Count == 0) return;
+
+        var problems = new List<string>();
+        if (unknown.Count > 0)
+            problems.Add($"unknown parameter(s): {string.Join(", ", unknown)}");
+        if (unattributed.Count > 0)
+            problems.Add($"texture reference(s) with no parameter name under: {string.Join(", ", unattributed)}");
+        throw new InvalidOperationException(
+            $"Unrecognized texture reference in '{filename}' ({string.Join("; ", problems)}). " +
+            "Confirm the parameter in fresh game data, then add it to MaterialTextureProperties.Known.");
+    }
+
+    // Records every texture-referencing parameter whose name is unknown, plus any texture reference
+    // carrying no parameter name at all (neither `m_name` nor `m_strName`, or a bare `.vtex` string
+    // sitting directly in an array). A texture reference is a `.vtex` value under any key other than
+    // those two name keys.
+    private static void CollectUnknownTextureProperties(
+        object? value, ISet<string> unknown, ISet<string> unattributed)
+    {
+        if (value is Dictionary<string, object?> dict)
+        {
+            var name =
+                dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
+                dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
+                null;
+
+            foreach (var (key, entry) in dict)
+            {
+                if (key is "m_name" or "m_strName" || !IsTextureReference(entry)) continue;
+                if (name == null) unattributed.Add($"'{key}'");
+                else if (!MaterialTextureProperties.Known.Contains(name)) unknown.Add(name);
+            }
+
+            foreach (var entry in dict.Values)
+                CollectUnknownTextureProperties(entry, unknown, unattributed);
+        }
+        else if (value is List<object?> list)
+        {
+            foreach (var entry in list)
+            {
+                if (IsTextureReference(entry)) unattributed.Add("array element");
+                CollectUnknownTextureProperties(entry, unknown, unattributed);
+            }
+        }
+    }
+
+    private static bool IsTextureReference(object? value) =>
+        value is string str &&
+        MaterialPaths.NormalizeMaterialResourcePath(str).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 
     private static bool ColorizeGraffitiImage(string srcPath, string hexColor, string outPath)
     {

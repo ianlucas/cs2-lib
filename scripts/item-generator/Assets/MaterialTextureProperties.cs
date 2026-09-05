@@ -1,0 +1,145 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Ian Lucas. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+namespace ItemGenerator;
+
+// The complete set of CS2 material parameter names known to reference a texture. A parameter
+// names its texture in one of two shapes, both covered here:
+//
+//   * `m_textureParams` entries on a `.vmat`  — the name is `m_name`, the texture is `m_pValue`.
+//   * composite-material loose variables on a `.vcompmat` — the name is `m_strName`, the texture
+//     is `m_strTextureRuntimeResourcePath` (its `.psd`/`.tga` source in `m_strTextureContentAssetPath`
+//     is authoring content, not a runtime texture, so it is not counted).
+//
+// It was gathered by scanning every generated `*.vmat.json`/`*.vcompmat.json` for parameters whose
+// value points at `/textures/`. AssetProcessor validates every emitted material against this set
+// and fails on any parameter that references a texture but is not listed here (and on any texture
+// reference it cannot attribute to a parameter name at all). A CS2 update that introduces a new
+// texture-bearing parameter therefore stops the build until the parameter is reviewed and added,
+// rather than silently shipping an unrecognized reference.
+//
+// Keep this list sorted; add new entries only after confirming the parameter in fresh game data.
+public static class MaterialTextureProperties
+{
+    public static readonly IReadOnlySet<string> Known = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "ambient_occlusion",
+        "g_tAmbientOcclusion",
+        "g_tBloodMask",
+        "g_tCaseHardeningColorRamp",
+        "g_tColor",
+        "g_tColorA",
+        "g_tDamage1",
+        "g_tDamage2",
+        "g_tDamage3",
+        "g_tDamage4",
+        "g_tDamageNormal1",
+        "g_tDamageNormal2",
+        "g_tDamageNormal3",
+        "g_tDamageNormal4",
+        "g_tDetail",
+        "g_tDetail1",
+        "g_tDetail2",
+        "g_tDetail3",
+        "g_tDetail4",
+        "g_tDetailNormal1",
+        "g_tDetailNormal2",
+        "g_tDetailNormal3",
+        "g_tDetailNormal4",
+        "g_tDiffuseFalloff",
+        "g_tFinalAmbientOcclusion",
+        "g_tGlitterNormal",
+        "g_tGlitterNormalSticker0",
+        "g_tGlitterNormalSticker1",
+        "g_tGlitterNormalSticker2",
+        "g_tGlitterNormalSticker3",
+        "g_tGlitterNormalSticker4",
+        "g_tGrime1",
+        "g_tGrime2",
+        "g_tGrime3",
+        "g_tGrime4",
+        "g_tGrunge",
+        "g_tGrunge1",
+        "g_tGrunge2",
+        "g_tGrunge3",
+        "g_tGrunge4",
+        "g_tHoloSpectrumSticker0",
+        "g_tHoloSpectrumSticker1",
+        "g_tHoloSpectrumSticker2",
+        "g_tHoloSpectrumSticker3",
+        "g_tHoloSpectrumSticker4",
+        "g_tLayerId",
+        "g_tLayerMask",
+        "g_tLiquidMask",
+        "g_tMasks",
+        "g_tMetalness",
+        "g_tNoise",
+        "g_tNormal",
+        "g_tNormalA",
+        "g_tNormalRoughnessSticker0",
+        "g_tNormalRoughnessSticker1",
+        "g_tNormalRoughnessSticker2",
+        "g_tNormalRoughnessSticker3",
+        "g_tNormalRoughnessSticker4",
+        "g_tObjectProperties",
+        "g_tOpaqueRefractMask",
+        "g_tOverlay",
+        "g_tOverlayMask",
+        "g_tPaintByNumberMasks",
+        "g_tPaintMetalness",
+        "g_tPaintRoughness",
+        "g_tPatinaAgeColorRamp",
+        "g_tPatinaAgeMask",
+        "g_tPattern",
+        "g_tPatternProperties",
+        "g_tPearlescenceMask",
+        "g_tPosition",
+        "g_tPositionOverride",
+        "g_tSelfIllumMask",
+        "g_tSfxMaskSticker0",
+        "g_tSfxMaskSticker1",
+        "g_tSfxMaskSticker2",
+        "g_tSfxMaskSticker3",
+        "g_tSfxMaskSticker4",
+        "g_tSssMask",
+        "g_tSticker0",
+        "g_tSticker1",
+        "g_tSticker2",
+        "g_tSticker3",
+        "g_tSticker4",
+        "g_tStickerScratches",
+        "g_tStickerWepInputs",
+        "g_tSubstrate1",
+        "g_tSubstrate2",
+        "g_tSubstrate3",
+        "g_tSubstrate4",
+        "g_tSubstrateNormal1",
+        "g_tSubstrateNormal2",
+        "g_tSubstrateNormal3",
+        "g_tSubstrateNormal4",
+        "g_tSubstrateProperties1",
+        "g_tSubstrateProperties2",
+        "g_tSubstrateProperties3",
+        "g_tSubstrateProperties4",
+        "g_tSurface",
+        "g_tSurface1",
+        "g_tSurface2",
+        "g_tSurface3",
+        "g_tSurface4",
+        "g_tSurfaceNormal1",
+        "g_tSurfaceNormal2",
+        "g_tSurfaceNormal3",
+        "g_tSurfaceNormal4",
+        "g_tSurfaceProperties1",
+        "g_tSurfaceProperties2",
+        "g_tSurfaceProperties3",
+        "g_tSurfaceProperties4",
+        "g_tTextureA",
+        "g_tTextureB",
+        "g_tTintId",
+        "g_tTintMask",
+        "g_tWear",
+    };
+}
