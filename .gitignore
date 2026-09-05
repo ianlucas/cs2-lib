@@ -1,5 +1,6 @@
 .codex
 .env
+.unoptimized-textures
 /dist
 /node_modules
 /scripts/item-generator/bin
