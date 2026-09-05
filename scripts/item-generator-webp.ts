@@ -6,13 +6,8 @@
 // Encodes a batch of PNG textures to WebP. Invoked once per run by the C# item-generator
 // (AssetProcessor.ProcessMaterialTextures) with a JSONL manifest of jobs. Output bytes feed the
 // content hashes embedded in CDN filenames, so sharp is pinned exact and nothing here may change
-// encoded bytes. Constraints:
-// - `exact` must stay on: shader logic reads RGB under fully-transparent pixels.
-// - `quality` is overloaded: the near-lossless level for near-lossless jobs (normal maps), VP8L
-//   compression effort for lossless jobs (paint masks, AO — bytes are bit-exact regardless),
-//   and lossy Q otherwise.
-// - `lossless` is only forwarded when true so lossy and near-lossless outputs stay
-//   byte-identical to previous runs.
+// encoded bytes. Every texture is encoded fully lossless (VP8L) verbatim -- no lossy or
+// near-lossless tiers. `exact` must stay on: shader logic reads RGB under fully-transparent pixels.
 
 import { mkdir, readFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
@@ -22,9 +17,6 @@ import sharp from "sharp";
 interface EncodeJob {
     src: string;
     dest: string;
-    quality: number;
-    nearLossless: boolean;
-    lossless?: boolean;
 }
 
 const manifestPath = process.argv[2];
@@ -40,11 +32,11 @@ const jobs: EncodeJob[] = (await readFile(manifestPath, "utf-8"))
 
 let failed = 0;
 
-async function encode({ src, dest, quality, nearLossless, lossless }: EncodeJob) {
+async function encode({ src, dest }: EncodeJob) {
     try {
         await mkdir(dirname(dest), { recursive: true });
         await sharp(src)
-            .webp({ quality, nearLossless, ...(lossless ? { lossless: true } : {}), exact: true })
+            .webp({ lossless: true, exact: true })
             .toFile(dest);
         console.log(`done ${dest}`);
     } catch (error) {
