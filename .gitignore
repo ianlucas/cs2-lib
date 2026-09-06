@@ -1,6 +1,7 @@
 .codex
 .env
 .unoptimized-output
+.prd-output
 /dist
 /node_modules
 /scripts/item-generator/bin
