@@ -15,8 +15,8 @@
 //   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened"
 //   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened" .unoptimized-output
 
-import { existsSync, readFileSync, statSync } from "fs";
-import { join } from "path";
+import { existsSync, readdirSync, readFileSync, statSync } from "fs";
+import { basename, dirname, join } from "path";
 import { CS2Economy, type CS2EconomyItem } from "../src/economy.ts";
 import { CS2_ITEMS } from "../src/items.ts";
 import { english } from "../src/translations/english.ts";
@@ -38,6 +38,22 @@ interface TextureRef {
 // one key even if its encoded bytes - and therefore its cs2-lib hash - ever change.
 function toVrfIdentity(texturePath: string): string {
     return texturePath.replace(/_[0-9a-f]{8}(\.(?:webp|exr))$/, "$1");
+}
+
+// Resolve a `/materials/...` or `/textures/...` resource to an on-disk file under `outputDir`,
+// tolerating a different output hash than the one cs2-lib recorded (e.g. `.prd-output` re-encodes
+// its own bytes): if the exact file is absent, fall back to any sibling whose name matches once the
+// trailing `_<8 hex>` hash is stripped.
+function resolveOutputFile(outputDir: string, resourcePath: string): string | undefined {
+    const direct = join(outputDir, resourcePath.replace(/^\//, ""));
+    if (existsSync(direct)) return direct;
+    const dir = dirname(direct);
+    const match = basename(direct).match(/^(.*)_[0-9a-f]{8}(\..+)$/);
+    if (match === null || !existsSync(dir)) return undefined;
+    const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`^${escape(match[1]!)}_[0-9a-f]{8}${escape(match[2]!)}$`);
+    const sibling = readdirSync(dir).find((entry) => pattern.test(entry));
+    return sibling === undefined ? undefined : join(dir, sibling);
 }
 
 function humanSize(bytes: number): string {
@@ -118,23 +134,28 @@ function main(): void {
     console.error(`# output: ${outputDir}`);
 
     const visited = new Set<string>();
+    const visitedFiles = new Set<string>();
     const uniqueTextures = new Map<string, number>();
     let missingTextures = 0;
     const blocks: { material: string; found: boolean; rows: (TextureRef & { size: string })[] }[] = [];
 
     // Depth-first, pre-order: collect each material with its textures, then descend into the
-    // materials it references. `visited` records each material once and breaks reference cycles.
+    // materials it references. `visited` records each material path once and breaks reference cycles;
+    // `visitedFiles` additionally collapses paths that resolve to the same on-disk file, so a material
+    // that references itself by its `.prd-output` hash isn't listed twice.
     const stack: string[] = [rootMaterial];
     while (stack.length > 0) {
         const materialPath = stack.pop()!;
         if (visited.has(materialPath)) continue;
         visited.add(materialPath);
 
-        const file = join(outputDir, materialPath.replace(/^\//, ""));
-        if (!existsSync(file)) {
+        const file = resolveOutputFile(outputDir, materialPath);
+        if (file === undefined) {
             blocks.push({ material: materialPath, found: false, rows: [] });
             continue;
         }
+        if (visitedFiles.has(file)) continue;
+        visitedFiles.add(file);
 
         const textures: TextureRef[] = [];
         const materials: string[] = [];
@@ -147,9 +168,9 @@ function main(): void {
             if (seenLines.has(dedupeKey)) continue;
             seenLines.add(dedupeKey);
 
-            const texFile = join(outputDir, path.replace(/^\//, ""));
+            const texFile = resolveOutputFile(outputDir, path);
             let size = "?";
-            if (existsSync(texFile)) {
+            if (texFile !== undefined) {
                 const bytes = statSync(texFile).size;
                 size = humanSize(bytes);
                 uniqueTextures.set(toVrfIdentity(path), bytes);
@@ -191,7 +212,7 @@ function main(): void {
 
     const totalBytes = [...uniqueTextures.values()].reduce((sum, bytes) => sum + bytes, 0);
     console.error(
-        `# ${visited.size} materials, ${uniqueTextures.size} unique textures, ${humanSize(totalBytes)} total` +
+        `# ${blocks.length} materials, ${uniqueTextures.size} unique textures, ${humanSize(totalBytes)} total` +
             (missingTextures > 0 ? ` (${missingTextures} texture file(s) missing)` : "")
     );
 }
