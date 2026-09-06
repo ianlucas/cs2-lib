@@ -691,6 +691,22 @@ public static partial class AssetProcessor
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
         Directory.CreateDirectory(stagingDir);
 
+        // Sticker-only per-property encode tiers (see StickerTextureOptimization). Every other texture
+        // stays lossless: a job with no `encode` descriptor takes the unchanged lossless path in
+        // item-generator-webp.ts, so no non-sticker texture's bytes -- or filename hash -- change.
+        var textureTiers = StickerTextureOptimization.ResolveTextureTiers(
+            ctx.MaterialDataByPath.Values.Concat(ctx.CompositeMaterialDataByPath.Values),
+            path =>
+            {
+                try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
+                catch { return null; }
+            });
+        var manifestJsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
+
         var encodeJobs = new List<(string ResolvedVtexPath, string StagedPath)>();
         var manifestLines = new List<string>();
 
@@ -709,13 +725,17 @@ public static partial class AssetProcessor
             if (File.Exists(pngPath))
             {
                 var stagedPath = Path.Combine(stagingDir, $"{encodeJobs.Count}.webp");
-                // Every texture converts verbatim to lossless WebP -- no per-texture
-                // classification or lossy/near-lossless tiers (see item-generator-webp.ts).
+                // Default: verbatim lossless WebP. A sticker texture bound to a tuned property instead
+                // carries an `encode` descriptor selecting its tier (see StickerTextureOptimization).
+                var encode = textureTiers.TryGetValue(resolvedVtexPath, out var tier)
+                    ? StickerTextureOptimization.ToSpec(tier)
+                    : null;
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
-                    dest = stagedPath
-                }));
+                    dest = stagedPath,
+                    encode
+                }, manifestJsonOptions));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }
             else if (File.Exists(exrPath))
