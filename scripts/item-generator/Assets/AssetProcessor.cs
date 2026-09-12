@@ -691,11 +691,13 @@ public static partial class AssetProcessor
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
         Directory.CreateDirectory(stagingDir);
 
-        // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures) and
-        // WeaponTextureOptimization (weapon/knife textures). The two scopes cannot overlap: each drops
-        // any texture that is also bound outside its own family. Every other texture stays lossless --
-        // a job with no `encode` descriptor takes the unchanged lossless path in item-generator-webp.ts,
-        // so its bytes, and the hash in its filename, never change.
+        // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures),
+        // WeaponTextureOptimization (weapon/knife textures) and GloveTextureOptimization (glove
+        // textures). The three scopes cannot overlap: each drops any texture that is also bound
+        // outside its own family, so a texture shared between two families is dropped by both and
+        // stays lossless. Every other texture stays lossless too -- a job with no `encode` descriptor
+        // takes the unchanged lossless path in item-generator-webp.ts, so its bytes, and the hash in
+        // its filename, never change.
         string? ResolveTexture(string path)
         {
             try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
@@ -707,6 +709,12 @@ public static partial class AssetProcessor
         var weaponTiers = WeaponTextureOptimization.ResolveTextureTiers(
             ctx.MaterialDataByPath.Values,
             ctx.CompositeMaterialDataByPath.Values,
+            ResolveTexture);
+        // Keyed by resource path, unlike the two above: the glove scope rule admits the shared
+        // character shader only under a glove arm model. Composites are not passed because a glove
+        // composite binds no texture of its own (see GloveTextureOptimization).
+        var gloveTiers = GloveTextureOptimization.ResolveTextureTiers(
+            ctx.MaterialDataByPath,
             ResolveTexture);
         var manifestJsonOptions = new JsonSerializerOptions
         {
@@ -736,6 +744,7 @@ public static partial class AssetProcessor
                 // an `encode` descriptor selecting its tier, tagged with the family that owns it.
                 object? encode =
                     weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier :
+                    gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier :
                     stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
                         ? StickerTextureOptimization.ToSpec(stickerTier)
                         : null;

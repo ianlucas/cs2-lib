@@ -18,6 +18,11 @@
 //                   property gets which tier and with what thresholds); this file owns the
 //                   MEASUREMENT -- every "guard" below is a texture-driven classifier evaluated
 //                   against the pristine PNG, never against a filename.
+//   kind "glove"    the guarded tier owned by GloveTextureOptimization. Same machinery as "weapon"
+//                   and the same split of responsibility -- a glove tier is a weapon tier applied to
+//                   the glove property whose channels mean the same thing -- so the two share this
+//                   encoder rather than duplicating it. Two mechanisms exist for the glove tiers and
+//                   no weapon tier uses them: flatPlaneGuard (below) and the budgets' `widths` rung.
 //
 // A job with no descriptor takes the exact original lossless path below, so its bytes -- and filename
 // hash -- never change.
@@ -65,6 +70,12 @@ import sharp from "sharp";
 //   sfxGuard        a packed data texture whose THIRD plane is optional (g_tMetalness' B = SFX mask):
 //                   if B carries real data the file is routed to `guardFallback` so no DCT touches it.
 //                   A lossy encode cannot hold a constant plane still.
+//   flatPlaneGuard  sfxGuard's generalization, for a packed texture where WHICH plane is constant is
+//                   not known in advance (a glove's packed properties carry AO beside a constant
+//                   roughness or metalness; its layer normals carry the normal in G/A beside a
+//                   constant aniso-roughness pair in R/B). If ANY of R/G/B spans FLAT_PLANE_SPAN
+//                   counts or fewer the file is routed to `guardFallback`, because the DCT drift that
+//                   sfxGuard exists to prevent is a property of constant planes, not of one channel.
 //   lossyGuard      encode the tier lossy at NATIVE resolution, decode it, and measure RGB PSNR
 //                   against the pristine PNG. Below `minPsnr` the texture is a high-frequency
 //                   region/coverage mask or camo whose values matter, and it takes `guardFallback`
@@ -87,8 +98,16 @@ import sharp from "sharp";
 //   maskBudget      the counterpart for a mask tier: down the `qualities` ladder for a replicated
 //                   mask, or the posterize `steps` ladder for a chromatic one. A mask that already
 //                   fits is never touched at all.
+//   widths          on either budget, the rung AFTER the ladder it belongs to: a tier whose remaining
+//                   bytes sit in planes it is not allowed to quantize any further restarts at its own
+//                   quality on a smaller image. Resolution is the last lever precisely because it is
+//                   the one that keeps every value inside the range its source texels had, so it is
+//                   tried only once quantization has failed to reach the target.
+//
+// A tier reached through `guardFallback` brings its OWN budgets when it declares them, falling back to
+// the base tier's otherwise. No weapon fallback tier declares any, so this is a glove-only path.
 interface EncodeSpec {
-    kind?: "sticker" | "weapon";
+    kind?: "sticker" | "weapon" | "glove";
     mode: "lossless" | "lossy" | "nearLossless";
     quality?: number;
     stripAlpha?: boolean;
@@ -106,13 +125,14 @@ interface EncodeSpec {
     greyGuard?: boolean;
     noiseGuard?: { maxLag1: number; fallback: EncodeSpec };
     sfxGuard?: boolean;
+    flatPlaneGuard?: boolean;
     lossyGuard?: { minPsnr: number };
     guardFallback?: EncodeSpec;
     alphaGuard?: { minSoft: number; alphaQuality: number };
     maskGuard?: boolean;
     flattenGuard?: boolean;
-    sizeBudget?: { maxBytes: number; minQuality: number; minAlphaQuality?: number };
-    maskBudget?: { maxBytes: number; qualities: number[]; steps: number[] };
+    sizeBudget?: { maxBytes: number; minQuality: number; minAlphaQuality?: number; widths?: number[] };
+    maskBudget?: { maxBytes: number; qualities: number[]; steps: number[]; widths?: number[] };
 }
 
 interface EncodeJob {
@@ -133,7 +153,10 @@ const DEGENERATE_ALPHA_SPAN = 2;
 // two palette levels the artist deliberately kept apart.
 const POSTERIZE_SKIP_DISTINCT = 32;
 
-// A guarded encode materializes 16 MP raw buffers, two at a time for a PSNR check, so weapon jobs run
+// A plane spanning this many counts or fewer is CONSTANT for encoding purposes: see flatPlaneGuard.
+const FLAT_PLANE_SPAN = 8;
+
+// A guarded encode materializes 16 MP raw buffers, two at a time for a PSNR check, so guarded jobs run
 // on a tighter leash than the plain lossless ones that make up the rest of the batch.
 const GUARDED_CONCURRENCY = 4;
 
@@ -156,8 +179,8 @@ async function encode({ src, dest, encode: spec }: EncodeJob) {
         if (spec === undefined) {
             await sharp(src).webp(LOSSLESS).toFile(dest);
             console.log(`done ${dest}`);
-        } else if (spec.kind === "weapon") {
-            const { data, label } = await encodeWeapon(src, spec);
+        } else if (spec.kind === "weapon" || spec.kind === "glove") {
+            const { data, label } = await encodeGuarded(src, spec);
             await writeFile(dest, data);
             console.log(`done ${dest} ${label}`);
         } else {
@@ -401,9 +424,11 @@ interface MaskFacts {
     alphaSpan: number;
     alphaMax: number;
     blueSpan: number;
+    minRgbSpan: number;
 }
 
-// The facts greyGuard / maskGuard / flattenGuard / sfxGuard need, in one pass over the pristine PNG.
+// The facts greyGuard / maskGuard / flattenGuard / sfxGuard / flatPlaneGuard need, in one pass over
+// the pristine PNG.
 // Scanned in FULL, not subsampled: all of them are extremes (a max deviation, a min/max span) rather
 // than averages, and one stray texel is exactly what would make an "independent" mask look replicated
 // or a real alpha plane look degenerate.
@@ -414,8 +439,8 @@ async function analyzeMaskPlanes(png: string): Promise<MaskFacts> {
     let maxBG = 0;
     let aMin = 255;
     let aMax = 0;
-    let bMin = 255;
-    let bMax = 0;
+    const min = [255, 255, 255];
+    const max = [0, 0, 0];
     for (let i = 0; i < n; i++) {
         const o = i * 4;
         const g = data[o + 1]!;
@@ -424,19 +449,29 @@ async function analyzeMaskPlanes(png: string): Promise<MaskFacts> {
         const bg = Math.abs(b - g);
         if (rg > maxRG) maxRG = rg;
         if (bg > maxBG) maxBG = bg;
-        if (b < bMin) bMin = b;
-        if (b > bMax) bMax = b;
+        for (let c = 0; c < 3; c++) {
+            const v = data[o + c]!;
+            if (v < min[c]!) min[c] = v;
+            if (v > max[c]!) max[c] = v;
+        }
         const a = data[o + 3]!;
         if (a < aMin) aMin = a;
         if (a > aMax) aMax = a;
     }
+    const spans = [0, 1, 2].map((c) => max[c]! - min[c]!);
     // Tolerance rather than exact equality: a field replicated through an 8-bit round-trip can sit a
     // count apart on one channel and is still one field.
-    return { replicated: maxRG <= 2 && maxBG <= 2, alphaSpan: aMax - aMin, alphaMax: aMax, blueSpan: bMax - bMin };
+    return {
+        replicated: maxRG <= 2 && maxBG <= 2,
+        alphaSpan: aMax - aMin,
+        alphaMax: aMax,
+        blueSpan: spans[2]!,
+        minRgbSpan: Math.min(...spans)
+    };
 }
 
 // ---------------------------------------------------------------------------------------------
-// The guarded weapon encode.
+// The guarded encode, shared by the weapon and glove families.
 // ---------------------------------------------------------------------------------------------
 
 // A compact description of what a texture actually got, appended to its `done` line so a build log
@@ -470,7 +505,7 @@ const specLabel = (s: EncodeSpec): string => {
 //       2048 area lossless     210K / 210K   (capping with the right one)
 //   So fixing only the cap would have made both files ~1.6x bigger. Both parts are required.
 const losslessFallback = (base: EncodeSpec): EncodeSpec => ({
-    kind: "weapon",
+    kind: base.kind,
     mode: "lossless",
     quality: 100,
     maxWidth: base.maxWidth,
@@ -478,7 +513,7 @@ const losslessFallback = (base: EncodeSpec): EncodeSpec => ({
     maskKernel: true
 });
 
-async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: Buffer; label: string }> {
+async function encodeGuarded(src: string, baseSpec: EncodeSpec): Promise<{ data: Buffer; label: string }> {
     const meta = await sharp(src).metadata();
     const width = meta.width ?? 0;
     const height = meta.height ?? 0;
@@ -642,6 +677,19 @@ async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: 
         }
     }
 
+    // FLAT-PLANE guard, sfxGuard's generalization and in the same place for the same reason: a packed
+    // data texture with a constant plane must not go near a DCT, which cannot hold such a plane still.
+    // Where sfxGuard knows the optional plane is B, this one asks only whether ANY of R/G/B is flat --
+    // on a glove the constant plane is roughness, metalness or one half of an anisotropy pair
+    // depending on the property. No tier sets both guards.
+    if (baseSpec.flatPlaneGuard === true && baseSpec.guardFallback !== undefined && !sfxRouted) {
+        maskFacts ??= await analyzeMaskPlanes(src);
+        if (maskFacts.minRgbSpan <= FLAT_PLANE_SPAN) {
+            spec = baseSpec.guardFallback;
+            sfxRouted = true;
+        }
+    }
+
     // Texture-driven fidelity gate. CLASSIFY at native resolution (no downscale) so the candidate
     // matches the PNG pixel-for-pixel and the RGB PSNR is meaningful: if the lossy reconstruction is too
     // far from the source, this is a region-weight mask / camo whose values matter -- encode it lossless
@@ -654,7 +702,7 @@ async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: 
             gateRejected = true;
             spec =
                 baseSpec.guardFallback ??
-                ({ kind: "weapon", mode: "lossless", quality: 100, maxWidth: baseSpec.maxWidth } as EncodeSpec);
+                ({ kind: baseSpec.kind, mode: "lossless", quality: 100, maxWidth: baseSpec.maxWidth } as EncodeSpec);
         }
     }
 
@@ -703,13 +751,16 @@ async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: 
     // mask IS the file and an RGB-only walk would grind to minQuality without moving the bytes. Alpha
     // then walks its own range linearly across the SAME rungs, so the two levers arrive at the bottom
     // together and a file that fits early never reaches either of them.
+    const sizeBudget = spec.sizeBudget ?? baseSpec.sizeBudget;
     if (
-        baseSpec.sizeBudget !== undefined &&
+        sizeBudget !== undefined &&
         spec.mode === "lossy" &&
-        candidate.length > baseSpec.sizeBudget.maxBytes &&
-        (spec.quality ?? 0) > baseSpec.sizeBudget.minQuality
+        candidate.length > sizeBudget.maxBytes &&
+        (spec.quality ?? 0) > sizeBudget.minQuality
     ) {
-        const { maxBytes, minQuality, minAlphaQuality } = baseSpec.sizeBudget;
+        const { maxBytes, minQuality, minAlphaQuality, widths } = sizeBudget;
+        const qualityBefore = spec.quality;
+        const alphaBefore = spec.alphaQuality;
         const steps: number[] = [];
         for (let q = (spec.quality ?? 0) - 6; q > minQuality; q -= 6) steps.push(q);
         steps.push(minQuality);
@@ -724,13 +775,25 @@ async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: 
             candidate = await encodeWith(spec);
             if (candidate.length <= maxBytes) break;
         }
+        // Out of quality to spend on a tier whose remaining bytes are planes it may not touch (a glove
+        // layer normal keeps half its normal vector in alpha): restart at the tier's own quality on a
+        // smaller image, which keeps every value inside the range its source texels had.
+        if (candidate.length > maxBytes) {
+            for (const maxWidth of widths ?? []) {
+                if (width <= maxWidth) continue;
+                spec = { ...spec, maxWidth, quality: qualityBefore, alphaQuality: alphaBefore };
+                candidate = await encodeWith(spec);
+                if (candidate.length <= maxBytes) break;
+            }
+        }
     }
 
     // MASK BUDGET. Only fires when the encode is still over budget, so a mask that already fits stays
     // bit-exact. Which ladder it walks is decided by the maskGuard's replication verdict, because the
     // two populations fail under opposite encoders. Both walk gentlest-first and stop at the first fit.
-    if (baseSpec.maskBudget !== undefined && candidate.length > baseSpec.maskBudget.maxBytes) {
-        const { maxBytes, qualities, steps } = baseSpec.maskBudget;
+    const maskBudget = spec.maskBudget ?? baseSpec.maskBudget;
+    if (maskBudget !== undefined && candidate.length > maskBudget.maxBytes) {
+        const { maxBytes, qualities, steps, widths } = maskBudget;
         if (maskFacts?.replicated === true) {
             // Replicated greyscale: chroma is constant, so 4:2:0 costs nothing and quality is the lever.
             for (const quality of qualities) {
@@ -745,6 +808,17 @@ async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: 
                 spec = { ...spec, posterize };
                 candidate = await encodeWith(spec);
                 if (candidate.length <= maxBytes) break;
+            }
+            // Out of quantization to spend: halve the resolution and go back to exact values, which on
+            // the one texture that reaches this rung is both smaller and more faithful than quantizing
+            // further (see GloveTextureOptimization.PackedFloorTier).
+            if (candidate.length > maxBytes) {
+                for (const maxWidth of widths ?? []) {
+                    if (width <= maxWidth) continue;
+                    spec = { ...spec, maxWidth, posterize: undefined };
+                    candidate = await encodeWith(spec);
+                    if (candidate.length <= maxBytes) break;
+                }
             }
         }
     }
@@ -765,6 +839,8 @@ async function encodeWeapon(src: string, baseSpec: EncodeSpec): Promise<{ data: 
 // Job loop.
 // ---------------------------------------------------------------------------------------------
 
+const isGuarded = (job: EncodeJob): boolean => job.encode?.kind === "weapon" || job.encode?.kind === "glove";
+
 // Two pools rather than one, because a guarded job holds several full-resolution raw planes at once
 // (two of them just to score a PSNR) and so has to run narrow. Sharing a single pool would let the
 // guarded jobs occupy every slot and idle the plain lossless ones behind them; running the two
@@ -780,12 +856,9 @@ async function drain(list: EncodeJob[], concurrency: number): Promise<void> {
 
 const workers = Math.max(2, availableParallelism());
 await Promise.all([
+    drain(jobs.filter(isGuarded), GUARDED_CONCURRENCY),
     drain(
-        jobs.filter((job) => job.encode?.kind === "weapon"),
-        GUARDED_CONCURRENCY
-    ),
-    drain(
-        jobs.filter((job) => job.encode?.kind !== "weapon"),
+        jobs.filter((job) => !isGuarded(job)),
         workers
     )
 ]);
