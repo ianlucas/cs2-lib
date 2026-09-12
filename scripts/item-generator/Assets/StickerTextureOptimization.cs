@@ -50,14 +50,19 @@ public sealed record StickerTextureTier(
     bool SmartSubsample = false);
 
 // The serializable descriptor emitted per encode job (null on a job means "default lossless", which is
-// byte-identical to the untiered path -- so no non-sticker texture filename ever changes).
+// byte-identical to the untiered path -- so no non-sticker texture filename ever changes). `Kind` picks
+// the encoder path in item-generator-webp.ts: this plain width/quality tier, rather than the guarded
+// weapon one (see WeaponTextureOptimization).
 public sealed record StickerEncodeSpec(
     string Mode,
     int? Quality,
     bool? StripAlpha,
     int? MinWidth,
     int? MaxWidth,
-    bool? SmartSubsample);
+    bool? SmartSubsample)
+{
+    public string Kind { get; init; } = "sticker";
+}
 
 public static class StickerTextureOptimization
 {

@@ -691,16 +691,23 @@ public static partial class AssetProcessor
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
         Directory.CreateDirectory(stagingDir);
 
-        // Sticker-only per-property encode tiers (see StickerTextureOptimization). Every other texture
-        // stays lossless: a job with no `encode` descriptor takes the unchanged lossless path in
-        // item-generator-webp.ts, so no non-sticker texture's bytes -- or filename hash -- change.
-        var textureTiers = StickerTextureOptimization.ResolveTextureTiers(
+        // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures) and
+        // WeaponTextureOptimization (weapon/knife textures). The two scopes cannot overlap: each drops
+        // any texture that is also bound outside its own family. Every other texture stays lossless --
+        // a job with no `encode` descriptor takes the unchanged lossless path in item-generator-webp.ts,
+        // so its bytes, and the hash in its filename, never change.
+        string? ResolveTexture(string path)
+        {
+            try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
+            catch { return null; }
+        }
+        var stickerTiers = StickerTextureOptimization.ResolveTextureTiers(
             ctx.MaterialDataByPath.Values.Concat(ctx.CompositeMaterialDataByPath.Values),
-            path =>
-            {
-                try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
-                catch { return null; }
-            });
+            ResolveTexture);
+        var weaponTiers = WeaponTextureOptimization.ResolveTextureTiers(
+            ctx.MaterialDataByPath.Values,
+            ctx.CompositeMaterialDataByPath.Values,
+            ResolveTexture);
         var manifestJsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -725,11 +732,13 @@ public static partial class AssetProcessor
             if (File.Exists(pngPath))
             {
                 var stagedPath = Path.Combine(stagingDir, $"{encodeJobs.Count}.webp");
-                // Default: verbatim lossless WebP. A sticker texture bound to a tuned property instead
-                // carries an `encode` descriptor selecting its tier (see StickerTextureOptimization).
-                var encode = textureTiers.TryGetValue(resolvedVtexPath, out var tier)
-                    ? StickerTextureOptimization.ToSpec(tier)
-                    : null;
+                // Default: verbatim lossless WebP. A texture bound to a tuned property instead carries
+                // an `encode` descriptor selecting its tier, tagged with the family that owns it.
+                object? encode =
+                    weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier :
+                    stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
+                        ? StickerTextureOptimization.ToSpec(stickerTier)
+                        : null;
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
