@@ -23,6 +23,10 @@
 //                   the glove property whose channels mean the same thing -- so the two share this
 //                   encoder rather than duplicating it. Two mechanisms exist for the glove tiers and
 //                   no weapon tier uses them: flatPlaneGuard (below) and the budgets' `widths` rung.
+//   kind "keychain" the guarded tier owned by KeychainTextureOptimization, on the same terms again:
+//                   a charm rides the weapon shader, so its tiers are weapon (and two sticker) tiers
+//                   ported to the keychain property with the same channel meaning. It needs no
+//                   mechanism of its own -- it uses the weapon guards plus the glove flatPlaneGuard.
 //
 // A job with no descriptor takes the exact original lossless path below, so its bytes -- and filename
 // hash -- never change.
@@ -105,9 +109,10 @@ import sharp from "sharp";
 //                   tried only once quantization has failed to reach the target.
 //
 // A tier reached through `guardFallback` brings its OWN budgets when it declares them, falling back to
-// the base tier's otherwise. No weapon fallback tier declares any, so this is a glove-only path.
+// the base tier's otherwise. No weapon fallback tier declares any; the glove and keychain packed
+// floors do.
 interface EncodeSpec {
-    kind?: "sticker" | "weapon" | "glove";
+    kind?: "sticker" | "weapon" | "glove" | "keychain";
     mode: "lossless" | "lossy" | "nearLossless";
     quality?: number;
     stripAlpha?: boolean;
@@ -179,7 +184,7 @@ async function encode({ src, dest, encode: spec }: EncodeJob) {
         if (spec === undefined) {
             await sharp(src).webp(LOSSLESS).toFile(dest);
             console.log(`done ${dest}`);
-        } else if (spec.kind === "weapon" || spec.kind === "glove") {
+        } else if (spec.kind === "weapon" || spec.kind === "glove" || spec.kind === "keychain") {
             const { data, label } = await encodeGuarded(src, spec);
             await writeFile(dest, data);
             console.log(`done ${dest} ${label}`);
@@ -839,7 +844,8 @@ async function encodeGuarded(src: string, baseSpec: EncodeSpec): Promise<{ data:
 // Job loop.
 // ---------------------------------------------------------------------------------------------
 
-const isGuarded = (job: EncodeJob): boolean => job.encode?.kind === "weapon" || job.encode?.kind === "glove";
+const isGuarded = (job: EncodeJob): boolean =>
+    job.encode?.kind === "weapon" || job.encode?.kind === "glove" || job.encode?.kind === "keychain";
 
 // Two pools rather than one, because a guarded job holds several full-resolution raw planes at once
 // (two of them just to score a PSNR) and so has to run narrow. Sharing a single pool would let the

@@ -692,12 +692,16 @@ public static partial class AssetProcessor
         Directory.CreateDirectory(stagingDir);
 
         // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures),
-        // WeaponTextureOptimization (weapon/knife textures) and GloveTextureOptimization (glove
-        // textures). The three scopes cannot overlap: each drops any texture that is also bound
-        // outside its own family, so a texture shared between two families is dropped by both and
-        // stays lossless. Every other texture stays lossless too -- a job with no `encode` descriptor
-        // takes the unchanged lossless path in item-generator-webp.ts, so its bytes, and the hash in
-        // its filename, never change.
+        // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures)
+        // and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
+        // also bound outside its own family, so a texture shared between two families is dropped by
+        // both and stays lossless. The one place two scopes can still agree is a charm-only texture on
+        // a property the weapon file targets too -- a charm material is a csgo_weapon.vfx material, and
+        // the weapon file only excludes the keychain ASSET TREE. Both such textures in the build today
+        // are shared engine defaults (a 1x1 and a 16x16 g_tMetalness constant, 0 K either way); the
+        // lookup order below resolves them to the weapon tier they already ship with. Every other
+        // texture stays lossless -- a job with no `encode` descriptor takes the unchanged lossless path
+        // in item-generator-webp.ts, so its bytes, and the hash in its filename, never change.
         string? ResolveTexture(string path)
         {
             try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
@@ -715,6 +719,12 @@ public static partial class AssetProcessor
         // composite binds no texture of its own (see GloveTextureOptimization).
         var gloveTiers = GloveTextureOptimization.ResolveTextureTiers(
             ctx.MaterialDataByPath,
+            ResolveTexture);
+        // Composites are passed as never-keychain: the only one a charm reaches is the display case's
+        // weapon paint composite, whose bindings must count as foreign (see KeychainTextureOptimization).
+        var keychainTiers = KeychainTextureOptimization.ResolveTextureTiers(
+            ctx.MaterialDataByPath.Values,
+            ctx.CompositeMaterialDataByPath.Values,
             ResolveTexture);
         var manifestJsonOptions = new JsonSerializerOptions
         {
@@ -745,6 +755,7 @@ public static partial class AssetProcessor
                 object? encode =
                     weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier :
                     gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier :
+                    keychainTiers.TryGetValue(resolvedVtexPath, out var keychainTier) ? keychainTier :
                     stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
                         ? StickerTextureOptimization.ToSpec(stickerTier)
                         : null;
