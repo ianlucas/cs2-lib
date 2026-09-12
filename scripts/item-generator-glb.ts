@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Adds EXT_meshopt_compression to a single GLB model in place. Invoked once per model by the C#
-// item-generator (AssetProcessor.OptimizeGlbsMeshopt) after textures are stubbed. Purely a
-// file-size optimization: the meshopt codec is fully reversible, so geometry decodes
-// bit-identically and every mesh/node/skin/accessor, float precision, and the embedded
+// Finishes a single GLB model in place: hands the Source-to-glTF conversion back to the scene's
+// root node (see item-generator-glb-unbake.ts, which explains why the published .glb contract puts
+// it there), then adds EXT_meshopt_compression. Invoked once per model by the C# item-generator
+// (AssetProcessor.OptimizeGlbsMeshopt) after textures are stubbed.
+//
+// The meshopt pass is purely a file-size optimization: the codec is fully reversible, so geometry
+// decodes bit-identically and every mesh/node/skin/accessor, float precision, and the embedded
 // EXT_texture_webp stubs are untouched. Constraints:
 // - Do NOT switch to gltf-transform's `meshopt()` wrapper: it also quantizes and prunes, which
 //   is lossy and removes skins/accessors.
@@ -18,6 +21,7 @@
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
+import { unbakeSourceConversion } from "./item-generator-glb-unbake.ts";
 
 const glbPath = process.argv[2];
 if (glbPath === undefined) {
@@ -32,6 +36,7 @@ const io = new NodeIO()
     .registerDependencies({ "meshopt.encoder": MeshoptEncoder, "meshopt.decoder": MeshoptDecoder });
 
 const document = await io.read(glbPath);
+unbakeSourceConversion(document);
 document
     .createExtension(EXTMeshoptCompression)
     .setRequired(true)
