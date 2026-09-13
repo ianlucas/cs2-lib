@@ -707,25 +707,39 @@ public static partial class AssetProcessor
             try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
             catch { return null; }
         }
-        var stickerTiers = StickerTextureOptimization.ResolveTextureTiers(
-            ctx.MaterialDataByPath.Values.Concat(ctx.CompositeMaterialDataByPath.Values),
-            ResolveTexture);
-        var weaponTiers = WeaponTextureOptimization.ResolveTextureTiers(
-            ctx.MaterialDataByPath.Values,
-            ctx.CompositeMaterialDataByPath.Values,
-            ResolveTexture);
+        // INPUT_SKIP_TEXTURE_OPTIMIZATION resolves no tier at all, putting every texture on that same
+        // default path -- an unoptimized build to compare a tuned one against.
+        var optimize = !Config.IsTextureOptimizationSkipped();
+        if (!optimize)
+            Log("Texture optimization skipped by input (INPUT_SKIP_TEXTURE_OPTIMIZATION).");
+
+        Dictionary<string, StickerTextureTier> stickerTiers = optimize
+            ? StickerTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath.Values.Concat(ctx.CompositeMaterialDataByPath.Values),
+                ResolveTexture)
+            : [];
+        Dictionary<string, WeaponTextureTier> weaponTiers = optimize
+            ? WeaponTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath.Values,
+                ctx.CompositeMaterialDataByPath.Values,
+                ResolveTexture)
+            : [];
         // Keyed by resource path, unlike the two above: the glove scope rule admits the shared
         // character shader only under a glove arm model. Composites are not passed because a glove
         // composite binds no texture of its own (see GloveTextureOptimization).
-        var gloveTiers = GloveTextureOptimization.ResolveTextureTiers(
-            ctx.MaterialDataByPath,
-            ResolveTexture);
+        Dictionary<string, GloveTextureTier> gloveTiers = optimize
+            ? GloveTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath,
+                ResolveTexture)
+            : [];
         // Composites are passed as never-keychain: the only one a charm reaches is the display case's
         // weapon paint composite, whose bindings must count as foreign (see KeychainTextureOptimization).
-        var keychainTiers = KeychainTextureOptimization.ResolveTextureTiers(
-            ctx.MaterialDataByPath.Values,
-            ctx.CompositeMaterialDataByPath.Values,
-            ResolveTexture);
+        Dictionary<string, KeychainTextureTier> keychainTiers = optimize
+            ? KeychainTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath.Values,
+                ctx.CompositeMaterialDataByPath.Values,
+                ResolveTexture)
+            : [];
         var manifestJsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

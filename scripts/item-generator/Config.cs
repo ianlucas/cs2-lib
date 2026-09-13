@@ -130,6 +130,14 @@ public static partial class Config
         return Environment.GetEnvironmentVariable("INPUT_REUSE_ASSETS") == "true";
     }
 
+    public static bool IsTextureOptimizationSkipped()
+    {
+        // Opts every material texture out of the per-property encode tiers (see
+        // Assets/*TextureOptimization.cs), producing an unoptimized build to compare a tuned one
+        // against.
+        return Environment.GetEnvironmentVariable("INPUT_SKIP_TEXTURE_OPTIMIZATION") == "true";
+    }
+
     [GeneratedRegex(@"%s(\d+)")]
     private static partial Regex FormattedStringRegex();
 
