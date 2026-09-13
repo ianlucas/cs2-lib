@@ -10,15 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="SteamKit2" Version="3.4.0" />
-    <!--
-      From 20.0, VRF bakes the Source-to-glTF conversion (Z-up inches to Y-up meters) into mesh data,
-      bone rest poses and animation tracks instead of emitting it as the exported .glb root node's
-      transform (GltfModelExporter.Conversion.cs). That silently breaks every object-space consumer
-      of these models, because this generator emits a model's metadata in raw model space on the
-      contract that the root node applies the conversion. scripts/item-generator-glb-unbake.ts undoes
-      the bake on the way out and hands it back to the root node, so the published .glb contract is
-      unchanged; read that file before touching this version or the GLB post-process.
-    -->
     <PackageReference Include="ValveResourceFormat" Version="20.0.6980" />
   </ItemGroup>
 </Project>
