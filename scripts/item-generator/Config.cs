@@ -61,8 +61,19 @@ public static partial class Config
 
     public static readonly string DepotFileListPath = Path.Combine(ScriptsDir, "cs2.depot");
     public static readonly string AssetsManifestPath = Path.Combine(ScriptsDir, "cs2.manifest");
-    public static readonly string DepotCsgoPath = Path.Combine(WorkdirDir, "game/csgo");
+    public static readonly string DepotGameDir = Path.Combine(WorkdirDir, "game");
+    public static readonly string DepotCsgoPath = Path.Combine(DepotGameDir, "csgo");
     public static readonly string CsgoPakDirPath = Path.Combine(DepotCsgoPath, "pak01_dir.vpk");
+
+    public static readonly string[] GeneratedDirs =
+    [
+        DecompiledDir,
+        OutputDir,
+        ItemGeneratorWorkdirDir,
+        ItemGeneratorCacheDir,
+        ItemGeneratorBuildDir,
+        DepotGameDir
+    ];
 
     public static string GetArchiveDepotPath(int archiveIndex) =>
         $"game/csgo/pak01_{archiveIndex:D3}.vpk";

@@ -17,7 +17,7 @@
 // Examples:
 //   npx tsx scripts/tool-list-textures.ts 215
 //   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened"
-//   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened" .unoptimized-output
+//   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened" scripts/workdir/unoptimized-output
 
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { basename, dirname, join } from "path";
@@ -26,7 +26,7 @@ import { CS2_ITEMS } from "../src/items.ts";
 import { english } from "../src/translations/english.ts";
 import { log, shouldRun } from "./utils.ts";
 
-export const DEFAULT_OUTPUT_DIR = ".unoptimized-output";
+export const DEFAULT_OUTPUT_DIR = "scripts/workdir/unoptimized-output";
 
 const isTextureRef = (value: string): boolean => /^\/textures\/.+\.(webp|exr)$/.test(value);
 const isMaterialRef = (value: string): boolean => /^\/materials\/.+\.(vmat|vcompmat)\.json$/.test(value);
@@ -50,7 +50,7 @@ export function toVrfIdentity(texturePath: string): string {
 }
 
 // Resolve a `/materials/...`, `/textures/...` or `/models/...` resource to an on-disk file under
-// `outputDir`, tolerating a different output hash than the one cs2-lib recorded (e.g. `.prd-output`
+// `outputDir`, tolerating a different output hash than the one cs2-lib recorded (e.g. `prd-output`
 // re-encodes its own bytes): if the exact file is absent, fall back to any sibling whose name
 // matches once the trailing `_<8 hex>` hash is stripped.
 export function resolveOutputFile(outputDir: string, resourcePath: string): string | undefined {
@@ -235,7 +235,7 @@ function main(): void {
     // Depth-first, pre-order: collect each material with its textures, then descend into the
     // materials it references. `visited` records each material path once and breaks reference cycles;
     // `visitedFiles` additionally collapses paths that resolve to the same on-disk file, so a material
-    // that references itself by its `.prd-output` hash isn't listed twice.
+    // that references itself by its `prd-output` hash isn't listed twice.
     const stack: string[] = [...rootMaterials].reverse();
     while (stack.length > 0) {
         const materialPath = stack.pop()!;
