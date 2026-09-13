@@ -700,8 +700,8 @@ public static partial class AssetProcessor
         // the weapon file only excludes the keychain ASSET TREE. Both such textures in the build today
         // are shared engine defaults (a 1x1 and a 16x16 g_tMetalness constant, 0 K either way); the
         // lookup order below resolves them to the weapon tier they already ship with. Every other
-        // texture stays lossless -- a job with no `encode` descriptor takes the unchanged lossless path
-        // in item-generator-webp.ts, so its bytes, and the hash in its filename, never change.
+        // texture stays lossless -- a job with no `encode` descriptor takes the default lossless path
+        // in item-generator-webp.ts, so its bytes, and the hash in its filename, stay stable.
         string? ResolveTexture(string path)
         {
             try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }

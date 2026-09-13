@@ -3,20 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Finishes a single GLB model in place: hands the Source-to-glTF conversion back to the scene's
-// root node (see "Unbaking the Source-to-glTF conversion" below for why the published .glb contract
-// puts it there), then adds EXT_meshopt_compression. Invoked once per model by the C# item-generator
-// (AssetProcessor.OptimizeGlbsMeshopt) after textures are stubbed.
-//
-// The meshopt pass is purely a file-size optimization: the codec is fully reversible, so geometry
-// decodes bit-identically and every mesh/node/skin/accessor, float precision, and the embedded
-// EXT_texture_webp stubs are untouched. Constraints:
-// - Do NOT switch to gltf-transform's `meshopt()` wrapper: it also quantizes and prunes, which
-//   is lossy and removes skins/accessors.
-// - Reversibility is a correctness requirement, not a quality preference: consumers ray the
-//   weapon's own triangles to place keychain charms (a moved vertex moves a stored placement),
-//   and the model's cloth collider (MetadataExtractor.ExtractClothCollider) describes the same
-//   surface these triangles do.
+/**
+ * Finishes a single GLB model in place: hands the Source-to-glTF conversion back to the scene's
+ * root node (see "Unbaking the Source-to-glTF conversion" below for why the published .glb
+ * contract puts it there), then adds EXT_meshopt_compression. Invoked once per model by the C#
+ * item-generator (AssetProcessor.OptimizeGlbsMeshopt) after textures are stubbed.
+ *
+ * The meshopt pass is purely a file-size optimization: the codec is fully reversible, so geometry
+ * decodes bit-identically and every mesh/node/skin/accessor, float precision, and the embedded
+ * EXT_texture_webp stubs are untouched. Constraints:
+ *
+ * - Do NOT switch to gltf-transform's `meshopt()` wrapper: it also quantizes and prunes, which is
+ *   lossy and removes skins/accessors.
+ * - Reversibility is a correctness requirement, not a quality preference: consumers ray the
+ *   weapon's own triangles to place keychain charms (a moved vertex moves a stored placement), and
+ *   the model's cloth collider (MetadataExtractor.ExtractClothCollider) describes the same surface
+ *   these triangles do.
+ */
 
 import { NodeIO, type Accessor, type Document, type Node } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
@@ -26,30 +29,28 @@ import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 // Unbaking the Source-to-glTF conversion
 //
 // Moves the conversion back out of the geometry and onto the exported scene's root node, undoing
-// what ValveResourceFormat 20 bakes in.
+// what ValveResourceFormat bakes in.
 //
-// VRF 19 emitted the conversion (Z-up inches to Y-up metres) as the root node's transform and left
-// mesh POSITION/NORMAL/TANGENT, bone rest poses and animation tracks in raw model space. VRF 20
-// bakes it into all of those instead and leaves the root node at identity, so the armature is
+// VRF bakes the conversion (Z-up inches to Y-up metres) into mesh POSITION/NORMAL/TANGENT, bone
+// rest poses and animation tracks, and leaves the root node at identity, so the armature is
 // identity-scaled and the bind matrices are clean inverses (GltfModelExporter.Conversion.cs:
-// BakePositions / BakeDirections / BakeTangents / BakeConversion). World space is identical either
-// way, which is why the swap is invisible to ordinary rendering and slipped through a dependency
-// bump.
+// BakePositions / BakeDirections / BakeTangents / BakeConversion). World space is the same either
+// way, which is why the bake is invisible to ordinary rendering.
 //
 // It is not invisible to anything reading OBJECT space, and this repo emits a model's metadata in
 // raw model space on the explicit contract that the consumer's root node applies the conversion:
 // MetadataExtractor's attachment anchors ("no axis-swap/scale"), ExtractClothCollider's distances
-// in inches, and the keychainPosition ranges in items.ts. The viewer reads object space directly
-// too -- csgo_simple_liquid.vfx computes a charm's fill from rest-pose `position` against
+// in inches, and the keychainPosition ranges in items.ts. Consumers read object space directly too
+// -- csgo_simple_liquid.vfx computes a charm's fill from rest-pose `position` against
 // g_flLiquidCenterOffset, and mounts StatTrak/name-tag modules at inch-valued offsets under a bone.
 // Baked, that metadata describes a space ~39x smaller and axis-permuted from the vertices it
-// annotates. See ianlucas/cs2-3d-viewer#145.
+// annotates.
 //
-// Undoing the bake here keeps the generator on current VRF while leaving the published .glb
-// contract exactly as it has always been, so no consumer has to move. Every operation below is the
-// arithmetic inverse of the named VRF function, and the conversion's rotation is an exact signed
-// axis permutation (its quaternion components are all +/-0.5), so the only inexact step in the
-// whole round trip is the single divide by 0.0254 that the root node immediately multiplies back.
+// Unbaking keeps the generator on current VRF while leaving the published .glb contract as the
+// consumer contract describes it. Every operation below is the arithmetic inverse of the named VRF
+// function, and the conversion's rotation is an exact signed axis permutation (its quaternion
+// components are all +/-0.5), so the only inexact step in the whole round trip is the single divide
+// by 0.0254 that the root node immediately multiplies back.
 // ---------------------------------------------------------------------------------------------
 
 /** VRF's SourceToGltfScale: inches to metres. */

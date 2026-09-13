@@ -3,114 +3,118 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Encodes a batch of PNG textures to WebP. Invoked once per run by the C# item-generator
-// (AssetProcessor.ProcessMaterialTextures) with a JSONL manifest of jobs. Output bytes feed the
-// content hashes embedded in CDN filenames, so sharp is pinned exact and nothing here may change
-// encoded bytes. By default a texture is encoded fully lossless (VP8L) verbatim -- `exact` must stay
-// on: shader logic reads RGB under fully-transparent pixels.
-//
-// A job MAY carry an `encode` descriptor selecting a smaller per-texture encoding. The descriptor is
-// tagged with the family that owns it, because the two families are tuned on different evidence and
-// must not share a code path:
-//
-//   kind "sticker"  the plain width/quality tier owned by StickerTextureOptimization. Unchanged.
-//   kind "weapon"   the guarded tier owned by WeaponTextureOptimization. C# owns the POLICY (which
-//                   property gets which tier and with what thresholds); this file owns the
-//                   MEASUREMENT -- every "guard" below is a texture-driven classifier evaluated
-//                   against the pristine PNG, never against a filename.
-//   kind "glove"    the guarded tier owned by GloveTextureOptimization. Same machinery as "weapon"
-//                   and the same split of responsibility -- a glove tier is a weapon tier applied to
-//                   the glove property whose channels mean the same thing -- so the two share this
-//                   encoder rather than duplicating it. Two mechanisms exist for the glove tiers and
-//                   no weapon tier uses them: flatPlaneGuard (below) and the budgets' `widths` rung.
-//   kind "keychain" the guarded tier owned by KeychainTextureOptimization, on the same terms again:
-//                   a charm rides the weapon shader, so its tiers are weapon (and two sticker) tiers
-//                   ported to the keychain property with the same channel meaning. It needs no
-//                   mechanism of its own -- it uses the weapon guards plus the glove flatPlaneGuard.
-//
-// A job with no descriptor takes the exact original lossless path below, so its bytes -- and filename
-// hash -- never change.
+/**
+ * Encodes a batch of PNG textures to WebP. Invoked once per run by the C# item-generator
+ * (AssetProcessor.ProcessMaterialTextures) with a JSONL manifest of jobs. Output bytes feed the
+ * content hashes embedded in CDN filenames, so sharp is pinned exact and nothing here may change
+ * encoded bytes. By default a texture is encoded fully lossless (VP8L) verbatim -- `exact` must
+ * stay on: shader logic reads RGB under fully-transparent pixels.
+ *
+ * A job MAY carry an `encode` descriptor selecting a smaller per-texture encoding. The descriptor is
+ * tagged with the family that owns it, because the families are tuned on different evidence and must
+ * not share a code path:
+ *
+ * - kind `sticker`: the plain width/quality tier owned by StickerTextureOptimization.
+ * - kind `weapon`: the guarded tier owned by WeaponTextureOptimization. C# owns the POLICY (which
+ *   property gets which tier and with what thresholds); this file owns the MEASUREMENT -- every
+ *   "guard" below is a texture-driven classifier evaluated against the pristine PNG, never against a
+ *   filename.
+ * - kind `glove`: the guarded tier owned by GloveTextureOptimization. Same machinery as `weapon` and
+ *   the same split of responsibility -- a glove tier is a weapon tier applied to the glove property
+ *   whose channels mean the same thing -- so the two share this encoder rather than duplicating it.
+ *   Two mechanisms exist for the glove tiers and no weapon tier uses them: flatPlaneGuard (below)
+ *   and the budgets' `widths` rung.
+ * - kind `keychain`: the guarded tier owned by KeychainTextureOptimization, on the same terms again:
+ *   a charm rides the weapon shader, so its tiers are weapon (and two sticker) tiers ported to the
+ *   keychain property with the same channel meaning. It needs no mechanism of its own -- it uses the
+ *   weapon guards plus the glove flatPlaneGuard.
+ *
+ * A job with no descriptor takes the default lossless path below, so its bytes -- and filename hash
+ * -- stay stable.
+ */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
 import sharp from "sharp";
 
-// A weapon tier's encode knobs. Everything optional is off unless the C# tier names it.
-//   stripAlpha      drop the alpha channel before encoding.
-//   minWidth        only touch textures at least this wide; narrower ones fall back to default lossless.
-//   maxWidth        downscale (aspect-preserving) so the long side is at most this.
-//   smartSubsample  force 4:4:4. Use when RGB packs independent data rather than a colour.
-//   alphaQuality    compress the ALPHA plane too (a coverage mask can dominate the file).
-//   effort          libwebp's method (0-6). Pure encoder search time at the same quality target, so it
-//                   is free size; everything here runs at 6.
-//   decimate        point-sample the RGB downscale instead of averaging it. Only for GRAIN textures:
-//                   a decimated white-noise field is still white noise with the same amplitude and
-//                   histogram, while any averaging kernel collapses it toward the mean.
-//   grainBoost      after decimating, scale each texel's deviation from its own 2x2 block mean by this,
-//                   to offset the contrast the sampler's bilinear magnification puts back.
-//   maskKernel      area-downscale EVERY plane, not just alpha. For a texture whose RGB is data rather
-//                   than a picture, Lanczos' negative lobes overshoot each region edge and invent
-//                   weights outside the range the two neighbouring regions had. Box averaging cannot.
-//   posterize       quantize each plane to buckets this wide before a LOSSLESS encode, holding 0 and
-//                   255 exact. The error is HARD-BOUNDED at posterize/2 per texel, which is what makes
-//                   it usable on data planes where lossy is not.
-//   flattenAlpha    replace alpha with a constant 255, so WebP omits the ALPH chunk entirely. Only for
-//                   a DEGENERATE alpha plane -- see maskGuard and flattenGuard.
-//   greyscale       encode the R plane alone (what greyGuard turns on).
-//
-// The guards, in the order this file runs them:
-//   greyGuard       SINGLE-CHANNEL property (one whose shader samples .r and nothing else): if the
-//                   pristine PNG is a replicated luma (R=G=B) with a constant-255 alpha, encode only
-//                   the R plane and drop the other three. Runs FIRST, ahead of every other guard, so
-//                   the fidelity gate measures what actually ships. Nothing is thrown away that the
-//                   shader could read: the two chroma planes were copies of R and the alpha was a
-//                   constant 255, which is exactly what a missing alpha plane decodes to.
-//   noiseGuard      mean lag-1 autocorrelation of the RGB planes. Artwork sits at ~0.99; a spray or
-//                   stipple grain sits near 0.3. Below `maxLag1` the texture takes `fallback` --
-//                   otherwise lossyGuard would (correctly, by its own metric) call it "complex" and
-//                   spend the whole budget keeping noise lossless, which is the one thing that cannot
-//                   be seen.
-//   sfxGuard        a packed data texture whose THIRD plane is optional (g_tMetalness' B = SFX mask):
-//                   if B carries real data the file is routed to `guardFallback` so no DCT touches it.
-//                   A lossy encode cannot hold a constant plane still.
-//   flatPlaneGuard  sfxGuard's generalization, for a packed texture where WHICH plane is constant is
-//                   not known in advance (a glove's packed properties carry AO beside a constant
-//                   roughness or metalness; its layer normals carry the normal in G/A beside a
-//                   constant aniso-roughness pair in R/B). If ANY of R/G/B spans FLAT_PLANE_SPAN
-//                   counts or fewer the file is routed to `guardFallback`, because the DCT drift that
-//                   sfxGuard exists to prevent is a property of constant planes, not of one channel.
-//   lossyGuard      encode the tier lossy at NATIVE resolution, decode it, and measure RGB PSNR
-//                   against the pristine PNG. Below `minPsnr` the texture is a high-frequency
-//                   region/coverage mask or camo whose values matter, and it takes `guardFallback`
-//                   (or plain lossless when the tier names none).
-//   alphaGuard      independent of everything above: measure what fraction of the mask is SOFT
-//                   (neither 0 nor 255) and only compress alpha when that clears `minSoft`. A hard
-//                   binary cut mask is left lossless -- lossy ringing at its 0/255 edges is what the
-//                   viewer magnifies into a wear-boundary artifact.
-//   maskGuard       for a 4-plane data mask: flattens a degenerate alpha plane, and records whether
-//                   R==G==B so maskBudget knows which ladder the texture belongs on.
-//   flattenGuard    maskGuard's counterpart for a property whose alpha is real transparency: the plane
-//                   is dropped only when it spans at most DEGENERATE_ALPHA_SPAN counts AND tops out at
-//                   255. Both halves are required -- a plane spanning two counts near ZERO is fully
-//                   transparent, and flattening that one to 255 would paint the overlay on at full
-//                   strength.
-//   sizeBudget      LAST pass on a lossy tier: if the encode still lands above `maxBytes`, step
-//                   quality down until it fits or hits `minQuality`. `minAlphaQuality` opts the ALPHA
-//                   plane into the same walk -- off by default, because on most properties the mask
-//                   must not be degraded to pay for the colour.
-//   maskBudget      the counterpart for a mask tier: down the `qualities` ladder for a replicated
-//                   mask, or the posterize `steps` ladder for a chromatic one. A mask that already
-//                   fits is never touched at all.
-//   widths          on either budget, the rung AFTER the ladder it belongs to: a tier whose remaining
-//                   bytes sit in planes it is not allowed to quantize any further restarts at its own
-//                   quality on a smaller image. Resolution is the last lever precisely because it is
-//                   the one that keeps every value inside the range its source texels had, so it is
-//                   tried only once quantization has failed to reach the target.
-//
-// A tier reached through `guardFallback` brings its OWN budgets when it declares them, falling back to
-// the base tier's otherwise. No weapon fallback tier declares any; the glove and keychain packed
-// floors do.
+/**
+ * A tier's encode knobs. Everything optional is off unless the C# tier names it.
+ *
+ * - `stripAlpha`: drop the alpha channel before encoding.
+ * - `minWidth`: only touch textures at least this wide; narrower ones fall back to default lossless.
+ * - `maxWidth`: downscale (aspect-preserving) so the long side is at most this.
+ * - `smartSubsample`: force 4:4:4. Use when RGB packs independent data rather than a colour.
+ * - `alphaQuality`: compress the ALPHA plane too (a coverage mask can dominate the file).
+ * - `effort`: libwebp's method (0-6). Pure encoder search time at the same quality target, so it is
+ *   free size; everything here runs at 6.
+ * - `decimate`: point-sample the RGB downscale instead of averaging it. Only for GRAIN textures: a
+ *   decimated white-noise field is still white noise with the same amplitude and histogram, while
+ *   any averaging kernel collapses it toward the mean.
+ * - `grainBoost`: after decimating, scale each texel's deviation from its own 2x2 block mean by
+ *   this, to offset the contrast the sampler's bilinear magnification puts back.
+ * - `maskKernel`: area-downscale EVERY plane, not just alpha. For a texture whose RGB is data rather
+ *   than a picture, Lanczos' negative lobes overshoot each region edge and invent weights outside
+ *   the range the two neighbouring regions had. Box averaging cannot.
+ * - `posterize`: quantize each plane to buckets this wide before a LOSSLESS encode, holding 0 and
+ *   255 exact. The error is HARD-BOUNDED at posterize/2 per texel, which is what makes it usable on
+ *   data planes where lossy is not.
+ * - `flattenAlpha`: replace alpha with a constant 255, so WebP omits the ALPH chunk entirely. Only
+ *   for a DEGENERATE alpha plane -- see maskGuard and flattenGuard.
+ * - `greyscale`: encode the R plane alone (what greyGuard turns on).
+ *
+ * The guards, in the order this file runs them:
+ *
+ * - `greyGuard`: SINGLE-CHANNEL property (one whose shader samples .r and nothing else): if the
+ *   pristine PNG is a replicated luma (R=G=B) with a constant-255 alpha, encode only the R plane and
+ *   drop the other three. Runs FIRST, ahead of every other guard, so the fidelity gate measures what
+ *   actually ships. Nothing is thrown away that the shader could read: the two chroma planes are
+ *   copies of R and the alpha is a constant 255, which is exactly what a missing alpha plane decodes
+ *   to.
+ * - `noiseGuard`: mean lag-1 autocorrelation of the RGB planes. Artwork sits at ~0.99; a spray or
+ *   stipple grain sits near 0.3. Below `maxLag1` the texture takes `fallback` -- otherwise lossyGuard
+ *   would (correctly, by its own metric) call it "complex" and spend the whole budget keeping noise
+ *   lossless, which is the one thing that cannot be seen.
+ * - `sfxGuard`: a packed data texture whose THIRD plane is optional (g_tMetalness' B = SFX mask): if
+ *   B carries real data the file is routed to `guardFallback` so no DCT touches it. A lossy encode
+ *   cannot hold a constant plane still.
+ * - `flatPlaneGuard`: sfxGuard's generalization, for a packed texture where WHICH plane is constant
+ *   is not known in advance (a glove's packed properties carry AO beside a constant roughness or
+ *   metalness; its layer normals carry the normal in G/A beside a constant aniso-roughness pair in
+ *   R/B). If ANY of R/G/B spans FLAT_PLANE_SPAN counts or fewer the file is routed to
+ *   `guardFallback`, because the DCT drift that sfxGuard exists to prevent is a property of constant
+ *   planes, not of one channel.
+ * - `lossyGuard`: encode the tier lossy at NATIVE resolution, decode it, and measure RGB PSNR
+ *   against the pristine PNG. Below `minPsnr` the texture is a high-frequency region/coverage mask or
+ *   camo whose values matter, and it takes `guardFallback` (or plain lossless when the tier names
+ *   none).
+ * - `alphaGuard`: independent of everything above: measure what fraction of the mask is SOFT (neither
+ *   0 nor 255) and only compress alpha when that clears `minSoft`. A hard binary cut mask is left
+ *   lossless -- lossy ringing at its 0/255 edges is what a renderer magnifies into a wear-boundary
+ *   artifact.
+ * - `maskGuard`: for a 4-plane data mask: flattens a degenerate alpha plane, and records whether
+ *   R==G==B so maskBudget knows which ladder the texture belongs on.
+ * - `flattenGuard`: maskGuard's counterpart for a property whose alpha is real transparency: the
+ *   plane is dropped only when it spans at most DEGENERATE_ALPHA_SPAN counts AND tops out at 255.
+ *   Both halves are required -- a plane spanning two counts near ZERO is fully transparent, and
+ *   flattening that one to 255 would paint the overlay on at full strength.
+ * - `sizeBudget`: LAST pass on a lossy tier: if the encode still lands above `maxBytes`, step quality
+ *   down until it fits or hits `minQuality`. `minAlphaQuality` opts the ALPHA plane into the same
+ *   walk -- off by default, because on most properties the mask must not be degraded to pay for the
+ *   colour.
+ * - `maskBudget`: the counterpart for a mask tier: down the `qualities` ladder for a replicated mask,
+ *   or the posterize `steps` ladder for a chromatic one. A mask that already fits is never touched at
+ *   all.
+ * - `widths`: on either budget, the rung AFTER the ladder it belongs to: a tier whose remaining bytes
+ *   sit in planes it is not allowed to quantize any further restarts at its own quality on a smaller
+ *   image. Resolution is the last lever precisely because it is the one that keeps every value inside
+ *   the range its source texels had, so it is tried only once quantization has failed to reach the
+ *   target.
+ *
+ * A tier reached through `guardFallback` brings its OWN budgets when it declares them, falling back
+ * to the base tier's otherwise. No weapon fallback tier declares any; the glove and keychain packed
+ * floors do.
+ */
 interface EncodeSpec {
     kind?: "sticker" | "weapon" | "glove" | "keychain";
     mode: "lossless" | "lossy" | "nearLossless";
@@ -146,23 +150,29 @@ interface EncodeJob {
     encode?: EncodeSpec;
 }
 
-// The default encoding, used for every texture without a descriptor and for a tiered texture that
-// falls back (too narrow to touch). Kept byte-for-byte as the historical path for hash stability.
+/**
+ * The default encoding, used for every texture without a descriptor and for a tiered texture that
+ * falls back (too narrow to touch). Byte-for-byte stable, because the output feeds a filename hash.
+ */
 const LOSSLESS = { lossless: true, exact: true } as const;
 
-// An alpha plane whose whole range spans this many counts or fewer carries no weight a blend can show.
+/** An alpha plane spanning this many counts or fewer carries no weight a blend can show. */
 const DEGENERATE_ALPHA_SPAN = 2;
 
-// Any channel already using few enough distinct values is a PRE-QUANTIZED selector plane: VP8L
-// compresses it to almost nothing, so posterizing it buys no bytes worth having and only risks MERGING
-// two palette levels the artist deliberately kept apart.
+/**
+ * Any channel already using few enough distinct values is a PRE-QUANTIZED selector plane: VP8L
+ * compresses it to almost nothing, so posterizing it buys no bytes worth having and only risks
+ * MERGING two palette levels the artist deliberately kept apart.
+ */
 const POSTERIZE_SKIP_DISTINCT = 32;
 
-// A plane spanning this many counts or fewer is CONSTANT for encoding purposes: see flatPlaneGuard.
+/** A plane spanning this many counts or fewer is CONSTANT for encoding purposes: see flatPlaneGuard. */
 const FLAT_PLANE_SPAN = 8;
 
-// A guarded encode materializes 16 MP raw buffers, two at a time for a PSNR check, so guarded jobs run
-// on a tighter leash than the plain lossless ones that make up the rest of the batch.
+/**
+ * A guarded encode materializes 16 MP raw buffers, two at a time for a PSNR check, so guarded jobs
+ * run on a tighter leash than the plain lossless ones that make up the rest of the batch.
+ */
 const GUARDED_CONCURRENCY = 4;
 
 const manifestPath = process.argv[2];
@@ -234,10 +244,12 @@ async function encodeSticker(src: string, dest: string, spec: EncodeSpec) {
 // guard's verdict is about the source art rather than about some earlier encode of it.
 // ---------------------------------------------------------------------------------------------
 
-// Quantize each channel of a raw plane in place to `step`-wide buckets, holding 0 and 255 EXACT: a
-// region-weight plane's "fully off" and "fully on" must stay exactly off/on, or a palette slot bleeds
-// in where the artist put none. The LUT is clamped because Math.round(254 / 16) * 16 is 256, which
-// wraps to 0 in a byte and would turn the brightest texels black.
+/**
+ * Quantizes each channel of a raw plane in place to `step`-wide buckets, holding 0 and 255 EXACT: a
+ * region-weight plane's "fully off" and "fully on" must stay exactly off/on, or a palette slot
+ * bleeds in where the artist put none. The LUT is clamped because Math.round(254 / 16) * 16 is 256,
+ * which wraps to 0 in a byte and would turn the brightest texels black.
+ */
 function posterizePlanes(plane: Buffer, channels: number, step: number, skipDistinct: number): void {
     for (let c = 0; c < channels; c++) {
         const seen = new Uint8Array(256);
@@ -253,19 +265,23 @@ function posterizePlanes(plane: Buffer, channels: number, step: number, skipDist
     }
 }
 
-// Area-average ("box") downscale of a single raw plane, srcW x srcH -> dstW x dstH, `channels` deep.
-// Unlike Lanczos this kernel has NO negative lobes, so a hard step edge (an alpha cut mask's 0/255
-// boundary) averages toward the mean with zero overshoot -- no ringing, no wear-boundary artifact once
-// the viewer upsamples for its bake. Separable (horizontal then vertical) with fractional edge weights,
-// so it is exact for the 2x case and correct for any ratio. Only used to downscale; never enlarges.
+/**
+ * Area-average ("box") downscale of a single raw plane, srcW x srcH -> dstW x dstH, `channels` deep.
+ * Unlike Lanczos this kernel has NO negative lobes, so a hard step edge (an alpha cut mask's 0/255
+ * boundary) averages toward the mean with zero overshoot -- no ringing, no wear-boundary artifact
+ * once a renderer upsamples for its bake. Separable (horizontal then vertical) with fractional edge
+ * weights, so it is exact for the 2x case and correct for any ratio. Only downscales; never enlarges.
+ */
 function areaDownscale(src: Buffer, srcW: number, srcH: number, dstW: number, dstH: number, channels: number): Buffer {
+    // `inLen`/`outLen` are the resampled axis in the input and output, `lines` counts the
+    // perpendicular axis, and the two strides are the element step along each of those axes.
     const accumulate = (
         input: ArrayLike<number>,
-        inLen: number, // length of the resampled axis in the input
-        outLen: number, // length of the resampled axis in the output
-        lines: number, // count of the perpendicular axis
-        strideAlong: number, // element step along the resampled axis
-        stridePerp: number, // element step along the perpendicular axis
+        inLen: number,
+        outLen: number,
+        lines: number,
+        strideAlong: number,
+        stridePerp: number,
         write: (line: number, out: number, ch: number, value: number) => void
     ): void => {
         const scale = inLen / outLen;
@@ -302,11 +318,13 @@ function areaDownscale(src: Buffer, srcW: number, srcH: number, dstW: number, ds
     return out;
 }
 
-// Point-sample ("nearest") downscale of a raw plane. For a NOISE field this is the only kernel that
-// preserves the signal: white noise decimated is still white noise, with an unchanged amplitude and
-// histogram, only at half the frequency -- whereas every averaging kernel drives it toward the mean
-// (a 2x box halves the standard deviation), which reads as the grain "washing out" into blotches.
-// For artwork this is plain aliasing, so it is gated behind noiseGuard.
+/**
+ * Point-sample ("nearest") downscale of a raw plane. For a NOISE field this is the only kernel that
+ * preserves the signal: white noise decimated is still white noise, at the same amplitude and
+ * histogram, only at half the frequency -- whereas every averaging kernel drives it toward the mean
+ * (a 2x box halves the standard deviation), which reads as the grain "washing out" into blotches.
+ * For artwork this is plain aliasing, so it is gated behind noiseGuard.
+ */
 function decimatePlane(src: Buffer, srcW: number, srcH: number, dstW: number, dstH: number, channels: number): Buffer {
     const out = Buffer.alloc(dstW * dstH * channels);
     const sx = srcW / dstW;
@@ -322,10 +340,12 @@ function decimatePlane(src: Buffer, srcW: number, srcH: number, dstW: number, ds
     return out;
 }
 
-// Restores the grain contrast that the sampler's bilinear magnification will smooth back out, by
-// scaling each decimated texel's deviation from its own source-block mean. `local` (the area downscale
-// of the same plane) IS that block mean, so this boosts only the high-frequency residual and leaves the
-// texture's low-frequency structure -- its soft colour blobs -- untouched.
+/**
+ * Restores the grain contrast that the sampler's bilinear magnification smooths back out, by scaling
+ * each decimated texel's deviation from its own source-block mean. `local` (the area downscale of
+ * the same plane) IS that block mean, so this boosts only the high-frequency residual and leaves the
+ * texture's low-frequency structure -- its soft colour blobs -- untouched.
+ */
 function boostGrain(decimated: Buffer, local: Buffer, gain: number): Buffer {
     const out = Buffer.alloc(decimated.length);
     for (let i = 0; i < decimated.length; i++) {
@@ -335,8 +355,10 @@ function boostGrain(decimated: Buffer, local: Buffer, gain: number): Buffer {
     return out;
 }
 
-// RGB PSNR (dB) between the pristine PNG and a candidate WebP buffer, both at native resolution.
-// Alpha is ignored: it is encoded losslessly and is not what the gate is judging.
+/**
+ * RGB PSNR (dB) between the pristine PNG and a candidate WebP buffer, both at native resolution.
+ * Alpha is ignored: it is encoded losslessly and is not what the gate is judging.
+ */
 async function psnrRgb(png: string, webp: Buffer): Promise<number> {
     const [a, b] = await Promise.all([
         sharp(png).removeAlpha().raw().toBuffer(),
@@ -352,10 +374,12 @@ async function psnrRgb(png: string, webp: Buffer): Promise<number> {
     return mse === 0 ? Infinity : 10 * Math.log10((255 * 255) / mse);
 }
 
-// Mean lag-1 autocorrelation of the RGB planes (horizontal and vertical). It says what KIND of signal
-// the RGB is: ~0.99 is painted artwork (neighbouring texels agree), ~0.3 is spray/stipple grain in
-// independent selector fields. Rows are subsampled: this only has to separate two populations that sit
-// an order of magnitude apart, not measure either precisely.
+/**
+ * Mean lag-1 autocorrelation of the RGB planes (horizontal and vertical). It says what KIND of
+ * signal the RGB is: ~0.99 is painted artwork (neighbouring texels agree), ~0.3 is spray/stipple
+ * grain in independent selector fields. Rows are subsampled: this only has to separate two
+ * populations that sit an order of magnitude apart, not measure either precisely.
+ */
 async function lag1Autocorrelation(png: string, width: number, height: number): Promise<number> {
     const rgb = await sharp(png).removeAlpha().raw().toBuffer();
     const step = Math.max(1, Math.floor(height / 512));
@@ -405,9 +429,12 @@ async function lag1Autocorrelation(png: string, width: number, height: number): 
     return (lagH / lagHn + lagV / lagVn) / 2 / varMean;
 }
 
-// Fraction of the alpha plane that is SOFT -- neither fully transparent nor fully opaque. A binary cut
-// mask sits near 0 (every texel is 0 or 255, so the mask is all hard edges); a coverage/translucency
-// ramp sits near 1. Rows are subsampled: this only has to tell two far-apart populations apart.
+/**
+ * Fraction of the alpha plane that is SOFT -- neither fully transparent nor fully opaque. A binary
+ * cut mask sits near 0 (every texel is 0 or 255, so the mask is all hard edges); a
+ * coverage/translucency ramp sits near 1. Rows are subsampled: this only has to tell two far-apart
+ * populations apart.
+ */
 async function alphaSoftFraction(png: string, width: number, height: number): Promise<number> {
     const alpha = await sharp(png).extractChannel(3).raw().toBuffer();
     const step = Math.max(1, Math.floor(height / 512));
@@ -432,11 +459,12 @@ interface MaskFacts {
     minRgbSpan: number;
 }
 
-// The facts greyGuard / maskGuard / flattenGuard / sfxGuard / flatPlaneGuard need, in one pass over
-// the pristine PNG.
-// Scanned in FULL, not subsampled: all of them are extremes (a max deviation, a min/max span) rather
-// than averages, and one stray texel is exactly what would make an "independent" mask look replicated
-// or a real alpha plane look degenerate.
+/**
+ * The facts greyGuard / maskGuard / flattenGuard / sfxGuard / flatPlaneGuard need, in one pass over
+ * the pristine PNG. Scanned in FULL, not subsampled: all of them are extremes (a max deviation, a
+ * min/max span) rather than averages, and one stray texel is exactly what would make an
+ * "independent" mask look replicated or a real alpha plane look degenerate.
+ */
 async function analyzeMaskPlanes(png: string): Promise<MaskFacts> {
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const n = info.width * info.height;
@@ -479,8 +507,10 @@ async function analyzeMaskPlanes(png: string): Promise<MaskFacts> {
 // The guarded encode, shared by the weapon and glove families.
 // ---------------------------------------------------------------------------------------------
 
-// A compact description of what a texture actually got, appended to its `done` line so a build log
-// records the route each guard took rather than just that something happened.
+/**
+ * A compact description of what a texture actually got, appended to its `done` line so a build log
+ * records the route each guard took rather than just that something happened.
+ */
 const specLabel = (s: EncodeSpec): string => {
     const qual = s.mode === "lossless" ? "" : ` q${s.quality}`;
     const alpha = s.alphaQuality !== undefined ? ` a${s.alphaQuality}` : "";
@@ -494,21 +524,26 @@ const specLabel = (s: EncodeSpec): string => {
     return `${s.mode}${qual}${alpha}${chroma}${grey}${kernel}${post}${flat}${strip}${cap}`;
 };
 
-// The tier a never-regress fallback encodes with. Two things it must not get wrong, both of which were
-// measured the hard way:
-//
-//   KEEP THE CAP. Dropping the resolution cap along with the lossy mode ships a 4K source LOSSLESS AT
-//   4096 whenever its lossy-at-2048 encode happens to lose on bytes.
-//
-//   USE THE AREA KERNEL. Never-regress fires precisely when lossless beats lossy, which is the
-//   signature of a flat, few-distinct-value stencil/region mask -- the exact content Lanczos handles
-//   worst. Its negative lobes ring at every hard edge and each ring is a new intermediate value, so a
-//   near-flat image becomes a noisy one and VP8L's predictors lose. Measured on the two textures this
-//   branch actually produced (usaf_round_psd, tiger_camo_psd, both 4096 binary-alpha stencils):
-//       native 4096 lossless   281K / 344K   (what the missing cap shipped)
-//       2048 Lanczos lossless  537K / 518K   (capping with the wrong kernel -- WORSE than not capping)
-//       2048 area lossless     210K / 210K   (capping with the right one)
-//   So fixing only the cap would have made both files ~1.6x bigger. Both parts are required.
+/**
+ * The tier a never-regress fallback encodes with. Two things it must not get wrong:
+ *
+ * KEEP THE CAP. Without the resolution cap, a 4K source ships LOSSLESS AT 4096 whenever its
+ * lossy-at-2048 encode happens to lose on bytes.
+ *
+ * USE THE AREA KERNEL. Never-regress fires precisely when lossless beats lossy, which is the
+ * signature of a flat, few-distinct-value stencil/region mask -- the exact content Lanczos handles
+ * worst. Its negative lobes ring at every hard edge and each ring is a new intermediate value, so a
+ * near-flat image becomes a noisy one and VP8L's predictors lose. Measured on the two textures that
+ * reach this path (usaf_round_psd, tiger_camo_psd, both 4096 binary-alpha stencils):
+ *
+ * ```
+ * native 4096 lossless   281K / 344K
+ * 2048 Lanczos lossless  537K / 518K   (the wrong kernel -- WORSE than not capping)
+ * 2048 area lossless     210K / 210K
+ * ```
+ *
+ * The cap alone leaves both files ~1.6x bigger, so both parts are required.
+ */
 const losslessFallback = (base: EncodeSpec): EncodeSpec => ({
     kind: base.kind,
     mode: "lossless",
@@ -523,8 +558,8 @@ async function encodeGuarded(src: string, baseSpec: EncodeSpec): Promise<{ data:
     const width = meta.width ?? 0;
     const height = meta.height ?? 0;
 
-    // Width gate: an already-small texture keeps the default lossless encoding, byte-identical to what
-    // an untiered texture gets.
+    // Width gate: an already-small texture keeps the default lossless encoding, byte-identical to
+    // what an untiered texture gets.
     if (baseSpec.minWidth !== undefined && width < baseSpec.minWidth) {
         return { data: await sharp(src).webp(LOSSLESS).toBuffer(), label: "lossless (below minWidth)" };
     }
@@ -847,10 +882,12 @@ async function encodeGuarded(src: string, baseSpec: EncodeSpec): Promise<{ data:
 const isGuarded = (job: EncodeJob): boolean =>
     job.encode?.kind === "weapon" || job.encode?.kind === "glove" || job.encode?.kind === "keychain";
 
-// Two pools rather than one, because a guarded job holds several full-resolution raw planes at once
-// (two of them just to score a PSNR) and so has to run narrow. Sharing a single pool would let the
-// guarded jobs occupy every slot and idle the plain lossless ones behind them; running the two
-// alongside each other keeps the machine busy on the cheap jobs while the expensive ones trickle.
+/**
+ * Two pools rather than one, because a guarded job holds several full-resolution raw planes at once
+ * (two of them just to score a PSNR) and so has to run narrow. Sharing a single pool would let the
+ * guarded jobs occupy every slot and idle the plain lossless ones behind them; running the two
+ * alongside each other keeps the machine busy on the cheap jobs while the expensive ones trickle.
+ */
 async function drain(list: EncodeJob[], concurrency: number): Promise<void> {
     let next = 0;
     await Promise.all(

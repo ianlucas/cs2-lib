@@ -5,29 +5,31 @@
 
 namespace ItemGenerator;
 
-// Per-property WebP encode tiers for STICKER textures. Every texture in the pipeline is lossless by
-// default (see item-generator-webp.ts); this is the one place that opts specific sticker textures
-// into a smaller encoding. It is deliberately the sole tuning surface -- edit Targets, rebuild, done.
+// Per-property WebP encode tiers for STICKER textures, one of the four tuning surfaces beside
+// WeaponTextureOptimization, GloveTextureOptimization and KeychainTextureOptimization. Every texture
+// in the pipeline is lossless by default (see item-generator-webp.ts); these four files are the only
+// places that opt a texture into a smaller encoding. Edit Targets, rebuild, done.
 //
 // SCOPE. Only the properties below are ever touched, and only textures reached through them. Each is
 // a sticker-EXCLUSIVE material parameter (the "Sticker0" suffix), so keying on the parameter name is
 // enough to stay on sticker textures and never touch a weapon/glove/character texture. A texture that
-// ALSO feeds any non-target parameter is dropped (ExcludeShared) so a shared mask is never re-encoded.
+// ALSO feeds any non-target parameter is dropped, so a shared mask is never re-encoded.
 //
-// WHY EACH TIER (validated out of band against ../cs2-3d-viewer; see the branch follow-up notes):
-//   g_tSticker0                lossy q90                 the visible artwork (color) -- safe, ~-63%.
-//   g_tHoloSpectrumSticker0    lossy q90, -alpha, w>=1024 RGB view-angle gradient LUT; alpha is dead
-//                              (strip it -- also dodges the "zero alpha blanks RGB" webp trap). Only
+// WHY EACH TIER:
+//   g_tSticker0                lossy q90                  the visible artwork (colour).
+//   g_tHoloSpectrumSticker0    lossy q90, -alpha, w>=1024  RGB view-angle gradient LUT; alpha is dead,
+//                              and stripping it also dodges webp's "zero alpha blanks RGB" trap. Only
 //                              the wide ones carry weight.
-//   g_tSfxMaskSticker0         lossless, downscale <=512  holo mask that GATES the spectrum composite.
-//                              RGB are three independent masks + live alpha; lossy shifts the composite
-//                              (bad even at q95). High-entropy, so the only lever is a lossless downscale.
-//   g_tNormalRoughnessSticker0 lossless, downscale <=512  RG=hemi-oct normal, B=roughness, A=self-illum.
-//                              Lossy (even q95) facets the normal on glossy/metallic stickers; downscale
-//                              keeps values exact (no faceting) while shedding spatial detail.
+//   g_tSfxMaskSticker0         lossless, downscale <=512   holo mask that GATES the spectrum
+//                              composite. RGB are three independent masks + live alpha, so lossy
+//                              shifts the composite even at q95. High-entropy, so the only lever is
+//                              the lossless downscale.
+//   g_tNormalRoughnessSticker0 lossless, downscale <=512   RG=hemi-oct normal, B=roughness,
+//                              A=self-illum. Lossy facets the normal on glossy/metallic stickers even
+//                              at q95; the downscale keeps values exact while shedding spatial detail.
 //
-// NOT ported here: g_tColor (sticker paper backing) -- it is a generic base-color parameter shared with
-// non-sticker materials, so it cannot be scoped to stickers by name alone; it was ~1 texture out of band.
+// NOT covered here: g_tColor (sticker paper backing) -- a generic base-colour parameter shared with
+// non-sticker materials, so it cannot be scoped to stickers by name alone, and it reaches ~1 texture.
 
 public enum StickerEncodeMode
 {
@@ -66,7 +68,6 @@ public sealed record StickerEncodeSpec(
 
 public static class StickerTextureOptimization
 {
-    // >>> TUNE HERE <<< property name -> encode tier.
     public static readonly IReadOnlyDictionary<string, StickerTextureTier> Targets =
         new Dictionary<string, StickerTextureTier>(StringComparer.Ordinal)
         {
@@ -91,7 +92,7 @@ public static class StickerTextureOptimization
 
     // Walks every material's parsed data and returns `resolved .vtex path -> tier` for the sticker
     // textures that qualify. A texture qualifies only if it is bound to a target parameter AND to no
-    // other parameter (mask safety), mirroring the out-of-band prototype's classifier.
+    // other parameter (mask safety).
     //
     // `resolveTexturePath` maps a raw `.vtex` reference to the same resolved key the encode loop uses
     // (returns null when it cannot be resolved). Material data nodes are the plain object graph the

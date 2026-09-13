@@ -3,21 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Lists every material (and every material it transitively references) used by a single item,
-// together with each material's texture parameters and the on-disk size of each texture. Handy
-// for scoping texture-optimization work to one item without re-running the whole item-generator.
-//
-// Doubles as a module: the helpers below are exported so a future tool can resolve an item, resolve
-// its root materials and walk them without shelling out. `main` only runs when this file is the
-// process entrypoint, so importing it has no side effects beyond loading the economy on demand.
-//
-// Usage:
-//   npx tsx scripts/tool-list-textures.ts <item-id-or-name> [outputDir]
-//
-// Examples:
-//   npx tsx scripts/tool-list-textures.ts 215
-//   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened"
-//   npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened" scripts/workdir/unoptimized-output
+/**
+ * Lists every material (and every material it transitively references) used by a single item,
+ * together with each material's texture parameters and the on-disk size of each texture. Scopes
+ * texture-optimization work to one item without re-running the whole item-generator.
+ *
+ * Doubles as a module: the helpers below are exported so a tool can resolve an item, resolve its
+ * root materials and walk them without shelling out. `main` only runs when this file is the process
+ * entrypoint, so importing it has no side effects beyond loading the economy on demand.
+ *
+ * Usage:
+ *
+ * ```
+ * npx tsx scripts/tool-list-textures.ts <item-id-or-name> [outputDir]
+ * npx tsx scripts/tool-list-textures.ts 215
+ * npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened"
+ * npx tsx scripts/tool-list-textures.ts "AK-47 | Case Hardened" scripts/workdir/unoptimized-output
+ * ```
+ */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { basename, dirname, join } from "path";
@@ -43,16 +46,20 @@ interface Gltf {
     materials?: { name?: string }[];
 }
 
-// Strip cs2-lib's output hash (`_<8 hex>` before the extension) so the same source texture maps to
-// one key even if its encoded bytes - and therefore its cs2-lib hash - ever change.
+/**
+ * Strips cs2-lib's output hash (`_<8 hex>` before the extension) so the same source texture maps to
+ * one key even if its encoded bytes -- and therefore its cs2-lib hash -- differ.
+ */
 export function toVrfIdentity(texturePath: string): string {
     return texturePath.replace(/_[0-9a-f]{8}(\.(?:webp|exr))$/, "$1");
 }
 
-// Resolve a `/materials/...`, `/textures/...` or `/models/...` resource to an on-disk file under
-// `outputDir`, tolerating a different output hash than the one cs2-lib recorded (e.g. `prd-output`
-// re-encodes its own bytes): if the exact file is absent, fall back to any sibling whose name
-// matches once the trailing `_<8 hex>` hash is stripped.
+/**
+ * Resolves a `/materials/...`, `/textures/...` or `/models/...` resource to an on-disk file under
+ * `outputDir`, tolerating a different output hash than the one cs2-lib recorded (e.g. `prd-output`
+ * re-encodes its own bytes): if the exact file is absent, falls back to any sibling whose name
+ * matches once the trailing `_<8 hex>` hash is stripped.
+ */
 export function resolveOutputFile(outputDir: string, resourcePath: string): string | undefined {
     const direct = join(outputDir, resourcePath.replace(/^\//, ""));
     if (existsSync(direct)) return direct;
@@ -71,14 +78,7 @@ export function humanSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)}M`;
 }
 
-// A weapon/knife GLB embeds one mesh per variant -- `.body_hd` and/or `.body_legacy` -- and the
-// item's `isLegacyModel` flag decides which one the game renders. Each mesh primitive names a glTF
-// material (e.g. `weapon_rif_ak47_6a98526d`), and that name is a `/materials/<name>.vmat.json`
-// resource whose texture params point at the real `/textures/*.webp` files (the images embedded in
-// the GLB itself are runtime stubs of a few bytes, so we ignore them). A base weapon with no paint
-// kit therefore gets its textures from here; a painted skin uses its paint-kit material instead.
-
-// GLB container: 12-byte header then length-prefixed chunks; the first chunk is the glTF JSON.
+/** GLB container: 12-byte header then length-prefixed chunks; the first chunk is the glTF JSON. */
 function readGlbJson(file: string): Gltf | undefined {
     const buffer = readFileSync(file);
     if (buffer.length < 20 || buffer.readUInt32LE(0) !== 0x46546c67) return undefined;
@@ -91,10 +91,12 @@ function readGlbJson(file: string): Gltf | undefined {
     }
 }
 
-// Pick the mesh(es) the game renders for this item's model variant. Weapons/knives carry a
-// `.body_hd` and/or `.body_legacy` mesh; `isLegacyModel` selects between them (falling back to
-// whichever variant exists). Models with no hd/legacy split (gloves, keychains) contribute all of
-// their non-hidden meshes.
+/**
+ * Picks the mesh(es) the game renders for this item's model variant. Weapons/knives carry a
+ * `.body_hd` and/or `.body_legacy` mesh; `isLegacyModel` selects between them (falling back to
+ * whichever variant exists). Models with no hd/legacy split (gloves, keychains) contribute all of
+ * their non-hidden meshes.
+ */
 function selectMeshes(gltf: Gltf, isLegacy: boolean): NonNullable<Gltf["meshes"]> {
     const meshes = (gltf.meshes ?? []).filter((mesh) => !(mesh.name ?? "").includes("hidden"));
     const legacy = meshes.filter((mesh) => (mesh.name ?? "").includes("legacy"));
@@ -107,8 +109,12 @@ function selectMeshes(gltf: Gltf, isLegacy: boolean): NonNullable<Gltf["meshes"]
     return meshes;
 }
 
-// The `/materials/<name>.vmat.json` resource paths bound by the rendered model variant, in mesh
-// order and deduped.
+/**
+ * The `/materials/<name>.vmat.json` resource paths bound by the rendered model variant, in mesh
+ * order and deduped. Each mesh primitive names a glTF material (e.g. `weapon_rif_ak47_6a98526d`)
+ * whose texture params point at the real `/textures/*.webp` files; the images embedded in the GLB
+ * itself are runtime stubs of a few bytes.
+ */
 export function collectModelMaterials(modelFile: string, isLegacy: boolean): string[] {
     const gltf = readGlbJson(modelFile);
     if (gltf === undefined) return [];
@@ -128,11 +134,13 @@ export function collectModelMaterials(modelFile: string, isLegacy: boolean): str
     return out;
 }
 
-// The material roots to walk for an item: its paint-kit material (when painted) plus the materials
-// its model binds for the rendered hd/legacy variant. Both matter: a painted skin composites its
-// pattern over the model's base body textures (e.g. a legacy skin still ships `ak47_color_psd`), and
-// a base/vanilla weapon has only the model materials. Shared sub-materials are deduped by the
-// caller's material walk, so listing both here never double-counts a texture.
+/**
+ * The material roots to walk for an item: its paint-kit material (when painted) plus the materials
+ * its model binds for the rendered hd/legacy variant. Both matter: a painted skin composites its
+ * pattern over the model's base body textures (e.g. a legacy skin still ships `ak47_color_psd`),
+ * and a base/vanilla weapon has only the model materials. Shared sub-materials are deduped by the
+ * caller's material walk, so listing both here never double-counts a texture.
+ */
 export function resolveRootMaterials(item: CS2EconomyItem, outputDir: string): string[] {
     const roots: string[] = [];
     const paint = item.materialPath ?? item.parent?.materialPath;
@@ -170,10 +178,12 @@ export function resolveItem(query: string): CS2EconomyItem {
     throw new Error(`No item found matching "${query}".`);
 }
 
-// Walks arbitrary material JSON, collecting texture references (attributed to the enclosing
-// parameter's `m_name`/`m_strName`, mirroring the generator's own attribution) and references to
-// other materials. `contextName` carries the nearest enclosing parameter name down to scalar
-// values so a texture sitting under `m_pValue`/`m_strTextureRuntimeResourcePath` is named correctly.
+/**
+ * Walks arbitrary material JSON, collecting texture references (attributed to the enclosing
+ * parameter's `m_name`/`m_strName`, mirroring the generator's own attribution) and references to
+ * other materials. `contextName` carries the nearest enclosing parameter name down to scalar values
+ * so a texture sitting under `m_pValue`/`m_strTextureRuntimeResourcePath` is named correctly.
+ */
 export function walk(
     value: unknown,
     contextName: string | undefined,
