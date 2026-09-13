@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-using System.Collections.Concurrent;
 using ValveResourceFormat;
 using ValveResourceFormat.ResourceTypes;
 
@@ -59,65 +58,5 @@ public static class TextureCodecPolicy
             if (dependency.String == HemiOctAnisoRoughness) aniso = true;
         }
         return aniso;
-    }
-
-    /// <summary>
-    /// The subset of <paramref name="vpkPaths"/> that <see cref="IsRawFourChannelNormal"/> holds
-    /// for, as normalized VPK paths.
-    ///
-    /// Deliberately re-reads the vtex_c headers rather than recording what
-    /// <see cref="ResourceDecompiler"/> saw: decompilation skips textures already present in the
-    /// workdir, so a set built there would depend on incremental state. Encoded bytes feed the
-    /// content hashes in CDN filenames, so the classification has to come out the same on an
-    /// incremental run as on a clean one.
-    ///
-    /// Costs one extra pass over the vtex_c entries. Reading is ordered by (archive, offset) so
-    /// that pass stays sequential, and only the headers are parsed -- no pixels are decoded.
-    /// </summary>
-    public static HashSet<string> Collect(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
-    {
-        var package = ctx.VpkPackage;
-        if (package == null) return [];
-
-        var work = vpkPaths
-            .Select(p => (VpkPath: p, Entry: package.FindEntry(p)))
-            .Where(t => t.Entry != null)
-            .ToArray();
-        if (work.Length == 0) return [];
-
-        Array.Sort(work, static (a, b) =>
-        {
-            var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
-            return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
-        });
-
-        // Entries inlined in pak01_dir.vpk (ArchiveIndex 0x7FFF) share Package.Reader's base
-        // stream and seek on it, so they cannot be read concurrently.
-        var dirVpkLock = new object();
-        var found = new ConcurrentBag<string>();
-        var po = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount) };
-
-        Parallel.ForEach(work, po, item =>
-        {
-            var (vpkPath, entry) = item;
-            byte[] data;
-            if (entry!.ArchiveIndex == 0x7FFF)
-            {
-                lock (dirVpkLock)
-                    package.ReadEntry(entry, out data, validateCrc: false);
-            }
-            else
-            {
-                package.ReadEntry(entry, out data, validateCrc: false);
-            }
-
-            using var resource = new Resource();
-            resource.FileName = vpkPath;
-            resource.Read(new MemoryStream(data));
-            if (IsRawFourChannelNormal(resource))
-                found.Add(vpkPath);
-        });
-
-        return [.. found];
     }
 }

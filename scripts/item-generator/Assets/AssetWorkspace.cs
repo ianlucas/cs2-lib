@@ -15,14 +15,12 @@ public static class AssetWorkspace
         Directory.CreateDirectory(Config.ItemGeneratorCacheDir);
 
         // Build dir holds per-run staging output (pre-hash encodes); never carry state across runs.
-        if (Directory.Exists(Config.ItemGeneratorBuildDir))
-            Directory.Delete(Config.ItemGeneratorBuildDir, true);
-        Directory.CreateDirectory(Config.ItemGeneratorBuildDir);
+        Workdir.RecreateGeneratedDir(Config.ItemGeneratorBuildDir);
 
         // A local resume keeps the completed, content-addressed assets from the previous run.
         // Individual processors only reuse unambiguous complete files and regenerate misses.
-        if (!Config.IsAssetReuseEnabled() && Directory.Exists(Config.OutputDir))
-            Directory.Delete(Config.OutputDir, true);
+        if (!Config.IsAssetReuseEnabled())
+            Workdir.RemoveGeneratedDir(Config.OutputDir);
 
         foreach (var folder in new[] { "images", "materials", "models", "textures" })
             Directory.CreateDirectory(Path.Combine(Config.OutputDir, folder));

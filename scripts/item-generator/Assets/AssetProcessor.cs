@@ -671,150 +671,6 @@ public static partial class AssetProcessor
         Log($"Extracted {FormatCount(processed.Count, "material")} and found {FormatCount(ctx.TexturesToProcess.Count, "texture reference")}.");
     }
 
-    // Texture paths bound to a *Normal* material param (g_tNormal, g_tGlitterNormal, ...) in any
-    // parsed vmat, plus a filename fallback ("_normal" in the stem) for normals that reach
-    // TexturesToProcess only through composite-material mutators or model materials. Membership
-    // selects the near-lossless WebP path (see Config.WebpNearLosslessNormals).
-    private static HashSet<string> CollectNormalMapTexturePaths(ItemGeneratorContext ctx)
-    {
-        var result = new HashSet<string>();
-        foreach (var data in ctx.MaterialDataByPath.Values)
-        {
-            if (data is not Dictionary<string, object?> vmat ||
-                !vmat.TryGetValue("m_textureParams", out var paramsObj) ||
-                paramsObj is not List<object?> textureParams)
-                continue;
-            foreach (var entry in textureParams)
-            {
-                if (entry is not Dictionary<string, object?> param ||
-                    param.GetValueOrDefault("m_name") is not string name ||
-                    !name.Contains("Normal", StringComparison.OrdinalIgnoreCase) ||
-                    param.GetValueOrDefault("m_pValue") is not string value)
-                    continue;
-                try
-                {
-                    var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, value);
-                    result.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
-                }
-                catch { }
-            }
-        }
-        foreach (var vtexPath in ctx.TexturesToProcess)
-        {
-            if (Path.GetFileNameWithoutExtension(vtexPath)
-                .Contains("_normal", StringComparison.OrdinalIgnoreCase))
-                result.Add(vtexPath);
-        }
-        return result;
-    }
-
-    // Params a compositor reads as DATA, not color: paint zone/coverage masks (g_tMasks,
-    // g_tPaintByNumberMasks), cavity/AO (g_tAmbientOcclusion, g_tFinalAmbientOcclusion) and the
-    // glove compositor's ID maps (g_tLayerId, g_tTintId). Deliberately excludes sticker sfx
-    // masks (g_tSfxMaskSticker*) and pearlescence masks — different pipelines, unmeasured
-    // benefit.
-    //
-    // "Id" is matched case-sensitively. g_tLayerId and g_tTintId are the only texture params
-    // game-wide ending in it; the all-caps F_TINT_ID is a feature flag that also reaches this
-    // predicate through WalkLooseVariables, and only its missing texture path keeps it out.
-    private static bool IsDataSelectorParamName(string name) =>
-        name.EndsWith("Masks", StringComparison.OrdinalIgnoreCase) ||
-        name.EndsWith("Id", StringComparison.Ordinal) ||
-        name.Contains("AmbientOcclusion", StringComparison.OrdinalIgnoreCase);
-
-    private static bool HasDataSelectorFilename(string vtexPath)
-    {
-        var stem = Path.GetFileNameWithoutExtension(vtexPath);
-        return stem.Contains("_masks", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("paintmask", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("tintid", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("materialid", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("_ao_", StringComparison.OrdinalIgnoreCase) ||
-            stem.EndsWith("_ao", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("paintao", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("ambient_occlusion", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("cavity", StringComparison.OrdinalIgnoreCase);
-    }
-
-    // Texture paths the customweapon and customglove compositors sample as data selectors —
-    // masks, AO and ID maps — collected from vmat texture params, composite-material loose
-    // variables (per-skin masks/AO bind through m_strName + m_strTextureRuntimeResourcePath,
-    // not m_textureParams), plus a filename fallback for the ones that reach TexturesToProcess
-    // through model materials only.
-    // Membership selects fully-lossless WebP (see Config.WebpLosslessQuality): lossy VP8 (even
-    // q95) dips flat macroblocks by 1-8/255 on a sparse 16px lattice and rings far deeper (to
-    // ±238) along mask-zone borders. The shaders amplify that: (1 - g_tMasks.x) directly blends
-    // bare-metal g_tColor into the paint, so each dipped block renders as a pixelated square on
-    // dark skins (Desert Eagle | Blaze body), and AO error shifts wear chip edges inside the
-    // 0.58..0.68 reveal band (AK-47 Asiimov). Near-binary masks also compress far BETTER
-    // lossless (pist_deagle_masks: 16 KB lossy VP8 → 1.6 KB VP8L).
-    //
-    // The glove ID maps fail the same way but harder, because a classifier reads them instead
-    // of a blend: g_tTintId decodes as ceil(r * 7) into eight buckets and g_tLayerId normalizes
-    // into per-layer weights, so a dipped macroblock crosses a bucket edge WHOLESALE and the
-    // whole block adopts a neighbouring layer's wear response. They are authored on discrete
-    // levels sitting right under those edges — glove_slick_half_back_tintid is 57% level 0 and
-    // 8% level 36, with 0 and 1 units of headroom — against a measured lossy error of up to
-    // 7/255. That map alone lands 5,362 texels (0.51%) in the wrong bucket, which renders as
-    // unworn squares on the ID maps' 16px lattice (Driver Gloves | Brocade Flowers past wear
-    // 0.30). Lossless drops it to zero, and all 37 ID maps shrink: 2177 KB VP8 → 628 KB VP8L.
-    private static HashSet<string> CollectDataSelectorTexturePaths(ItemGeneratorContext ctx)
-    {
-        var result = new HashSet<string>();
-
-        void AddResolved(string value)
-        {
-            try
-            {
-                var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, value);
-                result.Add(MaterialPaths.NormalizeMaterialResourcePath(resolved));
-            }
-            catch { }
-        }
-
-        foreach (var data in ctx.MaterialDataByPath.Values)
-        {
-            if (data is not Dictionary<string, object?> vmat ||
-                !vmat.TryGetValue("m_textureParams", out var paramsObj) ||
-                paramsObj is not List<object?> textureParams)
-                continue;
-            foreach (var entry in textureParams)
-            {
-                if (entry is not Dictionary<string, object?> param ||
-                    param.GetValueOrDefault("m_name") is not string name ||
-                    !IsDataSelectorParamName(name) ||
-                    param.GetValueOrDefault("m_pValue") is not string value)
-                    continue;
-                AddResolved(value);
-            }
-        }
-
-        void WalkLooseVariables(object? node)
-        {
-            if (node is Dictionary<string, object?> dict)
-            {
-                if (dict.GetValueOrDefault("m_strName") is string name &&
-                    IsDataSelectorParamName(name) &&
-                    dict.GetValueOrDefault("m_strTextureRuntimeResourcePath") is string path &&
-                    path.Length > 0)
-                    AddResolved(path);
-                foreach (var value in dict.Values) WalkLooseVariables(value);
-            }
-            else if (node is List<object?> list)
-            {
-                foreach (var value in list) WalkLooseVariables(value);
-            }
-        }
-        foreach (var data in ctx.CompositeMaterialDataByPath.Values) WalkLooseVariables(data);
-
-        foreach (var vtexPath in ctx.TexturesToProcess)
-        {
-            if (HasDataSelectorFilename(vtexPath))
-                result.Add(vtexPath);
-        }
-        return result;
-    }
-
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
     {
         if (Config.IsAssetReuseEnabled())
@@ -828,29 +684,67 @@ public static partial class AssetProcessor
         if (pending.Count == 0) return;
 
         Log($"Processing {FormatCount(pending.Count, "material texture")}...");
-        var normalMapTextures = CollectNormalMapTexturePaths(ctx);
-        var dataSelectorTextures = CollectDataSelectorTexturePaths(ctx);
 
         var compiledPaths = pending.Select(MaterialPaths.ToCompiledMaterialResourcePath).ToList();
-        // Keyed on the RESOLVED vpk path, because that is what the encode loop below compares
-        // against. ResolveMaterialResourcePath falls back to matching the filename anywhere in
-        // the index, so the resolved path is not always the string we started from, and keying
-        // on the unresolved one would silently drop the lossless flag for anything relocated.
-        var resolvedCompiledPaths = new List<string>(pending.Count);
-        foreach (var vtexPath in pending)
-        {
-            try
-            {
-                resolvedCompiledPaths.Add(MaterialPaths.ToCompiledMaterialResourcePath(
-                    MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath)));
-            }
-            catch { }
-        }
-        var rawFourChannelNormals = TextureCodecPolicy.Collect(ctx, resolvedCompiledPaths);
         ResourceDecompiler.DecompileAssets(ctx, compiledPaths);
 
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "textures");
         Directory.CreateDirectory(stagingDir);
+
+        // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures),
+        // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures)
+        // and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
+        // also bound outside its own family, so a texture shared between two families is dropped by
+        // both and stays lossless. The one place two scopes can still agree is a charm-only texture on
+        // a property the weapon file targets too -- a charm material is a csgo_weapon.vfx material, and
+        // the weapon file only excludes the keychain ASSET TREE. Both such textures in the build today
+        // are shared engine defaults (a 1x1 and a 16x16 g_tMetalness constant, 0 K either way); the
+        // lookup order below resolves them to the weapon tier they already ship with. Every other
+        // texture stays lossless -- a job with no `encode` descriptor takes the default lossless path
+        // in item-generator-webp.ts, so its bytes, and the hash in its filename, stay stable.
+        string? ResolveTexture(string path)
+        {
+            try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
+            catch { return null; }
+        }
+        // INPUT_SKIP_TEXTURE_OPTIMIZATION resolves no tier at all, putting every texture on that same
+        // default path -- an unoptimized build to compare a tuned one against.
+        var optimize = !Config.IsTextureOptimizationSkipped();
+        if (!optimize)
+            Log("Texture optimization skipped by input (INPUT_SKIP_TEXTURE_OPTIMIZATION).");
+
+        Dictionary<string, StickerTextureTier> stickerTiers = optimize
+            ? StickerTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath.Values.Concat(ctx.CompositeMaterialDataByPath.Values),
+                ResolveTexture)
+            : [];
+        Dictionary<string, WeaponTextureTier> weaponTiers = optimize
+            ? WeaponTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath.Values,
+                ctx.CompositeMaterialDataByPath.Values,
+                ResolveTexture)
+            : [];
+        // Keyed by resource path, unlike the two above: the glove scope rule admits the shared
+        // character shader only under a glove arm model. Composites are not passed because a glove
+        // composite binds no texture of its own (see GloveTextureOptimization).
+        Dictionary<string, GloveTextureTier> gloveTiers = optimize
+            ? GloveTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath,
+                ResolveTexture)
+            : [];
+        // Composites are passed as never-keychain: the only one a charm reaches is the display case's
+        // weapon paint composite, whose bindings must count as foreign (see KeychainTextureOptimization).
+        Dictionary<string, KeychainTextureTier> keychainTiers = optimize
+            ? KeychainTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath.Values,
+                ctx.CompositeMaterialDataByPath.Values,
+                ResolveTexture)
+            : [];
+        var manifestJsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
 
         var encodeJobs = new List<(string ResolvedVtexPath, string StagedPath)>();
         var manifestLines = new List<string>();
@@ -870,29 +764,21 @@ public static partial class AssetProcessor
             if (File.Exists(pngPath))
             {
                 var stagedPath = Path.Combine(stagingDir, $"{encodeJobs.Count}.webp");
-                var normalizedResolved = MaterialPaths.NormalizeMaterialResourcePath(resolvedVtexPath);
-                // Lossless (data selectors) wins over near-lossless (normals) when both match.
-                // Raw four-channel normals are data too: their channels are a packed
-                // hemi-octahedral pair and an anisotropic roughness pair, decoded non-linearly
-                // downstream, so near-lossless preprocessing would perturb the decoded normal
-                // rather than the stored value. See TextureCodecPolicy.
-                var lossless = dataSelectorTextures.Contains(vtexPath) ||
-                    dataSelectorTextures.Contains(normalizedResolved) ||
-                    rawFourChannelNormals.Contains(vpkPath);
-                var nearLossless = !lossless && (normalMapTextures.Contains(vtexPath) ||
-                    normalMapTextures.Contains(normalizedResolved));
+                // Default: verbatim lossless WebP. A texture bound to a tuned property instead carries
+                // an `encode` descriptor selecting its tier, tagged with the family that owns it.
+                object? encode =
+                    weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier :
+                    gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier :
+                    keychainTiers.TryGetValue(resolvedVtexPath, out var keychainTier) ? keychainTier :
+                    stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
+                        ? StickerTextureOptimization.ToSpec(stickerTier)
+                        : null;
                 manifestLines.Add(JsonSerializer.Serialize(new
                 {
                     src = pngPath,
                     dest = stagedPath,
-                    // For near-lossless encodes, quality is libwebp's near-lossless level; for
-                    // lossless it's VP8L's compression effort (not a fidelity knob).
-                    quality = lossless ? Config.WebpLosslessQuality
-                        : nearLossless ? Config.WebpNearLosslessNormals
-                        : Config.WebpQuality,
-                    nearLossless,
-                    lossless
-                }));
+                    encode
+                }, manifestJsonOptions));
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }
             else if (File.Exists(exrPath))
@@ -1043,9 +929,10 @@ public static partial class AssetProcessor
             RecordMaterialRename(ctx, path, isComposite, filename);
         }
 
-        void WriteMaterialFile(string filename, byte[] jsonBytes)
+        void WriteMaterialFile(string filename, byte[] jsonBytes, object? data)
         {
             AssertMaterialReferencesRewritten(System.Text.Encoding.UTF8.GetString(jsonBytes), filename);
+            AssertTextureReferencingPropertiesKnown(data, filename);
             var outPath = Path.Combine(Config.OutputDir, "materials", filename);
             Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
             File.WriteAllBytes(outPath, jsonBytes);
@@ -1096,7 +983,7 @@ public static partial class AssetProcessor
                 var jsonBytes = SerializeMaterial(data, null);
                 var filename = GetMaterialFilename(path, isComposite, ContentVersion.HashBytes(jsonBytes));
                 AssignFilename(path, isComposite, filename);
-                WriteMaterialFile(filename, jsonBytes);
+                WriteMaterialFile(filename, jsonBytes, data);
                 continue;
             }
 
@@ -1126,7 +1013,7 @@ public static partial class AssetProcessor
                 var filename = isComposite
                     ? ctx.CompositeMaterialFilenameByPath[path]
                     : ctx.MaterialFilenameByPath[path];
-                WriteMaterialFile(filename, SerializeMaterial(dataByPath[path]!, null));
+                WriteMaterialFile(filename, SerializeMaterial(dataByPath[path]!, null), dataByPath[path]);
             }
         }
     }
@@ -1445,6 +1332,68 @@ public static partial class AssetProcessor
         if (match.Success)
             throw new InvalidOperationException($"Unrewritten material reference '{match.Value}' found in '{filename}'.");
     }
+
+    // Every material parameter that points at a texture must be a known one (see
+    // MaterialTextureProperties.Known). A parameter names its texture in one of two shapes: an
+    // `m_textureParams` entry (name in `m_name`, texture in `m_pValue`) or a composite loose
+    // variable (name in `m_strName`, texture in `m_strTextureRuntimeResourcePath`). This fails on a
+    // texture-bearing parameter whose name is unknown, and on any texture reference it cannot
+    // attribute to a parameter name at all — so a new CS2 shape stops the build rather than shipping
+    // an unrecognized reference. Validates the raw (pre-patch) data, where textures are `.vtex`.
+    private static void AssertTextureReferencingPropertiesKnown(object? data, string filename)
+    {
+        var unknown = new SortedSet<string>(StringComparer.Ordinal);
+        var unattributed = new SortedSet<string>(StringComparer.Ordinal);
+        CollectUnknownTextureProperties(data, unknown, unattributed);
+        if (unknown.Count == 0 && unattributed.Count == 0) return;
+
+        var problems = new List<string>();
+        if (unknown.Count > 0)
+            problems.Add($"unknown parameter(s): {string.Join(", ", unknown)}");
+        if (unattributed.Count > 0)
+            problems.Add($"texture reference(s) with no parameter name under: {string.Join(", ", unattributed)}");
+        throw new InvalidOperationException(
+            $"Unrecognized texture reference in '{filename}' ({string.Join("; ", problems)}). " +
+            "Confirm the parameter in fresh game data, then add it to MaterialTextureProperties.Known.");
+    }
+
+    // Records every texture-referencing parameter whose name is unknown, plus any texture reference
+    // carrying no parameter name at all (neither `m_name` nor `m_strName`, or a bare `.vtex` string
+    // sitting directly in an array). A texture reference is a `.vtex` value under any key other than
+    // those two name keys.
+    private static void CollectUnknownTextureProperties(
+        object? value, ISet<string> unknown, ISet<string> unattributed)
+    {
+        if (value is Dictionary<string, object?> dict)
+        {
+            var name =
+                dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
+                dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
+                null;
+
+            foreach (var (key, entry) in dict)
+            {
+                if (key is "m_name" or "m_strName" || !IsTextureReference(entry)) continue;
+                if (name == null) unattributed.Add($"'{key}'");
+                else if (!MaterialTextureProperties.Known.Contains(name)) unknown.Add(name);
+            }
+
+            foreach (var entry in dict.Values)
+                CollectUnknownTextureProperties(entry, unknown, unattributed);
+        }
+        else if (value is List<object?> list)
+        {
+            foreach (var entry in list)
+            {
+                if (IsTextureReference(entry)) unattributed.Add("array element");
+                CollectUnknownTextureProperties(entry, unknown, unattributed);
+            }
+        }
+    }
+
+    private static bool IsTextureReference(object? value) =>
+        value is string str &&
+        MaterialPaths.NormalizeMaterialResourcePath(str).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 
     private static bool ColorizeGraffitiImage(string srcPath, string hexColor, string outPath)
     {
