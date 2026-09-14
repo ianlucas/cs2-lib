@@ -46,8 +46,8 @@ import sharp from "sharp";
  * - `maxWidth`: downscale (aspect-preserving) so the long side is at most this.
  * - `smartSubsample`: force 4:4:4. Use when RGB packs independent data rather than a colour.
  * - `alphaQuality`: compress the ALPHA plane too (a coverage mask can dominate the file).
- * - `effort`: libwebp's method (0-6). Pure encoder search time at the same quality target, so it is
- *   free size; everything here runs at 6.
+ * - `effort`: libwebp's method (0-6). Pure encoder search time at the same quality target. Lossy
+ *   encodes default to 5: method 6 compresses a lossless alpha plane ~12x slower for ~1.5% smaller.
  * - `decimate`: point-sample the RGB downscale instead of averaging it. Only for GRAIN textures: a
  *   decimated white-noise field is still white noise with the same amplitude and histogram, while
  *   any averaging kernel collapses it toward the mean.
@@ -656,8 +656,9 @@ async function encodeGuarded(src: string, baseSpec: EncodeSpec): Promise<{ data:
                   : {
                         quality: spec.quality ?? 90,
                         exact: true,
-                        // libwebp method 6: same quality target, the encoder just searches harder.
-                        effort: spec.effort ?? 6,
+                        // libwebp method 5, not 6: on a lossless alpha plane method 6 is ~12x slower
+                        // for ~1.5% smaller, which pushed the batch past the CI job time limit.
+                        effort: spec.effort ?? 5,
                         ...(spec.smartSubsample === true ? { smartSubsample: true } : {}),
                         ...(spec.alphaQuality !== undefined ? { alphaQuality: spec.alphaQuality } : {})
                     };
