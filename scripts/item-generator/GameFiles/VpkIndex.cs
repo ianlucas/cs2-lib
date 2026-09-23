@@ -12,7 +12,7 @@ public static class VpkIndexBuilder
     private static readonly Dictionary<string, string> CompiledExtensions = new()
     {
         [".vsvg_c"] = ".svg",
-        [".vtex_c"] = ".png"
+        [".vtex_c"] = ".png",
     };
 
     private static readonly Dictionary<string, string> OutputExtensions =
@@ -30,7 +30,8 @@ public static class VpkIndexBuilder
 
     public static void BuildVpkIndex(ItemGeneratorContext ctx)
     {
-        if (ctx.VpkIndex.Count > 0) return;
+        if (ctx.VpkIndex.Count > 0)
+            return;
 
         var pakDirPath = Config.GetPakDirPath();
         if (!File.Exists(pakDirPath))
@@ -65,9 +66,11 @@ public static class VpkIndexBuilder
 
     public static byte[]? ReadVpkEntry(ItemGeneratorContext ctx, string path)
     {
-        if (ctx.VpkPackage == null) return null;
+        if (ctx.VpkPackage == null)
+            return null;
         var entry = ctx.VpkPackage.FindEntry(path);
-        if (entry == null) return null;
+        if (entry == null)
+            return null;
         ctx.VpkPackage.ReadEntry(entry, out var data);
         return data;
     }

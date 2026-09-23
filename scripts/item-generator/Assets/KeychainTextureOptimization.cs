@@ -97,10 +97,12 @@ public static class KeychainTextureOptimization
 
     // The shaders a charm material can be on. Neither is keychain-exclusive on its own, which is why
     // KeychainPathSegments does the real work -- see the SCOPE note above.
-    public static readonly IReadOnlySet<string> KeychainShaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    public static readonly IReadOnlySet<string> KeychainShaders = new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         "csgo_weapon.vfx",
-        "csgo_simple_liquid.vfx"
+        "csgo_simple_liquid.vfx",
     };
 
     // The keychain asset tree, as it appears in a resolved TEXTURE resource path (weapons/keychains/*
@@ -138,7 +140,7 @@ public static class KeychainTextureOptimization
         AlphaQuality = 60,
         SmartSubsample = true,
         MaxWidth = Cap,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 20)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 20),
     };
 
     // NORMALS -- g_tNormal, the glitter normals (g_tGlitterNormal, g_tGlitterNormalSticker*) and the
@@ -160,7 +162,7 @@ public static class KeychainTextureOptimization
         MaxWidth = Cap,
         // libwebp's own default, stated so the budget has a rung to start from.
         AlphaQuality = 100,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 60)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 60),
     };
 
     // ALBEDO -- g_tColor (the charm's base colour), g_tDetail ("BC7 RGB sRGB, detail albedo overlay")
@@ -184,7 +186,7 @@ public static class KeychainTextureOptimization
         GuardFallback = GrainFloorTier,
         AlphaGuard = new(0.5, 60),
         FlattenGuard = true,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 40)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 40),
     };
 
     // SCALAR FIELDS IN ONE PLANE -- g_tAmbientOcclusion ("[weapon] BC4 R: plain AO"), g_tTintMask
@@ -206,7 +208,7 @@ public static class KeychainTextureOptimization
         GreyGuard = true,
         MaxWidth = Cap,
         LossyGuard = new(30),
-        SizeBudget = new(Ceiling, MinQuality: 84)
+        SizeBudget = new(Ceiling, MinQuality: 84),
     };
 
     // Where a packed texture with a FLAT plane goes, and where a packed gate rejection goes: bounded
@@ -221,7 +223,7 @@ public static class KeychainTextureOptimization
         Quality = 100,
         MaxWidth = Cap,
         MaskKernel = true,
-        MaskBudget = new(PackedCeiling, [80, 70, 60], [4, 8, 12, 16, 24, 32])
+        MaskBudget = new(PackedCeiling, [80, 70, 60], [4, 8, 12, 16, 24, 32]),
     };
 
     // PACKED DATA PLANES -- g_tMetalness ("BC5 R=roughness(inverted), G=metalness; the BC7 variant adds
@@ -255,7 +257,7 @@ public static class KeychainTextureOptimization
         SizeBudget = new(Ceiling, MinQuality: 70),
         // Reached only by a file the guards sent to the bounded floor that is still over PackedCeiling,
         // which is where the quantizer is the right answer: no DCT is involved on that path at all.
-        MaskBudget = new(PackedCeiling, [80, 70, 60], [4, 8, 12, 16, 24, 32])
+        MaskBudget = new(PackedCeiling, [80, 70, 60], [4, 8, 12, 16, 24, 32]),
     };
 
     // STICKER-SLOT ARTWORK -- g_tSticker0-4 on the display-case charm ("RGB=sticker color, A=wear
@@ -267,7 +269,7 @@ public static class KeychainTextureOptimization
     {
         Mode = KeychainEncodeMode.Lossy,
         Quality = 90,
-        MaxWidth = Cap
+        MaxWidth = Cap,
     };
 
     // STICKER-SLOT DATA -- g_tNormalRoughnessSticker0-4 ("RG=hemi-oct normal, +isoRough(B), A=self-illum
@@ -286,7 +288,7 @@ public static class KeychainTextureOptimization
         Mode = KeychainEncodeMode.Lossless,
         Quality = 100,
         MaxWidth = 512,
-        MaskKernel = true
+        MaskKernel = true,
     };
 
     // A property absent from this table is never touched: its textures take the default lossless path,
@@ -298,7 +300,8 @@ public static class KeychainTextureOptimization
     //                            path anyway, so the scope rule would drop it regardless.
     //   g_tStickerScratches      one texture, and it is the shared weapon scratch pattern -- dropped by
     //                            the scope rule before any tier could apply.
-    public static readonly IReadOnlyDictionary<string, KeychainTextureTier> Targets = BuildTargets();
+    public static readonly IReadOnlyDictionary<string, KeychainTextureTier> Targets =
+        BuildTargets();
 
     private static Dictionary<string, KeychainTextureTier> BuildTargets()
     {
@@ -315,13 +318,14 @@ public static class KeychainTextureOptimization
             ["g_tStickerWepInputs"] = PackedTier,
             ["g_tAmbientOcclusion"] = ScalarTier,
             ["g_tTintMask"] = ScalarTier,
-            ["g_tLiquidMask"] = ScalarTier
+            ["g_tLiquidMask"] = ScalarTier,
         };
         // The display case carries five sticker slots and the shader names each one, so a property is
         // registered per slot. They share one meaning per family, exactly as the glove layers do.
         void Slotted(string family, KeychainTextureTier tier)
         {
-            for (var slot = 0; slot <= 4; slot++) targets[$"{family}{slot}"] = tier;
+            for (var slot = 0; slot <= 4; slot++)
+                targets[$"{family}{slot}"] = tier;
         }
         Slotted("g_tSticker", StickerArtTier);
         Slotted("g_tGlitterNormalSticker", NormalTier);
@@ -352,7 +356,8 @@ public static class KeychainTextureOptimization
     public static Dictionary<string, KeychainTextureTier> ResolveTextureTiers(
         IEnumerable<object?> materialData,
         IEnumerable<object?> compositeMaterialData,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         var targetProperty = new Dictionary<string, string>(StringComparer.Ordinal);
         var foreign = new HashSet<string>(StringComparer.Ordinal);
@@ -363,11 +368,17 @@ public static class KeychainTextureOptimization
             // whether the material is a keychain material at all: it is one when it sits on a keychain
             // shader and draws at least one texture from the keychain asset tree (see SCOPE).
             var bindings = Collect(data, resolveTexturePath);
-            var keychainFamily = IsKeychainShader(data) && bindings.Any(binding => IsKeychainPath(binding.Path));
+            var keychainFamily =
+                IsKeychainShader(data) && bindings.Any(binding => IsKeychainPath(binding.Path));
             Admit(bindings, keychainFamily, targetProperty, foreign);
         }
         foreach (var data in compositeMaterialData)
-            Admit(Collect(data, resolveTexturePath), keychainFamily: false, targetProperty, foreign);
+            Admit(
+                Collect(data, resolveTexturePath),
+                keychainFamily: false,
+                targetProperty,
+                foreign
+            );
 
         foreach (var path in foreign)
             targetProperty.Remove(path);
@@ -382,7 +393,8 @@ public static class KeychainTextureOptimization
         List<(string Property, string Path)> bindings,
         bool keychainFamily,
         Dictionary<string, string> targetProperty,
-        HashSet<string> foreign)
+        HashSet<string> foreign
+    )
     {
         foreach (var (property, path) in bindings)
         {
@@ -392,7 +404,8 @@ public static class KeychainTextureOptimization
                 // dropped exactly like a foreign one.
                 if (targetProperty.TryGetValue(path, out var seen))
                 {
-                    if (!ReferenceEquals(Targets[seen], tier)) foreign.Add(path);
+                    if (!ReferenceEquals(Targets[seen], tier))
+                        foreign.Add(path);
                 }
                 else
                 {
@@ -407,20 +420,24 @@ public static class KeychainTextureOptimization
     }
 
     private static bool IsKeychainShader(object? data) =>
-        data is Dictionary<string, object?> dict &&
-        dict.TryGetValue("m_shaderName", out var shader) &&
-        shader is string name &&
-        KeychainShaders.Contains(name);
+        data is Dictionary<string, object?> dict
+        && dict.TryGetValue("m_shaderName", out var shader)
+        && shader is string name
+        && KeychainShaders.Contains(name);
 
     private static bool IsKeychainPath(string resolved)
     {
         var path = $"/{resolved.Replace('\\', '/').TrimStart('/')}";
         foreach (var segment in KeychainPathSegments)
-            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase)) return true;
+            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase))
+                return true;
         return false;
     }
 
-    private static List<(string Property, string Path)> Collect(object? data, Func<string, string?> resolveTexturePath)
+    private static List<(string Property, string Path)> Collect(
+        object? data,
+        Func<string, string?> resolveTexturePath
+    )
     {
         var bindings = new List<(string, string)>();
         Walk(data, contextName: null, bindings, resolveTexturePath);
@@ -431,14 +448,17 @@ public static class KeychainTextureOptimization
         object? value,
         string? contextName,
         List<(string Property, string Path)> bindings,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         switch (value)
         {
             case string reference:
-                if (!IsTextureReference(reference)) return;
+                if (!IsTextureReference(reference))
+                    return;
                 var resolved = resolveTexturePath(reference);
-                if (resolved != null) bindings.Add((contextName ?? "", resolved));
+                if (resolved != null)
+                    bindings.Add((contextName ?? "", resolved));
                 return;
 
             case List<object?> list:
@@ -451,9 +471,13 @@ public static class KeychainTextureOptimization
                 // (vcompmat); the texture path sits under a sibling key. Propagate that name down so a
                 // texture string inherits the parameter it belongs to.
                 var name =
-                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
-                    dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
-                    contextName;
+                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0
+                        ? n1
+                    : dict.TryGetValue("m_strName", out var mStrName)
+                    && mStrName is string n2
+                    && n2.Length > 0
+                        ? n2
+                    : contextName;
                 foreach (var (key, child) in dict)
                     Walk(child, name ?? key, bindings, resolveTexturePath);
                 return;
@@ -461,5 +485,7 @@ public static class KeychainTextureOptimization
     }
 
     private static bool IsTextureReference(string value) =>
-        MaterialPaths.NormalizeMaterialResourcePath(value).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
+        MaterialPaths
+            .NormalizeMaterialResourcePath(value)
+            .EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 }

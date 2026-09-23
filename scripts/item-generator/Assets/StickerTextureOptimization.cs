@@ -35,7 +35,7 @@ public enum StickerEncodeMode
 {
     Lossless,
     Lossy,
-    NearLossless
+    NearLossless,
 }
 
 // One encode tier. `Quality` is the VP8 quality for Lossy, or the near-lossless level for NearLossless
@@ -49,7 +49,8 @@ public sealed record StickerTextureTier(
     bool StripAlpha = false,
     int? MinWidth = null,
     int? MaxWidth = null,
-    bool SmartSubsample = false);
+    bool SmartSubsample = false
+);
 
 // The serializable descriptor emitted per encode job (null on a job means "default lossless", which is
 // byte-identical to the untiered path -- so no non-sticker texture filename ever changes). `Kind` picks
@@ -61,34 +62,44 @@ public sealed record StickerEncodeSpec(
     bool? StripAlpha,
     int? MinWidth,
     int? MaxWidth,
-    bool? SmartSubsample)
+    bool? SmartSubsample
+)
 {
     public string Kind { get; init; } = "sticker";
 }
 
 public static class StickerTextureOptimization
 {
-    public static readonly IReadOnlyDictionary<string, StickerTextureTier> Targets =
-        new Dictionary<string, StickerTextureTier>(StringComparer.Ordinal)
-        {
-            ["g_tSticker0"] = new(StickerEncodeMode.Lossy, Quality: 90),
-            ["g_tHoloSpectrumSticker0"] = new(StickerEncodeMode.Lossy, Quality: 90, StripAlpha: true, MinWidth: 1024),
-            ["g_tSfxMaskSticker0"] = new(StickerEncodeMode.Lossless, MaxWidth: 512),
-            ["g_tNormalRoughnessSticker0"] = new(StickerEncodeMode.Lossless, MaxWidth: 512)
-        };
+    public static readonly IReadOnlyDictionary<string, StickerTextureTier> Targets = new Dictionary<
+        string,
+        StickerTextureTier
+    >(StringComparer.Ordinal)
+    {
+        ["g_tSticker0"] = new(StickerEncodeMode.Lossy, Quality: 90),
+        ["g_tHoloSpectrumSticker0"] = new(
+            StickerEncodeMode.Lossy,
+            Quality: 90,
+            StripAlpha: true,
+            MinWidth: 1024
+        ),
+        ["g_tSfxMaskSticker0"] = new(StickerEncodeMode.Lossless, MaxWidth: 512),
+        ["g_tNormalRoughnessSticker0"] = new(StickerEncodeMode.Lossless, MaxWidth: 512),
+    };
 
-    public static StickerEncodeSpec ToSpec(StickerTextureTier tier) => new(
-        Mode: tier.Mode switch
-        {
-            StickerEncodeMode.Lossy => "lossy",
-            StickerEncodeMode.NearLossless => "nearLossless",
-            _ => "lossless"
-        },
-        Quality: tier.Mode == StickerEncodeMode.Lossless ? null : tier.Quality,
-        StripAlpha: tier.StripAlpha ? true : null,
-        MinWidth: tier.MinWidth,
-        MaxWidth: tier.MaxWidth,
-        SmartSubsample: tier.SmartSubsample ? true : null);
+    public static StickerEncodeSpec ToSpec(StickerTextureTier tier) =>
+        new(
+            Mode: tier.Mode switch
+            {
+                StickerEncodeMode.Lossy => "lossy",
+                StickerEncodeMode.NearLossless => "nearLossless",
+                _ => "lossless",
+            },
+            Quality: tier.Mode == StickerEncodeMode.Lossless ? null : tier.Quality,
+            StripAlpha: tier.StripAlpha ? true : null,
+            MinWidth: tier.MinWidth,
+            MaxWidth: tier.MaxWidth,
+            SmartSubsample: tier.SmartSubsample ? true : null
+        );
 
     // Walks every material's parsed data and returns `resolved .vtex path -> tier` for the sticker
     // textures that qualify. A texture qualifies only if it is bound to a target parameter AND to no
@@ -99,7 +110,8 @@ public static class StickerTextureOptimization
     // metadata extractor produces: nested Dictionary<string, object?> / List<object?> / string.
     public static Dictionary<string, StickerTextureTier> ResolveTextureTiers(
         IEnumerable<object?> materialData,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         var targetProperty = new Dictionary<string, string>(StringComparer.Ordinal);
         var shared = new HashSet<string>(StringComparer.Ordinal);
@@ -122,14 +134,17 @@ public static class StickerTextureOptimization
         string? contextName,
         Dictionary<string, string> targetProperty,
         HashSet<string> shared,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         switch (value)
         {
             case string reference:
-                if (!IsTextureReference(reference)) return;
+                if (!IsTextureReference(reference))
+                    return;
                 var resolved = resolveTexturePath(reference);
-                if (resolved == null) return;
+                if (resolved == null)
+                    return;
                 if (contextName != null && Targets.ContainsKey(contextName))
                 {
                     if (!targetProperty.ContainsKey(resolved))
@@ -151,9 +166,13 @@ public static class StickerTextureOptimization
                 // (vcompmat); the texture path sits under a sibling key. Propagate that name down so a
                 // texture string inherits the parameter it belongs to.
                 var name =
-                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
-                    dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
-                    contextName;
+                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0
+                        ? n1
+                    : dict.TryGetValue("m_strName", out var mStrName)
+                    && mStrName is string n2
+                    && n2.Length > 0
+                        ? n2
+                    : contextName;
                 foreach (var (key, child) in dict)
                     Walk(child, name ?? key, targetProperty, shared, resolveTexturePath);
                 return;
@@ -161,5 +180,7 @@ public static class StickerTextureOptimization
     }
 
     private static bool IsTextureReference(string value) =>
-        MaterialPaths.NormalizeMaterialResourcePath(value).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
+        MaterialPaths
+            .NormalizeMaterialResourcePath(value)
+            .EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 }

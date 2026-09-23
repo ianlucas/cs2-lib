@@ -24,14 +24,17 @@ namespace ItemGenerator.GameFiles;
 public static partial class MetadataExtractor
 {
     // Top-level DATA keys dropped from an agent's model-data JSON.
-    private static readonly string[] AgentDataDropKeys =
-        ["m_modelSkeleton", "m_remappingTable"];
+    private static readonly string[] AgentDataDropKeys = ["m_modelSkeleton", "m_remappingTable"];
 
     // m_keyValueText keys dropped from an agent's model-data JSON. All three are engine runtime
     // rigging: the AO capsule proxies feed the game's own ambient-occlusion pass, the physics body
     // markup feeds ragdolls, and the bone constraints drive eye-look morphs off a look-at bone.
     private static readonly string[] AgentKeyValueDropKeys =
-        ["ao_proxy_capsule_list", "CPhysicsBodyGameMarkupData", "BoneConstraintList"];
+    [
+        "ao_proxy_capsule_list",
+        "CPhysicsBodyGameMarkupData",
+        "BoneConstraintList",
+    ];
 
     // A mesh group entry is "<group>_@<choice index>_#&<choice name>".
     private const string MeshGroupChoiceSeparator = "_#&";
@@ -48,15 +51,20 @@ public static partial class MetadataExtractor
         ItemGeneratorContext ctx,
         Model model,
         Dictionary<string, object?> root,
-        AgentModelInfo agent)
+        AgentModelInfo agent
+    )
     {
-        foreach (var key in AgentDataDropKeys) root.Remove(key);
-        if (root.TryGetValue("m_modelInfo", out var modelInfoObj) &&
-            modelInfoObj is Dictionary<string, object?> modelInfo &&
-            modelInfo.TryGetValue("m_keyValueText", out var keyValuesObj) &&
-            keyValuesObj is Dictionary<string, object?> keyValues)
+        foreach (var key in AgentDataDropKeys)
+            root.Remove(key);
+        if (
+            root.TryGetValue("m_modelInfo", out var modelInfoObj)
+            && modelInfoObj is Dictionary<string, object?> modelInfo
+            && modelInfo.TryGetValue("m_keyValueText", out var keyValuesObj)
+            && keyValuesObj is Dictionary<string, object?> keyValues
+        )
         {
-            foreach (var key in AgentKeyValueDropKeys) keyValues.Remove(key);
+            foreach (var key in AgentKeyValueDropKeys)
+                keyValues.Remove(key);
         }
 
         var (keepMeshes, meshGroups) = ResolveMeshGroups(model, root);
@@ -85,15 +93,20 @@ public static partial class MetadataExtractor
     /// the first, and the two first-person meshes in the first-person choices.
     /// </remarks>
     private static (List<string> KeepMeshes, List<object?> MeshGroups) ResolveMeshGroups(
-        Model model, Dictionary<string, object?> root)
+        Model model,
+        Dictionary<string, object?> root
+    )
     {
         var groups = model.GetMeshGroups().ToList();
         var masks = ParseMaskArray(root.GetValueOrDefault("m_refMeshGroupMasks"));
         var defaultMask = ParseMask(root.GetValueOrDefault("m_nDefaultMeshGroupMask"));
 
-        var meshNames = model.GetEmbeddedMeshesAndLoD()
+        var meshNames = model
+            .GetEmbeddedMeshesAndLoD()
             .Select(m => (m.MeshIndex, m.Name))
-            .Concat(model.GetReferenceMeshNamesAndLoD().Select(m => (m.MeshIndex, Name: m.MeshName)))
+            .Concat(
+                model.GetReferenceMeshNamesAndLoD().Select(m => (m.MeshIndex, Name: m.MeshName))
+            )
             .OrderBy(m => m.MeshIndex)
             .ToList();
 
@@ -116,12 +129,20 @@ public static partial class MetadataExtractor
                 // Drift guard: this drop rule reads a CHOICE NAME, so it has to fail loudly rather
                 // than silently ship first-person arms (or silently drop the whole body) if Valve
                 // ever renames one.
-                var isFirst = choice.StartsWith(FirstPersonChoicePrefix, StringComparison.OrdinalIgnoreCase);
-                var isThird = choice.StartsWith(ThirdPersonChoicePrefix, StringComparison.OrdinalIgnoreCase);
+                var isFirst = choice.StartsWith(
+                    FirstPersonChoicePrefix,
+                    StringComparison.OrdinalIgnoreCase
+                );
+                var isThird = choice.StartsWith(
+                    ThirdPersonChoicePrefix,
+                    StringComparison.OrdinalIgnoreCase
+                );
                 if (!isFirst && !isThird)
                     throw new InvalidOperationException(
-                        $"Unrecognised '{FirstOrThirdPersonGroup}' mesh group choice '{choice}' in {model.Name}.");
-                if (isFirst) continue;
+                        $"Unrecognised '{FirstOrThirdPersonGroup}' mesh group choice '{choice}' in {model.Name}."
+                    );
+                if (isFirst)
+                    continue;
             }
             keepBits |= 1UL << bit;
             kept.Add((group, choice, bit));
@@ -130,22 +151,27 @@ public static partial class MetadataExtractor
         foreach (var (index, name) in meshNames)
         {
             var mask = index < masks.Count ? masks[index] : 0;
-            if ((mask & keepBits) != 0) keepMeshes.Add(name);
+            if ((mask & keepBits) != 0)
+                keepMeshes.Add(name);
         }
 
         foreach (var (group, choice, bit) in kept)
         {
             var bitMask = 1UL << bit;
-            meshGroups.Add(new Dictionary<string, object?>
-            {
-                ["group"] = group,
-                ["choice"] = choice,
-                ["default"] = (defaultMask & bitMask) != 0,
-                ["meshes"] = meshNames
-                    .Where(m => m.MeshIndex < masks.Count && (masks[m.MeshIndex] & bitMask) != 0)
-                    .Select(m => (object?)m.Name)
-                    .ToList()
-            });
+            meshGroups.Add(
+                new Dictionary<string, object?>
+                {
+                    ["group"] = group,
+                    ["choice"] = choice,
+                    ["default"] = (defaultMask & bitMask) != 0,
+                    ["meshes"] = meshNames
+                        .Where(m =>
+                            m.MeshIndex < masks.Count && (masks[m.MeshIndex] & bitMask) != 0
+                        )
+                        .Select(m => (object?)m.Name)
+                        .ToList(),
+                }
+            );
         }
 
         return (keepMeshes, meshGroups);
@@ -165,7 +191,12 @@ public static partial class MetadataExtractor
         value is List<object?> list ? [.. list.Select(ParseMask)] : [];
 
     private static ulong ParseMask(object? value) =>
-        ulong.TryParse(value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var mask)
+        ulong.TryParse(
+            value?.ToString(),
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var mask
+        )
             ? mask
             : 0;
 }

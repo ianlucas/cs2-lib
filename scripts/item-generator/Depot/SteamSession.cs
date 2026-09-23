@@ -54,18 +54,27 @@ public sealed class SteamSession : IDisposable
         var request = new SteamApps.PICSRequest(appId);
         var info = await _apps.PICSGetProductInfo(new List<SteamApps.PICSRequest> { request }, []);
         var appInfo = info.Results?.FirstOrDefault()?.Apps?.FirstOrDefault().Value;
-        if (appInfo == null) throw new InvalidOperationException("Failed to get app info.");
+        if (appInfo == null)
+            throw new InvalidOperationException("Failed to get app info.");
 
         var depots = appInfo.KeyValues["depots"];
         var depot = depots[depotId.ToString()];
         var manifests = depot["manifests"];
         var gid = manifests[branch]?["gid"]?.Value;
-        if (gid == null) throw new InvalidOperationException($"Manifest not found for depot {depotId} branch {branch}.");
+        if (gid == null)
+            throw new InvalidOperationException(
+                $"Manifest not found for depot {depotId} branch {branch}."
+            );
         return ulong.Parse(gid);
     }
 
-    public async Task DownloadDepotFiles(uint appId, uint depotId, string branch,
-        List<string> fileFilter, string outputDir)
+    public async Task DownloadDepotFiles(
+        uint appId,
+        uint depotId,
+        string branch,
+        List<string> fileFilter,
+        string outputDir
+    )
     {
         var manifestId = await GetDepotManifestId(appId, depotId, branch);
 
@@ -77,20 +86,35 @@ public sealed class SteamSession : IDisposable
         // The server list can include caches that only resolve on certain networks
         // (e.g. cache*.valve.org), so filter to eligible content servers and fall
         // back across them instead of trusting the first entry.
-        var cdnServers = servers?
-            .Where(s => s.Type is "SteamCache" or "CDN")
-            .Where(s => s.AllowedAppIds.Length == 0 || s.AllowedAppIds.Contains(appId))
-            .OrderBy(s => s.WeightedLoad)
-            .ToList() ?? [];
+        var cdnServers =
+            servers
+                ?.Where(s => s.Type is "SteamCache" or "CDN")
+                .Where(s => s.AllowedAppIds.Length == 0 || s.AllowedAppIds.Contains(appId))
+                .OrderBy(s => s.WeightedLoad)
+                .ToList()
+            ?? [];
         if (cdnServers.Count == 0)
             throw new InvalidOperationException("No CDN servers available.");
 
         var cdnClient = new Client(_client);
 
-        var manifestRequestCode = await _content.GetManifestRequestCode(depotId, appId, manifestId, branch);
-        var (manifestServer, manifest) = await TryEachServer(cdnServers, server =>
-            cdnClient.DownloadManifestAsync(depotId, manifestId,
-                manifestRequestCode, server, depotKey.DepotKey));
+        var manifestRequestCode = await _content.GetManifestRequestCode(
+            depotId,
+            appId,
+            manifestId,
+            branch
+        );
+        var (manifestServer, manifest) = await TryEachServer(
+            cdnServers,
+            server =>
+                cdnClient.DownloadManifestAsync(
+                    depotId,
+                    manifestId,
+                    manifestRequestCode,
+                    server,
+                    depotKey.DepotKey
+                )
+        );
 
         // Chunk downloads start with the server that just served the manifest.
         var orderedServers = new List<Server>(cdnServers.Count) { manifestServer };
@@ -100,10 +124,16 @@ public sealed class SteamSession : IDisposable
             .Select(f => f.Replace('\\', '/'))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var filesToDownload = manifest.Files!
-            .Where(f => f.FileName != null && normalizedFilter.Any(filter =>
-                f.FileName.Replace('\\', '/').StartsWith(filter, StringComparison.OrdinalIgnoreCase) ||
-                f.FileName.Replace('\\', '/').Equals(filter, StringComparison.OrdinalIgnoreCase)))
+        var filesToDownload = manifest
+            .Files!.Where(f =>
+                f.FileName != null
+                && normalizedFilter.Any(filter =>
+                    f.FileName.Replace('\\', '/')
+                        .StartsWith(filter, StringComparison.OrdinalIgnoreCase)
+                    || f.FileName.Replace('\\', '/')
+                        .Equals(filter, StringComparison.OrdinalIgnoreCase)
+                )
+            )
             .ToList();
 
         var totalFiles = filesToDownload.Count;
@@ -119,7 +149,8 @@ public sealed class SteamSession : IDisposable
             try
             {
                 var filePath = Path.Combine(outputDir, file.FileName!.Replace('\\', '/'));
-                if (File.Exists(filePath)) return;
+                if (File.Exists(filePath))
+                    return;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
                 using var fs = File.Create(filePath);
@@ -127,8 +158,17 @@ public sealed class SteamSession : IDisposable
                 foreach (var chunk in file.Chunks)
                 {
                     var chunkBuffer = new byte[chunk.UncompressedLength];
-                    await TryEachServer(orderedServers, server =>
-                        cdnClient.DownloadDepotChunkAsync(depotId, chunk, server, chunkBuffer, depotKey.DepotKey));
+                    await TryEachServer(
+                        orderedServers,
+                        server =>
+                            cdnClient.DownloadDepotChunkAsync(
+                                depotId,
+                                chunk,
+                                server,
+                                chunkBuffer,
+                                depotKey.DepotKey
+                            )
+                    );
                     // Chunks are not enumerated in file-offset order, so seek to each
                     // chunk's offset before writing or the output gets scrambled.
                     fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
@@ -146,7 +186,9 @@ public sealed class SteamSession : IDisposable
     }
 
     private static async Task<(Server Server, T Result)> TryEachServer<T>(
-        IReadOnlyList<Server> servers, Func<Server, Task<T>> action)
+        IReadOnlyList<Server> servers,
+        Func<Server, Task<T>> action
+    )
     {
         Exception? lastError = null;
         foreach (var server in servers)
@@ -155,13 +197,16 @@ public sealed class SteamSession : IDisposable
             {
                 return (server, await action(server));
             }
-            catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
+            catch (Exception ex)
+                when (ex is HttpRequestException or IOException or TaskCanceledException)
             {
                 lastError = ex;
             }
         }
         throw new InvalidOperationException(
-            $"All {servers.Count} CDN servers failed; last error: {lastError?.Message}", lastError);
+            $"All {servers.Count} CDN servers failed; last error: {lastError?.Message}",
+            lastError
+        );
     }
 
     private async Task WaitFor(Func<bool> condition, int timeoutMs = 30000)
@@ -172,7 +217,8 @@ public sealed class SteamSession : IDisposable
             _callbacks.RunWaitCallbacks(TimeSpan.FromMilliseconds(100));
             await Task.Delay(50);
         }
-        if (!condition()) throw new TimeoutException("Steam connection timed out.");
+        if (!condition())
+            throw new TimeoutException("Steam connection timed out.");
     }
 
     public void Dispose()

@@ -40,7 +40,7 @@ public static class PatchTextureOptimization
     {
         Kind = Patch,
         Mode = GloveEncodeMode.Lossy,
-        Quality = 90
+        Quality = 90,
     };
 
     // Every patch material binds its one artwork to all three slots. Absent on purpose:
@@ -49,13 +49,15 @@ public static class PatchTextureOptimization
     //   g_tColor, g_tNormal     the shared patch_inspect model maps, one file each.
     //   g_tAmbientOcclusion,    engine defaults bound across the build.
     //   g_tMetalness
-    public static readonly IReadOnlyDictionary<string, GloveTextureTier> Targets =
-        new Dictionary<string, GloveTextureTier>(StringComparer.Ordinal)
-        {
-            ["g_tPatch0"] = ArtworkTier,
-            ["g_tPatch1"] = ArtworkTier,
-            ["g_tPatch2"] = ArtworkTier
-        };
+    public static readonly IReadOnlyDictionary<string, GloveTextureTier> Targets = new Dictionary<
+        string,
+        GloveTextureTier
+    >(StringComparer.Ordinal)
+    {
+        ["g_tPatch0"] = ArtworkTier,
+        ["g_tPatch1"] = ArtworkTier,
+        ["g_tPatch2"] = ArtworkTier,
+    };
 
     // ---------------------------------------------------------------------------------------------
     // CLASSIFIER
@@ -70,13 +72,21 @@ public static class PatchTextureOptimization
     // be resolved).
     public static Dictionary<string, GloveTextureTier> ResolveTextureTiers(
         IEnumerable<KeyValuePair<string, object?>> materialData,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         var tiers = new Dictionary<string, GloveTextureTier>(StringComparer.Ordinal);
         var foreign = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var (path, data) in materialData)
-            Walk(data, contextName: null, IsPatchMaterial(path, data), tiers, foreign, resolveTexturePath);
+            Walk(
+                data,
+                contextName: null,
+                IsPatchMaterial(path, data),
+                tiers,
+                foreign,
+                resolveTexturePath
+            );
 
         foreach (var path in foreign)
             tiers.Remove(path);
@@ -85,12 +95,16 @@ public static class PatchTextureOptimization
 
     private static bool IsPatchMaterial(string materialPath, object? data)
     {
-        if (data is not Dictionary<string, object?> dict) return false;
-        if (!dict.TryGetValue("m_shaderName", out var shader) || shader is not string name) return false;
-        if (!string.Equals(name, CharacterShader, StringComparison.OrdinalIgnoreCase)) return false;
+        if (data is not Dictionary<string, object?> dict)
+            return false;
+        if (!dict.TryGetValue("m_shaderName", out var shader) || shader is not string name)
+            return false;
+        if (!string.Equals(name, CharacterShader, StringComparison.OrdinalIgnoreCase))
+            return false;
         var path = $"/{MaterialPaths.NormalizeMaterialResourcePath(materialPath).TrimStart('/')}";
         foreach (var segment in PatchPathSegments)
-            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase)) return true;
+            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase))
+                return true;
         return false;
     }
 
@@ -100,16 +114,23 @@ public static class PatchTextureOptimization
         bool patchFamily,
         Dictionary<string, GloveTextureTier> tiers,
         HashSet<string> foreign,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         switch (value)
         {
             case string reference:
-                if (!IsTextureReference(reference)) return;
+                if (!IsTextureReference(reference))
+                    return;
                 var resolved = resolveTexturePath(reference);
-                if (resolved == null) return;
-                if (patchFamily && contextName != null && Targets.TryGetValue(contextName, out var tier) &&
-                    (!tiers.TryGetValue(resolved, out var seen) || ReferenceEquals(seen, tier)))
+                if (resolved == null)
+                    return;
+                if (
+                    patchFamily
+                    && contextName != null
+                    && Targets.TryGetValue(contextName, out var tier)
+                    && (!tiers.TryGetValue(resolved, out var seen) || ReferenceEquals(seen, tier))
+                )
                     tiers[resolved] = tier;
                 else
                     foreign.Add(resolved);
@@ -124,9 +145,13 @@ public static class PatchTextureOptimization
                 // A texture-bearing node names its parameter with `m_name` (vmat) or `m_strName`
                 // (vcompmat); the texture path sits under a sibling key.
                 var name =
-                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
-                    dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
-                    contextName;
+                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0
+                        ? n1
+                    : dict.TryGetValue("m_strName", out var mStrName)
+                    && mStrName is string n2
+                    && n2.Length > 0
+                        ? n2
+                    : contextName;
                 foreach (var (key, child) in dict)
                     Walk(child, name ?? key, patchFamily, tiers, foreign, resolveTexturePath);
                 return;
@@ -134,5 +159,7 @@ public static class PatchTextureOptimization
     }
 
     private static bool IsTextureReference(string value) =>
-        MaterialPaths.NormalizeMaterialResourcePath(value).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
+        MaterialPaths
+            .NormalizeMaterialResourcePath(value)
+            .EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 }

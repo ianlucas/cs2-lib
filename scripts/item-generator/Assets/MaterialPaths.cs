@@ -17,7 +17,10 @@ public static class MaterialPaths
         return path;
     }
 
-    public static string GetPaintCompositeMaterialPath(string className, string? compositeMaterialPath)
+    public static string GetPaintCompositeMaterialPath(
+        string className,
+        string? compositeMaterialPath
+    )
     {
         return compositeMaterialPath ?? $"weapons/paints/legacy/{className}.vcompmat";
     }
@@ -38,8 +41,13 @@ public static class MaterialPaths
     public static string ToCompiledMaterialResourcePath(string path)
     {
         var normalized = NormalizeMaterialResourcePath(path).ToLowerInvariant();
-        if (normalized.EndsWith("_c")) return normalized;
-        if (normalized.EndsWith(".vcompmat") || normalized.EndsWith(".vmat") || normalized.EndsWith(".vtex"))
+        if (normalized.EndsWith("_c"))
+            return normalized;
+        if (
+            normalized.EndsWith(".vcompmat")
+            || normalized.EndsWith(".vmat")
+            || normalized.EndsWith(".vtex")
+        )
             return $"{normalized}_c";
         return normalized;
     }
@@ -56,43 +64,53 @@ public static class MaterialPaths
             return ToSourceMaterialResourcePath(compiledPath);
 
         var name = Path.GetFileName(compiledPath);
-        var matches = ctx.VpkIndex.Keys
-            .Where(candidate => Path.GetFileName(candidate) == name)
+        var matches = ctx
+            .VpkIndex.Keys.Where(candidate => Path.GetFileName(candidate) == name)
             .ToList();
 
         if (matches.Count == 1)
             return ToSourceMaterialResourcePath(matches[0]);
         if (matches.Count > 1)
-            throw new InvalidOperationException($"Ambiguous VPK entry for '{compiledPath}': {string.Join(", ", matches)}");
+            throw new InvalidOperationException(
+                $"Ambiguous VPK entry for '{compiledPath}': {string.Join(", ", matches)}"
+            );
 
         throw new FileNotFoundException($"VPK entry not found: {compiledPath}");
     }
 
     public static string GetCompositeMaterialFilename(string vcompmatPath, string version)
     {
-        var baseName = Path.GetFileNameWithoutExtension(NormalizeMaterialResourcePath(vcompmatPath));
-        if (baseName.EndsWith(".vcompmat")) baseName = baseName[..^9];
+        var baseName = Path.GetFileNameWithoutExtension(
+            NormalizeMaterialResourcePath(vcompmatPath)
+        );
+        if (baseName.EndsWith(".vcompmat"))
+            baseName = baseName[..^9];
         return $"{baseName}_{version}.vcompmat.json";
     }
 
     public static string GetVmatFilename(string vmatPath, string version)
     {
         var baseName = Path.GetFileNameWithoutExtension(NormalizeMaterialResourcePath(vmatPath));
-        if (baseName.EndsWith(".vmat")) baseName = baseName[..^5];
+        if (baseName.EndsWith(".vmat"))
+            baseName = baseName[..^5];
         return $"{baseName}_{version}.vmat.json";
     }
 
     public static string GetTextureFilename(string vtexPath, string version, string extension)
     {
         var baseName = Path.GetFileNameWithoutExtension(NormalizeMaterialResourcePath(vtexPath));
-        if (baseName.EndsWith(".vtex")) baseName = baseName[..^5];
+        if (baseName.EndsWith(".vtex"))
+            baseName = baseName[..^5];
         return $"{baseName}_{version}{extension}";
     }
 
     // GetIndexed*Filename produce *provisional* CRC-based names: unique, computable before any
     // bytes are generated, referenced from items at catalog time. WriteMaterialMetadata replaces
     // them with content-hashed names and records the mapping in ctx.AssetRenames.
-    public static string GetIndexedCompositeMaterialFilename(ItemGeneratorContext ctx, string vcompmatPath)
+    public static string GetIndexedCompositeMaterialFilename(
+        ItemGeneratorContext ctx,
+        string vcompmatPath
+    )
     {
         var resolvedPath = ResolveMaterialResourcePath(ctx, vcompmatPath);
         var vpkPath = ToCompiledMaterialResourcePath(resolvedPath);
@@ -114,29 +132,52 @@ public static class MaterialPaths
         object? value,
         Func<string, string?> resolveCompositeMaterial,
         Func<string, string?> resolveVmat,
-        Func<string, string?> resolveTexture)
+        Func<string, string?> resolveTexture
+    )
     {
         if (value is string str)
         {
             var normalized = NormalizeMaterialResourcePath(str);
             if (normalized.EndsWith(".vcompmat"))
                 return resolveCompositeMaterial(normalized)
-                    ?? throw new InvalidOperationException($"Unable to rewrite composite material reference: {str}");
+                    ?? throw new InvalidOperationException(
+                        $"Unable to rewrite composite material reference: {str}"
+                    );
             if (normalized.EndsWith(".vmat"))
                 return resolveVmat(normalized)
-                    ?? throw new InvalidOperationException($"Unable to rewrite material reference: {str}");
+                    ?? throw new InvalidOperationException(
+                        $"Unable to rewrite material reference: {str}"
+                    );
             if (normalized.EndsWith(".vtex"))
                 return resolveTexture(normalized)
-                    ?? throw new InvalidOperationException($"Unable to rewrite texture reference: {str}");
+                    ?? throw new InvalidOperationException(
+                        $"Unable to rewrite texture reference: {str}"
+                    );
             return str;
         }
 
         if (value is List<object?> list)
-            return list.Select(entry => PatchMaterialResourceReferences(entry, resolveCompositeMaterial, resolveVmat, resolveTexture)).ToList();
+            return list.Select(entry =>
+                    PatchMaterialResourceReferences(
+                        entry,
+                        resolveCompositeMaterial,
+                        resolveVmat,
+                        resolveTexture
+                    )
+                )
+                .ToList();
 
         if (value is Dictionary<string, object?> dict)
-            return dict.ToDictionary(kv => kv.Key,
-                kv => PatchMaterialResourceReferences(kv.Value, resolveCompositeMaterial, resolveVmat, resolveTexture));
+            return dict.ToDictionary(
+                kv => kv.Key,
+                kv =>
+                    PatchMaterialResourceReferences(
+                        kv.Value,
+                        resolveCompositeMaterial,
+                        resolveVmat,
+                        resolveTexture
+                    )
+            );
 
         return value;
     }

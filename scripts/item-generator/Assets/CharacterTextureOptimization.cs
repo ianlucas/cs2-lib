@@ -40,7 +40,11 @@ public static class CharacterTextureOptimization
     public const string CharacterShader = "csgo_character.vfx";
 
     /// Subtrees of csgo_character.vfx materials that belong to another family.
-    public static readonly IReadOnlyList<string> ForeignPathSegments = ["/models/shared/arms/", "/patches/"];
+    public static readonly IReadOnlyList<string> ForeignPathSegments =
+    [
+        "/models/shared/arms/",
+        "/patches/",
+    ];
 
     // ---------------------------------------------------------------------------------------------
     // TIERS
@@ -73,7 +77,7 @@ public static class CharacterTextureOptimization
         Quality = 80,
         MaxWidth = Cap,
         AlphaQuality = 100,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 60)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 60),
     };
 
     // ALBEDO -- g_tColor, and the patch BACKING weaves, which are albedo by another name (a cloth or
@@ -89,7 +93,7 @@ public static class CharacterTextureOptimization
         LossyGuard = new(30),
         AlphaGuard = new(0.5, 60),
         FlattenGuard = true,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 40)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 40),
     };
 
     // ORM PACK -- R = ambient occlusion, G = roughness, B = metalness: three INDEPENDENT scalars, so
@@ -105,7 +109,7 @@ public static class CharacterTextureOptimization
         Quality = 100,
         MaxWidth = Cap,
         MaskKernel = true,
-        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half])
+        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half]),
     };
 
     private static readonly GloveTextureTier OrmTier = new()
@@ -121,7 +125,7 @@ public static class CharacterTextureOptimization
         LossyGuard = new(30),
         GuardFallback = OrmFloorTier,
         SizeBudget = new(Ceiling, MinQuality: 70, MinAlphaQuality: null, Widths: [Half]),
-        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half])
+        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half]),
     };
 
     // A property absent from this table is never touched. The absences are deliberate:
@@ -143,15 +147,17 @@ public static class CharacterTextureOptimization
     //   g_tTintMask,        one binding each across every agent material in the build.
     //   g_tGlassTintColor,
     //   g_tGlassDust
-    public static readonly IReadOnlyDictionary<string, GloveTextureTier> Targets =
-        new Dictionary<string, GloveTextureTier>(StringComparer.Ordinal)
-        {
-            ["g_tColor"] = AlbedoTier,
-            ["g_tNormal"] = NormalTier,
-            ["g_tPatch0Backing"] = AlbedoTier,
-            ["g_tPatch1Backing"] = AlbedoTier,
-            ["g_tPatch2Backing"] = AlbedoTier
-        };
+    public static readonly IReadOnlyDictionary<string, GloveTextureTier> Targets = new Dictionary<
+        string,
+        GloveTextureTier
+    >(StringComparer.Ordinal)
+    {
+        ["g_tColor"] = AlbedoTier,
+        ["g_tNormal"] = NormalTier,
+        ["g_tPatch0Backing"] = AlbedoTier,
+        ["g_tPatch1Backing"] = AlbedoTier,
+        ["g_tPatch2Backing"] = AlbedoTier,
+    };
 
     /// <summary>
     /// Tiers for images a material binds through a glTF PBR SLOT rather than a vmat parameter.
@@ -166,7 +172,7 @@ public static class CharacterTextureOptimization
         new Dictionary<string, GloveTextureTier>(StringComparer.Ordinal)
         {
             ["occlusionTexture"] = OrmTier,
-            ["metallicRoughnessTexture"] = OrmTier
+            ["metallicRoughnessTexture"] = OrmTier,
         };
 
     // ---------------------------------------------------------------------------------------------
@@ -200,18 +206,27 @@ public static class CharacterTextureOptimization
     /// </para>
     /// </remarks>
     public static Dictionary<string, GloveTextureTier> ResolveTextureTiers(
-        IEnumerable<(string MaterialPath, string ShaderName, IReadOnlyDictionary<string, string> TextureParams,
-            IReadOnlyDictionary<string, string> GltfSlots)> materials)
+        IEnumerable<(
+            string MaterialPath,
+            string ShaderName,
+            IReadOnlyDictionary<string, string> TextureParams,
+            IReadOnlyDictionary<string, string> GltfSlots
+        )> materials
+    )
     {
         var tiers = new Dictionary<string, GloveTextureTier>(StringComparer.OrdinalIgnoreCase);
         var foreign = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void Bind(string texture, GloveTextureTier? tier)
         {
-            if (texture.Length == 0) return;
+            if (texture.Length == 0)
+                return;
             // Two bindings that want DIFFERENT tiers have no single answer, so the texture is dropped
             // exactly like a foreign one.
-            if (tier == null || tiers.TryGetValue(texture, out var seen) && !ReferenceEquals(seen, tier))
+            if (
+                tier == null
+                || tiers.TryGetValue(texture, out var seen) && !ReferenceEquals(seen, tier)
+            )
                 foreign.Add(texture);
             else
                 tiers[texture] = tier;
@@ -233,10 +248,12 @@ public static class CharacterTextureOptimization
 
     private static bool IsAgentMaterial(string materialPath, string shaderName)
     {
-        if (!string.Equals(shaderName, CharacterShader, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.Equals(shaderName, CharacterShader, StringComparison.OrdinalIgnoreCase))
+            return false;
         var path = $"/{MaterialPaths.NormalizeMaterialResourcePath(materialPath).TrimStart('/')}";
         foreach (var segment in ForeignPathSegments)
-            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase)) return false;
+            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase))
+                return false;
         return true;
     }
 }

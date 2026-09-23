@@ -14,8 +14,12 @@ using static ItemGenerator.Logging;
 namespace ItemGenerator.GameFiles;
 
 public record ModelMetadataResult(
-    object? Data, object? ClothCollider, string Filename, List<string> Materials,
-    AgentModelExport? Agent = null);
+    object? Data,
+    object? ClothCollider,
+    string Filename,
+    List<string> Materials,
+    AgentModelExport? Agent = null
+);
 
 /// <summary>
 /// What FinalizeModels needs to turn an agent's raw VRF export into the published .glb: which
@@ -31,11 +35,19 @@ public record ModelMetadataResult(
 public record AgentModelExport(List<string> KeepMeshes, Dictionary<string, object?> Pose);
 
 public record CompositeMaterialMetadataResult(
-    List<string> CompositeMaterialRefs, object? Data,
-    string VcompmatPath, List<string> VmatRefs, List<string> VtexRefs);
+    List<string> CompositeMaterialRefs,
+    object? Data,
+    string VcompmatPath,
+    List<string> VmatRefs,
+    List<string> VtexRefs
+);
+
 public record MaterialMetadataResult(
-    object? Data, string VmatPath,
-    List<string> VmatRefs, List<string> VtexRefs);
+    object? Data,
+    string VmatPath,
+    List<string> VmatRefs,
+    List<string> VtexRefs
+);
 
 public static partial class MetadataExtractor
 {
@@ -49,18 +61,22 @@ public static partial class MetadataExtractor
     private const double ClothColliderCeiling = 2.5;
 
     public static List<ModelMetadataResult> ExtractModelMetadata(
-        ItemGeneratorContext ctx, List<(string VpkPath, string TargetFilename, AgentModelInfo? Agent)> entries)
+        ItemGeneratorContext ctx,
+        List<(string VpkPath, string TargetFilename, AgentModelInfo? Agent)> entries
+    )
     {
         var results = new List<ModelMetadataResult>();
-        if (ctx.VpkPackage == null) return results;
+        if (ctx.VpkPackage == null)
+            return results;
 
         foreach (var (vpkPath, targetFilename, agent) in entries)
         {
             var entry = ctx.VpkPackage.FindEntry(vpkPath);
             if (entry == null)
             {
-                results.Add(new ModelMetadataResult(
-                    null, null, Path.GetFileName(targetFilename), []));
+                results.Add(
+                    new ModelMetadataResult(null, null, Path.GetFileName(targetFilename), [])
+                );
                 continue;
             }
 
@@ -83,10 +99,12 @@ public static partial class MetadataExtractor
             if (resource.DataBlock is Model model)
             {
                 parsedData = ConvertKV3ToObject(model.Data);
-                if (parsedData is Dictionary<string, object?> topDict &&
-                    topDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
-                    modelInfoObj is Dictionary<string, object?> modelInfo &&
-                    model.KeyValues.IsCollection)
+                if (
+                    parsedData is Dictionary<string, object?> topDict
+                    && topDict.TryGetValue("m_modelInfo", out var modelInfoObj)
+                    && modelInfoObj is Dictionary<string, object?> modelInfo
+                    && model.KeyValues.IsCollection
+                )
                 {
                     modelInfo["m_keyValueText"] = ConvertKV3ToObject(model.KeyValues);
                 }
@@ -102,10 +120,15 @@ public static partial class MetadataExtractor
                 // the self-collision tree's shape, and morph/wind data are solver-internal
                 // acceleration structures fully derivable from the scalar arrays, so they are
                 // dropped to keep the model-data JSON small.
-                if (parsedData is Dictionary<string, object?> rootForPhysics &&
-                    ExtractFeModel(resource) is { } feModel)
+                if (
+                    parsedData is Dictionary<string, object?> rootForPhysics
+                    && ExtractFeModel(resource) is { } feModel
+                )
                 {
-                    rootForPhysics["physics"] = new Dictionary<string, object?> { ["feModel"] = feModel };
+                    rootForPhysics["physics"] = new Dictionary<string, object?>
+                    {
+                        ["feModel"] = feModel,
+                    };
                 }
 
                 // Surface the applied-module anchors (StatTrak module, name tag, charm) from the
@@ -118,18 +141,39 @@ public static partial class MetadataExtractor
                 if (parsedData is Dictionary<string, object?> root)
                 {
                     string[] wantedAttachments =
-                        ["stattrak", "stattrak_legacy", "nametag", "nametag_legacy", "keychain", "keychain_legacy"];
+                    [
+                        "stattrak",
+                        "stattrak_legacy",
+                        "nametag",
+                        "nametag_legacy",
+                        "keychain",
+                        "keychain_legacy",
+                    ];
                     var attachments = new Dictionary<string, object?>();
                     foreach (var key in wantedAttachments)
                     {
-                        if (!model.Attachments.TryGetValue(key, out var attachment) || attachment.Length == 0)
+                        if (
+                            !model.Attachments.TryGetValue(key, out var attachment)
+                            || attachment.Length == 0
+                        )
                             continue;
                         var influence = attachment[0];
                         attachments[key] = new Dictionary<string, object?>
                         {
                             ["bone"] = influence.Name,
-                            ["offset"] = new[] { influence.Offset.X, influence.Offset.Y, influence.Offset.Z },
-                            ["rotation"] = new[] { influence.Rotation.X, influence.Rotation.Y, influence.Rotation.Z, influence.Rotation.W },
+                            ["offset"] = new[]
+                            {
+                                influence.Offset.X,
+                                influence.Offset.Y,
+                                influence.Offset.Z,
+                            },
+                            ["rotation"] = new[]
+                            {
+                                influence.Rotation.X,
+                                influence.Rotation.Y,
+                                influence.Rotation.Z,
+                                influence.Rotation.W,
+                            },
                         };
                     }
                     if (attachments.Count > 0)
@@ -140,19 +184,30 @@ public static partial class MetadataExtractor
                     agentExport = ApplyAgentModelData(ctx, model, agentRoot, agent);
             }
 
-            var filename = Path.GetFileNameWithoutExtension(targetFilename).Replace(".glb", "") + ".json";
-            results.Add(new ModelMetadataResult(
-                parsedData, ExtractClothCollider(resource), filename, materials, agentExport));
+            var filename =
+                Path.GetFileNameWithoutExtension(targetFilename).Replace(".glb", "") + ".json";
+            results.Add(
+                new ModelMetadataResult(
+                    parsedData,
+                    ExtractClothCollider(resource),
+                    filename,
+                    materials,
+                    agentExport
+                )
+            );
         }
 
         return results;
     }
 
     public static List<CompositeMaterialMetadataResult> ExtractCompositeMaterialMetadata(
-        ItemGeneratorContext ctx, IEnumerable<string> vcompmatPaths)
+        ItemGeneratorContext ctx,
+        IEnumerable<string> vcompmatPaths
+    )
     {
         var results = new List<CompositeMaterialMetadataResult>();
-        if (ctx.VpkPackage == null) return results;
+        if (ctx.VpkPackage == null)
+            return results;
 
         foreach (var path in vcompmatPaths)
         {
@@ -185,25 +240,36 @@ public static partial class MetadataExtractor
                 CollectResourceRefs(dataText, ".vtex", vtexRefs);
             }
 
-            results.Add(new CompositeMaterialMetadataResult(
-                compositeMaterialRefs, parsedData, resolvedPath, vmatRefs, vtexRefs));
+            results.Add(
+                new CompositeMaterialMetadataResult(
+                    compositeMaterialRefs,
+                    parsedData,
+                    resolvedPath,
+                    vmatRefs,
+                    vtexRefs
+                )
+            );
         }
 
         return results;
     }
 
     public static List<MaterialMetadataResult> ExtractMaterialMetadata(
-        ItemGeneratorContext ctx, IEnumerable<string> vmatPaths)
+        ItemGeneratorContext ctx,
+        IEnumerable<string> vmatPaths
+    )
     {
         var results = new List<MaterialMetadataResult>();
-        if (ctx.VpkPackage == null) return results;
+        if (ctx.VpkPackage == null)
+            return results;
 
         foreach (var path in vmatPaths)
         {
             var resolvedPath = MaterialPaths.ResolveMaterialResourcePath(ctx, path);
             var vpkPath = MaterialPaths.ToCompiledMaterialResourcePath(resolvedPath);
             var entry = ctx.VpkPackage.FindEntry(vpkPath);
-            if (entry == null) continue;
+            if (entry == null)
+                continue;
 
             ctx.VpkPackage.ReadEntry(entry, out var data);
             using var resource = new Resource();
@@ -246,16 +312,22 @@ public static partial class MetadataExtractor
     // consumers to evaluate. Params VRF couldn't decode fall back to null rather than garbage.
     private static void ReplaceDynamicParamBytecode(object? parsedData, Material material)
     {
-        if (parsedData is not Dictionary<string, object?> root) return;
+        if (parsedData is not Dictionary<string, object?> root)
+            return;
         foreach (var key in new[] { "m_dynamicParams", "m_dynamicTextureParams" })
         {
-            if (!root.TryGetValue(key, out var listObj) || listObj is not List<object?> list) continue;
+            if (!root.TryGetValue(key, out var listObj) || listObj is not List<object?> list)
+                continue;
             foreach (var entryObj in list)
             {
-                if (entryObj is not Dictionary<string, object?> entry ||
-                    entry.GetValueOrDefault("m_name") is not string name) continue;
+                if (
+                    entryObj is not Dictionary<string, object?> entry
+                    || entry.GetValueOrDefault("m_name") is not string name
+                )
+                    continue;
                 entry["m_value"] = material.DynamicExpressions.TryGetValue(name, out var expression)
-                    ? expression : null;
+                    ? expression
+                    : null;
             }
         }
     }
@@ -283,22 +355,34 @@ public static partial class MetadataExtractor
     private static readonly string[] FeModelDropPrefixes = ["m_Simd"];
     private static readonly HashSet<string> FeModelDropKeys =
     [
-        "m_CtrlHash", "m_DynNodeWindBases", "m_SourceElems",
-        "m_MorphLayers", "m_MorphSetData",
-        "m_TreeParents", "m_TreeChildren",
+        "m_CtrlHash",
+        "m_DynNodeWindBases",
+        "m_SourceElems",
+        "m_MorphLayers",
+        "m_MorphSetData",
+        "m_TreeParents",
+        "m_TreeChildren",
     ];
 
     // The model's FeModel (softbody) as a trimmed JSON-ready dictionary, or null when the model
     // has no PHYS block, no FeModel, or only static nodes (nothing simulates).
     private static Dictionary<string, object?>? ExtractFeModel(Resource resource)
     {
-        if (resource.GetBlockByType(BlockType.PHYS) is not PhysAggregateData phys) return null;
-        if (ConvertKV3ToObject(phys.Data) is not Dictionary<string, object?> physData ||
-            physData.GetValueOrDefault("m_pFeModel") is not Dictionary<string, object?> feModel)
+        if (resource.GetBlockByType(BlockType.PHYS) is not PhysAggregateData phys)
             return null;
-        if (!int.TryParse(feModel.GetValueOrDefault("m_nNodeCount")?.ToString(), out var nodeCount) ||
-            !int.TryParse(feModel.GetValueOrDefault("m_nStaticNodes")?.ToString(), out var staticNodes) ||
-            nodeCount <= staticNodes)
+        if (
+            ConvertKV3ToObject(phys.Data) is not Dictionary<string, object?> physData
+            || physData.GetValueOrDefault("m_pFeModel") is not Dictionary<string, object?> feModel
+        )
+            return null;
+        if (
+            !int.TryParse(feModel.GetValueOrDefault("m_nNodeCount")?.ToString(), out var nodeCount)
+            || !int.TryParse(
+                feModel.GetValueOrDefault("m_nStaticNodes")?.ToString(),
+                out var staticNodes
+            )
+            || nodeCount <= staticNodes
+        )
             return null;
         foreach (var key in feModel.Keys.ToList())
         {
@@ -344,16 +428,22 @@ public static partial class MetadataExtractor
     // grid the game ships, and a grid where it does not is skipped rather than guessed at.
     private static Dictionary<string, object?>? ExtractClothCollider(Resource resource)
     {
-        if (resource.GetBlockByType(BlockType.PHYS) is not PhysAggregateData phys) return null;
-        if (ConvertKV3ToObject(phys.Data) is not Dictionary<string, object?> physData ||
-            physData.GetValueOrDefault("m_pFeModel") is not Dictionary<string, object?> feModel)
+        if (resource.GetBlockByType(BlockType.PHYS) is not PhysAggregateData phys)
+            return null;
+        if (
+            ConvertKV3ToObject(phys.Data) is not Dictionary<string, object?> physData
+            || physData.GetValueOrDefault("m_pFeModel") is not Dictionary<string, object?> feModel
+        )
             return null;
 
         // The FeModel's own control names are the weapon BONES its colliders are bound to, and
         // nNode indexes them. Resolving it here means the collider file names its bones outright
         // and a consumer never needs m_CtrlName.
-        var bones = (feModel.GetValueOrDefault("m_CtrlName") as List<object?>)?
-            .Select(name => name?.ToString() ?? "").ToList() ?? [];
+        var bones =
+            (feModel.GetValueOrDefault("m_CtrlName") as List<object?>)
+                ?.Select(name => name?.ToString() ?? "")
+                .ToList()
+            ?? [];
         string BoneOf(Dictionary<string, object?> rigid)
         {
             var node = ParseInt(rigid.GetValueOrDefault("nNode"));
@@ -366,7 +456,8 @@ public static partial class MetadataExtractor
         var sdfs = new List<object?>();
         foreach (var entryObj in feModel.GetValueOrDefault("m_SDFRigids") as List<object?> ?? [])
         {
-            if (entryObj is not Dictionary<string, object?> sdf) continue;
+            if (entryObj is not Dictionary<string, object?> sdf)
+                continue;
             var min = ParseVector(sdf.GetValueOrDefault("vLocalMin"), 3);
             var max = ParseVector(sdf.GetValueOrDefault("vLocalMax"), 3);
             var width = ParseInt(sdf.GetValueOrDefault("m_nWidth"));
@@ -377,11 +468,15 @@ public static partial class MetadataExtractor
                 Log($"  Cloth collider grid has no readable box: {width}x{height}x{depth}.");
                 continue;
             }
-            if (sdf.GetValueOrDefault("m_Distances") is not List<object?> distances ||
-                distances.Count != width * height * depth)
+            if (
+                sdf.GetValueOrDefault("m_Distances") is not List<object?> distances
+                || distances.Count != width * height * depth
+            )
             {
-                Log($"  Cloth collider grid holds the wrong number of samples for " +
-                    $"{width}x{height}x{depth}.");
+                Log(
+                    $"  Cloth collider grid holds the wrong number of samples for "
+                        + $"{width}x{height}x{depth}."
+                );
                 continue;
             }
 
@@ -389,7 +484,7 @@ public static partial class MetadataExtractor
             {
                 (max[0] - min[0]) / width,
                 (max[1] - min[1]) / height,
-                (max[2] - min[2]) / depth
+                (max[2] - min[2]) / depth,
             };
             if (cells.Max() - cells.Min() > 1e-4)
             {
@@ -413,25 +508,30 @@ public static partial class MetadataExtractor
                 bytes[i] = (byte)Math.Round((clamped - ClothColliderFloor) / span * 255);
             }
             if (unreadable > 0)
-                Log($"  Cloth collider grid has {unreadable} unreadable samples of {bytes.Length}.");
+                Log(
+                    $"  Cloth collider grid has {unreadable} unreadable samples of {bytes.Length}."
+                );
 
-            sdfs.Add(new Dictionary<string, object?>
-            {
-                ["bone"] = BoneOf(sdf),
-                ["collisionMask"] = ParseInt(sdf.GetValueOrDefault("nCollisionMask")),
-                ["min"] = min,
-                ["cell"] = cells[0],
-                ["width"] = width,
-                ["height"] = height,
-                ["depth"] = depth,
-                ["distances"] = Convert.ToBase64String(bytes),
-            });
+            sdfs.Add(
+                new Dictionary<string, object?>
+                {
+                    ["bone"] = BoneOf(sdf),
+                    ["collisionMask"] = ParseInt(sdf.GetValueOrDefault("nCollisionMask")),
+                    ["min"] = min,
+                    ["cell"] = cells[0],
+                    ["width"] = width,
+                    ["height"] = height,
+                    ["depth"] = depth,
+                    ["distances"] = Convert.ToBase64String(bytes),
+                }
+            );
         }
 
         var boxes = new List<object?>();
         foreach (var entryObj in feModel.GetValueOrDefault("m_BoxRigids") as List<object?> ?? [])
         {
-            if (entryObj is not Dictionary<string, object?> box) continue;
+            if (entryObj is not Dictionary<string, object?> box)
+                continue;
             // tmFrame2 packs the position as (x, y, z, 1) and then the quaternion, exactly like
             // m_InitPose. vSize is carried verbatim and is read as half-extents.
             var frame = ParseVector(box.GetValueOrDefault("tmFrame2"), 8);
@@ -441,21 +541,26 @@ public static partial class MetadataExtractor
                 Log("  Cloth collider box has no readable frame or size.");
                 continue;
             }
-            boxes.Add(new Dictionary<string, object?>
-            {
-                ["bone"] = BoneOf(box),
-                ["collisionMask"] = ParseInt(box.GetValueOrDefault("nCollisionMask")),
-                ["center"] = new List<double> { frame[0], frame[1], frame[2] },
-                ["rotation"] = new List<double> { frame[4], frame[5], frame[6], frame[7] },
-                ["halfExtents"] = size,
-            });
+            boxes.Add(
+                new Dictionary<string, object?>
+                {
+                    ["bone"] = BoneOf(box),
+                    ["collisionMask"] = ParseInt(box.GetValueOrDefault("nCollisionMask")),
+                    ["center"] = new List<double> { frame[0], frame[1], frame[2] },
+                    ["rotation"] = new List<double> { frame[4], frame[5], frame[6], frame[7] },
+                    ["halfExtents"] = size,
+                }
+            );
         }
 
         var capsules = new List<object?>();
-        foreach (var entryObj in
-            feModel.GetValueOrDefault("m_TaperedCapsuleRigids") as List<object?> ?? [])
+        foreach (
+            var entryObj in feModel.GetValueOrDefault("m_TaperedCapsuleRigids") as List<object?>
+                ?? []
+        )
         {
-            if (entryObj is not Dictionary<string, object?> capsule) continue;
+            if (entryObj is not Dictionary<string, object?> capsule)
+                continue;
             // vSphere is the capsule's two ends, each packed (x, y, z, radius), and the radii
             // differ — that is what makes it tapered. Carried in the same packing.
             var ends = capsule.GetValueOrDefault("vSphere") as List<object?>;
@@ -466,12 +571,14 @@ public static partial class MetadataExtractor
                 Log("  Cloth collider capsule has no readable ends.");
                 continue;
             }
-            capsules.Add(new Dictionary<string, object?>
-            {
-                ["bone"] = BoneOf(capsule),
-                ["collisionMask"] = ParseInt(capsule.GetValueOrDefault("nCollisionMask")),
-                ["spheres"] = new List<object?> { near, far },
-            });
+            capsules.Add(
+                new Dictionary<string, object?>
+                {
+                    ["bone"] = BoneOf(capsule),
+                    ["collisionMask"] = ParseInt(capsule.GetValueOrDefault("nCollisionMask")),
+                    ["spheres"] = new List<object?> { near, far },
+                }
+            );
         }
 
         // No weapon in the game authors either of these today, which is why there is no branch for
@@ -482,7 +589,8 @@ public static partial class MetadataExtractor
                 Log($"  Cloth collider carries {unread.Count} unread {key}.");
         }
 
-        if (sdfs.Count == 0 && boxes.Count == 0 && capsules.Count == 0) return null;
+        if (sdfs.Count == 0 && boxes.Count == 0 && capsules.Count == 0)
+            return null;
         return new Dictionary<string, object?>
         {
             ["quantiseFloor"] = ClothColliderFloor,
@@ -499,11 +607,13 @@ public static partial class MetadataExtractor
     // A fixed-length KV3 float array, or null when it is absent or the wrong length.
     private static List<double>? ParseVector(object? value, int length)
     {
-        if (value is not List<object?> list || list.Count < length) return null;
+        if (value is not List<object?> list || list.Count < length)
+            return null;
         var result = new List<double>(length);
         for (var i = 0; i < length; i++)
         {
-            if (!TryParseDouble(list[i], out var component)) return null;
+            if (!TryParseDouble(list[i], out var component))
+                return null;
             result.Add(component);
         }
         return result;
@@ -511,14 +621,19 @@ public static partial class MetadataExtractor
 
     private static bool TryParseDouble(object? value, out double result) =>
         double.TryParse(
-            value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out result);
+            value?.ToString(),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out result
+        );
 
-    public static KVObject? GetRootKvObject(Resource resource) => resource.DataBlock switch
-    {
-        KeyValuesOrNTRO kv => kv.Data,
-        BinaryKV3 binkv => binkv.Data.Root,
-        _ => null,
-    };
+    public static KVObject? GetRootKvObject(Resource resource) =>
+        resource.DataBlock switch
+        {
+            KeyValuesOrNTRO kv => kv.Data,
+            BinaryKV3 binkv => binkv.Data.Root,
+            _ => null,
+        };
 
     private static void CollectResourceRefs(string dataText, string extension, List<string> refs)
     {
@@ -532,7 +647,8 @@ public static partial class MetadataExtractor
 
     public static object? ConvertKV3ToObject(KVObject? kvObject)
     {
-        if (kvObject == null) return null;
+        if (kvObject == null)
+            return null;
 
         if (kvObject.IsArray)
         {
@@ -555,7 +671,8 @@ public static partial class MetadataExtractor
 
     private static object? ConvertKVObjectToValue(KVObject? value)
     {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         if (value.IsCollection || value.IsArray)
             return ConvertKV3ToObject(value);
         return value.ToString();

@@ -40,12 +40,19 @@ public static class InventoryPose
     private const string SkeletonVpkPath = "animation/skeletons/characters/worldmodel.vnmskel_c";
 
     private static List<string>? cachedBoneIds;
-    private static readonly Dictionary<string, Dictionary<string, object?>> cachedPoses = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Dictionary<string, object?>> cachedPoses = new(
+        StringComparer.Ordinal
+    );
 
-    public static Dictionary<string, object?> Read(ItemGeneratorContext ctx, string team, string poseSequence)
+    public static Dictionary<string, object?> Read(
+        ItemGeneratorContext ctx,
+        string team,
+        string poseSequence
+    )
     {
         var cacheKey = $"{team}/{poseSequence}";
-        if (cachedPoses.TryGetValue(cacheKey, out var cached)) return cached;
+        if (cachedPoses.TryGetValue(cacheKey, out var cached))
+            return cached;
 
         var pose = ReadUncached(ctx, team, poseSequence);
         cachedPoses[cacheKey] = pose;
@@ -53,14 +60,19 @@ public static class InventoryPose
     }
 
     private static Dictionary<string, object?> ReadUncached(
-        ItemGeneratorContext ctx, string team, string poseSequence)
+        ItemGeneratorContext ctx,
+        string team,
+        string poseSequence
+    )
     {
         var pose = new Dictionary<string, object?>();
         var boneIds = ReadBoneIds(ctx);
-        if (boneIds == null) return pose;
+        if (boneIds == null)
+            return pose;
 
         var clipPath = $"animation/anims/ui_anims/inventory_pose/{team}/{poseSequence}.vnmclip_c";
-        if (ReadResourceData(ctx, clipPath) is not { } clip) return pose;
+        if (ReadResourceData(ctx, clipPath) is not { } clip)
+            return pose;
 
         if (clip.GetValueOrDefault("m_trackCompressionSettings") is not List<object?> tracks)
             return pose;
@@ -69,30 +81,36 @@ public static class InventoryPose
         // bones, so mismatched lengths fail rather than pose partially.
         if (tracks.Count != boneIds.Count)
             throw new InvalidOperationException(
-                $"Inventory pose '{clipPath}' has {tracks.Count} tracks for {boneIds.Count} skeleton bones.");
+                $"Inventory pose '{clipPath}' has {tracks.Count} tracks for {boneIds.Count} skeleton bones."
+            );
 
         for (var index = 0; index < tracks.Count; index++)
         {
-            if (tracks[index] is not Dictionary<string, object?> track) continue;
-            if (!IsTrue(track.GetValueOrDefault("m_bIsRotationStatic")) ||
-                !IsTrue(track.GetValueOrDefault("m_bIsTranslationStatic")))
+            if (tracks[index] is not Dictionary<string, object?> track)
+                continue;
+            if (
+                !IsTrue(track.GetValueOrDefault("m_bIsRotationStatic"))
+                || !IsTrue(track.GetValueOrDefault("m_bIsTranslationStatic"))
+            )
                 throw new InvalidOperationException(
-                    $"Inventory pose '{clipPath}' track {index} ({boneIds[index]}) is animated, not static. " +
-                    "These clips have always been static poses; reading one as a pose would be wrong.");
+                    $"Inventory pose '{clipPath}' track {index} ({boneIds[index]}) is animated, not static. "
+                        + "These clips have always been static poses; reading one as a pose would be wrong."
+                );
 
             var rotation = ParseFloats(track.GetValueOrDefault("m_constantRotation"), 4);
             var translation = new[]
             {
                 RangeStart(track, "m_translationRangeX"),
                 RangeStart(track, "m_translationRangeY"),
-                RangeStart(track, "m_translationRangeZ")
+                RangeStart(track, "m_translationRangeZ"),
             };
-            if (rotation == null) continue;
+            if (rotation == null)
+                continue;
 
             pose[boneIds[index]] = new Dictionary<string, object?>
             {
                 ["translation"] = translation.Select(v => (object?)v).ToList(),
-                ["rotation"] = rotation.Select(v => (object?)v).ToList()
+                ["rotation"] = rotation.Select(v => (object?)v).ToList(),
             };
         }
 
@@ -101,17 +119,24 @@ public static class InventoryPose
 
     private static List<string>? ReadBoneIds(ItemGeneratorContext ctx)
     {
-        if (cachedBoneIds != null) return cachedBoneIds;
-        if (ReadResourceData(ctx, SkeletonVpkPath) is not { } skeleton) return null;
-        if (skeleton.GetValueOrDefault("m_boneIDs") is not List<object?> boneIds) return null;
+        if (cachedBoneIds != null)
+            return cachedBoneIds;
+        if (ReadResourceData(ctx, SkeletonVpkPath) is not { } skeleton)
+            return null;
+        if (skeleton.GetValueOrDefault("m_boneIDs") is not List<object?> boneIds)
+            return null;
         cachedBoneIds = [.. boneIds.Select(id => id?.ToString() ?? "")];
         return cachedBoneIds;
     }
 
-    private static Dictionary<string, object?>? ReadResourceData(ItemGeneratorContext ctx, string vpkPath)
+    private static Dictionary<string, object?>? ReadResourceData(
+        ItemGeneratorContext ctx,
+        string vpkPath
+    )
     {
         var entry = ctx.VpkPackage?.FindEntry(vpkPath);
-        if (entry == null) return null;
+        if (entry == null)
+            return null;
         ctx.VpkPackage!.ReadEntry(entry, out var data);
         using var resource = new Resource();
         resource.Read(new MemoryStream(data));
@@ -126,16 +151,22 @@ public static class InventoryPose
 
     private static double[]? ParseFloats(object? value, int expected)
     {
-        if (value is not List<object?> list || list.Count != expected) return null;
+        if (value is not List<object?> list || list.Count != expected)
+            return null;
         return [.. list.Select(ParseDouble)];
     }
 
     private static double ParseDouble(object? value) =>
-        double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+        double.TryParse(
+            value?.ToString(),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var parsed
+        )
             ? parsed
             : 0;
 
     private static bool IsTrue(object? value) =>
-        value?.ToString() is { } text &&
-        (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1");
+        value?.ToString() is { } text
+        && (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1");
 }

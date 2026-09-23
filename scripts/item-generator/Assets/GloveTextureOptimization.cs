@@ -57,12 +57,22 @@ public sealed record GloveAlphaGuard(double MinSoft, int AlphaQuality);
 // opts the alpha plane into the same walk. `Widths` is the LAST rung: a tier whose remaining bytes sit
 // in planes it is not allowed to quantize restarts at its own quality on a smaller image instead (see
 // PackedTier).
-public sealed record GloveSizeBudget(int MaxBytes, int MinQuality, int? MinAlphaQuality = null, int[]? Widths = null);
+public sealed record GloveSizeBudget(
+    int MaxBytes,
+    int MinQuality,
+    int? MinAlphaQuality = null,
+    int[]? Widths = null
+);
 
 // The mask-tier counterpart: a REPLICATED mask (R==G==B) walks `Qualities` lossy, an independent-plane
 // one walks `Steps` as posterize bucket widths under a lossless encode, and `Widths` is again the last
 // rung when quantization has run out. Only fires when over `MaxBytes`.
-public sealed record GloveMaskBudget(int MaxBytes, int[] Qualities, int[] Steps, int[]? Widths = null);
+public sealed record GloveMaskBudget(
+    int MaxBytes,
+    int[] Qualities,
+    int[] Steps,
+    int[]? Widths = null
+);
 
 // One encode tier, and the exact descriptor item-generator-webp.ts receives (camelCase, nulls
 // omitted). Field semantics are documented once, on the EncodeSpec interface there, so the mechanism
@@ -99,11 +109,13 @@ public static class GloveTextureOptimization
     // ---------------------------------------------------------------------------------------------
 
     // Shaders whose every material is a glove material (see the SCOPE note above).
-    public static readonly IReadOnlySet<string> GloveShaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    public static readonly IReadOnlySet<string> GloveShaders = new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         "csgo_customglove.vfx",
         "csgo_customglove_preview.vfx",
-        "csgo_textile_layer.vfx"
+        "csgo_textile_layer.vfx",
     };
 
     // The shared character shader, admitted only under a glove arm model. Agents bind the same
@@ -141,7 +153,7 @@ public static class GloveTextureOptimization
         MaxWidth = Cap,
         // libwebp's own default, stated so the budget has a rung to start from.
         AlphaQuality = 100,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 60)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 60),
     };
 
     // Where an albedo/detail fidelity-gate REJECTION goes, instead of lossless. Ported from the weapon
@@ -155,7 +167,7 @@ public static class GloveTextureOptimization
         AlphaQuality = 60,
         SmartSubsample = true,
         MaxWidth = Cap,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 20)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 20),
     };
 
     // ALBEDO -- g_tColor (the base glove's baked colour) and the layered g_tSubstrate* / g_tSurface*
@@ -177,7 +189,7 @@ public static class GloveTextureOptimization
         GuardFallback = GrainFloorTier,
         AlphaGuard = new(0.5, 60),
         FlattenGuard = true,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 40)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 40),
     };
 
     // LAYERED DETAIL / DIRT -- g_tDetail*, g_tGrunge*, g_tGrime*. Every one is a small tiling swatch
@@ -198,7 +210,7 @@ public static class GloveTextureOptimization
         SmartSubsample = true,
         LossyGuard = new(30),
         GuardFallback = GrainFloorTier,
-        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 20)
+        SizeBudget = new(Ceiling, MinQuality: 64, MinAlphaQuality: 20),
     };
 
     // SCALAR HEIGHT -- g_tDamage1-4, "BC4 R. Per-material damage height (stored inverted)", the field
@@ -213,7 +225,7 @@ public static class GloveTextureOptimization
         GreyGuard = true,
         MaxWidth = Cap,
         LossyGuard = new(30),
-        SizeBudget = new(Ceiling, MinQuality: 78)
+        SizeBudget = new(Ceiling, MinQuality: 78),
     };
 
     // GREY AO -- g_tAmbientOcclusion on the base glove materials, "BC4 R: plain AO". R = G = B with a
@@ -227,7 +239,7 @@ public static class GloveTextureOptimization
         GreyGuard = true,
         MaxWidth = Cap,
         LossyGuard = new(30),
-        SizeBudget = new(Ceiling, MinQuality: 84)
+        SizeBudget = new(Ceiling, MinQuality: 84),
     };
 
     // Where a packed texture with a FLAT plane goes, and where a packed gate rejection goes: bounded
@@ -249,7 +261,7 @@ public static class GloveTextureOptimization
         Quality = 100,
         MaxWidth = Cap,
         MaskKernel = true,
-        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half])
+        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half]),
     };
 
     // PACKED DATA PLANES -- every glove texture whose channels are several INDEPENDENT scalars rather
@@ -286,7 +298,7 @@ public static class GloveTextureOptimization
         SizeBudget = new(Ceiling, MinQuality: 70, MinAlphaQuality: null, Widths: [Half]),
         // Reached only by a file the guards sent to the bounded floor that is still over the ceiling,
         // which is where the quantizer is the right answer: no DCT is involved on that path at all.
-        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half])
+        MaskBudget = new(Ceiling, [80, 70, 60], [4, 8, 12, 16], [Half]),
     };
 
     // GRAIN patterns, ported verbatim from the weapon PatternNoiseTier (decimate + grain boost + q50
@@ -299,7 +311,7 @@ public static class GloveTextureOptimization
         SmartSubsample = true,
         AlphaQuality = 60,
         Decimate = true,
-        GrainBoost = 1.5
+        GrainBoost = 1.5,
     };
 
     // Where a g_tPattern gate rejection goes. Ported verbatim from the weapon PatternFloorTier.
@@ -309,7 +321,7 @@ public static class GloveTextureOptimization
         Quality = 75,
         MaxWidth = Cap,
         SmartSubsample = true,
-        SizeBudget = new(Ceiling, MinQuality: 64)
+        SizeBudget = new(Ceiling, MinQuality: 64),
     };
 
     // PAINT PATTERN -- g_tPattern, the glove's paint-kit artwork over the composite: "BC7 RGBA, or
@@ -326,7 +338,7 @@ public static class GloveTextureOptimization
         NoiseGuard = new(0.5, PatternNoiseTier),
         GuardFallback = PatternFloorTier,
         AlphaGuard = new(0.5, 60),
-        SizeBudget = new(Ceiling, MinQuality: 64)
+        SizeBudget = new(Ceiling, MinQuality: 64),
     };
 
     // LAYER WEIGHTS -- g_tLayerMask, "BC7 RGBA. Per-layer blend masks", the plane-per-layer mask
@@ -341,7 +353,7 @@ public static class GloveTextureOptimization
         MaxWidth = Cap,
         MaskKernel = true,
         FlattenGuard = true,
-        MaskBudget = new(Ceiling, [75, 70, 65], [8, 12, 16, 20])
+        MaskBudget = new(Ceiling, [75, 70, 65], [8, 12, 16, 20]),
     };
 
     // A property absent from this table is never touched: its textures take the default lossless path,
@@ -368,13 +380,14 @@ public static class GloveTextureOptimization
             ["g_tColor"] = AlbedoTier,
             ["g_tAmbientOcclusion"] = AoTier,
             ["g_tPattern"] = PatternTier,
-            ["g_tLayerMask"] = LayerMaskTier
+            ["g_tLayerMask"] = LayerMaskTier,
         };
         // The four material LAYERS a glove composites share one meaning per family, so a texture bound
         // as g_tSubstrate1 on one glove and g_tSubstrate3 on another takes the same tier either way.
         void Layered(string family, GloveTextureTier tier)
         {
-            for (var layer = 1; layer <= 4; layer++) targets[$"{family}{layer}"] = tier;
+            for (var layer = 1; layer <= 4; layer++)
+                targets[$"{family}{layer}"] = tier;
         }
         Layered("g_tSurfaceProperties", PackedTier);
         Layered("g_tSubstrateProperties", PackedTier);
@@ -410,13 +423,21 @@ public static class GloveTextureOptimization
     // Dictionary<string, object?> / List<object?> / string.
     public static Dictionary<string, GloveTextureTier> ResolveTextureTiers(
         IEnumerable<KeyValuePair<string, object?>> materialData,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         var targetProperty = new Dictionary<string, string>(StringComparer.Ordinal);
         var foreign = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var (path, data) in materialData)
-            Walk(data, contextName: null, IsGloveMaterial(path, data), targetProperty, foreign, resolveTexturePath);
+            Walk(
+                data,
+                contextName: null,
+                IsGloveMaterial(path, data),
+                targetProperty,
+                foreign,
+                resolveTexturePath
+            );
 
         foreach (var path in foreign)
             targetProperty.Remove(path);
@@ -429,13 +450,18 @@ public static class GloveTextureOptimization
 
     private static bool IsGloveMaterial(string materialPath, object? data)
     {
-        if (data is not Dictionary<string, object?> dict) return false;
-        if (!dict.TryGetValue("m_shaderName", out var shader) || shader is not string name) return false;
-        if (GloveShaders.Contains(name)) return true;
-        if (!string.Equals(name, CharacterShader, StringComparison.OrdinalIgnoreCase)) return false;
+        if (data is not Dictionary<string, object?> dict)
+            return false;
+        if (!dict.TryGetValue("m_shaderName", out var shader) || shader is not string name)
+            return false;
+        if (GloveShaders.Contains(name))
+            return true;
+        if (!string.Equals(name, CharacterShader, StringComparison.OrdinalIgnoreCase))
+            return false;
         var path = $"/{MaterialPaths.NormalizeMaterialResourcePath(materialPath).TrimStart('/')}";
         foreach (var segment in GlovePathSegments)
-            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase)) return true;
+            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase))
+                return true;
         return false;
     }
 
@@ -445,21 +471,29 @@ public static class GloveTextureOptimization
         bool gloveFamily,
         Dictionary<string, string> targetProperty,
         HashSet<string> foreign,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         switch (value)
         {
             case string reference:
-                if (!IsTextureReference(reference)) return;
+                if (!IsTextureReference(reference))
+                    return;
                 var resolved = resolveTexturePath(reference);
-                if (resolved == null) return;
-                if (gloveFamily && contextName != null && Targets.TryGetValue(contextName, out var tier))
+                if (resolved == null)
+                    return;
+                if (
+                    gloveFamily
+                    && contextName != null
+                    && Targets.TryGetValue(contextName, out var tier)
+                )
                 {
                     // Two bindings that want DIFFERENT tiers have no single answer, so the texture is
                     // dropped exactly like a foreign one.
                     if (targetProperty.TryGetValue(resolved, out var seen))
                     {
-                        if (!ReferenceEquals(Targets[seen], tier)) foreign.Add(resolved);
+                        if (!ReferenceEquals(Targets[seen], tier))
+                            foreign.Add(resolved);
                     }
                     else
                     {
@@ -474,7 +508,14 @@ public static class GloveTextureOptimization
 
             case List<object?> list:
                 foreach (var entry in list)
-                    Walk(entry, contextName, gloveFamily, targetProperty, foreign, resolveTexturePath);
+                    Walk(
+                        entry,
+                        contextName,
+                        gloveFamily,
+                        targetProperty,
+                        foreign,
+                        resolveTexturePath
+                    );
                 return;
 
             case Dictionary<string, object?> dict:
@@ -482,15 +523,28 @@ public static class GloveTextureOptimization
                 // (vcompmat); the texture path sits under a sibling key. Propagate that name down so a
                 // texture string inherits the parameter it belongs to.
                 var name =
-                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
-                    dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
-                    contextName;
+                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0
+                        ? n1
+                    : dict.TryGetValue("m_strName", out var mStrName)
+                    && mStrName is string n2
+                    && n2.Length > 0
+                        ? n2
+                    : contextName;
                 foreach (var (key, child) in dict)
-                    Walk(child, name ?? key, gloveFamily, targetProperty, foreign, resolveTexturePath);
+                    Walk(
+                        child,
+                        name ?? key,
+                        gloveFamily,
+                        targetProperty,
+                        foreign,
+                        resolveTexturePath
+                    );
                 return;
         }
     }
 
     private static bool IsTextureReference(string value) =>
-        MaterialPaths.NormalizeMaterialResourcePath(value).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
+        MaterialPaths
+            .NormalizeMaterialResourcePath(value)
+            .EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 }

@@ -52,7 +52,8 @@ public static class AssetWorkspace
     private static List<CS2Item> LoadExistingItems()
     {
         var path = Path.Combine(Config.CwdPath, Config.ItemsJsonPath);
-        if (!File.Exists(path)) return [];
+        if (!File.Exists(path))
+            return [];
         var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<List<CS2Item>>(json) ?? [];
     }

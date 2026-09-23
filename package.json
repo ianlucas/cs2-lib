@@ -42,6 +42,7 @@
     "scripts": {
         "docs": "typedoc",
         "format": "prettier . --write",
+        "format:cs": "dotnet tool restore && dotnet csharpier format scripts/item-generator",
         "prepack": "rolldown -c rolldown.config.ts",
         "test": "vitest --run --testTimeout 120000",
         "typecheck": "tsc --noEmit",

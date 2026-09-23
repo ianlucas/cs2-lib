@@ -12,15 +12,16 @@ public static class OutputWriter
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private const string Banner = "/*---------------------------------------------------------------------------------------------\n *  Copyright (c) Ian Lucas. All rights reserved.\n *  Licensed under the MIT License. See License.txt in the project root for license information.\n *--------------------------------------------------------------------------------------------*/";
+    private const string Banner =
+        "/*---------------------------------------------------------------------------------------------\n *  Copyright (c) Ian Lucas. All rights reserved.\n *  Licensed under the MIT License. See License.txt in the project root for license information.\n *--------------------------------------------------------------------------------------------*/";
 
     public static async Task EmitOutputs(ItemGeneratorContext ctx)
     {
-        var items = ctx.Items.Values
-            .OrderBy(i => i.Id)
+        var items = ctx
+            .Items.Values.OrderBy(i => i.Id)
             .Select(i => new CS2Item
             {
                 AlternateName = i.AlternateName,
@@ -74,7 +75,7 @@ public static class OutputWriter
                 Type = i.Type,
                 VariantIndex = i.VariantIndex,
                 WearMax = i.WearMax,
-                WearMin = i.WearMin
+                WearMin = i.WearMin,
             })
             .ToList();
 
@@ -111,12 +112,20 @@ public static class OutputWriter
 
     private static string CreateItemsModule(string itemsJson)
     {
-        return Banner + "\n\nimport type { CS2Item } from \"./economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const CS2_ITEMS: CS2Item[] = " + itemsJson + ";";
+        return Banner
+            + "\n\nimport type { CS2Item } from \"./economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const CS2_ITEMS: CS2Item[] = "
+            + itemsJson
+            + ";";
     }
 
     private static string CreateTranslationModule(string language, string tokensJson)
     {
-        return Banner + "\n\nimport type { CS2ItemTranslationMap } from \"../economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const " + language + ": CS2ItemTranslationMap = " + tokensJson + ";";
+        return Banner
+            + "\n\nimport type { CS2ItemTranslationMap } from \"../economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const "
+            + language
+            + ": CS2ItemTranslationMap = "
+            + tokensJson
+            + ";";
     }
 
     private static async Task WriteFileAsync(string relativePath, string content)

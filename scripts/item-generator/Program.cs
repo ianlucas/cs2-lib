@@ -17,9 +17,11 @@ if (File.Exists(envPath))
     foreach (var line in File.ReadAllLines(envPath))
     {
         var trimmed = line.Trim();
-        if (trimmed.Length == 0 || trimmed.StartsWith('#')) continue;
+        if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+            continue;
         var eq = trimmed.IndexOf('=');
-        if (eq < 0) continue;
+        if (eq < 0)
+            continue;
         var key = trimmed[..eq].Trim();
         var value = trimmed[(eq + 1)..].Trim().Trim('"');
         Environment.SetEnvironmentVariable(key, value);
@@ -33,19 +35,33 @@ Log($"Starting item generator in {mode} mode ({sourceMode} source).");
 
 try
 {
-    await RunStep("Preparing workspace", () => AssetWorkspace.PrepareWorkspace(ctx),
-        () => $"{ctx.StaticAssets.Count} static images");
+    await RunStep(
+        "Preparing workspace",
+        () => AssetWorkspace.PrepareWorkspace(ctx),
+        () => $"{ctx.StaticAssets.Count} static images"
+    );
 
-    await RunStep("Loading CS2 source data", () => SourceDataLoader.LoadSourceData(ctx),
-        () => $"{ctx.CsgoTranslationByLanguage.Count} languages, {ctx.PaintKits.Count} paint kits, {ctx.GraffitiTints.Count} graffiti tints");
+    await RunStep(
+        "Loading CS2 source data",
+        () => SourceDataLoader.LoadSourceData(ctx),
+        () =>
+            $"{ctx.CsgoTranslationByLanguage.Count} languages, {ctx.PaintKits.Count} paint kits, {ctx.GraffitiTints.Count} graffiti tints"
+    );
 
-    await RunStep("Building item catalog", () => CatalogBuilder.BuildCatalog(ctx),
-        () => $"{ctx.Items.Count} items, {ctx.NeededVpkPaths.Count} VPK assets, {ctx.ImagesToProcess.Count} image tasks, {ctx.ModelsToProcess.Count} model tasks");
+    await RunStep(
+        "Building item catalog",
+        () => CatalogBuilder.BuildCatalog(ctx),
+        () =>
+            $"{ctx.Items.Count} items, {ctx.NeededVpkPaths.Count} VPK assets, {ctx.ImagesToProcess.Count} image tasks, {ctx.ModelsToProcess.Count} model tasks"
+    );
 
     await RunStep("Processing assets", () => AssetProcessor.ProcessAssets(ctx));
 
-    await RunStep("Emitting outputs", () => OutputWriter.EmitOutputs(ctx),
-        () => $"{ctx.Items.Count} items, {ctx.ItemTranslationByLanguage.Count} translation files");
+    await RunStep(
+        "Emitting outputs",
+        () => OutputWriter.EmitOutputs(ctx),
+        () => $"{ctx.Items.Count} items, {ctx.ItemTranslationByLanguage.Count} translation files"
+    );
 
     await RunStep("Uploading assets", () => CdnUploader.UploadAssets(ctx));
 
