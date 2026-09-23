@@ -10,8 +10,7 @@ export type Interface<T extends object> = {
     [key in T extends any ? { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T] : never]: T[key];
 } & {
     [key in T extends any ? { [K in keyof T]-?: {} extends Pick<T, K> ? K : never }[keyof T] : never]-?:
-        | T[key]
-        | undefined;
+        T[key] | undefined;
 };
 
 export type MapValue<T> = T extends Map<any, infer I> ? I : never;
