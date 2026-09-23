@@ -663,7 +663,7 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasStickers(): boolean {
-        return CS2_STICKERABLE_ITEMS.includes(this.type) && !this.isC4();
+        return CS2_STICKERABLE_ITEMS.includes(this.type);
     }
 
     hasKeychains(): boolean {

@@ -296,6 +296,22 @@ describe("repairInventoryItem attributes with nothing to coerce them into", () =
         });
     });
 
+    test("keeps stickers attached to C4 when repairing an inventory item", () => {
+        const c4: CS2BaseInventoryItem = { id: C4_ID, stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, schema: 3 } } };
+
+        expect(repairInventoryItem(CS2Economy, c4)).toBe(true);
+        expect(c4.stickers).toEqual({
+            0: {
+                id: FALLEN_COLOGNE_2015_ID,
+                schema: 3,
+                wear: undefined,
+                rotation: undefined,
+                x: undefined,
+                y: undefined
+            }
+        });
+    });
+
     test("drops an attachment of a kind its slot was never able to hold", () => {
         const stickered: CS2BaseInventoryItem = { id: AK47_ID, stickers: { 0: { id: LIL_AVA_ID } } };
         expect(repairInventoryItem(CS2Economy, stickered)).toBe(true);

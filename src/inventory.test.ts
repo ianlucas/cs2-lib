@@ -242,6 +242,18 @@ describe("CS2Inventory methods", () => {
         expect(inventory.get(1).id).toBe(ZZ_NATION_RIO_2022_HOLO_ID);
     });
 
+    test("addWithSticker should add a sticker to C4 within its schema count", () => {
+        expect(CS2Economy.getById(C4_ID).hasStickers()).toBe(true);
+        expect(CS2Economy.getById(C4_ID).getStickerSchemaCount()).toBe(4);
+        inventory.add({ id: FALLEN_COLOGNE_2015_ID });
+        expect(() => inventory.addWithSticker(0, C4_ID, { schema: 4 })).toThrow();
+        inventory.addWithSticker(0, C4_ID, { schema: 3 });
+
+        expect(inventory.size()).toBe(1);
+        expect(inventory.get(0).id).toBe(C4_ID);
+        expect(inventory.get(0).stickers?.get(0)).toEqual({ id: FALLEN_COLOGNE_2015_ID, schema: 3 });
+    });
+
     test("addWithKeychain should add items with keychains to the inventory", () => {
         inventory.add({ id: LIL_AVA_ID });
         inventory.addWithKeychain(0, AK47_ID);
