@@ -22,7 +22,9 @@ public static class SourceDataLoader
         VpkIndexBuilder.BuildVpkIndex(ctx);
         if (ctx.SourceMode == Cs2SourceMode.WorkspaceDepot)
             await Depot.DepotDownloaderService.DownloadFiles(
-                ResourceDecompiler.GetItemDefinitionArchiveFiles(ctx), Config.WorkdirDir);
+                ResourceDecompiler.GetItemDefinitionArchiveFiles(ctx),
+                Config.WorkdirDir
+            );
         ResourceDecompiler.DecompileItemDefinitionResources(ctx);
         ReadCsgoLanguageFiles(ctx);
         ReadItemsGameFile(ctx);
@@ -39,18 +41,24 @@ public static class SourceDataLoader
         ctx.ItemTranslationByLanguage = [];
         ctx.CsgoTranslationByLanguage = [];
 
-        if (!Directory.Exists(Config.GameResourceDir)) return;
+        if (!Directory.Exists(Config.GameResourceDir))
+            return;
 
         foreach (var file in Directory.GetFiles(Config.GameResourceDir))
         {
             var match = Config.LanguageFileRe.Match(Path.GetFileName(file));
-            if (!match.Success) continue;
+            if (!match.Success)
+                continue;
             var language = match.Groups[1].Value;
 
             ctx.ItemTranslationByLanguage[language] = [];
 
             var serializer = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
-            var options = new KVSerializerOptions { HasEscapeSequences = true, EnableValveNullByteBugBehavior = true };
+            var options = new KVSerializerOptions
+            {
+                HasEscapeSequences = true,
+                EnableValveNullByteBugBehavior = true,
+            };
             using var reader = new StreamReader(file, detectEncodingFromByteOrderMarks: true);
             var text = reader.ReadToEnd();
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
@@ -91,7 +99,8 @@ public static class SourceDataLoader
             foreach (var rarity in rarities)
             {
                 var colorKey = KvHelper.GetString(rarity.Value, "color");
-                if (colorKey == null) continue;
+                if (colorKey == null)
+                    continue;
                 var colorObj = KvHelper.GetChild(colors, colorKey);
                 var hexColor = KvHelper.GetString(colorObj, "hex_color");
                 if (hexColor != null)
@@ -115,7 +124,8 @@ public static class SourceDataLoader
             foreach (var lootList in KvHelper.GetMergedSection(ctx.GameItems, "client_loot_lists"))
             {
                 var rarityKey = rarityKeys.FirstOrDefault(k => lootList.Key.Contains($"_{k}"));
-                if (rarityKey == null) continue;
+                if (rarityKey == null)
+                    continue;
 
                 foreach (var item in lootList.Value)
                 {
@@ -132,22 +142,28 @@ public static class SourceDataLoader
         {
             var name = KvHelper.GetString(entry.Value, "name");
             var descriptionTag = KvHelper.GetString(entry.Value, "description_tag");
-            if (name == null || name == "default" || descriptionTag == null) continue;
+            if (name == null || name == "default" || descriptionTag == null)
+                continue;
 
             var wearMaxStr = KvHelper.GetString(entry.Value, "wear_remap_max");
             var wearMinStr = KvHelper.GetString(entry.Value, "wear_remap_min");
 
-            ctx.PaintKits.Add(new PaintKitRecord(
-                ClassName: name,
-                CompositeMaterialPath: KvHelper.GetString(entry.Value, "composite_material_path"),
-                DescToken: PrependHash(KvHelper.GetString(entry.Value, "description_string")),
-                Index: int.Parse(entry.Key),
-                IsLegacy: KvHelper.GetString(entry.Value, "use_legacy_model") == "1",
-                NameToken: PrependHash(descriptionTag)!,
-                RarityColorHex: GetRarityColorHex(ctx, [name]),
-                WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 0.8,
-                WearMin: wearMinStr != null ? double.Parse(wearMinStr) : 0.06
-            ));
+            ctx.PaintKits.Add(
+                new PaintKitRecord(
+                    ClassName: name,
+                    CompositeMaterialPath: KvHelper.GetString(
+                        entry.Value,
+                        "composite_material_path"
+                    ),
+                    DescToken: PrependHash(KvHelper.GetString(entry.Value, "description_string")),
+                    Index: int.Parse(entry.Key),
+                    IsLegacy: KvHelper.GetString(entry.Value, "use_legacy_model") == "1",
+                    NameToken: PrependHash(descriptionTag)!,
+                    RarityColorHex: GetRarityColorHex(ctx, [name]),
+                    WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 0.8,
+                    WearMin: wearMinStr != null ? double.Parse(wearMinStr) : 0.06
+                )
+            );
         }
 
         // Build graffiti tints
@@ -159,12 +175,14 @@ public static class SourceDataLoader
             {
                 var id = int.Parse(KvHelper.GetString(entry.Value, "id") ?? "0");
                 var hexColor = KvHelper.GetString(entry.Value, "hex_color") ?? "";
-                ctx.GraffitiTints.Add(new GraffitiTintRecord(
-                    HexColor: hexColor,
-                    Id: id,
-                    Name: Translations.RequireTranslation(ctx, $"#Attrib_SprayTintValue_{id}"),
-                    NameToken: $"#Attrib_SprayTintValue_{id}"
-                ));
+                ctx.GraffitiTints.Add(
+                    new GraffitiTintRecord(
+                        HexColor: hexColor,
+                        Id: id,
+                        Name: Translations.RequireTranslation(ctx, $"#Attrib_SprayTintValue_{id}"),
+                        NameToken: $"#Attrib_SprayTintValue_{id}"
+                    )
+                );
             }
         }
 
@@ -174,11 +192,15 @@ public static class SourceDataLoader
         foreach (var itemSet in KvHelper.GetMergedSection(ctx.GameItems, "item_sets"))
         {
             var items = KvHelper.GetChild(itemSet.Value, "items");
-            if (items == null) continue;
+            if (items == null)
+                continue;
             foreach (var item in items)
             {
                 if (!ctx.ItemSetImage.ContainsKey(itemSet.Key))
-                    ctx.ItemSetImage[itemSet.Key] = CatalogAssets.GetCollectionImage(ctx, itemSet.Key);
+                    ctx.ItemSetImage[itemSet.Key] = CatalogAssets.GetCollectionImage(
+                        ctx,
+                        itemSet.Key
+                    );
                 ctx.ItemSetItemKey[item.Key] = itemSet.Key;
             }
         }
@@ -190,7 +212,11 @@ public static class SourceDataLoader
             : [];
     }
 
-    public static string GetRarityColorHex(ItemGeneratorContext ctx, string?[] keywords, string? defaultsTo = null)
+    public static string GetRarityColorHex(
+        ItemGeneratorContext ctx,
+        string?[] keywords,
+        string? defaultsTo = null
+    )
     {
         string? colorHex = null;
         if (defaultsTo != null)
@@ -202,22 +228,31 @@ public static class SourceDataLoader
 
         foreach (var keyword in keywords)
         {
-            if (keyword == null) continue;
-            if (keyword.StartsWith('#')) { colorHex = keyword; break; }
+            if (keyword == null)
+                continue;
+            if (keyword.StartsWith('#'))
+            {
+                colorHex = keyword;
+                break;
+            }
 
-            colorHex = ctx.ItemsRaritiesColorHex.GetValueOrDefault(keyword)
+            colorHex =
+                ctx.ItemsRaritiesColorHex.GetValueOrDefault(keyword)
                 ?? ctx.PaintKitsRaritiesColorHex.GetValueOrDefault(keyword)
                 ?? ctx.RaritiesColorHex.GetValueOrDefault(keyword);
-            if (colorHex != null) break;
+            if (colorHex != null)
+                break;
         }
 
-        return colorHex ?? ctx.RaritiesColorHex.GetValueOrDefault("default")
+        return colorHex
+            ?? ctx.RaritiesColorHex.GetValueOrDefault("default")
             ?? throw new InvalidOperationException("Unable to resolve rarity color hex.");
     }
 
     private static string? PrependHash(string? str)
     {
-        if (str == null || str.StartsWith('#')) return str;
+        if (str == null || str.StartsWith('#'))
+            return str;
         return $"#{str}";
     }
 }

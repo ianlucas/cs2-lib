@@ -28,6 +28,9 @@
  *   a charm rides the weapon shader, so its tiers are weapon (and two sticker) tiers ported to the
  *   keychain property with the same channel meaning. It needs no mechanism of its own -- it uses the
  *   weapon guards plus the glove flatPlaneGuard.
+ * - kinds `character` and `patch`: the guarded tiers owned by CharacterTextureOptimization (an
+ *   agent's embedded textures) and PatchTextureOptimization (patch artwork). Both are glove tier
+ *   records and need no mechanism of their own.
  *
  * A job with no descriptor takes the default lossless path below, so its bytes -- and filename hash
  * -- stay stable.
@@ -116,7 +119,7 @@ import sharp from "sharp";
  * floors do.
  */
 interface EncodeSpec {
-    kind?: "sticker" | "weapon" | "glove" | "keychain";
+    kind?: "sticker" | "weapon" | "glove" | "keychain" | "character" | "patch";
     mode: "lossless" | "lossy" | "nearLossless";
     quality?: number;
     stripAlpha?: boolean;
@@ -194,7 +197,13 @@ async function encode({ src, dest, encode: spec }: EncodeJob) {
         if (spec === undefined) {
             await sharp(src).webp(LOSSLESS).toFile(dest);
             console.log(`done ${dest}`);
-        } else if (spec.kind === "weapon" || spec.kind === "glove" || spec.kind === "keychain") {
+        } else if (
+            spec.kind === "weapon" ||
+            spec.kind === "glove" ||
+            spec.kind === "keychain" ||
+            spec.kind === "character" ||
+            spec.kind === "patch"
+        ) {
             const { data, label } = await encodeGuarded(src, spec);
             await writeFile(dest, data);
             console.log(`done ${dest} ${label}`);
@@ -881,7 +890,11 @@ async function encodeGuarded(src: string, baseSpec: EncodeSpec): Promise<{ data:
 // ---------------------------------------------------------------------------------------------
 
 const isGuarded = (job: EncodeJob): boolean =>
-    job.encode?.kind === "weapon" || job.encode?.kind === "glove" || job.encode?.kind === "keychain";
+    job.encode?.kind === "weapon" ||
+    job.encode?.kind === "glove" ||
+    job.encode?.kind === "keychain" ||
+    job.encode?.kind === "character" ||
+    job.encode?.kind === "patch";
 
 /**
  * Two pools rather than one, because a guarded job holds several full-resolution raw planes at once

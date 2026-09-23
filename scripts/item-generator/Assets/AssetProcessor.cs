@@ -44,6 +44,7 @@ public static partial class AssetProcessor
             PreProcessMaterials(ctx);
             ProcessMaterialTextures(ctx);
             WriteMaterialMetadata(ctx);
+            ResolveAgentPatchSlots(ctx);
             await FinalizeModels(ctx);
         }
 
@@ -52,7 +53,8 @@ public static partial class AssetProcessor
 
     private static async Task ProcessImages(ItemGeneratorContext ctx)
     {
-        if (ctx.ImagesToProcess.Count == 0) return;
+        if (ctx.ImagesToProcess.Count == 0)
+            return;
         Log($"Processing {FormatCount(ctx.ImagesToProcess.Count, "image task")}...");
 
         var stagingDir = Path.Combine(Config.ItemGeneratorBuildDir, "images");
@@ -72,18 +74,24 @@ public static partial class AssetProcessor
                 ctx.AssetRenames[task.Provisional] = cached;
                 continue;
             }
-            tasks.Add(Task.Run(async () =>
-            {
-                await semaphore.WaitAsync();
-                try
+            tasks.Add(
+                Task.Run(async () =>
                 {
-                    var final = ProcessImageTask(task, stagingDir);
-                    if (final != null)
-                        lock (renameLock) ctx.AssetRenames[task.Provisional] = final;
-                }
-                finally { semaphore.Release(); }
-                LogProgress(ref processed, ref lastMilestone, total);
-            }));
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        var final = ProcessImageTask(task, stagingDir);
+                        if (final != null)
+                            lock (renameLock)
+                                ctx.AssetRenames[task.Provisional] = final;
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                    LogProgress(ref processed, ref lastMilestone, total);
+                })
+            );
         }
 
         await Task.WhenAll(tasks);
@@ -93,20 +101,26 @@ public static partial class AssetProcessor
     private static bool TryReuseImageTask(PendingImageTask task, out string final)
     {
         final = "";
-        if (!Config.IsAssetReuseEnabled()) return false;
+        if (!Config.IsAssetReuseEnabled())
+            return false;
 
         var imagesDir = Path.Combine(Config.OutputDir, "images");
-        if (!Directory.Exists(imagesDir)) return false;
+        if (!Directory.Exists(imagesDir))
+            return false;
         var baseName = Path.GetFileName(task.FinalBase);
         var suffix = task.FinalSuffix != null ? $"_{task.FinalSuffix}" : "";
         var matches = Directory.GetFiles(imagesDir, $"{baseName}_????????{suffix}.webp");
-        if (matches.Length != 1) return false;
+        if (matches.Length != 1)
+            return false;
 
         if (task is PaintImageTask)
         {
             var stem = Path.GetFileNameWithoutExtension(matches[0]);
-            if (!Config.PaintImageSuffixes.All(s =>
-                File.Exists(Path.Combine(imagesDir, $"{stem}_{s}.webp"))))
+            if (
+                !Config.PaintImageSuffixes.All(s =>
+                    File.Exists(Path.Combine(imagesDir, $"{stem}_{s}.webp"))
+                )
+            )
                 return false;
         }
 
@@ -118,7 +132,10 @@ public static partial class AssetProcessor
     // content-addressed name. Returns the final name, or null when the source is unavailable.
     private static string? ProcessImageTask(PendingImageTask task, string stagingDir)
     {
-        var stagedBase = Path.Combine(stagingDir, Path.GetFileNameWithoutExtension(task.Provisional));
+        var stagedBase = Path.Combine(
+            stagingDir,
+            Path.GetFileNameWithoutExtension(task.Provisional)
+        );
         switch (task)
         {
             case RegularImageTask regular:
@@ -130,7 +147,8 @@ public static partial class AssetProcessor
             {
                 var staged = $"{stagedBase}.webp";
                 return ColorizeGraffitiImage(graffiti.LocalPath, graffiti.HexColor, staged)
-                    ? PromoteImage(staged, task) : null;
+                    ? PromoteImage(staged, task)
+                    : null;
             }
             case SvgImageTask svg:
             {
@@ -146,7 +164,8 @@ public static partial class AssetProcessor
                     if (ConvertToWebp(src, staged))
                         produced.Add((suffix, staged, ContentVersion.HashFileFull(staged)));
                 }
-                if (produced.Count == 0) return null;
+                if (produced.Count == 0)
+                    return null;
 
                 // Consumers derive the _light/_medium/_heavy URLs from the base URL (see
                 // economy.ts getImageUrl), so the whole wear set must share one version token.
@@ -176,15 +195,18 @@ public static partial class AssetProcessor
     {
         var outPath = Path.Combine(Config.OutputDir, destFilename.TrimStart('/'));
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-        if (move) File.Move(srcPath, outPath, true);
-        else File.Copy(srcPath, outPath, true);
+        if (move)
+            File.Move(srcPath, outPath, true);
+        else
+            File.Copy(srcPath, outPath, true);
     }
 
     // Rewrites provisional asset references on items to their final content-addressed names.
     // ModelPath is patched separately by FinalizeModels (the .glb/.json pair move together).
     private static void ApplyAssetRenames(ItemGeneratorContext ctx)
     {
-        if (ctx.AssetRenames.Count == 0) return;
+        if (ctx.AssetRenames.Count == 0)
+            return;
         string? Map(string? value) =>
             value != null && ctx.AssetRenames.TryGetValue(value, out var final) ? final : value;
 
@@ -200,9 +222,10 @@ public static partial class AssetProcessor
     private static void PrepareModels(ItemGeneratorContext ctx)
     {
         HydrateReusedModelData(ctx);
-        if (ctx.ModelsToProcess.Count == 0) return;
+        if (ctx.ModelsToProcess.Count == 0)
+            return;
         Log($"Preparing {FormatCount(ctx.ModelsToProcess.Count, "model")}...");
-        ResourceDecompiler.DecompileModelAssets(ctx, ctx.ModelsToProcess.Keys);
+        ResourceDecompiler.DecompileModelAssets(ctx, ctx.ModelsToProcess);
         ExtractModelData(ctx);
     }
 
@@ -210,7 +233,8 @@ public static partial class AssetProcessor
     // content-hashed material filename stems, so models must be hashed after materials settle.
     private static async Task FinalizeModels(ItemGeneratorContext ctx)
     {
-        if (ctx.ModelsToProcess.Count == 0) return;
+        if (ctx.ModelsToProcess.Count == 0)
+            return;
         Log($"Finalizing {FormatCount(ctx.ModelsToProcess.Count, "model")}...");
 
         // Pass 1: patch + stub each model, collecting the GLBs to compress.
@@ -221,11 +245,22 @@ public static partial class AssetProcessor
             var baseName = Path.GetFileNameWithoutExtension(vpkPath).Replace(".vmdl", "");
             var glbPath = Path.Combine(modelDir, $"{baseName}.glb");
 
-            if (!File.Exists(glbPath)) continue;
+            if (!File.Exists(glbPath))
+                continue;
 
             EnsureGlbSatelliteTextures(glbPath);
-            PatchGlbAssets(ctx, glbPath);
-            StubModelTextures(glbPath);
+            if (model.Agent != null)
+            {
+                // An agent's textures are EMBEDDED, not stubbed, and its material slots keep VRF's
+                // names: with nothing published separately there is no content-hashed material
+                // filename to rename them to, and the consumer matches on `extras.vmat` anyway.
+                await FinalizeAgentModel(ctx, vpkPath, model, glbPath);
+            }
+            else
+            {
+                PatchGlbAssets(ctx, glbPath);
+                StubModelTextures(glbPath);
+            }
             stubbed.Add((vpkPath, model, glbPath));
         }
 
@@ -244,7 +279,7 @@ public static partial class AssetProcessor
             var dependencyHash = ContentVersion.Combine([
                 ContentVersion.HashFileFull(glbPath),
                 File.Exists(modelDataPath) ? ContentVersion.HashFileFull(modelDataPath) : "",
-                File.Exists(colliderPath) ? ContentVersion.HashFileFull(colliderPath) : ""
+                File.Exists(colliderPath) ? ContentVersion.HashFileFull(colliderPath) : "",
             ]);
 
             var versionedBase = $"{model.Base}_{dependencyHash}";
@@ -273,20 +308,32 @@ public static partial class AssetProcessor
 
     private static void ExtractModelData(ItemGeneratorContext ctx)
     {
-        var entries = ctx.ModelsToProcess.Select(kv =>
-            (VpkPath: kv.Key, TargetFilename: kv.Value.PlayerModel)).ToList();
+        var entries = ctx
+            .ModelsToProcess.Select(kv =>
+                (VpkPath: kv.Key, TargetFilename: kv.Value.PlayerModel, Agent: kv.Value.Agent)
+            )
+            .ToList();
         var results = MetadataExtractor.ExtractModelMetadata(ctx, entries);
 
         for (int i = 0; i < results.Count; i++)
         {
             var result = results[i];
             var vpkPath = entries[i].VpkPath;
-            if (!ctx.ModelsToProcess.TryGetValue(vpkPath, out var model)) continue;
+            if (!ctx.ModelsToProcess.TryGetValue(vpkPath, out var model))
+                continue;
+
+            if (result.Agent != null)
+                ctx.AgentModelExports[vpkPath] = result.Agent;
 
             foreach (var material in result.Materials)
             {
                 var normalized = MaterialPaths.NormalizeMaterialResourcePath(material);
-                ctx.MaterialsToProcess.Add(normalized);
+                // An agent's materials stay OUT of the material pipeline: its textures are embedded
+                // in its .glb, so there is no separate material JSON for a consumer to fetch and no
+                // content-addressed texture to publish. Everything the consumer needs about them
+                // rides in the .glb's own `extras.vmat`. See FinalizeAgentModel.
+                if (model.Agent == null)
+                    ctx.MaterialsToProcess.Add(normalized);
                 model.DirectMaterials.Add(normalized);
             }
 
@@ -322,8 +369,10 @@ public static partial class AssetProcessor
     {
         foreach (var playerModelPath in ctx.ReusedModelPaths)
         {
-            var dataPath = Path.Combine(Config.OutputDir,
-                Path.ChangeExtension(playerModelPath.TrimStart('/'), ".json"));
+            var dataPath = Path.Combine(
+                Config.OutputDir,
+                Path.ChangeExtension(playerModelPath.TrimStart('/'), ".json")
+            );
             if (!File.Exists(dataPath))
                 throw new FileNotFoundException($"Cached model data not found: {dataPath}");
 
@@ -332,47 +381,63 @@ public static partial class AssetProcessor
                 ApplyModelMetadata(ctx, playerModelPath, data);
 
             var colliderPath = ClothColliderPathOf(dataPath);
-            if (File.Exists(colliderPath)) ApplyColliderMetadata(ctx, playerModelPath);
+            if (File.Exists(colliderPath))
+                ApplyColliderMetadata(ctx, playerModelPath);
         }
     }
 
-    private static object? ConvertJsonElement(JsonElement element) => element.ValueKind switch
-    {
-        JsonValueKind.Object => element.EnumerateObject().ToDictionary(
-            property => property.Name, property => ConvertJsonElement(property.Value)),
-        JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
-        JsonValueKind.String => element.GetString(),
-        JsonValueKind.Number when element.TryGetInt64(out var integer) => integer,
-        JsonValueKind.Number => element.GetDouble(),
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
-        _ => null
-    };
+    private static object? ConvertJsonElement(JsonElement element) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.Object => element
+                .EnumerateObject()
+                .ToDictionary(
+                    property => property.Name,
+                    property => ConvertJsonElement(property.Value)
+                ),
+            JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number when element.TryGetInt64(out var integer) => integer,
+            JsonValueKind.Number => element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null,
+        };
 
     private static void ApplyModelMetadata(
-        ItemGeneratorContext ctx, string playerModelPath, Dictionary<string, object?> dataDict)
+        ItemGeneratorContext ctx,
+        string playerModelPath,
+        Dictionary<string, object?> dataDict
+    )
     {
-        if (dataDict.TryGetValue("m_modelInfo", out var modelInfoObj) &&
-            modelInfoObj is Dictionary<string, object?> modelInfo &&
-            modelInfo.TryGetValue("m_keyValueText", out var kvTextObj) &&
-            kvTextObj is Dictionary<string, object?> kvText)
+        if (
+            dataDict.TryGetValue("m_modelInfo", out var modelInfoObj)
+            && modelInfoObj is Dictionary<string, object?> modelInfo
+            && modelInfo.TryGetValue("m_keyValueText", out var kvTextObj)
+            && kvTextObj is Dictionary<string, object?> kvText
+        )
         {
-            if (kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj) &&
-                stickerMarkupObj is List<object?> stickerMarkup)
+            if (
+                kvText.TryGetValue("StickerMarkup", out var stickerMarkupObj)
+                && stickerMarkupObj is List<object?> stickerMarkup
+            )
             {
                 var stickerSchemaCount = stickerMarkup.Count(s =>
-                    s is Dictionary<string, object?> d &&
-                    d.TryGetValue("Mesh", out var mesh) &&
-                    mesh?.ToString() == "body_hd");
+                    s is Dictionary<string, object?> d
+                    && d.TryGetValue("Mesh", out var mesh)
+                    && mesh?.ToString() == "body_hd"
+                );
                 var legacyStickerSchemaCount = stickerMarkup.Count - stickerSchemaCount;
                 var hdOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: true);
                 var legacyOffsetBounds = ComputeStickerOffsetBounds(stickerMarkup, hd: false);
 
                 foreach (var item in ctx.Items.Values)
                 {
-                    if (item.ModelPath != playerModelPath) continue;
+                    if (item.ModelPath != playerModelPath)
+                        continue;
                     item.StickerSchemaCount = stickerSchemaCount > 0 ? stickerSchemaCount : null;
-                    item.LegacyStickerSchemaCount = legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
+                    item.LegacyStickerSchemaCount =
+                        legacyStickerSchemaCount > 0 ? legacyStickerSchemaCount : null;
                     if (hdOffsetBounds is { } hd)
                     {
                         item.StickerOffsetXMin = hd.XMin;
@@ -390,16 +455,26 @@ public static partial class AssetProcessor
                 }
             }
 
-            if (kvText.TryGetValue("KeychainMarkup", out var keychainMarkupObj) &&
-                keychainMarkupObj is List<object?> keychainMarkup)
+            if (
+                kvText.TryGetValue("KeychainMarkup", out var keychainMarkupObj)
+                && keychainMarkupObj is List<object?> keychainMarkup
+            )
             {
-                var hdKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: false);
-                var legacyKeychainBounds = ComputeKeychainPositionBounds(keychainMarkup, legacyModel: true);
+                var hdKeychainBounds = ComputeKeychainPositionBounds(
+                    keychainMarkup,
+                    legacyModel: false
+                );
+                var legacyKeychainBounds = ComputeKeychainPositionBounds(
+                    keychainMarkup,
+                    legacyModel: true
+                );
 
-                if (hdKeychainBounds == null && legacyKeychainBounds == null) return;
+                if (hdKeychainBounds == null && legacyKeychainBounds == null)
+                    return;
                 foreach (var item in ctx.Items.Values)
                 {
-                    if (item.ModelPath != playerModelPath) continue;
+                    if (item.ModelPath != playerModelPath)
+                        continue;
                     if (hdKeychainBounds is { } hd)
                     {
                         item.KeychainPositionXMin = hd.XMin;
@@ -427,7 +502,8 @@ public static partial class AssetProcessor
     {
         foreach (var item in ctx.Items.Values)
         {
-            if (item.ModelPath == playerModelPath) item.HasColliderData = true;
+            if (item.ModelPath == playerModelPath)
+                item.HasColliderData = true;
         }
     }
 
@@ -447,23 +523,36 @@ public static partial class AssetProcessor
     // anything outside [Min, Max]; inside, it may still miss the (non-rectangular) surface and simply
     // not render. Mins are floored and maxes ceiled outward so rounding never rejects a valid nudge.
     private static (double XMin, double XMax, double YMin, double YMax)? ComputeStickerOffsetBounds(
-        List<object?> stickerMarkup, bool hd)
+        List<object?> stickerMarkup,
+        bool hd
+    )
     {
-        double polyXMin = double.PositiveInfinity, polyXMax = double.NegativeInfinity;
-        double polyYMin = double.PositiveInfinity, polyYMax = double.NegativeInfinity;
-        double offXMin = double.PositiveInfinity, offXMax = double.NegativeInfinity;
-        double offYMin = double.PositiveInfinity, offYMax = double.NegativeInfinity;
+        double polyXMin = double.PositiveInfinity,
+            polyXMax = double.NegativeInfinity;
+        double polyYMin = double.PositiveInfinity,
+            polyYMax = double.NegativeInfinity;
+        double offXMin = double.PositiveInfinity,
+            offXMax = double.NegativeInfinity;
+        double offYMin = double.PositiveInfinity,
+            offYMax = double.NegativeInfinity;
         var hasPolygon = false;
         var hasOffset = false;
 
         foreach (var entry in stickerMarkup)
         {
-            if (entry is not Dictionary<string, object?> markup) continue;
+            if (entry is not Dictionary<string, object?> markup)
+                continue;
             var isHd = markup.TryGetValue("Mesh", out var mesh) && mesh?.ToString() == "body_hd";
-            if (isHd != hd) continue;
+            if (isHd != hd)
+                continue;
 
-            if (markup.TryGetValue("Offset", out var offsetObj) && offsetObj is List<object?> offset &&
-                offset.Count >= 2 && TryParseDouble(offset[0], out var ox) && TryParseDouble(offset[1], out var oy))
+            if (
+                markup.TryGetValue("Offset", out var offsetObj)
+                && offsetObj is List<object?> offset
+                && offset.Count >= 2
+                && TryParseDouble(offset[0], out var ox)
+                && TryParseDouble(offset[1], out var oy)
+            )
             {
                 offXMin = Math.Min(offXMin, ox);
                 offXMax = Math.Max(offXMax, ox);
@@ -472,17 +561,27 @@ public static partial class AssetProcessor
                 hasOffset = true;
             }
 
-            if (markup.TryGetValue("Polygons", out var polygonsObj) && polygonsObj is List<object?> polygons)
+            if (
+                markup.TryGetValue("Polygons", out var polygonsObj)
+                && polygonsObj is List<object?> polygons
+            )
             {
                 foreach (var polygonObj in polygons)
                 {
-                    if (polygonObj is not Dictionary<string, object?> polygon) continue;
-                    if (!polygon.TryGetValue("Vertices", out var verticesObj) ||
-                        verticesObj is not List<object?> vertices) continue;
+                    if (polygonObj is not Dictionary<string, object?> polygon)
+                        continue;
+                    if (
+                        !polygon.TryGetValue("Vertices", out var verticesObj)
+                        || verticesObj is not List<object?> vertices
+                    )
+                        continue;
                     for (var i = 0; i + 1 < vertices.Count; i += 2)
                     {
-                        if (!TryParseDouble(vertices[i], out var vx) ||
-                            !TryParseDouble(vertices[i + 1], out var vy)) continue;
+                        if (
+                            !TryParseDouble(vertices[i], out var vx)
+                            || !TryParseDouble(vertices[i + 1], out var vy)
+                        )
+                            continue;
                         polyXMin = Math.Min(polyXMin, vx);
                         polyXMax = Math.Max(polyXMax, vx);
                         polyYMin = Math.Min(polyYMin, vy);
@@ -493,7 +592,8 @@ public static partial class AssetProcessor
             }
         }
 
-        if (!hasPolygon || !hasOffset) return null;
+        if (!hasPolygon || !hasOffset)
+            return null;
         return (
             QuantizeOutward(polyXMin - offXMax, up: false),
             QuantizeOutward(polyXMax - offXMin, up: true),
@@ -509,29 +609,50 @@ public static partial class AssetProcessor
     // app rules out anything outside [Min, Max]; inside, it may still miss a (non-rectangular)
     // surface and simply not render. Mins are floored and maxes ceiled outward so rounding never
     // rejects a valid placement.
-    private static (double XMin, double XMax, double YMin, double YMax, double ZMin, double ZMax)?
-        ComputeKeychainPositionBounds(List<object?> keychainMarkup, bool legacyModel)
+    private static (
+        double XMin,
+        double XMax,
+        double YMin,
+        double YMax,
+        double ZMin,
+        double ZMax
+    )? ComputeKeychainPositionBounds(List<object?> keychainMarkup, bool legacyModel)
     {
-        double xMin = double.PositiveInfinity, xMax = double.NegativeInfinity;
-        double yMin = double.PositiveInfinity, yMax = double.NegativeInfinity;
-        double zMin = double.PositiveInfinity, zMax = double.NegativeInfinity;
+        double xMin = double.PositiveInfinity,
+            xMax = double.NegativeInfinity;
+        double yMin = double.PositiveInfinity,
+            yMax = double.NegativeInfinity;
+        double zMin = double.PositiveInfinity,
+            zMax = double.NegativeInfinity;
         var hasCorner = false;
 
         foreach (var entry in keychainMarkup)
         {
-            if (entry is not Dictionary<string, object?> markup) continue;
-            var isLegacy = markup.TryGetValue("LegacyModel", out var legacyObj) &&
-                legacyObj?.ToString() is { } legacyText &&
-                (legacyText.Equals("true", StringComparison.OrdinalIgnoreCase) || legacyText == "1");
-            if (isLegacy != legacyModel) continue;
+            if (entry is not Dictionary<string, object?> markup)
+                continue;
+            var isLegacy =
+                markup.TryGetValue("LegacyModel", out var legacyObj)
+                && legacyObj?.ToString() is { } legacyText
+                && (
+                    legacyText.Equals("true", StringComparison.OrdinalIgnoreCase)
+                    || legacyText == "1"
+                );
+            if (isLegacy != legacyModel)
+                continue;
 
-            if (!markup.TryGetValue("Corners", out var cornersObj) ||
-                cornersObj is not List<object?> corners) continue;
+            if (
+                !markup.TryGetValue("Corners", out var cornersObj)
+                || cornersObj is not List<object?> corners
+            )
+                continue;
             for (var i = 0; i + 2 < corners.Count; i += 3)
             {
-                if (!TryParseDouble(corners[i], out var x) ||
-                    !TryParseDouble(corners[i + 1], out var y) ||
-                    !TryParseDouble(corners[i + 2], out var z)) continue;
+                if (
+                    !TryParseDouble(corners[i], out var x)
+                    || !TryParseDouble(corners[i + 1], out var y)
+                    || !TryParseDouble(corners[i + 2], out var z)
+                )
+                    continue;
                 xMin = Math.Min(xMin, x);
                 xMax = Math.Max(xMax, x);
                 yMin = Math.Min(yMin, y);
@@ -542,7 +663,8 @@ public static partial class AssetProcessor
             }
         }
 
-        if (!hasCorner) return null;
+        if (!hasCorner)
+            return null;
         return (
             QuantizeOutward(xMin, up: false, KeychainPositionFactor),
             QuantizeOutward(xMax, up: true, KeychainPositionFactor),
@@ -556,11 +678,15 @@ public static partial class AssetProcessor
     private static bool TryParseDouble(object? value, out double result)
     {
         result = 0;
-        return value is string s &&
-            double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
+        return value is string s
+            && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
     }
 
-    private static double QuantizeOutward(double value, bool up, double factor = StickerOffsetFactor)
+    private static double QuantizeOutward(
+        double value,
+        bool up,
+        double factor = StickerOffsetFactor
+    )
     {
         var steps = up ? Math.Ceiling(value / factor) : Math.Floor(value / factor);
         return Math.Round(steps * factor, 4);
@@ -568,9 +694,11 @@ public static partial class AssetProcessor
 
     private static void PreProcessCompositeMaterials(ItemGeneratorContext ctx)
     {
-        var pending = ctx.CompositeMaterialsToProcess
-            .Where(p => !ctx.CompositeMaterialDataByPath.ContainsKey(p)).ToList();
-        if (pending.Count == 0) return;
+        var pending = ctx
+            .CompositeMaterialsToProcess.Where(p => !ctx.CompositeMaterialDataByPath.ContainsKey(p))
+            .ToList();
+        if (pending.Count == 0)
+            return;
 
         Log($"Extracting {FormatCount(pending.Count, "composite material")}...");
         var processed = new HashSet<string>(ctx.CompositeMaterialDataByPath.Keys);
@@ -620,14 +748,18 @@ public static partial class AssetProcessor
             }
         }
 
-        Log($"Extracted {FormatCount(processed.Count, "composite material")} and found {FormatCount(ctx.MaterialsToProcess.Count, "material reference")}.");
+        Log(
+            $"Extracted {FormatCount(processed.Count, "composite material")} and found {FormatCount(ctx.MaterialsToProcess.Count, "material reference")}."
+        );
     }
 
     private static void PreProcessMaterials(ItemGeneratorContext ctx)
     {
-        var pending = ctx.MaterialsToProcess
-            .Where(p => !ctx.MaterialDataByPath.ContainsKey(p)).ToList();
-        if (pending.Count == 0) return;
+        var pending = ctx
+            .MaterialsToProcess.Where(p => !ctx.MaterialDataByPath.ContainsKey(p))
+            .ToList();
+        if (pending.Count == 0)
+            return;
 
         Log($"Extracting {FormatCount(pending.Count, "material")}...");
         var processed = new HashSet<string>(ctx.MaterialDataByPath.Keys);
@@ -668,7 +800,9 @@ public static partial class AssetProcessor
             }
         }
 
-        Log($"Extracted {FormatCount(processed.Count, "material")} and found {FormatCount(ctx.TexturesToProcess.Count, "texture reference")}.");
+        Log(
+            $"Extracted {FormatCount(processed.Count, "material")} and found {FormatCount(ctx.TexturesToProcess.Count, "texture reference")}."
+        );
     }
 
     private static void ProcessMaterialTextures(ItemGeneratorContext ctx)
@@ -679,9 +813,11 @@ public static partial class AssetProcessor
                 TryReuseMaterialTexture(ctx, vtexPath);
         }
 
-        var pending = ctx.TexturesToProcess
-            .Where(p => !ctx.TextureFilenameByPath.ContainsKey(p)).ToList();
-        if (pending.Count == 0) return;
+        var pending = ctx
+            .TexturesToProcess.Where(p => !ctx.TextureFilenameByPath.ContainsKey(p))
+            .ToList();
+        if (pending.Count == 0)
+            return;
 
         Log($"Processing {FormatCount(pending.Count, "material texture")}...");
 
@@ -692,8 +828,8 @@ public static partial class AssetProcessor
         Directory.CreateDirectory(stagingDir);
 
         // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures),
-        // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures)
-        // and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
+        // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures),
+        // PatchTextureOptimization (patch artwork) and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
         // also bound outside its own family, so a texture shared between two families is dropped by
         // both and stays lossless. The one place two scopes can still agree is a charm-only texture on
         // a property the weapon file targets too -- a charm material is a csgo_weapon.vfx material, and
@@ -704,8 +840,14 @@ public static partial class AssetProcessor
         // in item-generator-webp.ts, so its bytes, and the hash in its filename, stay stable.
         string? ResolveTexture(string path)
         {
-            try { return MaterialPaths.ResolveMaterialResourcePath(ctx, path); }
-            catch { return null; }
+            try
+            {
+                return MaterialPaths.ResolveMaterialResourcePath(ctx, path);
+            }
+            catch
+            {
+                return null;
+            }
         }
         // INPUT_SKIP_TEXTURE_OPTIMIZATION resolves no tier at all, putting every texture on that same
         // default path -- an unoptimized build to compare a tuned one against.
@@ -716,21 +858,26 @@ public static partial class AssetProcessor
         Dictionary<string, StickerTextureTier> stickerTiers = optimize
             ? StickerTextureOptimization.ResolveTextureTiers(
                 ctx.MaterialDataByPath.Values.Concat(ctx.CompositeMaterialDataByPath.Values),
-                ResolveTexture)
+                ResolveTexture
+            )
             : [];
         Dictionary<string, WeaponTextureTier> weaponTiers = optimize
             ? WeaponTextureOptimization.ResolveTextureTiers(
                 ctx.MaterialDataByPath.Values,
                 ctx.CompositeMaterialDataByPath.Values,
-                ResolveTexture)
+                ResolveTexture
+            )
             : [];
         // Keyed by resource path, unlike the two above: the glove scope rule admits the shared
         // character shader only under a glove arm model. Composites are not passed because a glove
         // composite binds no texture of its own (see GloveTextureOptimization).
         Dictionary<string, GloveTextureTier> gloveTiers = optimize
-            ? GloveTextureOptimization.ResolveTextureTiers(
-                ctx.MaterialDataByPath,
-                ResolveTexture)
+            ? GloveTextureOptimization.ResolveTextureTiers(ctx.MaterialDataByPath, ResolveTexture)
+            : [];
+        // Keyed by resource path for the same reason as gloves: the patch scope admits the shared
+        // character shader only under `/patches/`.
+        Dictionary<string, GloveTextureTier> patchTiers = optimize
+            ? PatchTextureOptimization.ResolveTextureTiers(ctx.MaterialDataByPath, ResolveTexture)
             : [];
         // Composites are passed as never-keychain: the only one a charm reaches is the display case's
         // weapon paint composite, whose bindings must count as foreign (see KeychainTextureOptimization).
@@ -738,12 +885,18 @@ public static partial class AssetProcessor
             ? KeychainTextureOptimization.ResolveTextureTiers(
                 ctx.MaterialDataByPath.Values,
                 ctx.CompositeMaterialDataByPath.Values,
-                ResolveTexture)
+                ResolveTexture
+            )
             : [];
         var manifestJsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = System
+                .Text
+                .Json
+                .Serialization
+                .JsonIgnoreCondition
+                .WhenWritingNull,
         };
 
         var encodeJobs = new List<(string ResolvedVtexPath, string StagedPath)>();
@@ -753,11 +906,14 @@ public static partial class AssetProcessor
         {
             var resolvedVtexPath = MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath);
             var vpkPath = MaterialPaths.ToCompiledMaterialResourcePath(resolvedVtexPath);
-            if (!ctx.VpkIndex.ContainsKey(vpkPath)) continue;
+            if (!ctx.VpkIndex.ContainsKey(vpkPath))
+                continue;
 
-            var basePath = Path.Combine(Config.DecompiledDir,
+            var basePath = Path.Combine(
+                Config.DecompiledDir,
                 Path.GetDirectoryName(resolvedVtexPath)!,
-                Path.GetFileNameWithoutExtension(resolvedVtexPath).Replace(".vtex", ""));
+                Path.GetFileNameWithoutExtension(resolvedVtexPath).Replace(".vtex", "")
+            );
             var pngPath = $"{basePath}.png";
             var exrPath = $"{basePath}.exr";
 
@@ -767,18 +923,25 @@ public static partial class AssetProcessor
                 // Default: verbatim lossless WebP. A texture bound to a tuned property instead carries
                 // an `encode` descriptor selecting its tier, tagged with the family that owns it.
                 object? encode =
-                    weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier :
-                    gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier :
-                    keychainTiers.TryGetValue(resolvedVtexPath, out var keychainTier) ? keychainTier :
-                    stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
+                    weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier
+                    : gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier
+                    : patchTiers.TryGetValue(resolvedVtexPath, out var patchTier) ? patchTier
+                    : keychainTiers.TryGetValue(resolvedVtexPath, out var keychainTier)
+                        ? keychainTier
+                    : stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
                         ? StickerTextureOptimization.ToSpec(stickerTier)
-                        : null;
-                manifestLines.Add(JsonSerializer.Serialize(new
-                {
-                    src = pngPath,
-                    dest = stagedPath,
-                    encode
-                }, manifestJsonOptions));
+                    : null;
+                manifestLines.Add(
+                    JsonSerializer.Serialize(
+                        new
+                        {
+                            src = pngPath,
+                            dest = stagedPath,
+                            encode,
+                        },
+                        manifestJsonOptions
+                    )
+                );
                 encodeJobs.Add((resolvedVtexPath, stagedPath));
             }
             else if (File.Exists(exrPath))
@@ -793,9 +956,11 @@ public static partial class AssetProcessor
             File.WriteAllLines(manifestPath, manifestLines);
             RunEncodeWebpBatch(manifestPath, encodeJobs.Count);
 
-            Parallel.ForEach(encodeJobs,
+            Parallel.ForEach(
+                encodeJobs,
                 new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                job => PromoteTexture(ctx, job.ResolvedVtexPath, job.StagedPath, ".webp"));
+                job => PromoteTexture(ctx, job.ResolvedVtexPath, job.StagedPath, ".webp")
+            );
         }
 
         Log($"Processed {FormatCount(pending.Count, "material texture")}.");
@@ -804,23 +969,42 @@ public static partial class AssetProcessor
     private static void TryReuseMaterialTexture(ItemGeneratorContext ctx, string vtexPath)
     {
         string resolved;
-        try { resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath); }
-        catch { return; }
+        try
+        {
+            resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, vtexPath);
+        }
+        catch
+        {
+            return;
+        }
 
         var dir = Path.Combine(Config.OutputDir, "textures");
-        if (!Directory.Exists(dir)) return;
+        if (!Directory.Exists(dir))
+            return;
         var baseName = Path.GetFileNameWithoutExtension(resolved);
-        if (baseName.EndsWith(".vtex")) baseName = baseName[..^5];
-        var matches = Directory.GetFiles(dir, $"{baseName}_????????.*")
+        if (baseName.EndsWith(".vtex"))
+            baseName = baseName[..^5];
+        var matches = Directory
+            .GetFiles(dir, $"{baseName}_????????.*")
             .Where(path => Path.GetExtension(path) is ".webp" or ".exr")
             .ToArray();
-        if (matches.Length != 1) return;
+        if (matches.Length != 1)
+            return;
         ctx.TextureFilenameByPath[resolved] = $"/textures/{Path.GetFileName(matches[0])}";
     }
 
-    private static void PromoteTexture(ItemGeneratorContext ctx, string resolvedVtexPath, string srcPath, string extension)
+    private static void PromoteTexture(
+        ItemGeneratorContext ctx,
+        string resolvedVtexPath,
+        string srcPath,
+        string extension
+    )
     {
-        var filename = MaterialPaths.GetTextureFilename(resolvedVtexPath, ContentVersion.HashFile(srcPath), extension);
+        var filename = MaterialPaths.GetTextureFilename(
+            resolvedVtexPath,
+            ContentVersion.HashFile(srcPath),
+            extension
+        );
         var outPath = Path.Combine(Config.OutputDir, "textures", filename);
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
         File.Move(srcPath, outPath, true);
@@ -837,8 +1021,9 @@ public static partial class AssetProcessor
     {
         if (!NodeAvailable.Value)
             throw new InvalidOperationException(
-                "node not found. Textures are encoded via scripts/item-generator-webp.ts (sharp). " +
-                "Install Node.js 20+ and run `npm install`.");
+                "node not found. Textures are encoded via scripts/item-generator-webp.ts (sharp). "
+                    + "Install Node.js 20+ and run `npm install`."
+            );
 
         var script = Path.Combine(Config.ScriptsDir, "item-generator-webp.ts");
         var info = new ProcessStartInfo("node")
@@ -846,7 +1031,7 @@ public static partial class AssetProcessor
             ArgumentList = { "--import", "tsx", script, manifestPath },
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false
+            UseShellExecute = false,
         };
         // sharp finishes encodes on the libuv pool; the default of 4 threads would bottleneck.
         info.Environment["UV_THREADPOOL_SIZE"] = Math.Max(4, Environment.ProcessorCount).ToString();
@@ -863,7 +1048,9 @@ public static partial class AssetProcessor
         }
         p.WaitForExit();
         if (p.ExitCode != 0)
-            throw new InvalidOperationException($"item-generator-webp.ts failed (exit {p.ExitCode}): {stderrTask.Result}");
+            throw new InvalidOperationException(
+                $"item-generator-webp.ts failed (exit {p.ExitCode}): {stderrTask.Result}"
+            );
     }
 
     private static void WriteMaterialMetadata(ItemGeneratorContext ctx)
@@ -880,9 +1067,13 @@ public static partial class AssetProcessor
                 if (cycleMembers != null && cycleMembers.Contains(resolved))
                     return $"cycle:{resolved}";
                 return ctx.CompositeMaterialFilenameByPath.TryGetValue(resolved, out var filename)
-                    ? $"/materials/{filename}" : null;
+                    ? $"/materials/{filename}"
+                    : null;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         string? ResolveVmat(string path, HashSet<string>? cycleMembers = null)
@@ -893,9 +1084,13 @@ public static partial class AssetProcessor
                 if (cycleMembers != null && cycleMembers.Contains(resolved))
                     return $"cycle:{resolved}";
                 return ctx.MaterialFilenameByPath.TryGetValue(resolved, out var filename)
-                    ? $"/materials/{filename}" : null;
+                    ? $"/materials/{filename}"
+                    : null;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         string? ResolveTexture(string path)
@@ -903,9 +1098,14 @@ public static partial class AssetProcessor
             try
             {
                 var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, path);
-                return ctx.TextureFilenameByPath.TryGetValue(resolved, out var value) ? value : null;
+                return ctx.TextureFilenameByPath.TryGetValue(resolved, out var value)
+                    ? value
+                    : null;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         byte[] SerializeMaterial(object data, HashSet<string>? cycleMembers)
@@ -914,24 +1114,31 @@ public static partial class AssetProcessor
                 data,
                 path => ResolveCompositeMaterial(path, cycleMembers),
                 path => ResolveVmat(path, cycleMembers),
-                ResolveTexture);
+                ResolveTexture
+            );
             return JsonSerializer.SerializeToUtf8Bytes(patched);
         }
 
-        string GetMaterialFilename(string path, bool isComposite, string version) => isComposite
-            ? MaterialPaths.GetCompositeMaterialFilename(path, version)
-            : MaterialPaths.GetVmatFilename(path, version);
+        string GetMaterialFilename(string path, bool isComposite, string version) =>
+            isComposite
+                ? MaterialPaths.GetCompositeMaterialFilename(path, version)
+                : MaterialPaths.GetVmatFilename(path, version);
 
         void AssignFilename(string path, bool isComposite, string filename)
         {
-            if (isComposite) ctx.CompositeMaterialFilenameByPath[path] = filename;
-            else ctx.MaterialFilenameByPath[path] = filename;
+            if (isComposite)
+                ctx.CompositeMaterialFilenameByPath[path] = filename;
+            else
+                ctx.MaterialFilenameByPath[path] = filename;
             RecordMaterialRename(ctx, path, isComposite, filename);
         }
 
         void WriteMaterialFile(string filename, byte[] jsonBytes, object? data)
         {
-            AssertMaterialReferencesRewritten(System.Text.Encoding.UTF8.GetString(jsonBytes), filename);
+            AssertMaterialReferencesRewritten(
+                System.Text.Encoding.UTF8.GetString(jsonBytes),
+                filename
+            );
             AssertTextureReferencingPropertiesKnown(data, filename);
             var outPath = Path.Combine(Config.OutputDir, "materials", filename);
             Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
@@ -941,8 +1148,10 @@ public static partial class AssetProcessor
         // Material JSONs embed the filenames of the materials they reference, so content-hashed
         // names must be assigned bottom-up: dependencies first, then their referrers.
         var dataByPath = new Dictionary<string, object?>();
-        foreach (var (path, data) in ctx.CompositeMaterialDataByPath) dataByPath[path] = data;
-        foreach (var (path, data) in ctx.MaterialDataByPath) dataByPath[path] = data;
+        foreach (var (path, data) in ctx.CompositeMaterialDataByPath)
+            dataByPath[path] = data;
+        foreach (var (path, data) in ctx.MaterialDataByPath)
+            dataByPath[path] = data;
 
         var dependencies = new Dictionary<string, List<string>>();
         foreach (var (path, data) in dataByPath)
@@ -963,7 +1172,9 @@ public static partial class AssetProcessor
             dependencies[path] = resolved;
         }
 
-        foreach (var component in StronglyConnectedComponents(dataByPath.Keys.ToList(), dependencies))
+        foreach (
+            var component in StronglyConnectedComponents(dataByPath.Keys.ToList(), dependencies)
+        )
         {
             if (component.Count == 1 && !dependencies[component[0]].Contains(component[0]))
             {
@@ -976,12 +1187,20 @@ public static partial class AssetProcessor
                     // No extractable content (missing or unparseable VPK entry): keep a
                     // deterministic sentinel name so references remain rewritable; no file is
                     // written (same dangling-reference behavior as the CRC-named pipeline).
-                    AssignFilename(path, isComposite, GetMaterialFilename(path, isComposite, "00000000"));
+                    AssignFilename(
+                        path,
+                        isComposite,
+                        GetMaterialFilename(path, isComposite, "00000000")
+                    );
                     continue;
                 }
 
                 var jsonBytes = SerializeMaterial(data, null);
-                var filename = GetMaterialFilename(path, isComposite, ContentVersion.HashBytes(jsonBytes));
+                var filename = GetMaterialFilename(
+                    path,
+                    isComposite,
+                    ContentVersion.HashBytes(jsonBytes)
+                );
                 AssignFilename(path, isComposite, filename);
                 WriteMaterialFile(filename, jsonBytes, data);
                 continue;
@@ -993,8 +1212,11 @@ public static partial class AssetProcessor
             // hashed from each member's canonical form. Any change to any member (or to an
             // external dependency's name) changes the token and renames the whole group.
             var members = new HashSet<string>(component);
-            var token = ContentVersion.Combine(component.Select(path =>
-                ContentVersion.HashBytesFull(SerializeMaterial(dataByPath[path]!, members))));
+            var token = ContentVersion.Combine(
+                component.Select(path =>
+                    ContentVersion.HashBytesFull(SerializeMaterial(dataByPath[path]!, members))
+                )
+            );
 
             var assigned = new HashSet<string>();
             foreach (var path in component)
@@ -1003,7 +1225,8 @@ public static partial class AssetProcessor
                 var filename = GetMaterialFilename(path, isComposite, token);
                 if (!assigned.Add(filename))
                     throw new InvalidOperationException(
-                        $"Filename collision inside material cycle: '{filename}' ({string.Join(", ", component)})");
+                        $"Filename collision inside material cycle: '{filename}' ({string.Join(", ", component)})"
+                    );
                 AssignFilename(path, isComposite, filename);
             }
 
@@ -1013,14 +1236,23 @@ public static partial class AssetProcessor
                 var filename = isComposite
                     ? ctx.CompositeMaterialFilenameByPath[path]
                     : ctx.MaterialFilenameByPath[path];
-                WriteMaterialFile(filename, SerializeMaterial(dataByPath[path]!, null), dataByPath[path]);
+                WriteMaterialFile(
+                    filename,
+                    SerializeMaterial(dataByPath[path]!, null),
+                    dataByPath[path]
+                );
             }
         }
     }
 
     // Items reference materials by their provisional CRC-based names (see
     // MaterialPaths.GetIndexed*Filename); record the mapping to the final content-hashed name.
-    private static void RecordMaterialRename(ItemGeneratorContext ctx, string path, bool isComposite, string filename)
+    private static void RecordMaterialRename(
+        ItemGeneratorContext ctx,
+        string path,
+        bool isComposite,
+        string filename
+    )
     {
         try
         {
@@ -1057,7 +1289,9 @@ public static partial class AssetProcessor
     // is emitted only after every component it depends on), which is exactly the order
     // WriteMaterialMetadata needs to assign names bottom-up.
     private static List<List<string>> StronglyConnectedComponents(
-        IReadOnlyCollection<string> nodes, Dictionary<string, List<string>> dependencies)
+        IReadOnlyCollection<string> nodes,
+        Dictionary<string, List<string>> dependencies
+    )
     {
         var index = 0;
         var indices = new Dictionary<string, int>();
@@ -1116,8 +1350,12 @@ public static partial class AssetProcessor
         catch { }
     }
 
-    private static void UpdateModelAssetReferences(ItemGeneratorContext ctx,
-        PendingModelTask model, string playerModel, string modelData)
+    private static void UpdateModelAssetReferences(
+        ItemGeneratorContext ctx,
+        PendingModelTask model,
+        string playerModel,
+        string modelData
+    )
     {
         foreach (var item in ctx.Items.Values)
         {
@@ -1134,11 +1372,15 @@ public static partial class AssetProcessor
         foreach (var vpkPath in vpkPaths)
         {
             // 0x7FFF marks entries inlined in pak01_dir.vpk; there is no archive to fetch.
-            if (ctx.VpkIndex.TryGetValue(vpkPath, out var entry)
-                && int.TryParse(entry.Fnumber, out var fnumber) && fnumber != 0x7FFF)
+            if (
+                ctx.VpkIndex.TryGetValue(vpkPath, out var entry)
+                && int.TryParse(entry.Fnumber, out var fnumber)
+                && fnumber != 0x7FFF
+            )
                 vpks.Add(Config.GetArchiveDepotPath(fnumber));
         }
-        if (vpks.Count == 0) return;
+        if (vpks.Count == 0)
+            return;
         await Depot.DepotDownloaderService.DownloadFiles([.. vpks], Config.WorkdirDir);
     }
 
@@ -1150,65 +1392,83 @@ public static partial class AssetProcessor
     {
         try
         {
-            using var p = Process.Start(new ProcessStartInfo("node")
-            {
-                ArgumentList = { "--version" },
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            });
+            using var p = Process.Start(
+                new ProcessStartInfo("node")
+                {
+                    ArgumentList = { "--version" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                }
+            );
             p!.WaitForExit();
             return p.ExitCode == 0;
         }
-        catch { return false; }
+        catch
+        {
+            return false;
+        }
     });
 
     private static async Task OptimizeGlbsMeshopt(IReadOnlyList<string> glbPaths)
     {
-        if (glbPaths.Count == 0) return;
+        if (glbPaths.Count == 0)
+            return;
         if (!NodeAvailable.Value)
             throw new InvalidOperationException(
-                "node not found. GLB geometry is compressed with EXT_meshopt_compression via " +
-                "scripts/item-generator-glb.ts (gltf-transform + meshoptimizer). Install Node.js 20+ " +
-                "and run `npm install`.");
+                "node not found. GLB geometry is compressed with EXT_meshopt_compression via "
+                    + "scripts/item-generator-glb.ts (gltf-transform + meshoptimizer). Install Node.js 20+ "
+                    + "and run `npm install`."
+            );
 
         Log($"Compressing {FormatCount(glbPaths.Count, "model")} with EXT_meshopt_compression...");
         var script = Path.Combine(Config.ScriptsDir, "item-generator-glb.ts");
         var semaphore = new SemaphoreSlim(Config.ExternalConcurrency);
         var compressed = 0;
         var lastMilestone = 0;
-        await Task.WhenAll(glbPaths.Select(async glbPath =>
-        {
-            await semaphore.WaitAsync();
-            try { await OptimizeGlbMeshopt(script, glbPath); }
-            finally
+        await Task.WhenAll(
+            glbPaths.Select(async glbPath =>
             {
-                semaphore.Release();
-                LogProgress(ref compressed, ref lastMilestone, glbPaths.Count);
-            }
-        }));
+                await semaphore.WaitAsync();
+                try
+                {
+                    await OptimizeGlbMeshopt(script, glbPath);
+                }
+                finally
+                {
+                    semaphore.Release();
+                    LogProgress(ref compressed, ref lastMilestone, glbPaths.Count);
+                }
+            })
+        );
     }
 
     private static async Task OptimizeGlbMeshopt(string script, string glbPath)
     {
-        using var p = Process.Start(new ProcessStartInfo("node")
-        {
-            ArgumentList = { "--import", "tsx", script, glbPath },
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        });
+        using var p = Process.Start(
+            new ProcessStartInfo("node")
+            {
+                ArgumentList = { "--import", "tsx", script, glbPath },
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            }
+        );
         var err = await p!.StandardError.ReadToEndAsync();
         await p.WaitForExitAsync();
         if (p.ExitCode != 0)
-            throw new InvalidOperationException($"item-generator-glb.ts failed for {glbPath} (exit {p.ExitCode}): {err}");
+            throw new InvalidOperationException(
+                $"item-generator-glb.ts failed for {glbPath} (exit {p.ExitCode}): {err}"
+            );
     }
 
     private static bool ConvertToWebp(string srcPath, string outPath)
     {
-        if (!File.Exists(srcPath)) return false;
+        if (!File.Exists(srcPath))
+            return false;
         using var bitmap = SKBitmap.Decode(srcPath);
-        if (bitmap == null) return false;
+        if (bitmap == null)
+            return false;
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
@@ -1219,7 +1479,8 @@ public static partial class AssetProcessor
 
     private static bool ConvertSvgToWebp(string srcPath, string outPath)
     {
-        if (!File.Exists(srcPath)) return false;
+        if (!File.Exists(srcPath))
+            return false;
         // SVG rendering requires Svg.Skia package. For collection icons that are SVG,
         // we use VRF's built-in SVG decompilation which already outputs PNG.
         // If the decompiled output is a PNG next to the SVG, use that instead.
@@ -1240,7 +1501,8 @@ public static partial class AssetProcessor
     private static void StubModelTextures(string glbPath)
     {
         var model = ModelRoot.Load(glbPath);
-        if (model.LogicalImages.Count == 0) return;
+        if (model.LogicalImages.Count == 0)
+            return;
 
         foreach (var image in model.LogicalImages)
         {
@@ -1255,12 +1517,18 @@ public static partial class AssetProcessor
     private static byte[]? DownscaleToPlaceholderWebp(byte[] source)
     {
         using var bitmap = SKBitmap.Decode(source);
-        if (bitmap == null) return null;
+        if (bitmap == null)
+            return null;
 
         // Opaque target so the encoder emits a plain RGB (lossy VP8) WebP, like the reference.
         var info = new SKImageInfo(4, 4, SKColorType.Rgba8888, SKAlphaType.Opaque);
         using var resized = new SKBitmap(info);
-        if (!bitmap.ScalePixels(resized, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)))
+        if (
+            !bitmap.ScalePixels(
+                resized,
+                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)
+            )
+        )
             return null;
 
         using var image = SKImage.FromBitmap(resized);
@@ -1286,22 +1554,28 @@ public static partial class AssetProcessor
         var dir = Path.GetDirectoryName(glbPath)!;
         var bytes = File.ReadAllBytes(glbPath);
         // GLB: 12-byte header, then chunks [length u32][type u32][data]; the first chunk is JSON.
-        if (bytes.Length < 20) return;
+        if (bytes.Length < 20)
+            return;
         var jsonLength = (int)BitConverter.ToUInt32(bytes, 12);
-        if (20 + jsonLength > bytes.Length) return;
+        if (20 + jsonLength > bytes.Length)
+            return;
 
         var json = System.Text.Encoding.UTF8.GetString(bytes, 20, jsonLength);
         using var doc = JsonDocument.Parse(json);
-        if (!doc.RootElement.TryGetProperty("images", out var images)) return;
+        if (!doc.RootElement.TryGetProperty("images", out var images))
+            return;
 
         foreach (var image in images.EnumerateArray())
         {
-            if (!image.TryGetProperty("uri", out var uriProp)) continue;
+            if (!image.TryGetProperty("uri", out var uriProp))
+                continue;
             var uri = uriProp.GetString();
-            if (string.IsNullOrEmpty(uri) || uri.StartsWith("data:", StringComparison.Ordinal)) continue;
+            if (string.IsNullOrEmpty(uri) || uri.StartsWith("data:", StringComparison.Ordinal))
+                continue;
 
             var path = Path.Combine(dir, Uri.UnescapeDataString(uri));
-            if (File.Exists(path)) continue;
+            if (File.Exists(path))
+                continue;
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllBytes(path, PlaceholderTexturePng.Value);
             Log($"  wrote placeholder for missing satellite texture {uri}");
@@ -1314,23 +1588,35 @@ public static partial class AssetProcessor
         var patched = false;
         foreach (var material in model.LogicalMaterials)
         {
-            if (material.Extras is not JsonObject extrasObj) continue;
-            if (!extrasObj.TryGetPropertyValue("vmat", out var vmatNode) || vmatNode is not JsonObject vmatObj) continue;
-            if (!vmatObj.TryGetPropertyValue("Name", out var nameNode) || nameNode == null) continue;
+            if (material.Extras is not JsonObject extrasObj)
+                continue;
+            if (
+                !extrasObj.TryGetPropertyValue("vmat", out var vmatNode)
+                || vmatNode is not JsonObject vmatObj
+            )
+                continue;
+            if (!vmatObj.TryGetPropertyValue("Name", out var nameNode) || nameNode == null)
+                continue;
             var vmatPath = nameNode.GetValue<string>().Replace('\\', '/');
-            if (!ctx.MaterialFilenameByPath.TryGetValue(vmatPath, out var filename)) continue;
-            var matName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(filename));
+            if (!ctx.MaterialFilenameByPath.TryGetValue(vmatPath, out var filename))
+                continue;
+            var matName = Path.GetFileNameWithoutExtension(
+                Path.GetFileNameWithoutExtension(filename)
+            );
             material.Name = matName;
             patched = true;
         }
-        if (patched) model.SaveGLB(glbPath);
+        if (patched)
+            model.SaveGLB(glbPath);
     }
 
     private static void AssertMaterialReferencesRewritten(string json, string filename)
     {
         var match = UnrewrittenRefRegex().Match(json);
         if (match.Success)
-            throw new InvalidOperationException($"Unrewritten material reference '{match.Value}' found in '{filename}'.");
+            throw new InvalidOperationException(
+                $"Unrewritten material reference '{match.Value}' found in '{filename}'."
+            );
     }
 
     // Every material parameter that points at a texture must be a known one (see
@@ -1345,16 +1631,20 @@ public static partial class AssetProcessor
         var unknown = new SortedSet<string>(StringComparer.Ordinal);
         var unattributed = new SortedSet<string>(StringComparer.Ordinal);
         CollectUnknownTextureProperties(data, unknown, unattributed);
-        if (unknown.Count == 0 && unattributed.Count == 0) return;
+        if (unknown.Count == 0 && unattributed.Count == 0)
+            return;
 
         var problems = new List<string>();
         if (unknown.Count > 0)
             problems.Add($"unknown parameter(s): {string.Join(", ", unknown)}");
         if (unattributed.Count > 0)
-            problems.Add($"texture reference(s) with no parameter name under: {string.Join(", ", unattributed)}");
+            problems.Add(
+                $"texture reference(s) with no parameter name under: {string.Join(", ", unattributed)}"
+            );
         throw new InvalidOperationException(
-            $"Unrecognized texture reference in '{filename}' ({string.Join("; ", problems)}). " +
-            "Confirm the parameter in fresh game data, then add it to MaterialTextureProperties.Known.");
+            $"Unrecognized texture reference in '{filename}' ({string.Join("; ", problems)}). "
+                + "Confirm the parameter in fresh game data, then add it to MaterialTextureProperties.Known."
+        );
     }
 
     // Records every texture-referencing parameter whose name is unknown, plus any texture reference
@@ -1362,20 +1652,30 @@ public static partial class AssetProcessor
     // sitting directly in an array). A texture reference is a `.vtex` value under any key other than
     // those two name keys.
     private static void CollectUnknownTextureProperties(
-        object? value, ISet<string> unknown, ISet<string> unattributed)
+        object? value,
+        ISet<string> unknown,
+        ISet<string> unattributed
+    )
     {
         if (value is Dictionary<string, object?> dict)
         {
             var name =
-                dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
-                dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
-                null;
+                dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0
+                    ? n1
+                : dict.TryGetValue("m_strName", out var mStrName)
+                && mStrName is string n2
+                && n2.Length > 0
+                    ? n2
+                : null;
 
             foreach (var (key, entry) in dict)
             {
-                if (key is "m_name" or "m_strName" || !IsTextureReference(entry)) continue;
-                if (name == null) unattributed.Add($"'{key}'");
-                else if (!MaterialTextureProperties.Known.Contains(name)) unknown.Add(name);
+                if (key is "m_name" or "m_strName" || !IsTextureReference(entry))
+                    continue;
+                if (name == null)
+                    unattributed.Add($"'{key}'");
+                else if (!MaterialTextureProperties.Known.Contains(name))
+                    unknown.Add(name);
             }
 
             foreach (var entry in dict.Values)
@@ -1385,39 +1685,57 @@ public static partial class AssetProcessor
         {
             foreach (var entry in list)
             {
-                if (IsTextureReference(entry)) unattributed.Add("array element");
+                if (IsTextureReference(entry))
+                    unattributed.Add("array element");
                 CollectUnknownTextureProperties(entry, unknown, unattributed);
             }
         }
     }
 
     private static bool IsTextureReference(object? value) =>
-        value is string str &&
-        MaterialPaths.NormalizeMaterialResourcePath(str).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
+        value is string str
+        && MaterialPaths
+            .NormalizeMaterialResourcePath(str)
+            .EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 
     private static bool ColorizeGraffitiImage(string srcPath, string hexColor, string outPath)
     {
-        if (!File.Exists(srcPath)) return false;
+        if (!File.Exists(srcPath))
+            return false;
 
         var colorR = Convert.ToByte(hexColor.Substring(1, 2), 16) / 255.0f;
         var colorG = Convert.ToByte(hexColor.Substring(3, 2), 16) / 255.0f;
         var colorB = Convert.ToByte(hexColor.Substring(5, 2), 16) / 255.0f;
 
         using var bitmap = SKBitmap.Decode(srcPath);
-        if (bitmap == null) return false;
+        if (bitmap == null)
+            return false;
 
-        var output = new SKBitmap(bitmap.Width, bitmap.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        var output = new SKBitmap(
+            bitmap.Width,
+            bitmap.Height,
+            SKColorType.Rgba8888,
+            SKAlphaType.Premul
+        );
         for (int y = 0; y < bitmap.Height; y++)
         {
             for (int x = 0; x < bitmap.Width; x++)
             {
                 var pixel = bitmap.GetPixel(x, y);
-                var gray = 0.2126f * (pixel.Red / 255f) + 0.7152f * (pixel.Green / 255f) + 0.0722f * (pixel.Blue / 255f);
-                output.SetPixel(x, y, new SKColor(
-                    (byte)(gray * colorR * 255),
-                    (byte)(gray * colorG * 255),
-                    (byte)(gray * colorB * 255),
-                    pixel.Alpha));
+                var gray =
+                    0.2126f * (pixel.Red / 255f)
+                    + 0.7152f * (pixel.Green / 255f)
+                    + 0.0722f * (pixel.Blue / 255f);
+                output.SetPixel(
+                    x,
+                    y,
+                    new SKColor(
+                        (byte)(gray * colorR * 255),
+                        (byte)(gray * colorG * 255),
+                        (byte)(gray * colorB * 255),
+                        pixel.Alpha
+                    )
+                );
             }
         }
 

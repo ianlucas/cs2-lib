@@ -15,17 +15,24 @@ namespace ItemGenerator.GameFiles;
 public static class ResourceDecompiler
 {
     private static readonly string[] ItemDefinitionPrefixes =
-        ["scripts/items/items_game.txt", "resource/csgo_"];
+    [
+        "scripts/items/items_game.txt",
+        "resource/csgo_",
+    ];
 
     private static IEnumerable<PackageEntry> GetItemDefinitionEntries(Package package)
     {
         foreach (var (_, entries) in package.Entries!)
-            foreach (var entry in entries)
-            {
-                var path = entry.GetFullPath();
-                if (ItemDefinitionPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-                    yield return entry;
-            }
+        foreach (var entry in entries)
+        {
+            var path = entry.GetFullPath();
+            if (
+                ItemDefinitionPrefixes.Any(p =>
+                    path.StartsWith(p, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+                yield return entry;
+        }
     }
 
     /// <summary>
@@ -36,23 +43,31 @@ public static class ResourceDecompiler
     /// </summary>
     public static List<string> GetItemDefinitionArchiveFiles(ItemGeneratorContext ctx)
     {
-        if (ctx.VpkPackage == null) return [];
-        return [.. GetItemDefinitionEntries(ctx.VpkPackage)
-            .Where(e => e.ArchiveIndex != 0x7FFF
-                && !File.Exists(Path.Combine(Config.DecompiledDir, e.GetFullPath())))
-            .Select(e => Config.GetArchiveDepotPath(e.ArchiveIndex))
-            .Distinct()];
+        if (ctx.VpkPackage == null)
+            return [];
+        return
+        [
+            .. GetItemDefinitionEntries(ctx.VpkPackage)
+                .Where(e =>
+                    e.ArchiveIndex != 0x7FFF
+                    && !File.Exists(Path.Combine(Config.DecompiledDir, e.GetFullPath()))
+                )
+                .Select(e => Config.GetArchiveDepotPath(e.ArchiveIndex))
+                .Distinct(),
+        ];
     }
 
     public static void DecompileItemDefinitionResources(ItemGeneratorContext ctx)
     {
-        if (ctx.VpkPackage == null) return;
+        if (ctx.VpkPackage == null)
+            return;
 
         foreach (var entry in GetItemDefinitionEntries(ctx.VpkPackage))
         {
             var path = entry.GetFullPath();
             var outPath = Path.Combine(Config.DecompiledDir, path);
-            if (File.Exists(outPath)) continue;
+            if (File.Exists(outPath))
+                continue;
 
             ctx.VpkPackage.ReadEntry(entry, out var data);
             Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
@@ -74,7 +89,8 @@ public static class ResourceDecompiler
 
     public static void DecompileAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
     {
-        if (ctx.VpkPackage == null) return;
+        if (ctx.VpkPackage == null)
+            return;
 
         var package = ctx.VpkPackage;
         var outDir = Config.DecompiledDir;
@@ -89,24 +105,31 @@ public static class ResourceDecompiler
             .Where(t => t.Entry != null && !IsAlreadyExtracted(t.VpkPath, outDir))
             .ToArray();
 
-        if (work.Length == 0) return;
+        if (work.Length == 0)
+            return;
 
         // Sort by (archive, offset) so each archive file is read sequentially,
         // which avoids head-seek thrashing across the split _NNN.vpk files.
-        Array.Sort(work, static (a, b) =>
-        {
-            var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
-            return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
-        });
+        Array.Sort(
+            work,
+            static (a, b) =>
+            {
+                var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
+                return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
+            }
+        );
 
         // Pre-create all unique output directories once instead of per-file in the hot loop.
         var dirs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (vpkPath, _) in work)
         {
-            var basePath = vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath;
+            var basePath = vpkPath.EndsWith("_c", StringComparison.Ordinal)
+                ? vpkPath[..^2]
+                : vpkPath;
             dirs.Add(Path.Combine(outDir, Path.GetDirectoryName(basePath) ?? ""));
         }
-        foreach (var d in dirs) Directory.CreateDirectory(d);
+        foreach (var d in dirs)
+            Directory.CreateDirectory(d);
 
         var total = work.Length;
         var decompiled = 0;
@@ -117,39 +140,50 @@ public static class ResourceDecompiler
         var dirVpkLock = new object();
 
         var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
-        Parallel.ForEach(Partitioner.Create(work, loadBalance: true), po, item =>
-        {
-            var (vpkPath, entry) = item;
-            byte[] data;
-            if (entry!.ArchiveIndex == 0x7FFF)
+        Parallel.ForEach(
+            Partitioner.Create(work, loadBalance: true),
+            po,
+            item =>
             {
-                lock (dirVpkLock)
+                var (vpkPath, entry) = item;
+                byte[] data;
+                if (entry!.ArchiveIndex == 0x7FFF)
+                {
+                    lock (dirVpkLock)
+                        package.ReadEntry(entry, out data, validateCrc: false);
+                }
+                else
+                {
                     package.ReadEntry(entry, out data, validateCrc: false);
-            }
-            else
-            {
-                package.ReadEntry(entry, out data, validateCrc: false);
-            }
+                }
 
-            if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
-                DecompileTexture(data, vpkPath, outDir);
-            else if (vpkPath.EndsWith(".vsvg_c", StringComparison.OrdinalIgnoreCase))
-                DecompileSvg(data, vpkPath, outDir);
-            else
-            {
-                var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath);
-                if (!File.Exists(outPath))
-                    File.WriteAllBytes(outPath, data);
-            }
+                if (vpkPath.EndsWith(".vtex_c", StringComparison.OrdinalIgnoreCase))
+                    DecompileTexture(data, vpkPath, outDir);
+                else if (vpkPath.EndsWith(".vsvg_c", StringComparison.OrdinalIgnoreCase))
+                    DecompileSvg(data, vpkPath, outDir);
+                else
+                {
+                    var outPath = Path.Combine(
+                        outDir,
+                        vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath
+                    );
+                    if (!File.Exists(outPath))
+                        File.WriteAllBytes(outPath, data);
+                }
 
-            if (!reportProgress) return;
-            var current = Interlocked.Increment(ref decompiled);
-            var pct = current * 100 / total;
-            var milestone = pct / 5 * 5;
-            if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
-                Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
-                Log($"  {milestone}% ({current}/{total})");
-        });
+                if (!reportProgress)
+                    return;
+                var current = Interlocked.Increment(ref decompiled);
+                var pct = current * 100 / total;
+                var milestone = pct / 5 * 5;
+                if (
+                    milestone > 0
+                    && milestone > Volatile.Read(ref lastMilestone)
+                    && Interlocked.Exchange(ref lastMilestone, milestone) < milestone
+                )
+                    Log($"  {milestone}% ({current}/{total})");
+            }
+        );
     }
 
     private static bool IsAlreadyExtracted(string vpkPath, string outDir)
@@ -164,13 +198,34 @@ public static class ResourceDecompiler
             return File.Exists(Path.Combine(dir, baseName + ".png"))
                 || File.Exists(Path.Combine(dir, baseName + ".exr"));
         }
-        var outPath = Path.Combine(outDir, vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath);
+        var outPath = Path.Combine(
+            outDir,
+            vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath
+        );
         return File.Exists(outPath);
     }
 
-    public static void DecompileModelAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
+    /// <summary>
+    /// The animation name an AGENT export filters to, chosen so that it matches nothing.
+    /// </summary>
+    /// <remarks>
+    /// An agent's .glb needs a SKELETON and no animations, and VRF only creates one when
+    /// ExportAnimations is on (GltfModelExporter: `ExportAnimations ? CreateGltfSkeleton(...)`).
+    /// Left unfiltered, that pulls in the whole shared worldmodel animation graph — measured at 2062
+    /// clips and a 291 MB .glb for one agent, against 2.2 MB with the skeleton alone. Filtering to a
+    /// name nothing can match keeps the skeleton and writes no clips. The graph is still LOADED
+    /// either way (GetAllAnimations runs before the filter is applied), so this buys size, not time.
+    /// </remarks>
+    private const string AgentAnimationSentinel = "__cs2lib_skeleton_only__";
+
+    public static void DecompileModelAssets(
+        ItemGeneratorContext ctx,
+        IReadOnlyDictionary<string, PendingModelTask> models
+    )
     {
-        if (ctx.VpkPackage == null) return;
+        if (ctx.VpkPackage == null)
+            return;
+        var vpkPaths = models.Keys;
         var package = ctx.VpkPackage;
         var fileLoader = new GameFileLoader(package, package.FileName);
         var parallelism = Math.Max(2, Environment.ProcessorCount);
@@ -182,23 +237,37 @@ public static class ResourceDecompiler
             .Select(vpkPath =>
             {
                 var entry = package.FindEntry(vpkPath);
-                if (entry == null) return default;
-                var basePath = vpkPath.EndsWith("_c", StringComparison.Ordinal) ? vpkPath[..^2] : vpkPath;
-                var outDir = Path.Combine(Config.DecompiledDir, Path.GetDirectoryName(vpkPath) ?? "");
-                var glbPath = Path.Combine(outDir, Path.GetFileNameWithoutExtension(basePath) + ".glb");
-                if (File.Exists(glbPath)) return default;
+                if (entry == null)
+                    return default;
+                var basePath = vpkPath.EndsWith("_c", StringComparison.Ordinal)
+                    ? vpkPath[..^2]
+                    : vpkPath;
+                var outDir = Path.Combine(
+                    Config.DecompiledDir,
+                    Path.GetDirectoryName(vpkPath) ?? ""
+                );
+                var glbPath = Path.Combine(
+                    outDir,
+                    Path.GetFileNameWithoutExtension(basePath) + ".glb"
+                );
+                if (File.Exists(glbPath))
+                    return default;
                 return (VpkPath: vpkPath, Entry: entry, OutDir: outDir, GlbPath: glbPath);
             })
             .Where(t => t.Entry != null)
             .ToArray();
 
-        if (work.Length == 0) return;
+        if (work.Length == 0)
+            return;
 
-        Array.Sort(work, static (a, b) =>
-        {
-            var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
-            return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
-        });
+        Array.Sort(
+            work,
+            static (a, b) =>
+            {
+                var c = a.Entry!.ArchiveIndex.CompareTo(b.Entry!.ArchiveIndex);
+                return c != 0 ? c : a.Entry.Offset.CompareTo(b.Entry.Offset);
+            }
+        );
 
         foreach (var d in work.Select(w => w.OutDir).Distinct(StringComparer.Ordinal))
             Directory.CreateDirectory(d);
@@ -211,44 +280,55 @@ public static class ResourceDecompiler
         // directories (the common weapon case) still export fully in parallel.
         var exportDirLocks = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
         var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
-        Parallel.ForEach(Partitioner.Create(work, loadBalance: true), po, item =>
-        {
-            var (vpkPath, entry, outDir, glbPath) = item;
-            byte[] data;
-            if (entry!.ArchiveIndex == 0x7FFF)
+        Parallel.ForEach(
+            Partitioner.Create(work, loadBalance: true),
+            po,
+            item =>
             {
-                lock (dirVpkLock)
+                var (vpkPath, entry, outDir, glbPath) = item;
+                byte[] data;
+                if (entry!.ArchiveIndex == 0x7FFF)
+                {
+                    lock (dirVpkLock)
+                        package.ReadEntry(entry, out data, validateCrc: false);
+                }
+                else
+                {
                     package.ReadEntry(entry, out data, validateCrc: false);
-            }
-            else
-            {
-                package.ReadEntry(entry, out data, validateCrc: false);
-            }
+                }
 
-            using var resource = new Resource();
-            resource.Read(new MemoryStream(data));
-            if (!GltfModelExporter.CanExport(resource)) return;
+                using var resource = new Resource();
+                resource.Read(new MemoryStream(data));
+                if (!GltfModelExporter.CanExport(resource))
+                    return;
 
-            var exporter = new GltfModelExporter(fileLoader)
-            {
-                ProgressReporter = new Progress<string>(_ => { }),
-                ExportMaterials = true,
-            };
-            lock (exportDirLocks.GetOrAdd(outDir, static _ => new object()))
-                exporter.Export(resource, glbPath);
-        });
+                var exporter = new GltfModelExporter(fileLoader)
+                {
+                    ProgressReporter = new Progress<string>(_ => { }),
+                    ExportMaterials = true,
+                };
+                if (models.TryGetValue(vpkPath, out var task) && task.Agent != null)
+                    exporter.AnimationFilter.Add(AgentAnimationSentinel);
+                lock (exportDirLocks.GetOrAdd(outDir, static _ => new object()))
+                    exporter.Export(resource, glbPath);
+            }
+        );
     }
 
     private static void DecompileTexture(byte[] data, string vpkPath, string outDir)
     {
         var basePath = vpkPath.EndsWith("_c") ? vpkPath[..^2] : vpkPath;
         var baseName = Path.GetFileNameWithoutExtension(basePath);
-        if (baseName.EndsWith(".vtex")) baseName = baseName[..^5];
+        if (baseName.EndsWith(".vtex"))
+            baseName = baseName[..^5];
         var dir = Path.Combine(outDir, Path.GetDirectoryName(basePath) ?? "");
         Directory.CreateDirectory(dir);
 
-        if (File.Exists(Path.Combine(dir, $"{baseName}.png")) ||
-            File.Exists(Path.Combine(dir, $"{baseName}.exr"))) return;
+        if (
+            File.Exists(Path.Combine(dir, $"{baseName}.png"))
+            || File.Exists(Path.Combine(dir, $"{baseName}.exr"))
+        )
+            return;
 
         using var resource = new Resource();
         resource.FileName = vpkPath;
@@ -257,8 +337,12 @@ public static class ResourceDecompiler
         var textureExtract = new TextureExtract(resource);
         // BC7 HemiOctAnisoRoughness maps pack four independent channels and VRF's default decode
         // destroys one of them, so export the block-decompressed texels verbatim and leave the
-        // decode to the consumer. See TextureCodecPolicy.
-        if (TextureCodecPolicy.IsRawFourChannelNormal(resource))
+        // decode to the consumer. An anisotropic roughness pair is mis-decoded the same way. See
+        // TextureCodecPolicy.
+        if (
+            TextureCodecPolicy.IsRawFourChannelNormal(resource)
+            || TextureCodecPolicy.IsAnisoRoughness(resource)
+        )
             textureExtract.DecodeFlags = TextureCodec.None;
         var ext = textureExtract.ImageOutputExtension;
         var outPath = Path.Combine(dir, $"{baseName}{ext}");
@@ -270,11 +354,17 @@ public static class ResourceDecompiler
             return;
         }
         var imageSubFile = content.SubFiles.FirstOrDefault(sf =>
-            sf.FileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+            sf.FileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase)
+        );
         if (imageSubFile == null)
-            throw new InvalidOperationException($"No {ext} subfile produced for texture: {vpkPath}");
-        var imageBytes = imageSubFile.Extract?.Invoke()
-            ?? throw new InvalidOperationException($"SubFile Extract returned null for texture: {vpkPath}");
+            throw new InvalidOperationException(
+                $"No {ext} subfile produced for texture: {vpkPath}"
+            );
+        var imageBytes =
+            imageSubFile.Extract?.Invoke()
+            ?? throw new InvalidOperationException(
+                $"SubFile Extract returned null for texture: {vpkPath}"
+            );
         File.WriteAllBytes(outPath, imageBytes);
     }
 
@@ -288,7 +378,8 @@ public static class ResourceDecompiler
         Directory.CreateDirectory(dir);
 
         var outPath = Path.Combine(dir, Path.GetFileName(basePath));
-        if (File.Exists(outPath)) return;
+        if (File.Exists(outPath))
+            return;
 
         var extracted = FileExtract.Extract(resource, null!);
         File.WriteAllBytes(outPath, extracted.Data!);

@@ -92,11 +92,13 @@ public static class WeaponTextureOptimization
     // The shader families whose channel semantics the tiers below were written against. A `.vcompmat`
     // has no shader of its own and is always a weapon paint composite, so composites are in scope
     // unconditionally.
-    public static readonly IReadOnlySet<string> WeaponShaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    public static readonly IReadOnlySet<string> WeaponShaders = new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         "csgo_customweapon.vfx",
         "csgo_composite_inputs.vfx",
-        "csgo_weapon.vfx"
+        "csgo_weapon.vfx",
     };
 
     // Keychains are csgo_weapon.vfx models hanging off a weapon, so the shader rule alone would sweep
@@ -124,7 +126,7 @@ public static class WeaponTextureOptimization
         Mode = WeaponEncodeMode.Lossless,
         Quality = 100,
         MaxWidth = Cap,
-        MinWidth = Cap + 1
+        MinWidth = Cap + 1,
     };
 
     // Same downscale-only deal, for properties whose pixels are a MASK rather than a picture: coverage
@@ -138,7 +140,7 @@ public static class WeaponTextureOptimization
         Quality = 100,
         MaxWidth = Cap,
         MinWidth = Cap + 1,
-        MaskKernel = true
+        MaskKernel = true,
     };
 
     // Normal maps (BC5 hemi-oct RG, or BC7 RG + isoRough in B). Lossy q80 holds high-frequency
@@ -150,7 +152,7 @@ public static class WeaponTextureOptimization
     {
         Mode = WeaponEncodeMode.Lossy,
         Quality = 80,
-        MaxWidth = Cap
+        MaxWidth = Cap,
     };
 
     // GRAIN patterns: the spray/stipple camo class, whose RGB is a high-frequency dither over
@@ -167,7 +169,7 @@ public static class WeaponTextureOptimization
         SmartSubsample = true,
         AlphaQuality = 60,
         Decimate = true,
-        GrainBoost = 1.5
+        GrainBoost = 1.5,
     };
 
     // NOISE-FLOOR patterns: where a g_tPattern fidelity-gate FAILURE goes, instead of lossless. A
@@ -181,7 +183,7 @@ public static class WeaponTextureOptimization
         Mode = WeaponEncodeMode.Lossy,
         Quality = 75,
         MaxWidth = Cap,
-        SmartSubsample = true
+        SmartSubsample = true,
     };
 
     // Where a g_tOverlay fidelity-gate FAILURE goes. Deliberately the GENTLE remedy rather than
@@ -193,7 +195,7 @@ public static class WeaponTextureOptimization
         Quality = 90,
         AlphaQuality = 60,
         SmartSubsample = true,
-        MaxWidth = Cap
+        MaxWidth = Cap,
     };
 
     // INDEPENDENT-CHANNEL grunge: where a g_tGrunge fidelity-gate FAILURE goes. R/G/B are three
@@ -208,7 +210,7 @@ public static class WeaponTextureOptimization
         Quality = 28,
         AlphaQuality = 15,
         SmartSubsample = true,
-        MaxWidth = Cap
+        MaxWidth = Cap,
     };
 
     // Reached only by a g_tMetalness file the guards sent to the lossless floor. See MetalnessTier.
@@ -217,7 +219,7 @@ public static class WeaponTextureOptimization
         Mode = WeaponEncodeMode.Lossless,
         Quality = 100,
         MaxWidth = Cap,
-        MaskKernel = true
+        MaskKernel = true,
     };
 
     // PAINT-BY-NUMBER masks: R/G/B/A are four INDEPENDENT region-weight planes, each selecting one
@@ -242,7 +244,7 @@ public static class WeaponTextureOptimization
         MaxWidth = Cap,
         MaskKernel = true,
         MaskGuard = true,
-        MaskBudget = new((int)Math.Round(1.3 * MB), [75, 70, 65], [8, 12, 16, 20])
+        MaskBudget = new((int)Math.Round(1.3 * MB), [75, 70, 65], [8, 12, 16, 20]),
     };
 
     // OVERLAY colour composited over the paint (BC7 RGBA sRGB): RGB is a picture, A is the overlay's
@@ -262,7 +264,7 @@ public static class WeaponTextureOptimization
         LossyGuard = new(30),
         GuardFallback = OverlayFloorTier,
         FlattenGuard = true,
-        SizeBudget = new((int)Math.Round(1.2 * MB), MinQuality: 56, MinAlphaQuality: 15)
+        SizeBudget = new((int)Math.Round(1.2 * MB), MinQuality: 56, MinAlphaQuality: 15),
     };
 
     // Object-space surface normal (BC7 RGB), the triplanar composite input deciding how a paint pattern
@@ -284,7 +286,7 @@ public static class WeaponTextureOptimization
         MaskKernel = true,
         // No MaskGuard on purpose (see above), which also means MaskBudget takes its posterize ladder
         // rather than the replicated-lossy one -- the right default for three independent data planes.
-        MaskBudget = new(350 * KB, [80, 70, 60], [4, 8, 12, 16, 24, 32])
+        MaskBudget = new(350 * KB, [80, 70, 60], [4, 8, 12, 16, 24, 32]),
     };
 
     // Packed roughness/metalness (BC5 R = roughness INVERTED, G = metalness; the BC7 variant adds
@@ -313,7 +315,7 @@ public static class WeaponTextureOptimization
         SizeBudget = new(MB, MinQuality: 70),
         // Reached only by a file the guards sent to the lossless floor that is STILL over budget, which
         // is where the bounded quantizer is the right answer: no DCT is involved on that path at all.
-        MaskBudget = new(MB, [80, 70, 60], [4, 8, 12, 16, 24, 32])
+        MaskBudget = new(MB, [80, 70, 60], [4, 8, 12, 16, 24, 32]),
     };
 
     // Paint-wear pattern (BC4 R): the scalar field the shader thresholds against the item's wear float
@@ -333,7 +335,7 @@ public static class WeaponTextureOptimization
         GreyGuard = true,
         MaxWidth = Cap,
         LossyGuard = new(30),
-        SizeBudget = new((int)Math.Round(1.5 * MB), MinQuality: 78)
+        SizeBudget = new((int)Math.Round(1.5 * MB), MinQuality: 78),
     };
 
     // Per-paint roughness (BC4 R): the scalar gloss field the shader hands to the specular lobe. No
@@ -358,7 +360,7 @@ public static class WeaponTextureOptimization
         // Nothing in the shipped set reaches this; it exists so a future roughness map cannot land
         // above the ceiling. MinQuality stops one rung short of q80, where the banding proxy
         // quadruples against q90.
-        SizeBudget = new((int)Math.Round(1.25 * MB), MinQuality: 84)
+        SizeBudget = new((int)Math.Round(1.25 * MB), MinQuality: 84),
     };
 
     // Paint pattern (RGB = pattern colour OR region weights, A = cut/coverage mask). THREE populations
@@ -395,7 +397,7 @@ public static class WeaponTextureOptimization
         NoiseGuard = new(0.5, PatternNoiseTier),
         GuardFallback = PatternFloorTier,
         AlphaGuard = new(0.5, 60),
-        SizeBudget = new((int)Math.Round(1.3 * MB), MinQuality: 64)
+        SizeBudget = new((int)Math.Round(1.3 * MB), MinQuality: 64),
     };
 
     // Grunge/dirt detail (RGB = grime colour multiplied over the paint, A = wear modifier). The highest
@@ -422,7 +424,7 @@ public static class WeaponTextureOptimization
         SmartSubsample = true,
         LossyGuard = new(30),
         GuardFallback = GrungeFloorTier,
-        SizeBudget = new((int)Math.Round(1.5 * MB), MinQuality: 40, MinAlphaQuality: 15)
+        SizeBudget = new((int)Math.Round(1.5 * MB), MinQuality: 40, MinAlphaQuality: 15),
     };
 
     // Albedo (RGB = base colour, A = paint/wear coverage mask). The heaviest colour maps are already 2K,
@@ -436,31 +438,33 @@ public static class WeaponTextureOptimization
         Quality = 80,
         MaxWidth = Cap,
         AlphaQuality = 60,
-        LossyGuard = new(30)
+        LossyGuard = new(30),
     };
 
     // A property absent from this table is never touched: its textures take the default lossless path,
     // byte-identical to an untiered texture.
-    public static readonly IReadOnlyDictionary<string, WeaponTextureTier> Targets =
-        new Dictionary<string, WeaponTextureTier>(StringComparer.Ordinal)
-        {
-            ["g_tPattern"] = PatternTier,
-            ["g_tGrunge"] = GrungeTier,
-            ["g_tNormal"] = NormalTier,
-            ["g_tColor"] = ColorTier,
-            ["g_tWear"] = WearTier,
-            ["g_tPaintByNumberMasks"] = PaintByNumberTier,
-            ["g_tPearlescenceMask"] = MaskDownscaleOnly,
-            ["g_tPaintMetalness"] = MaskDownscaleOnly,
-            ["g_tOverlayMask"] = MaskDownscaleOnly,
-            ["g_tMasks"] = MaskDownscaleOnly,
-            ["g_tMetalness"] = MetalnessTier,
-            ["g_tPaintRoughness"] = PaintRoughnessTier,
-            ["g_tAmbientOcclusion"] = DownscaleOnly,
-            ["g_tFinalAmbientOcclusion"] = DownscaleOnly,
-            ["g_tSurface"] = SurfaceTier,
-            ["g_tOverlay"] = OverlayTier
-        };
+    public static readonly IReadOnlyDictionary<string, WeaponTextureTier> Targets = new Dictionary<
+        string,
+        WeaponTextureTier
+    >(StringComparer.Ordinal)
+    {
+        ["g_tPattern"] = PatternTier,
+        ["g_tGrunge"] = GrungeTier,
+        ["g_tNormal"] = NormalTier,
+        ["g_tColor"] = ColorTier,
+        ["g_tWear"] = WearTier,
+        ["g_tPaintByNumberMasks"] = PaintByNumberTier,
+        ["g_tPearlescenceMask"] = MaskDownscaleOnly,
+        ["g_tPaintMetalness"] = MaskDownscaleOnly,
+        ["g_tOverlayMask"] = MaskDownscaleOnly,
+        ["g_tMasks"] = MaskDownscaleOnly,
+        ["g_tMetalness"] = MetalnessTier,
+        ["g_tPaintRoughness"] = PaintRoughnessTier,
+        ["g_tAmbientOcclusion"] = DownscaleOnly,
+        ["g_tFinalAmbientOcclusion"] = DownscaleOnly,
+        ["g_tSurface"] = SurfaceTier,
+        ["g_tOverlay"] = OverlayTier,
+    };
 
     // ---------------------------------------------------------------------------------------------
     // CLASSIFIER
@@ -479,16 +483,31 @@ public static class WeaponTextureOptimization
     public static Dictionary<string, WeaponTextureTier> ResolveTextureTiers(
         IEnumerable<object?> materialData,
         IEnumerable<object?> compositeMaterialData,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         var targetProperty = new Dictionary<string, string>(StringComparer.Ordinal);
         var foreign = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var data in materialData)
-            Walk(data, contextName: null, IsWeaponShader(data), targetProperty, foreign, resolveTexturePath);
+            Walk(
+                data,
+                contextName: null,
+                IsWeaponShader(data),
+                targetProperty,
+                foreign,
+                resolveTexturePath
+            );
         // A `.vcompmat` carries no shader name and is always a weapon paint composite.
         foreach (var data in compositeMaterialData)
-            Walk(data, contextName: null, weaponFamily: true, targetProperty, foreign, resolveTexturePath);
+            Walk(
+                data,
+                contextName: null,
+                weaponFamily: true,
+                targetProperty,
+                foreign,
+                resolveTexturePath
+            );
 
         foreach (var path in foreign)
             targetProperty.Remove(path);
@@ -500,16 +519,17 @@ public static class WeaponTextureOptimization
     }
 
     private static bool IsWeaponShader(object? data) =>
-        data is Dictionary<string, object?> dict &&
-        dict.TryGetValue("m_shaderName", out var shader) &&
-        shader is string name &&
-        WeaponShaders.Contains(name);
+        data is Dictionary<string, object?> dict
+        && dict.TryGetValue("m_shaderName", out var shader)
+        && shader is string name
+        && WeaponShaders.Contains(name);
 
     private static bool IsExcludedPath(string resolved)
     {
         var path = $"/{resolved.Replace('\\', '/').TrimStart('/')}";
         foreach (var segment in ExcludedPathSegments)
-            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase)) return true;
+            if (path.Contains(segment, StringComparison.OrdinalIgnoreCase))
+                return true;
         return false;
     }
 
@@ -519,16 +539,23 @@ public static class WeaponTextureOptimization
         bool weaponFamily,
         Dictionary<string, string> targetProperty,
         HashSet<string> foreign,
-        Func<string, string?> resolveTexturePath)
+        Func<string, string?> resolveTexturePath
+    )
     {
         switch (value)
         {
             case string reference:
-                if (!IsTextureReference(reference)) return;
+                if (!IsTextureReference(reference))
+                    return;
                 var resolved = resolveTexturePath(reference);
-                if (resolved == null) return;
-                if (weaponFamily && contextName != null && Targets.ContainsKey(contextName) &&
-                    !IsExcludedPath(resolved))
+                if (resolved == null)
+                    return;
+                if (
+                    weaponFamily
+                    && contextName != null
+                    && Targets.ContainsKey(contextName)
+                    && !IsExcludedPath(resolved)
+                )
                 {
                     // First target property wins. No texture in the build is bound to two different
                     // target properties, so there is nothing to resolve.
@@ -543,7 +570,14 @@ public static class WeaponTextureOptimization
 
             case List<object?> list:
                 foreach (var entry in list)
-                    Walk(entry, contextName, weaponFamily, targetProperty, foreign, resolveTexturePath);
+                    Walk(
+                        entry,
+                        contextName,
+                        weaponFamily,
+                        targetProperty,
+                        foreign,
+                        resolveTexturePath
+                    );
                 return;
 
             case Dictionary<string, object?> dict:
@@ -551,15 +585,28 @@ public static class WeaponTextureOptimization
                 // (vcompmat); the texture path sits under a sibling key. Propagate that name down so a
                 // texture string inherits the parameter it belongs to.
                 var name =
-                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0 ? n1 :
-                    dict.TryGetValue("m_strName", out var mStrName) && mStrName is string n2 && n2.Length > 0 ? n2 :
-                    contextName;
+                    dict.TryGetValue("m_name", out var mName) && mName is string n1 && n1.Length > 0
+                        ? n1
+                    : dict.TryGetValue("m_strName", out var mStrName)
+                    && mStrName is string n2
+                    && n2.Length > 0
+                        ? n2
+                    : contextName;
                 foreach (var (key, child) in dict)
-                    Walk(child, name ?? key, weaponFamily, targetProperty, foreign, resolveTexturePath);
+                    Walk(
+                        child,
+                        name ?? key,
+                        weaponFamily,
+                        targetProperty,
+                        foreign,
+                        resolveTexturePath
+                    );
                 return;
         }
     }
 
     private static bool IsTextureReference(string value) =>
-        MaterialPaths.NormalizeMaterialResourcePath(value).EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
+        MaterialPaths
+            .NormalizeMaterialResourcePath(value)
+            .EndsWith(".vtex", StringComparison.OrdinalIgnoreCase);
 }

@@ -182,6 +182,24 @@ public static class MaterialTextureProperties
         "g_tPaintMetalness",
         // BC4 R [customweapon]. Per-paint roughness.
         "g_tPaintRoughness",
+        // BC7 RGBA sRGB [character]: RGB=artwork, A=coverage (the cut-out around the patch's shape,
+        // 23% fully transparent on patch_banana). One of the three patch slots csgo_character.vfx
+        // composites onto an agent. An agent's own material ships a placeholder here that the game
+        // replaces; the value that matters is the one on a PATCH's material, which is the artwork
+        // itself. See docs/patches.md.
+        "g_tPatch0",
+        // BC7 RGBA sRGB [character]: RGB=cloth or leather weave, A=coverage with a soft edge. The
+        // backing the patch is sewn onto, sized by g_flPatch0BackingScale. Unlike the artwork this
+        // one is authored per AGENT, and 19 distinct backings ship across the catalogue.
+        "g_tPatch0Backing",
+        // BC7 RGBA sRGB [character]. Patch slot 1 artwork — as g_tPatch0.
+        "g_tPatch1",
+        // BC7 RGBA sRGB [character]. Patch slot 1 backing — as g_tPatch0Backing.
+        "g_tPatch1Backing",
+        // BC7 RGBA sRGB [character]. Patch slot 2 artwork — as g_tPatch0.
+        "g_tPatch2",
+        // BC7 RGBA sRGB [character]. Patch slot 2 backing — as g_tPatch0Backing.
+        "g_tPatch2Backing",
         // BC7 RGBA sRGB [customweapon]. Patina/age color-ramp LUT.
         "g_tPatinaAgeColorRamp",
         // BC4 R [customweapon]. Patina/age application mask.

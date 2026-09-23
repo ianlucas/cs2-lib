@@ -12,23 +12,31 @@ public static class Translations
 {
     private static string? ResolveToken(string? token)
     {
-        if (token == null || token.Length == 0) return null;
+        if (token == null || token.Length == 0)
+            return null;
         return (token[0] == '#' ? token[1..] : token).ToLowerInvariant();
     }
 
     private static bool IsTranslationKey(ItemGeneratorContext ctx, string? token)
     {
-        if (token == null || token.Length == 0) return false;
+        if (token == null || token.Length == 0)
+            return false;
         var resolved = ResolveToken(token);
-        if (resolved == null) return false;
+        if (resolved == null)
+            return false;
         return ctx.CsgoTranslationByLanguage.TryGetValue("english", out var english)
             && english.ContainsKey(resolved);
     }
 
-    public static string? FindTranslation(ItemGeneratorContext ctx, string? token, string language = "english")
+    public static string? FindTranslation(
+        ItemGeneratorContext ctx,
+        string? token,
+        string language = "english"
+    )
     {
         token = ResolveToken(token);
-        if (token == null) return null;
+        if (token == null)
+            return null;
         if (!ctx.CsgoTranslationByLanguage.TryGetValue(language, out var translations))
             return null;
         if (!translations.TryGetValue(token, out var value) || value == null)
@@ -36,21 +44,33 @@ public static class Translations
         return StripHtml(value);
     }
 
-    public static string RequireTranslation(ItemGeneratorContext ctx, string? token, string language = "english")
+    public static string RequireTranslation(
+        ItemGeneratorContext ctx,
+        string? token,
+        string language = "english"
+    )
     {
         return FindTranslation(ctx, token, language)
-            ?? throw new InvalidOperationException($"Failed to find translation for '{token}' ({language}).");
+            ?? throw new InvalidOperationException(
+                $"Failed to find translation for '{token}' ({language})."
+            );
     }
 
     public static bool HasTranslation(ItemGeneratorContext ctx, string? token)
     {
         var resolved = ResolveToken(token);
-        if (resolved == null) return false;
+        if (resolved == null)
+            return false;
         return ctx.CsgoTranslationByLanguage.TryGetValue("english", out var english)
             && english.ContainsKey(resolved);
     }
 
-    public static void AddTranslation(ItemGeneratorContext ctx, int id, string property, params string?[] tokens)
+    public static void AddTranslation(
+        ItemGeneratorContext ctx,
+        int id,
+        string property,
+        params string?[] tokens
+    )
     {
         foreach (var (language, items) in ctx.ItemTranslationByLanguage)
         {
@@ -66,13 +86,16 @@ public static class Translations
                 if (token == null)
                     throw new InvalidOperationException("Translation token is null");
                 if (IsTranslationKey(ctx, token))
-                    parts.Add(FindTranslation(ctx, token, language) ?? RequireTranslation(ctx, token));
+                    parts.Add(
+                        FindTranslation(ctx, token, language) ?? RequireTranslation(ctx, token)
+                    );
                 else
                     parts.Add(token);
             }
 
             var value = string.Join("", parts).Trim();
-            if (value.Length == 0) continue;
+            if (value.Length == 0)
+                continue;
 
             if (property == "name" && language == "english")
                 ctx.ItemNames[id] = value;
@@ -81,13 +104,24 @@ public static class Translations
         }
     }
 
-    public static void TryAddTranslation(ItemGeneratorContext ctx, int id, string property, string? token)
+    public static void TryAddTranslation(
+        ItemGeneratorContext ctx,
+        int id,
+        string property,
+        string? token
+    )
     {
         if (IsTranslationKey(ctx, token))
             AddTranslation(ctx, id, property, token!);
     }
 
-    public static void AddFormattedTranslation(ItemGeneratorContext ctx, int id, string property, string? key, params string[] values)
+    public static void AddFormattedTranslation(
+        ItemGeneratorContext ctx,
+        int id,
+        string property,
+        string? key,
+        params string[] values
+    )
     {
         foreach (var (language, items) in ctx.ItemTranslationByLanguage)
         {
@@ -97,29 +131,51 @@ public static class Translations
                 items[id] = itemTranslation;
             }
 
-            var template = FindTranslation(ctx, key, language) ?? RequireTranslation(ctx, key, "english");
-            var result = Config.FormattedStringRe.Replace(template, match =>
-            {
-                var index = int.Parse(match.Groups[1].Value) - 1;
-                if (index < 0 || index >= values.Length) return match.Value;
-                var valueKey = values[index];
-                return FindTranslation(ctx, valueKey, language) ?? RequireTranslation(ctx, valueKey, "english");
-            });
+            var template =
+                FindTranslation(ctx, key, language) ?? RequireTranslation(ctx, key, "english");
+            var result = Config.FormattedStringRe.Replace(
+                template,
+                match =>
+                {
+                    var index = int.Parse(match.Groups[1].Value) - 1;
+                    if (index < 0 || index >= values.Length)
+                        return match.Value;
+                    var valueKey = values[index];
+                    return FindTranslation(ctx, valueKey, language)
+                        ?? RequireTranslation(ctx, valueKey, "english");
+                }
+            );
 
             SetTranslationProperty(itemTranslation, property, result);
         }
     }
 
-    private static void SetTranslationProperty(CS2ItemTranslation translation, string property, string value)
+    private static void SetTranslationProperty(
+        CS2ItemTranslation translation,
+        string property,
+        string value
+    )
     {
         switch (property)
         {
-            case "name": translation.Name = value; break;
-            case "description": translation.Description = value; break;
-            case "categoryName": translation.CategoryName = value; break;
-            case "collectionName": translation.CollectionName = value; break;
-            case "collectionDescription": translation.CollectionDescription = value; break;
-            case "tournamentDescription": translation.TournamentDescription = value; break;
+            case "name":
+                translation.Name = value;
+                break;
+            case "description":
+                translation.Description = value;
+                break;
+            case "categoryName":
+                translation.CategoryName = value;
+                break;
+            case "collectionName":
+                translation.CollectionName = value;
+                break;
+            case "collectionDescription":
+                translation.CollectionDescription = value;
+                break;
+            case "tournamentDescription":
+                translation.TournamentDescription = value;
+                break;
         }
     }
 

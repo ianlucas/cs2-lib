@@ -38,8 +38,27 @@ namespace ItemGenerator.GameFiles;
 public static class TextureCodecPolicy
 {
     private const string CompileTexture = "CompileTexture";
-    private const string HemiOctAnisoRoughness = "Texture Compiler Version Mip HemiOctAnisoRoughness";
-    private const string HemiOctIsoRoughnessRgB = "Texture Compiler Version Mip HemiOctIsoRoughness_RG_B";
+    private const string HemiOctAnisoRoughness =
+        "Texture Compiler Version Mip HemiOctAnisoRoughness";
+    private const string HemiOctIsoRoughnessRgB =
+        "Texture Compiler Version Mip HemiOctIsoRoughness_RG_B";
+    private const string AnisoRoughnessRg = "Texture Compiler Version Mip AnisoRoughness_RG";
+
+    /// <summary>
+    /// Whether this is a compiler-generated anisotropic roughness pair (csgo_character.vfx's
+    /// g_tAnisoGloss), whose (r, g) must be exported verbatim.
+    /// </summary>
+    /// <remarks>
+    /// The ATI2N texture holds roughness along the two anisotropy axes. It also carries the
+    /// HemiOctAnisoRoughness dependency, so VRF's default decode reads (r, g) as a hemi-octahedral
+    /// normal and rewrites both: measured on ctm_fbi_v2_body_variantd, a raw median of 0.89 comes
+    /// out as 0.99.
+    /// </remarks>
+    public static bool IsAnisoRoughness(Resource resource) =>
+        resource.EditInfo != null
+        && resource.EditInfo.SpecialDependencies.Any(dependency =>
+            dependency.CompilerIdentifier == CompileTexture && dependency.String == AnisoRoughnessRg
+        );
 
     /// <summary>
     /// Whether this texture's four raw channels must survive export intact.
@@ -53,9 +72,12 @@ public static class TextureCodecPolicy
         var aniso = false;
         foreach (var dependency in resource.EditInfo.SpecialDependencies)
         {
-            if (dependency.CompilerIdentifier != CompileTexture) continue;
-            if (dependency.String == HemiOctIsoRoughnessRgB) return false;
-            if (dependency.String == HemiOctAnisoRoughness) aniso = true;
+            if (dependency.CompilerIdentifier != CompileTexture)
+                continue;
+            if (dependency.String == HemiOctIsoRoughnessRgB)
+                return false;
+            if (dependency.String == HemiOctAnisoRoughness)
+                aniso = true;
         }
         return aniso;
     }

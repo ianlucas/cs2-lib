@@ -14,16 +14,21 @@ public static class Logging
         Console.WriteLine(message);
     }
 
-    public static async Task RunStep(string name, Func<Task> callback, Func<string?>? getSummary = null)
+    public static async Task RunStep(
+        string name,
+        Func<Task> callback,
+        Func<string?>? getSummary = null
+    )
     {
         var sw = Stopwatch.StartNew();
         Log($"{name}...");
         await callback();
         sw.Stop();
         var summary = getSummary?.Invoke();
-        var duration = sw.ElapsedMilliseconds < 1000
-            ? $"{sw.ElapsedMilliseconds}ms"
-            : $"{sw.Elapsed.TotalSeconds:F1}s";
+        var duration =
+            sw.ElapsedMilliseconds < 1000
+                ? $"{sw.ElapsedMilliseconds}ms"
+                : $"{sw.Elapsed.TotalSeconds:F1}s";
         Log($"{name} done{(summary != null ? $" ({summary})" : "")} in {duration}.");
     }
 
@@ -32,8 +37,11 @@ public static class Logging
         var current = Interlocked.Increment(ref processed);
         var pct = current * 100 / total;
         var milestone = pct / 5 * 5;
-        if (milestone > 0 && milestone > Volatile.Read(ref lastMilestone) &&
-            Interlocked.Exchange(ref lastMilestone, milestone) < milestone)
+        if (
+            milestone > 0
+            && milestone > Volatile.Read(ref lastMilestone)
+            && Interlocked.Exchange(ref lastMilestone, milestone) < milestone
+        )
             Log($"  {milestone}% ({current}/{total})");
     }
 

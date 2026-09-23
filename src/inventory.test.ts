@@ -15,8 +15,8 @@ import {
     CS2_MIN_KEYCHAIN_SEED
 } from "./economy-constants.ts";
 import { CS2Economy } from "./economy.ts";
-import type { CS2BaseInventoryItem } from "./inventory-types.ts";
 import { CS2_INVENTORY_VERSION } from "./inventory-migrations/index.ts";
+import type { CS2BaseInventoryItem } from "./inventory-types.ts";
 import { CS2Inventory } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { CS2Team } from "./teams.ts";
@@ -847,33 +847,25 @@ describe("CS2Inventory methods", () => {
 
     test("apply and remove patches", () => {
         inventory.add({ id: BLOODY_DARRYL_THE_STRAPPED_ID });
-        inventory.add({ id: BLOODHOUND_ID });
-        inventory.add({ id: BLOODHOUND_ID });
-        inventory.add({ id: BLOODHOUND_ID });
-        inventory.add({ id: BLOODHOUND_ID });
-        inventory.add({ id: BLOODHOUND_ID });
+        for (let slot = 0; slot < CS2_MAX_PATCHES; slot++) {
+            inventory.add({ id: BLOODHOUND_ID });
+        }
         expect(() => inventory.applyItemPatch(0, 1, -1)).toThrow();
         expect(() => inventory.applyItemPatch(0, 1, CS2_MAX_PATCHES)).toThrow();
-        for (let uid = 1; uid < 1 + 5; uid++) {
+        for (let uid = 1; uid < 1 + CS2_MAX_PATCHES; uid++) {
             const index = uid - 1;
             inventory.applyItemPatch(0, uid, index);
             expect(inventory.get(0).patches?.get(index)).toBe(BLOODHOUND_ID);
         }
         expect(() => inventory.removeItemPatch(0, -1)).toThrow();
         expect(() => inventory.removeItemPatch(0, CS2_MAX_PATCHES)).toThrow();
-        for (let uid = 1; uid < 1 + 5; uid++) {
+        for (let uid = 1; uid < 1 + CS2_MAX_PATCHES; uid++) {
             const index = uid - 1;
             inventory.removeItemPatch(0, index);
             expect(inventory.get(0).patches?.get(index)).toBe(undefined);
         }
         expect(inventory.get(0).patches).toBe(undefined);
-        const patches = {
-            0: BLOODHOUND_ID,
-            1: BLOODHOUND_ID,
-            2: BLOODHOUND_ID,
-            3: BLOODHOUND_ID,
-            4: BLOODHOUND_ID
-        };
+        const patches = Object.fromEntries(Array.from({ length: CS2_MAX_PATCHES }, (_, slot) => [slot, BLOODHOUND_ID]));
         expect(() =>
             inventory.add({
                 id: BLOODY_DARRYL_THE_STRAPPED_ID,
@@ -888,7 +880,7 @@ describe("CS2Inventory methods", () => {
                 id: BLOODY_DARRYL_THE_STRAPPED_ID,
                 patches: {
                     ...patches,
-                    5: BLOODHOUND_ID
+                    [CS2_MAX_PATCHES]: BLOODHOUND_ID
                 }
             })
         ).toThrow();
@@ -1261,7 +1253,7 @@ describe("sticker schema materialization", () => {
         }
     });
 
-    test("editing the materialized item no longer throws — materializer and validator now agree", () => {
+    test("editing the materialized item no longer throws - materializer and validator now agree", () => {
         const inventory = new CS2Inventory();
         inventory.add({ id: AK47_ID, stickers: fiveStickers });
         expect(() => inventory.editItemSticker(0, 4, { wear: 0.5 })).not.toThrow();

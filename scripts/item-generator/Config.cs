@@ -7,8 +7,17 @@ using System.Text.RegularExpressions;
 
 namespace ItemGenerator;
 
-public enum ItemGeneratorMode { Limited, Full }
-public enum Cs2SourceMode { InstalledGame, WorkspaceDepot }
+public enum ItemGeneratorMode
+{
+    Limited,
+    Full,
+}
+
+public enum Cs2SourceMode
+{
+    InstalledGame,
+    WorkspaceDepot,
+}
 
 public static partial class Config
 {
@@ -18,13 +27,25 @@ public static partial class Config
     public static readonly string DecompiledDir = Path.Combine(WorkdirDir, "decompiled");
 
     public static readonly string GameImagesDir = Path.Combine(DecompiledDir, "panorama/images");
-    public static readonly string GameItemsPath = Path.Combine(DecompiledDir, "scripts/items/items_game.txt");
+    public static readonly string GameItemsPath = Path.Combine(
+        DecompiledDir,
+        "scripts/items/items_game.txt"
+    );
     public static readonly string GameResourceDir = Path.Combine(DecompiledDir, "resource");
     public static readonly string OutputDir = Path.Combine(WorkdirDir, "output");
 
-    public static readonly string ItemGeneratorWorkdirDir = Path.Combine(WorkdirDir, "item-generator");
-    public static readonly string ItemGeneratorCacheDir = Path.Combine(ItemGeneratorWorkdirDir, "cache");
-    public static readonly string ItemGeneratorBuildDir = Path.Combine(ItemGeneratorWorkdirDir, "build");
+    public static readonly string ItemGeneratorWorkdirDir = Path.Combine(
+        WorkdirDir,
+        "item-generator"
+    );
+    public static readonly string ItemGeneratorCacheDir = Path.Combine(
+        ItemGeneratorWorkdirDir,
+        "cache"
+    );
+    public static readonly string ItemGeneratorBuildDir = Path.Combine(
+        ItemGeneratorWorkdirDir,
+        "build"
+    );
 
     public const string ItemIdsJsonPath = "scripts/data/items-ids.json";
     public const string ItemsJsonPath = "scripts/data/items.json";
@@ -42,15 +63,24 @@ public static partial class Config
     public static readonly string[] FreeMusicKits = ["1", "70"];
     public static readonly string[] HeavyWeapons =
     [
-        "weapon_m249", "weapon_mag7", "weapon_negev",
-        "weapon_nova", "weapon_sawedoff", "weapon_xm1014"
+        "weapon_m249",
+        "weapon_mag7",
+        "weapon_negev",
+        "weapon_nova",
+        "weapon_sawedoff",
+        "weapon_xm1014",
     ];
     public static readonly string[] PaintImageSuffixes = ["light", "medium", "heavy"];
     public static readonly string[] UncategorizedStickers =
     [
-        "community_mix01", "community02", "danger_zone",
-        "standard", "stickers2", "tournament_assets"
+        "community_mix01",
+        "community02",
+        "danger_zone",
+        "standard",
+        "stickers2",
+        "tournament_assets",
     ];
+
     // Lossy quality for the image pipeline (item icons, graffiti, paint previews, GLB texture
     // stubs).
     public const int WebpQuality = 95;
@@ -72,7 +102,7 @@ public static partial class Config
         ItemGeneratorWorkdirDir,
         ItemGeneratorCacheDir,
         ItemGeneratorBuildDir,
-        DepotGameDir
+        DepotGameDir,
     ];
 
     public static string GetArchiveDepotPath(int archiveIndex) =>

@@ -21,7 +21,11 @@ public static class CatalogAssets
         return $"panorama/images/{path}_png.png".ToLowerInvariant();
     }
 
-    private static string GetVpkPaintImagePath(string className, string paintClassName, string suffix)
+    private static string GetVpkPaintImagePath(
+        string className,
+        string paintClassName,
+        string suffix
+    )
     {
         return $"panorama/images/econ/default_generated/{className}_{paintClassName}_{suffix}_png.png".ToLowerInvariant();
     }
@@ -39,7 +43,8 @@ public static class CatalogAssets
     private static string VpkImageBaseName(string vpkPath)
     {
         var baseName = Path.GetFileNameWithoutExtension(vpkPath);
-        if (baseName.EndsWith("_png")) baseName = baseName[..^4];
+        if (baseName.EndsWith("_png"))
+            baseName = baseName[..^4];
         return baseName;
     }
 
@@ -48,9 +53,14 @@ public static class CatalogAssets
         return ctx.VpkIndex.ContainsKey(GetVpkImagePath(path));
     }
 
-    public static bool IsPaintImageValid(ItemGeneratorContext ctx, string? className, string? paintClassName)
+    public static bool IsPaintImageValid(
+        ItemGeneratorContext ctx,
+        string? className,
+        string? paintClassName
+    )
     {
-        if (className == null || paintClassName == null) return false;
+        if (className == null || paintClassName == null)
+            return false;
         return ctx.VpkIndex.ContainsKey(GetVpkPaintImagePath(className, paintClassName, "light"));
     }
 
@@ -69,11 +79,18 @@ public static class CatalogAssets
         ctx.NeededVpkPaths.Add(entry.EntryPath);
         var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
         ctx.ImagesToProcess[entry.EntryPath] = new RegularImageTask(
-            localPath, filename, $"/images/{VpkImageBaseName(vpkPath)}");
+            localPath,
+            filename,
+            $"/images/{VpkImageBaseName(vpkPath)}"
+        );
         return filename;
     }
 
-    public static string GetPaintImage(ItemGeneratorContext ctx, string? className, string? paintClassName)
+    public static string GetPaintImage(
+        ItemGeneratorContext ctx,
+        string? className,
+        string? paintClassName
+    )
     {
         var cn = className ?? throw new InvalidOperationException("className is null");
         var pcn = paintClassName ?? throw new InvalidOperationException("paintClassName is null");
@@ -82,12 +99,16 @@ public static class CatalogAssets
             throw new FileNotFoundException($"VPK entry not found: {lightVpkPath}");
 
         var baseFilename = $"/images/{cn}_{pcn}_{entry.Crc}.webp";
-        var localPaths = Config.PaintImageSuffixes.Select(suffix =>
-        {
-            var paintImagePath = Path.Combine(Config.GameImagesDir,
-                $"econ/default_generated/{cn}_{pcn}_{suffix}_png.png".ToLowerInvariant());
-            return (paintImagePath, suffix);
-        }).ToList();
+        var localPaths = Config
+            .PaintImageSuffixes.Select(suffix =>
+            {
+                var paintImagePath = Path.Combine(
+                    Config.GameImagesDir,
+                    $"econ/default_generated/{cn}_{pcn}_{suffix}_png.png".ToLowerInvariant()
+                );
+                return (paintImagePath, suffix);
+            })
+            .ToList();
 
         foreach (var suffix in Config.PaintImageSuffixes)
         {
@@ -96,11 +117,19 @@ public static class CatalogAssets
                 ctx.NeededVpkPaths.Add(suffixEntry.EntryPath);
         }
 
-        ctx.ImagesToProcess[entry.EntryPath] = new PaintImageTask(localPaths, baseFilename, $"/images/{cn}_{pcn}");
+        ctx.ImagesToProcess[entry.EntryPath] = new PaintImageTask(
+            localPaths,
+            baseFilename,
+            $"/images/{cn}_{pcn}"
+        );
         return baseFilename;
     }
 
-    public static string GetDefaultGraffitiImage(ItemGeneratorContext ctx, string stickerMaterial, string hexColor)
+    public static string GetDefaultGraffitiImage(
+        ItemGeneratorContext ctx,
+        string stickerMaterial,
+        string hexColor
+    )
     {
         var vpkPath = GetVpkImagePath($"econ/stickers/{stickerMaterial}");
         if (!ctx.VpkIndex.TryGetValue(vpkPath, out var entry))
@@ -110,9 +139,16 @@ public static class CatalogAssets
         var colorNoHash = hexColor.Replace("#", "");
         var filename = $"/images/{materialBase}_{colorNoHash}_{entry.Crc}.webp";
         ctx.NeededVpkPaths.Add(entry.EntryPath);
-        var localPath = Path.Combine(Config.GameImagesDir, $"econ/stickers/{stickerMaterial}_png.png".ToLowerInvariant());
+        var localPath = Path.Combine(
+            Config.GameImagesDir,
+            $"econ/stickers/{stickerMaterial}_png.png".ToLowerInvariant()
+        );
         ctx.ImagesToProcess[$"{entry.EntryPath}:{hexColor}"] = new GraffitiImageTask(
-            localPath, hexColor, filename, $"/images/{materialBase}_{colorNoHash}");
+            localPath,
+            hexColor,
+            filename,
+            $"/images/{materialBase}_{colorNoHash}"
+        );
         return filename;
     }
 
@@ -130,13 +166,23 @@ public static class CatalogAssets
         ctx.NeededVpkPaths.Add(entry.EntryPath);
         var localPath = Path.Combine(Config.GameImagesDir, $"{path}_png.png".ToLowerInvariant());
         ctx.ImagesToProcess[$"{entry.EntryPath}:rare"] = new RegularImageTask(
-            localPath, filename, $"/images/{VpkImageBaseName(vpkPath)}", "rare");
+            localPath,
+            filename,
+            $"/images/{VpkImageBaseName(vpkPath)}",
+            "rare"
+        );
         return filename;
     }
 
-    public static string? GetModel(ItemGeneratorContext ctx, string? path, int? existingId = null)
+    public static string? GetModel(
+        ItemGeneratorContext ctx,
+        string? path,
+        int? existingId = null,
+        AgentModelInfo? agent = null
+    )
     {
-        if (path == null) return null;
+        if (path == null)
+            return null;
 
         if (ctx.Mode == ItemGeneratorMode.Limited && existingId.HasValue)
         {
@@ -153,13 +199,16 @@ public static class CatalogAssets
 
         if (Config.IsAssetReuseEnabled())
         {
-            if (existingId.HasValue &&
-                ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing) &&
-                ExistingOutputExists(existing.ModelPath))
+            if (
+                existingId.HasValue
+                && ctx.ExistingItemsById.TryGetValue(existingId.Value, out var existing)
+                && ExistingOutputExists(existing.ModelPath)
+            )
                 return ReuseModel(ctx, existing.ModelPath!);
 
             var cached = FindCachedModel(baseName);
-            if (cached != null) return ReuseModel(ctx, cached);
+            if (cached != null)
+                return ReuseModel(ctx, cached);
         }
 
         var playerModel = $"/models/{baseName}_{entry.Crc}.glb";
@@ -170,13 +219,14 @@ public static class CatalogAssets
             Crc = entry.Crc,
             ModelData = modelData,
             PlayerModel = playerModel,
-            DirectMaterials = []
+            DirectMaterials = [],
+            Agent = agent,
         };
         return playerModel;
     }
 
-    private static bool ExistingOutputExists(string? assetPath) => assetPath != null &&
-        File.Exists(Path.Combine(Config.OutputDir, assetPath.TrimStart('/')));
+    private static bool ExistingOutputExists(string? assetPath) =>
+        assetPath != null && File.Exists(Path.Combine(Config.OutputDir, assetPath.TrimStart('/')));
 
     private static string ReuseModel(ItemGeneratorContext ctx, string modelPath)
     {
@@ -187,11 +237,14 @@ public static class CatalogAssets
     private static string? FindCachedModel(string baseName)
     {
         var dir = Path.Combine(Config.OutputDir, "models");
-        if (!Directory.Exists(dir)) return null;
+        if (!Directory.Exists(dir))
+            return null;
         var matches = Directory.GetFiles(dir, $"{baseName}_????????.glb");
-        if (matches.Length != 1) return null;
+        if (matches.Length != 1)
+            return null;
         var dataPath = Path.ChangeExtension(matches[0], ".json");
-        if (!File.Exists(dataPath)) return null;
+        if (!File.Exists(dataPath))
+            return null;
         return $"/models/{Path.GetFileName(matches[0])}";
     }
 
@@ -217,7 +270,10 @@ public static class CatalogAssets
     }
 
     public static async Task<string?> TryGetFallbackImage(
-        ItemGeneratorContext ctx, string source, string imagePath)
+        ItemGeneratorContext ctx,
+        string source,
+        string imagePath
+    )
     {
         var staticKey = $"/images/{Path.GetFileName(imagePath)}.png";
         if (ctx.StaticAssets.TryGetValue(staticKey, out var staticValue) && staticValue != null)
@@ -227,7 +283,8 @@ public static class CatalogAssets
         if (!File.Exists(localPath))
         {
             var fallback = await Sources.External.FindFallbackImage(source, imagePath);
-            if (fallback == null) return null;
+            if (fallback == null)
+                return null;
         }
 
         var filename = CopyAndOptimizeImage(localPath);
@@ -239,12 +296,14 @@ public static class CatalogAssets
     // the start (no provisional/rename step): these run before the catalog references them.
     public static string CopyAndOptimizeImage(string src)
     {
-        using var bitmap = SKBitmap.Decode(src)
+        using var bitmap =
+            SKBitmap.Decode(src)
             ?? throw new InvalidOperationException($"Unable to decode image: {src}");
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Webp, Config.WebpQuality);
         var bytes = data.ToArray();
-        var dest = $"/images/{Path.GetFileNameWithoutExtension(src)}_{ContentVersion.HashBytes(bytes)}.webp";
+        var dest =
+            $"/images/{Path.GetFileNameWithoutExtension(src)}_{ContentVersion.HashBytes(bytes)}.webp";
         var outPath = Path.Combine(Config.OutputDir, dest.TrimStart('/'));
         Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
         File.WriteAllBytes(outPath, bytes);

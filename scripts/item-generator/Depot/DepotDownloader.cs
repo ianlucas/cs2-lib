@@ -23,21 +23,33 @@ public static class DepotDownloaderService
     {
         using var session = new SteamSession();
         await session.ConnectAnonymous();
-        var manifestId = await session.GetDepotManifestId(Config.AppId, Config.AssetsDepotId, DefaultBranch);
+        var manifestId = await session.GetDepotManifestId(
+            Config.AppId,
+            Config.AssetsDepotId,
+            DefaultBranch
+        );
         return manifestId.ToString();
     }
 
     public static async Task DownloadFiles(List<string> files, string outputDir)
     {
-        if (files.Count == 0) return;
+        if (files.Count == 0)
+            return;
         using var session = new SteamSession();
         await session.ConnectAnonymous();
-        await session.DownloadDepotFiles(Config.AppId, Config.AssetsDepotId, DefaultBranch, files, outputDir);
+        await session.DownloadDepotFiles(
+            Config.AppId,
+            Config.AssetsDepotId,
+            DefaultBranch,
+            files,
+            outputDir
+        );
     }
 
     public static async Task DownloadFileList(string fileListPath, string outputDir)
     {
-        if (!File.Exists(fileListPath)) return;
+        if (!File.Exists(fileListPath))
+            return;
         var files = (await File.ReadAllLinesAsync(fileListPath))
             .Where(l => !string.IsNullOrWhiteSpace(l))
             .ToList();
@@ -52,7 +64,9 @@ public static class DepotDownloaderService
 
         var latestManifest = await FetchLatestManifestId();
         if (!Config.IsForceMode() && currentManifest == latestManifest)
-            throw new DepotUpToDateException($"Depot {Config.AssetsDepotId} is already up to date.");
+            throw new DepotUpToDateException(
+                $"Depot {Config.AssetsDepotId} is already up to date."
+            );
 
         // Defer the write until the run finishes successfully (see CommitAssetsManifest)
         // so a failed download/processing run doesn't mark this depot version as
@@ -62,14 +76,16 @@ public static class DepotDownloaderService
 
     public static async Task CommitAssetsManifest(ItemGeneratorContext ctx)
     {
-        if (ctx.AssetsManifestId == null) return;
+        if (ctx.AssetsManifestId == null)
+            return;
         await File.WriteAllTextAsync(Config.AssetsManifestPath, ctx.AssetsManifestId);
     }
 
     public static async Task EnsureItemDefinitionPackages(ItemGeneratorContext ctx)
     {
         Directory.CreateDirectory(Config.WorkdirDir);
-        if (ctx.SourceMode == Cs2SourceMode.InstalledGame) return;
+        if (ctx.SourceMode == Cs2SourceMode.InstalledGame)
+            return;
 
         await DownloadFileList(Config.DepotFileListPath, Config.WorkdirDir);
 

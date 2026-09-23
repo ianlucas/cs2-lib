@@ -18,8 +18,9 @@ public static class Workdir
         var target = Normalize(path);
         if (!Config.GeneratedDirs.Any(dir => Normalize(dir) == target))
             throw new InvalidOperationException(
-                $"Refusing to delete '{target}': not an item-generator directory. " +
-                "Add it to Config.GeneratedDirs if the generator owns it.");
+                $"Refusing to delete '{target}': not an item-generator directory. "
+                    + "Add it to Config.GeneratedDirs if the generator owns it."
+            );
 
         if (Directory.Exists(target))
             Directory.Delete(target, true);
