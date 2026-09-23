@@ -55,7 +55,7 @@
         "@gltf-transform/core": "4.5.0",
         "@gltf-transform/extensions": "4.5.0",
         "@total-typescript/tsconfig": "^1.0.4",
-        "@types/node": "^22.20.2",
+        "@types/node": "^22.20.3",
         "javascript-stringify": "^2.1.0",
         "meshoptimizer": "1.2.0",
         "prettier": "3.9.6",
