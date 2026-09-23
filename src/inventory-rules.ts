@@ -401,6 +401,27 @@ function repairSlots(slots: Record<string, unknown>, maximum: number): void {
     }
 }
 
+function repairPatchSlots(patches: Record<string, number>): void {
+    const displaced: number[] = [];
+    for (const [key, slot] of Object.keys(patches)
+        .map((key) => [key, parseInt(key, 10)] as const)
+        .sort(([, a], [, b]) => a - b)) {
+        if (!Number.isInteger(slot) || slot < 0 || slot >= CS2_MAX_PATCHES) {
+            displaced.push(patches[key]!);
+            delete patches[key];
+        }
+    }
+    for (const patchId of displaced) {
+        const slot = Array.from({ length: CS2_MAX_PATCHES }, (_, index) => index).find(
+            (index) => patches[index] === undefined
+        );
+        if (slot === undefined) {
+            break;
+        }
+        patches[slot] = patchId;
+    }
+}
+
 export function getDropReason(economy: CS2EconomyInstance, id: number): CS2InventoryDropReason {
     return economy.items.has(id) ? "unrepairable" : "unknown-item";
 }
@@ -423,7 +444,7 @@ export function repairInventoryItem(
         if (!economyItem.hasPatches()) {
             item.patches = undefined;
         } else {
-            repairSlots(item.patches, CS2_MAX_PATCHES);
+            repairPatchSlots(item.patches);
             for (const [slot, patchId] of Object.entries(item.patches)) {
                 if (!checkAttachmentId(economy, patchId, (patch) => patch.isPatch())) {
                     delete item.patches[slot];

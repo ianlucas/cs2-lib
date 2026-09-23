@@ -44,6 +44,7 @@ public static partial class AssetProcessor
             PreProcessMaterials(ctx);
             ProcessMaterialTextures(ctx);
             WriteMaterialMetadata(ctx);
+            ResolveAgentPatchSlots(ctx);
             await FinalizeModels(ctx);
         }
 
@@ -202,7 +203,7 @@ public static partial class AssetProcessor
         HydrateReusedModelData(ctx);
         if (ctx.ModelsToProcess.Count == 0) return;
         Log($"Preparing {FormatCount(ctx.ModelsToProcess.Count, "model")}...");
-        ResourceDecompiler.DecompileModelAssets(ctx, ctx.ModelsToProcess.Keys);
+        ResourceDecompiler.DecompileModelAssets(ctx, ctx.ModelsToProcess);
         ExtractModelData(ctx);
     }
 
@@ -224,8 +225,18 @@ public static partial class AssetProcessor
             if (!File.Exists(glbPath)) continue;
 
             EnsureGlbSatelliteTextures(glbPath);
-            PatchGlbAssets(ctx, glbPath);
-            StubModelTextures(glbPath);
+            if (model.Agent != null)
+            {
+                // An agent's textures are EMBEDDED, not stubbed, and its material slots keep VRF's
+                // names: with nothing published separately there is no content-hashed material
+                // filename to rename them to, and the consumer matches on `extras.vmat` anyway.
+                await FinalizeAgentModel(ctx, vpkPath, model, glbPath);
+            }
+            else
+            {
+                PatchGlbAssets(ctx, glbPath);
+                StubModelTextures(glbPath);
+            }
             stubbed.Add((vpkPath, model, glbPath));
         }
 
@@ -274,7 +285,7 @@ public static partial class AssetProcessor
     private static void ExtractModelData(ItemGeneratorContext ctx)
     {
         var entries = ctx.ModelsToProcess.Select(kv =>
-            (VpkPath: kv.Key, TargetFilename: kv.Value.PlayerModel)).ToList();
+            (VpkPath: kv.Key, TargetFilename: kv.Value.PlayerModel, Agent: kv.Value.Agent)).ToList();
         var results = MetadataExtractor.ExtractModelMetadata(ctx, entries);
 
         for (int i = 0; i < results.Count; i++)
@@ -283,10 +294,16 @@ public static partial class AssetProcessor
             var vpkPath = entries[i].VpkPath;
             if (!ctx.ModelsToProcess.TryGetValue(vpkPath, out var model)) continue;
 
+            if (result.Agent != null) ctx.AgentModelExports[vpkPath] = result.Agent;
+
             foreach (var material in result.Materials)
             {
                 var normalized = MaterialPaths.NormalizeMaterialResourcePath(material);
-                ctx.MaterialsToProcess.Add(normalized);
+                // An agent's materials stay OUT of the material pipeline: its textures are embedded
+                // in its .glb, so there is no separate material JSON for a consumer to fetch and no
+                // content-addressed texture to publish. Everything the consumer needs about them
+                // rides in the .glb's own `extras.vmat`. See FinalizeAgentModel.
+                if (model.Agent == null) ctx.MaterialsToProcess.Add(normalized);
                 model.DirectMaterials.Add(normalized);
             }
 
@@ -692,8 +709,8 @@ public static partial class AssetProcessor
         Directory.CreateDirectory(stagingDir);
 
         // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures),
-        // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures)
-        // and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
+        // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures),
+        // PatchTextureOptimization (patch artwork) and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
         // also bound outside its own family, so a texture shared between two families is dropped by
         // both and stays lossless. The one place two scopes can still agree is a charm-only texture on
         // a property the weapon file targets too -- a charm material is a csgo_weapon.vfx material, and
@@ -729,6 +746,13 @@ public static partial class AssetProcessor
         // composite binds no texture of its own (see GloveTextureOptimization).
         Dictionary<string, GloveTextureTier> gloveTiers = optimize
             ? GloveTextureOptimization.ResolveTextureTiers(
+                ctx.MaterialDataByPath,
+                ResolveTexture)
+            : [];
+        // Keyed by resource path for the same reason as gloves: the patch scope admits the shared
+        // character shader only under `/patches/`.
+        Dictionary<string, GloveTextureTier> patchTiers = optimize
+            ? PatchTextureOptimization.ResolveTextureTiers(
                 ctx.MaterialDataByPath,
                 ResolveTexture)
             : [];
@@ -769,6 +793,7 @@ public static partial class AssetProcessor
                 object? encode =
                     weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier :
                     gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier :
+                    patchTiers.TryGetValue(resolvedVtexPath, out var patchTier) ? patchTier :
                     keychainTiers.TryGetValue(resolvedVtexPath, out var keychainTier) ? keychainTier :
                     stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
                         ? StickerTextureOptimization.ToSpec(stickerTier)

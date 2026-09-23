@@ -168,9 +168,24 @@ public static class ResourceDecompiler
         return File.Exists(outPath);
     }
 
-    public static void DecompileModelAssets(ItemGeneratorContext ctx, IEnumerable<string> vpkPaths)
+    /// <summary>
+    /// The animation name an AGENT export filters to, chosen so that it matches nothing.
+    /// </summary>
+    /// <remarks>
+    /// An agent's .glb needs a SKELETON and no animations, and VRF only creates one when
+    /// ExportAnimations is on (GltfModelExporter: `ExportAnimations ? CreateGltfSkeleton(...)`).
+    /// Left unfiltered, that pulls in the whole shared worldmodel animation graph — measured at 2062
+    /// clips and a 291 MB .glb for one agent, against 2.2 MB with the skeleton alone. Filtering to a
+    /// name nothing can match keeps the skeleton and writes no clips. The graph is still LOADED
+    /// either way (GetAllAnimations runs before the filter is applied), so this buys size, not time.
+    /// </remarks>
+    private const string AgentAnimationSentinel = "__cs2lib_skeleton_only__";
+
+    public static void DecompileModelAssets(
+        ItemGeneratorContext ctx, IReadOnlyDictionary<string, PendingModelTask> models)
     {
         if (ctx.VpkPackage == null) return;
+        var vpkPaths = models.Keys;
         var package = ctx.VpkPackage;
         var fileLoader = new GameFileLoader(package, package.FileName);
         var parallelism = Math.Max(2, Environment.ProcessorCount);
@@ -234,6 +249,8 @@ public static class ResourceDecompiler
                 ProgressReporter = new Progress<string>(_ => { }),
                 ExportMaterials = true,
             };
+            if (models.TryGetValue(vpkPath, out var task) && task.Agent != null)
+                exporter.AnimationFilter.Add(AgentAnimationSentinel);
             lock (exportDirLocks.GetOrAdd(outDir, static _ => new object()))
                 exporter.Export(resource, glbPath);
         });
@@ -257,8 +274,9 @@ public static class ResourceDecompiler
         var textureExtract = new TextureExtract(resource);
         // BC7 HemiOctAnisoRoughness maps pack four independent channels and VRF's default decode
         // destroys one of them, so export the block-decompressed texels verbatim and leave the
-        // decode to the consumer. See TextureCodecPolicy.
-        if (TextureCodecPolicy.IsRawFourChannelNormal(resource))
+        // decode to the consumer. An anisotropic roughness pair is mis-decoded the same way. See
+        // TextureCodecPolicy.
+        if (TextureCodecPolicy.IsRawFourChannelNormal(resource) || TextureCodecPolicy.IsAnisoRoughness(resource))
             textureExtract.DecodeFlags = TextureCodec.None;
         var ext = textureExtract.ImageOutputExtension;
         var outPath = Path.Combine(dir, $"{baseName}{ext}");

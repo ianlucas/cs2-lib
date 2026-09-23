@@ -270,12 +270,21 @@ describe("repairInventoryItem attributes with nothing to coerce them into", () =
             0: { id: LIL_AVA_ID, seed: 1, x: undefined, y: undefined, z: undefined }
         });
 
+        // Out-of-range patch slots reflow into the free in-range ones rather than being dropped:
+        // a patch slot index carries no placement, so there is nothing to preserve by discarding it
+        // (see repairPatchSlots). Slots fill lowest-first in ascending key order, so "-1" takes slot
+        // 1 and 4 takes slot 2; 99 has nowhere left to go and is the only one lost.
         const patched: CS2BaseInventoryItem = {
             id: GROUND_REBEL_ID,
             patches: { 0: BLOODHOUND_ID, 4: BLOODHOUND_ID, 99: BLOODHOUND_ID, "-1": BLOODHOUND_ID }
         };
         expect(repairInventoryItem(CS2Economy, patched)).toBe(true);
-        expect(patched.patches).toEqual({ 0: BLOODHOUND_ID, 4: BLOODHOUND_ID });
+        expect(patched.patches).toEqual({ 0: BLOODHOUND_ID, 1: BLOODHOUND_ID, 2: BLOODHOUND_ID });
+
+        // An in-range stack is left exactly where it is.
+        const inRange: CS2BaseInventoryItem = { id: GROUND_REBEL_ID, patches: { 2: BLOODHOUND_ID } };
+        expect(repairInventoryItem(CS2Economy, inRange)).toBe(true);
+        expect(inRange.patches).toEqual({ 2: BLOODHOUND_ID });
     });
 
     test("keeps keychains attached to C4 when repairing an inventory item", () => {

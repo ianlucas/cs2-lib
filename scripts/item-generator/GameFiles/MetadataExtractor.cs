@@ -14,7 +14,22 @@ using static ItemGenerator.Logging;
 namespace ItemGenerator.GameFiles;
 
 public record ModelMetadataResult(
-    object? Data, object? ClothCollider, string Filename, List<string> Materials);
+    object? Data, object? ClothCollider, string Filename, List<string> Materials,
+    AgentModelExport? Agent = null);
+
+/// <summary>
+/// What FinalizeModels needs to turn an agent's raw VRF export into the published .glb: which
+/// meshes survive, and the pose to write into its joints. Both are computed here because both come
+/// out of the model resource, and neither is expressible in the model-data JSON.
+/// </summary>
+/// <param name="KeepMeshes">
+/// Leaf mesh names to keep, e.g. "thirdperson_body". VRF names a glTF mesh
+/// "&lt;model path&gt;.vmdl_c.&lt;leaf&gt;", so the consumer of this list matches on the leaf.
+/// </param>
+/// <param name="Pose">Bone name -&gt; { translation, rotation }, in raw model space. Empty when the
+/// agent names no pose_sequence.</param>
+public record AgentModelExport(List<string> KeepMeshes, Dictionary<string, object?> Pose);
+
 public record CompositeMaterialMetadataResult(
     List<string> CompositeMaterialRefs, object? Data,
     string VcompmatPath, List<string> VmatRefs, List<string> VtexRefs);
@@ -34,12 +49,12 @@ public static partial class MetadataExtractor
     private const double ClothColliderCeiling = 2.5;
 
     public static List<ModelMetadataResult> ExtractModelMetadata(
-        ItemGeneratorContext ctx, List<(string VpkPath, string TargetFilename)> entries)
+        ItemGeneratorContext ctx, List<(string VpkPath, string TargetFilename, AgentModelInfo? Agent)> entries)
     {
         var results = new List<ModelMetadataResult>();
         if (ctx.VpkPackage == null) return results;
 
-        foreach (var (vpkPath, targetFilename) in entries)
+        foreach (var (vpkPath, targetFilename, agent) in entries)
         {
             var entry = ctx.VpkPackage.FindEntry(vpkPath);
             if (entry == null)
@@ -64,6 +79,7 @@ public static partial class MetadataExtractor
             }
 
             object? parsedData = null;
+            AgentModelExport? agentExport = null;
             if (resource.DataBlock is Model model)
             {
                 parsedData = ConvertKV3ToObject(model.Data);
@@ -119,11 +135,14 @@ public static partial class MetadataExtractor
                     if (attachments.Count > 0)
                         root["attachments"] = attachments;
                 }
+
+                if (agent != null && parsedData is Dictionary<string, object?> agentRoot)
+                    agentExport = ApplyAgentModelData(ctx, model, agentRoot, agent);
             }
 
             var filename = Path.GetFileNameWithoutExtension(targetFilename).Replace(".glb", "") + ".json";
             results.Add(new ModelMetadataResult(
-                parsedData, ExtractClothCollider(resource), filename, materials));
+                parsedData, ExtractClothCollider(resource), filename, materials, agentExport));
         }
 
         return results;
@@ -494,7 +513,7 @@ public static partial class MetadataExtractor
         double.TryParse(
             value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out result);
 
-    private static KVObject? GetRootKvObject(Resource resource) => resource.DataBlock switch
+    public static KVObject? GetRootKvObject(Resource resource) => resource.DataBlock switch
     {
         KeyValuesOrNTRO kv => kv.Data,
         BinaryKV3 binkv => binkv.Data.Root,

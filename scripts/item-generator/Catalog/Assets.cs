@@ -134,7 +134,8 @@ public static class CatalogAssets
         return filename;
     }
 
-    public static string? GetModel(ItemGeneratorContext ctx, string? path, int? existingId = null)
+    public static string? GetModel(
+        ItemGeneratorContext ctx, string? path, int? existingId = null, AgentModelInfo? agent = null)
     {
         if (path == null) return null;
 
@@ -170,7 +171,8 @@ public static class CatalogAssets
             Crc = entry.Crc,
             ModelData = modelData,
             PlayerModel = playerModel,
-            DirectMaterials = []
+            DirectMaterials = [],
+            Agent = agent
         };
         return playerModel;
     }

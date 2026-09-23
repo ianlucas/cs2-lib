@@ -27,6 +27,14 @@ public static class MaterialPaths
         return $"stickers/{stickerMaterial}.vmat";
     }
 
+    // A patch's material, from items_game.txt's `patch_material` (e.g. "case01/patch_banana"). It is
+    // a csgo_character.vfx material dressing the patch_inspect model, and its `g_tPatch0` binding is
+    // the artwork the game composites onto an agent. See docs/patches.md.
+    public static string GetPatchMaterialPath(string patchMaterial)
+    {
+        return $"patches/{patchMaterial}.vmat";
+    }
+
     public static string ToCompiledMaterialResourcePath(string path)
     {
         var normalized = NormalizeMaterialResourcePath(path).ToLowerInvariant();

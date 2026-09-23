@@ -282,6 +282,16 @@ public record GraffitiImageTask(string LocalPath, string HexColor, string Provis
 public record SvgImageTask(string LocalPath, string Provisional, string FinalBase)
     : PendingImageTask(Provisional, FinalBase);
 
+/// <summary>
+/// What an AGENT model needs beyond any other model, and the marker that it is one.
+/// </summary>
+/// <param name="Team">"ct" or "t" — which inventory_pose subtree this agent's clip lives under.</param>
+/// <param name="PoseSequence">
+/// items_game.txt's `inventory_image_data.pose_sequence`, e.g. "cu_t_pose01". Null on an agent that
+/// names none, which leaves the model in its bind pose.
+/// </param>
+public record AgentModelInfo(string Team, string? PoseSequence);
+
 public record PendingModelTask
 {
     public string Base { get; init; } = "";
@@ -289,6 +299,10 @@ public record PendingModelTask
     public string ModelData { get; set; } = "";
     public string PlayerModel { get; set; } = "";
     public HashSet<string> DirectMaterials { get; init; } = [];
+    // Non-null only for agents. Agents take a different finalize path from every other model: their
+    // textures are embedded rather than stubbed, their first-person meshes are dropped, and their
+    // inventory pose is baked into the skeleton. See AssetProcessor.FinalizeModels.
+    public AgentModelInfo? Agent { get; init; }
 }
 
 public class ItemGeneratorContext
@@ -311,6 +325,9 @@ public class ItemGeneratorContext
     public HashSet<string> NeededVpkPaths { get; set; } = [];
     public Dictionary<string, PendingImageTask> ImagesToProcess { get; set; } = [];
     public Dictionary<string, PendingModelTask> ModelsToProcess { get; set; } = [];
+    // Agent-only export data (mesh keep list + inventory pose), keyed by the model's VPK path.
+    // Produced by the model metadata pass, consumed by FinalizeModels.
+    public Dictionary<string, GameFiles.AgentModelExport> AgentModelExports { get; set; } = [];
     public HashSet<string> CompositeMaterialsToProcess { get; set; } = [];
     public HashSet<string> MaterialsToProcess { get; set; } = [];
     public HashSet<string> TexturesToProcess { get; set; } = [];

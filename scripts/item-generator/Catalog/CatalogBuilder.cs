@@ -552,6 +552,7 @@ public static class CatalogBuilder
                 DefinitionIndex = 4609,
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, $"econ/patches/{patchMaterial}"),
+                MaterialPath = GetPatchMaterial(ctx, patchMaterial),
                 ParentId = parentId,
                 RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemKey, itemRarity]),
                 Type = CS2ItemType.Patch,
@@ -583,6 +584,11 @@ public static class CatalogBuilder
             var team = GetTeam(usedByClasses);
             var id = GetItemId(ctx, $"agent_{GetTeamsString(usedByClasses)}_{index}");
             var modelKey = playerModel.Replace("characters/models/", "").Replace(".vmdl", "");
+            // The pose the game renders this agent's inventory icon in. The clip is a standalone
+            // .vnmclip_c under animation/anims/ui_anims/inventory_pose/{ct,t}/, not an animation of
+            // the model, and it is baked into the published .glb's joints (InventoryPose).
+            var poseSequence = KvHelper.GetString(
+                KvHelper.GetChild(item, "inventory_image_data"), "pose_sequence");
 
             Translations.AddTranslation(ctx, id, "name", "#Type_CustomPlayer", " | ", itemName);
             Translations.AddTranslation(ctx, id, "description", itemDescription);
@@ -596,6 +602,8 @@ public static class CatalogBuilder
                 Id = id,
                 ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
                 ModelKey = modelKey,
+                ModelPath = CatalogAssets.GetModel(ctx, playerModel, id,
+                    new AgentModelInfo(team == CS2ItemTeam.CT ? "ct" : "t", poseSequence)),
                 RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [name, itemRarity]),
                 Team = (int)team,
                 Type = CS2ItemType.Agent,
@@ -1019,6 +1027,23 @@ public static class CatalogBuilder
         }
 
         return (category ?? "Valve", categoryToken);
+    }
+
+    // The patch's own material. Unlike a sticker's, it is not a composite: it is a plain
+    // csgo_character.vfx material whose `g_tPatch0` is the artwork, so the consumer reads that one
+    // binding out of the material JSON. See docs/patches.md.
+    private static string? GetPatchMaterial(ItemGeneratorContext ctx, string? patchMaterial)
+    {
+        if (ctx.Mode != ItemGeneratorMode.Full || patchMaterial == null) return null;
+        try
+        {
+            var resolvedPath = MaterialPaths.ResolveMaterialResourcePath(ctx,
+                MaterialPaths.GetPatchMaterialPath(patchMaterial));
+            var normalized = MaterialPaths.NormalizeMaterialResourcePath(resolvedPath);
+            ctx.MaterialsToProcess.Add(normalized);
+            return $"/materials/{MaterialPaths.GetIndexedVmatFilename(ctx, normalized)}";
+        }
+        catch { return null; }
     }
 
     private static string? GetStickerCompositeMaterial(ItemGeneratorContext ctx, string stickerMaterial)
