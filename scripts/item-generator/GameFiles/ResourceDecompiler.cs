@@ -218,6 +218,17 @@ public static class ResourceDecompiler
     /// </remarks>
     private const string AgentAnimationSentinel = "__cs2lib_skeleton_only__";
 
+    /// <summary>
+    /// How GltfModelExporter reports a material whose shader it could not read.
+    /// </summary>
+    /// <remarks>
+    /// The exporter swallows the failure and falls back to guessing channels from parameter names,
+    /// which for csgo_character.vfx packs an ORM of AO alone: roughness 1 and metalness 0 on every
+    /// agent surface. That shipped silently when CS2 moved its shaders to VCS version 72, which the
+    /// VRF of the day could not parse, so any such report fails the export instead.
+    /// </remarks>
+    private const string ShaderInputFailurePrefix = "Failed to get texture inputs";
+
     public static void DecompileModelAssets(
         ItemGeneratorContext ctx,
         IReadOnlyDictionary<string, PendingModelTask> models
@@ -279,6 +290,7 @@ public static class ResourceDecompiler
         // the same directory race on the shared PNG. Serialize per directory; models in distinct
         // directories (the common weapon case) still export fully in parallel.
         var exportDirLocks = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
+        var shaderInputFailures = new ConcurrentBag<string>();
         var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
         Parallel.ForEach(
             Partitioner.Create(work, loadBalance: true),
@@ -304,7 +316,7 @@ public static class ResourceDecompiler
 
                 var exporter = new GltfModelExporter(fileLoader)
                 {
-                    ProgressReporter = new Progress<string>(_ => { }),
+                    ProgressReporter = new ShaderInputFailureReporter(vpkPath, shaderInputFailures),
                     ExportMaterials = true,
                 };
                 if (models.TryGetValue(vpkPath, out var task) && task.Agent != null)
@@ -313,6 +325,31 @@ public static class ResourceDecompiler
                     exporter.Export(resource, glbPath);
             }
         );
+
+        if (!shaderInputFailures.IsEmpty)
+            throw new InvalidOperationException(
+                $"VRF could not read the shader inputs of {shaderInputFailures.Count} texture(s), so their "
+                    + "PBR channels would ship as defaults. Delete the affected .glb files from "
+                    + $"{Config.DecompiledDir} after fixing VRF.\n"
+                    + string.Join("\n", shaderInputFailures.Order(StringComparer.Ordinal).Take(20))
+            );
+    }
+
+    /// <summary>
+    /// Collects an export's shader input failures (see <see cref="ShaderInputFailurePrefix"/>).
+    /// </summary>
+    /// <remarks>
+    /// Synchronous on purpose: <see cref="Progress{T}"/> posts to the thread pool, so a report could
+    /// land after the failures have been checked.
+    /// </remarks>
+    private sealed class ShaderInputFailureReporter(string vpkPath, ConcurrentBag<string> failures)
+        : IProgress<string>
+    {
+        public void Report(string value)
+        {
+            if (value.StartsWith(ShaderInputFailurePrefix, StringComparison.Ordinal))
+                failures.Add($"  {vpkPath}: {value}");
+        }
     }
 
     private static void DecompileTexture(byte[] data, string vpkPath, string outDir)
