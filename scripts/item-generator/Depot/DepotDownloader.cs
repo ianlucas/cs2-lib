@@ -93,7 +93,18 @@ public static class DepotDownloaderService
         // chicken-and-egg (a model's archive must be read to learn its materials, whose
         // archives reveal textures, ...), so the needed set can't be computed up front.
         // Bulk-fetch the whole pak set; DownloadFiles skips archives already on disk.
+        // Model export also reads shaders to unpack material channels: VRF follows gameinfo.gi's
+        // search paths to each mod's shaders_vulkan VPK (csgo_character.vfx lives in csgo_core).
         if (ctx.Mode == ItemGeneratorMode.Full)
-            await DownloadFiles(["game/csgo/pak01_"], Config.WorkdirDir);
+            await DownloadFiles(
+                [
+                    "game/csgo/pak01_",
+                    "game/csgo/gameinfo.gi",
+                    "game/csgo/shaders_vulkan_",
+                    "game/csgo_core/shaders_vulkan_",
+                    "game/core/shaders_vulkan_",
+                ],
+                Config.WorkdirDir
+            );
     }
 }
