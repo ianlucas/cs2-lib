@@ -6,6 +6,7 @@
 using System.Collections.Concurrent;
 using SteamDatabase.ValvePak;
 using ValveResourceFormat;
+using ValveResourceFormat.CompiledShader;
 using ValveResourceFormat.IO;
 using ValveResourceFormat.TextureDecoders;
 using static ItemGenerator.Logging;
@@ -238,7 +239,8 @@ public static class ResourceDecompiler
             return;
         var vpkPaths = models.Keys;
         var package = ctx.VpkPackage;
-        var fileLoader = new GameFileLoader(package, package.FileName);
+        var shaderInputFailures = new ConcurrentBag<string>();
+        var fileLoader = new ShaderCheckingFileLoader(package, shaderInputFailures);
         var parallelism = Math.Max(2, Environment.ProcessorCount);
 
         // Resolve entries, compute glb output path, drop already-exported, in parallel.
@@ -290,7 +292,6 @@ public static class ResourceDecompiler
         // the same directory race on the shared PNG. Serialize per directory; models in distinct
         // directories (the common weapon case) still export fully in parallel.
         var exportDirLocks = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
-        var shaderInputFailures = new ConcurrentBag<string>();
         var po = new ParallelOptions { MaxDegreeOfParallelism = parallelism };
         Parallel.ForEach(
             Partitioner.Create(work, loadBalance: true),
@@ -328,11 +329,31 @@ public static class ResourceDecompiler
 
         if (!shaderInputFailures.IsEmpty)
             throw new InvalidOperationException(
-                $"VRF could not read the shader inputs of {shaderInputFailures.Count} texture(s), so their "
-                    + "PBR channels would ship as defaults. Delete the affected .glb files from "
-                    + $"{Config.DecompiledDir} after fixing VRF.\n"
+                $"VRF could not find or read {shaderInputFailures.Count} shader(s) or texture input(s), so "
+                    + "their PBR channels would ship as defaults. Delete the affected .glb files from "
+                    + $"{Config.DecompiledDir} after fixing the shader source or VRF.\n"
                     + string.Join("\n", shaderInputFailures.Order(StringComparer.Ordinal).Take(20))
             );
+    }
+
+    /// <summary>
+    /// Records shaders that no search path provides.
+    /// </summary>
+    /// <remarks>
+    /// VRF only logs a missing shader to stderr and the exporter then guesses channels the same way
+    /// as for an unreadable one (see <see cref="ShaderInputFailurePrefix"/>), which is how agents
+    /// kept shipping flat after the VCS 72 fix: CI had not downloaded any shader VPK.
+    /// </remarks>
+    private sealed class ShaderCheckingFileLoader(Package package, ConcurrentBag<string> failures)
+        : GameFileLoader(package, package.FileName)
+    {
+        protected override ShaderCollection LoadShaderFromDisk(string shaderName)
+        {
+            var collection = base.LoadShaderFromDisk(shaderName);
+            if (collection.Features == null)
+                failures.Add($"  {shaderName}: not found in any shader package");
+            return collection;
+        }
     }
 
     /// <summary>
