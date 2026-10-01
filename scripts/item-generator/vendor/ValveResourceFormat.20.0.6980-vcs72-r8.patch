@@ -1,0 +1,74 @@
+diff --git a/ValveResourceFormat/CompiledShader/Enums/VfxRegisterType.cs b/ValveResourceFormat/CompiledShader/Enums/VfxRegisterType.cs
+index 62c99dd..3e3b89c 100644
+--- a/ValveResourceFormat/CompiledShader/Enums/VfxRegisterType.cs
++++ b/ValveResourceFormat/CompiledShader/Enums/VfxRegisterType.cs
+@@ -19,5 +19,6 @@ public enum VfxRegisterType
+     PushConstantBuffer,
+     TextureIndex,
+     SamplerIndex,
++    SpecConstant,
+ #pragma warning restore CS1591
+ }
+diff --git a/ValveResourceFormat/CompiledShader/Enums/VfxRuleMethod.cs b/ValveResourceFormat/CompiledShader/Enums/VfxRuleMethod.cs
+index ebff90d..b221849 100644
+--- a/ValveResourceFormat/CompiledShader/Enums/VfxRuleMethod.cs
++++ b/ValveResourceFormat/CompiledShader/Enums/VfxRuleMethod.cs
+@@ -9,6 +9,7 @@ public enum VfxRuleMethod
+     Unknown = 0,
+     ChildOf,
+     Requires,
+-    AllowNum
++    AllowNum,
++    Suppress,
+ #pragma warning restore CS1591
+ }
+diff --git a/ValveResourceFormat/CompiledShader/Enums/VfxStaticComboSourceType.cs b/ValveResourceFormat/CompiledShader/Enums/VfxStaticComboSourceType.cs
+index e42c025..9ba2dde 100644
+--- a/ValveResourceFormat/CompiledShader/Enums/VfxStaticComboSourceType.cs
++++ b/ValveResourceFormat/CompiledShader/Enums/VfxStaticComboSourceType.cs
+@@ -20,5 +20,7 @@ public enum VfxStaticComboSourceType
+     __SET_BY_FEATURE_NE__,
+     S_EXECUTION_REORDERING,
+     S_SUPPORTS_DX_11_1,
++    S_GPU_VENDOR_ID,
++    S_GPU_DEVICE_ID,
+ #pragma warning restore CS1591
+ }
+diff --git a/ValveResourceFormat/CompiledShader/VfxProgramData.cs b/ValveResourceFormat/CompiledShader/VfxProgramData.cs
+index 489ae02..79e6ea8 100644
+--- a/ValveResourceFormat/CompiledShader/VfxProgramData.cs
++++ b/ValveResourceFormat/CompiledShader/VfxProgramData.cs
+@@ -573,7 +573,7 @@ private void UnserializeKV3ProgramData(KVObject data)
+         private static void ThrowIfNotSupported(int vcsFileVersion)
+         {
+             const int earliest = 59;
+-            const int latest = 71;
++            const int latest = 72;
+ 
+             if (vcsFileVersion < earliest || vcsFileVersion > latest)
+             {
+diff --git a/ValveResourceFormat/Resource/Enums/VTexFormat.cs b/ValveResourceFormat/Resource/Enums/VTexFormat.cs
+index f45f6d5..fa0e136 100644
+--- a/ValveResourceFormat/Resource/Enums/VTexFormat.cs
++++ b/ValveResourceFormat/Resource/Enums/VTexFormat.cs
+@@ -37,6 +37,7 @@ public enum VTexFormat
+         BGRA8888 = 28,
+         WEBP_RGBA8888 = 29,
+         WEBP_DXT5 = 30,
++        R8_UNORM = 33,
+ #pragma warning restore CS1591
+     }
+ }
+diff --git a/ValveResourceFormat/Resource/ResourceTypes/Texture.cs b/ValveResourceFormat/Resource/ResourceTypes/Texture.cs
+index cc48232..c57fe85 100644
+--- a/ValveResourceFormat/Resource/ResourceTypes/Texture.cs
++++ b/ValveResourceFormat/Resource/ResourceTypes/Texture.cs
+@@ -795,6 +795,8 @@ private ITextureDecoder CreateDecoder(uint mipLevel)
+ 
+                 // Simple colors
+                 VTexFormat.I8 => new DecodeI8(),
++                // CS2 recompiles its I8 textures to this with the same single 8-bit plane.
++                VTexFormat.R8_UNORM => new DecodeI8(),
+                 VTexFormat.RGBA8888 => new DecodeRGBA8888(),
+                 VTexFormat.R16 => new DecodeR16(),
+                 VTexFormat.RG1616 => new DecodeRG1616(),
