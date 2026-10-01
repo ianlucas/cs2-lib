@@ -76,9 +76,10 @@ public static partial class Config
     // is offered and kept alive with.
     public const string PetLoadoutSlot = "pet";
 
-    // Pets have no authored inventory icon -- the client renders them live -- so every pet without
-    // one shares this image. It is one of 30 `pet_hen_1_hen_catalan_*` icons the game ships that
-    // nothing references, all of the same brown hen.
+    // Pets have no authored inventory icon -- the client renders them live -- so a pet is given a
+    // render in scripts/images, and one without it takes this image. It is one of 30
+    // `pet_hen_1_hen_catalan_*` icons the game ships that nothing references, all of the same
+    // brown hen.
     public const string PetPlaceholderImage =
         "econ/default_generated/pet_hen_1_hen_catalan_tan_light";
 

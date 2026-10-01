@@ -513,10 +513,7 @@ public static class CatalogBuilder
                 {
                     DefinitionIndex = int.Parse(petIndex),
                     Id = id,
-                    ImagePath = CatalogAssets.GetImage(
-                        ctx,
-                        FindPetImage(ctx, pedestalDisplayModel) ?? Config.PetPlaceholderImage
-                    ),
+                    ImagePath = GetPetImage(ctx, name, pedestalDisplayModel),
                     ModelPath = CatalogAssets.GetModel(
                         ctx,
                         pedestalDisplayModel,
@@ -546,8 +543,27 @@ public static class CatalogBuilder
         return string.Join(" ", words.Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
     }
 
-    // A pet definition names a model and no image. The egg is the one pet with an authored icon,
-    // and it is found through the item that shares its model: the egg as it is offered.
+    // A pet definition names a model and no image, so the image is the first of: the game's own
+    // icon, a render supplied in scripts/images under the definition's name, the shared placeholder.
+    private static string GetPetImage(
+        ItemGeneratorContext ctx,
+        string name,
+        string? pedestalDisplayModel
+    )
+    {
+        var authored = FindPetImage(ctx, pedestalDisplayModel);
+        if (authored != null)
+            return CatalogAssets.GetImage(ctx, authored);
+        if (
+            ctx.StaticAssets.TryGetValue($"/images/{name}.png", out var supplied)
+            && supplied != null
+        )
+            return supplied;
+        return CatalogAssets.GetImage(ctx, Config.PetPlaceholderImage);
+    }
+
+    // The egg is the one pet with an authored icon, and it is found through the item that shares
+    // its model: the egg as it is offered.
     private static string? FindPetImage(ItemGeneratorContext ctx, string? pedestalDisplayModel)
     {
         if (pedestalDisplayModel == null)
