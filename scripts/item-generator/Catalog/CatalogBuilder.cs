@@ -18,6 +18,7 @@ public static class CatalogBuilder
         ParsePaintKits(ctx);
         ParseMusicKits(ctx);
         ParseKeychains(ctx);
+        ParsePets(ctx);
         await ParseStickers(ctx);
         ParseGraffiti(ctx);
         ParsePatches(ctx);
@@ -462,6 +463,107 @@ public static class CatalogBuilder
         }
     }
 
+    // A pet is one `pet` item whose `pet id` attribute names a pet_definitions entry, so the entries
+    // are the catalog items -- the same shape as a keychain or a music kit. Life stages are not
+    // modelled: the egg and the chick are entries of their own, and a breed is always its hen.
+    private static void ParsePets(ItemGeneratorContext ctx)
+    {
+        var definitions = KvHelper.GetMergedSection(ctx.GameItems!, "pet_definitions").ToList();
+        if (definitions.Count == 0)
+            return;
+
+        var (petIndex, petItem) = KvHelper
+            .GetMergedSection(ctx.GameItems!, "items")
+            .Select(entry => (entry.Key, entry.Value))
+            .FirstOrDefault(entry => KvHelper.GetString(entry.Value, "name") == "pet");
+        if (petItem == null)
+            throw new InvalidOperationException("pet_definitions without a 'pet' item.");
+        var itemRarity = KvHelper.GetString(petItem, "item_rarity");
+
+        // Every breed shares one loc_name ("Pet Chicken"), and nothing localizes what tells them
+        // apart, so a name used more than once is suffixed with a label read off the schema key.
+        var sharedNames = definitions
+            .Select(entry => KvHelper.GetString(entry.Value, "loc_name"))
+            .GroupBy(locName => locName)
+            .Where(group => group.Key != null && group.Count() > 1)
+            .Select(group => group.Key!)
+            .ToHashSet();
+
+        foreach (var entry in definitions)
+        {
+            var index = entry.Key;
+            var name = KvHelper.GetString(entry.Value, "name") ?? "";
+            var locName = KvHelper.GetString(entry.Value, "loc_name");
+            var locDescription = KvHelper.GetString(entry.Value, "loc_description");
+            var pedestalDisplayModel = KvHelper.GetString(entry.Value, "pedestal_display_model");
+
+            if (!Translations.HasTranslation(ctx, locName))
+                continue;
+
+            var id = GetItemId(ctx, $"pet_{index}");
+            if (sharedNames.Contains(locName!))
+                Translations.AddTranslation(ctx, id, "name", locName, " | ", GetPetLabel(name));
+            else
+                Translations.AddTranslation(ctx, id, "name", locName);
+            Translations.TryAddTranslation(ctx, id, "description", locDescription);
+
+            AddItem(
+                ctx,
+                new CS2Item
+                {
+                    DefinitionIndex = int.Parse(petIndex),
+                    Id = id,
+                    ImagePath = CatalogAssets.GetImage(
+                        ctx,
+                        FindPetImage(ctx, pedestalDisplayModel) ?? Config.PetPlaceholderImage
+                    ),
+                    ModelPath = CatalogAssets.GetModel(
+                        ctx,
+                        pedestalDisplayModel,
+                        id,
+                        pet: new PetModelInfo(
+                            Config.PetScaleByDefinition.TryGetValue(index, out var scale)
+                                ? scale
+                                : null
+                        )
+                    ),
+                    RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [itemRarity, "rare"]),
+                    Type = CS2ItemType.Pet,
+                    VariantIndex = int.Parse(index),
+                }
+            );
+        }
+    }
+
+    // "chicken_catalana_01" -> "Catalana".
+    private static string GetPetLabel(string name)
+    {
+        var words = name.Split('_', StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (words.Count > 1 && words[^1].All(char.IsDigit))
+            words.RemoveAt(words.Count - 1);
+        if (words.Count > 1)
+            words.RemoveAt(0);
+        return string.Join(" ", words.Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
+    }
+
+    // A pet definition names a model and no image. The egg is the one pet with an authored icon,
+    // and it is found through the item that shares its model: the egg as it is offered.
+    private static string? FindPetImage(ItemGeneratorContext ctx, string? pedestalDisplayModel)
+    {
+        if (pedestalDisplayModel == null)
+            return null;
+        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "items"))
+        {
+            var attributes = KvHelper.GetChild(entry.Value, "attributes");
+            if (KvHelper.GetString(attributes, "pedestal display model") != pedestalDisplayModel)
+                continue;
+            var imageInventory = KvHelper.GetString(entry.Value, "image_inventory");
+            if (imageInventory != null && CatalogAssets.IsImageValid(ctx, imageInventory))
+                return imageInventory;
+        }
+        return null;
+    }
+
     private static async Task ParseStickers(ItemGeneratorContext ctx)
     {
         var parentId = CreateStub(
@@ -891,9 +993,18 @@ public static class CatalogBuilder
             var imageInventory = KvHelper.GetString(item, "image_inventory");
             var prefab = KvHelper.GetString(item, "prefab");
             var itemDescription = KvHelper.GetString(item, "item_description");
+            // The egg and the feed sit in the pet's loadout slot with no tool prefab and no
+            // econ/tools/ image, but a tool is what they are: things a pet is acquired and kept
+            // with. The `pet` item itself has no name or image of its own and is skipped here; it is
+            // ParsePets' to emit.
+            var isPetTool =
+                KvHelper.GetString(item, "flexible_loadout_slot") == Config.PetLoadoutSlot
+                && itemName != null
+                && imageInventory != null;
 
             if (
-                prefab != "recipe"
+                !isPetTool
+                && prefab != "recipe"
                 && (
                     itemName == null
                     || imageInventory == null
@@ -913,7 +1024,10 @@ public static class CatalogBuilder
 
             Collections.AddContainerItem(ctx, name, id);
             Translations.AddTranslation(ctx, id, "name", "#CSGO_Type_Tool", " | ", itemName);
-            Translations.AddTranslation(ctx, id, "description", itemDescription);
+            if (isPetTool)
+                Translations.TryAddTranslation(ctx, id, "description", itemDescription);
+            else
+                Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             AddItem(
                 ctx,
@@ -923,6 +1037,20 @@ public static class CatalogBuilder
                     Id = id,
                     ImagePath = CatalogAssets.GetImage(ctx, image),
                     IsDefault = baseitem == "1" ? true : null,
+                    ModelPath = isPetTool
+                        ? CatalogAssets.GetModel(
+                            ctx,
+                            KvHelper.GetString(
+                                KvHelper.GetChild(item, "attributes"),
+                                "pedestal display model"
+                            ),
+                            id,
+                            // The feed bag's mesh groups are its three bag variants, drawn in the
+                            // same place and picked by the item's `pet seed`. The tool is inert
+                            // and unseeded, so it ships the default bag alone.
+                            defaultMeshGroupOnly: true
+                        )
+                        : null,
                     RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
                     Type = CS2ItemType.Tool,
                     VariantIndex = null,
@@ -1167,6 +1295,7 @@ public static class CatalogBuilder
         item.StickerOffsetYMax ??= previous.StickerOffsetYMax;
         item.StickerOffsetYMin ??= previous.StickerOffsetYMin;
         item.StickerSchemaCount ??= previous.StickerSchemaCount;
+        item.StyleCount ??= previous.StyleCount;
     }
 
     private static int CreateStub(

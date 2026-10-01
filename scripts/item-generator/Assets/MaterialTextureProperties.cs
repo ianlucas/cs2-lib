@@ -25,7 +25,7 @@ namespace ItemGenerator;
 //
 // Shaders sourced (the [bracket] tags, each a csgo_*.vfx): customweapon, composite_inputs, weapon,
 // weapon_sticker, customglove(+preview), textile_layer, character, simple, simple_liquid,
-// unlitgeneric, composite_generic.
+// unlitgeneric, composite_generic, environment.
 //
 // Format legend (CS2 VTEX_FORMAT):
 //   BC7      4-channel block (carries RGB or RGBA)     DXT1    RGB (+1-bit A) block
@@ -50,6 +50,10 @@ public static class MaterialTextureProperties
         // [customweapon/composite_inputs] BC7 RGBA sRGB: R=cavity, G=ambient occlusion, A=no-paint mask.
         // [weapon/weapon_sticker/character/simple] BC4 R: plain AO. Ambient occlusion / cavity.
         "g_tAmbientOcclusion",
+        // BC5 RG [character]. Roughness along the two anisotropy axes (F_ANISOTROPIC_GLOSS). Generated
+        // by the compiler from the normal map, and exported verbatim rather than through the HemiOct
+        // decode its dependencies would otherwise select — see TextureCodecPolicy.IsAnisoRoughness.
+        "g_tAnisoGloss",
         // BC4 R [character]. Blood-application mask.
         "g_tBloodMask",
         // BC7 RGBA sRGB [customweapon]. Color-ramp LUT: remaps wear/durability to a case-hardening tint.
@@ -57,6 +61,9 @@ public static class MaterialTextureProperties
         // [customweapon/composite/weapon] BC7 RGBA sRGB: RGB albedo (+A). [sticker/character/unlit]
         // DXT1 RGB. [simple/character] BC7 RGB + A=AO|metalness|translucency. Base color / albedo.
         "g_tColor",
+        // BC7 RGBA [environment]. Layer-1 albedo of the blend-layered prop shader. A is a live plane
+        // on the one file bound today (0..255); what it holds is not confirmed.
+        "g_tColor1",
         // BC7 [simple_liquid]: RGB=color (sRGB), A=metalness. Liquid layer-A albedo+metalness.
         "g_tColorA",
         // BC4 R [customglove(+preview)/textile]. Per-material damage height (stored inverted).
@@ -127,6 +134,9 @@ public static class MaterialTextureProperties
         "g_tGrunge3",
         // BC7 RGBA [customglove]. Per-material grunge — as g_tGrunge1.
         "g_tGrunge4",
+        // BC7 [environment]. Layer-1 height, which the shader blends its layers by. Only the 4x4 engine
+        // default is bound today.
+        "g_tHeight1",
         // BC7 RGB sRGB [weapon_sticker/weapon]. Holographic spectrum gradient (view-angle rainbow).
         "g_tHoloSpectrumSticker0",
         // BC7 RGB sRGB [weapon]. Holo spectrum — as g_tHoloSpectrumSticker0.
@@ -137,6 +147,10 @@ public static class MaterialTextureProperties
         "g_tHoloSpectrumSticker3",
         // BC7 RGB sRGB [weapon]. Holo spectrum — as g_tHoloSpectrumSticker0.
         "g_tHoloSpectrumSticker4",
+        // BC7 [character]. Thin-film iridescence (F_IRIDESCENCE): the film thickness and the mask it is
+        // applied through. Which channels hold which is not confirmed; on every file bound today G is
+        // the only live plane, R is a constant 127..130 and B and A are 0..1.
+        "g_tIridescentThickness_Mask",
         // BC7 RGB [customglove(+preview)]. Object material-id map: picks which layer material per texel.
         "g_tLayerId",
         // BC7 RGBA [customglove]. Per-layer blend masks.
@@ -155,6 +169,8 @@ public static class MaterialTextureProperties
         // [weapon/customweapon/customglove/textile] BC5 HemiOct(RG) normal. [character/simple/weapon_sticker]
         // BC7 RG=normal +isoRough(B). Tangent-space normal (with packed roughness in the 4-channel form).
         "g_tNormal",
+        // BC7 [environment]: RG=hemi-oct normal, +isoRough(B). Layer-1 normal.
+        "g_tNormal1",
         // BC7 [simple_liquid]: RG=hemi-oct normal, +isoRough(B). Liquid layer-A normal.
         "g_tNormalA",
         // BC7 [weapon_sticker/weapon]: RG=hemi-oct normal, +isoRough(B), A=self-illum mask. Sticker normal.

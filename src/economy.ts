@@ -6,6 +6,8 @@
 import {
     CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX,
     CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX,
+    CS2_CHICKEN_EGG_TOOL_DEFINITION_INDEX,
+    CS2_CHICKEN_FEED_TOOL_DEFINITION_INDEX,
     CS2_CONTAINER_ITEMS,
     CS2_CONTRACT_TOOL_DEFINITION_INDEX,
     CS2_DISPLAY_ITEMS,
@@ -20,6 +22,7 @@ import {
     CS2_MAX_GRAFFITI_CHARGES,
     CS2_MAX_KEYCHAIN_SEED,
     CS2_MAX_MINIMAL_WEAR_WEAR,
+    CS2_MAX_PET_SEED,
     CS2_MAX_SEED,
     CS2_MAX_STATTRAK,
     CS2_MAX_STICKERS,
@@ -28,6 +31,8 @@ import {
     CS2_MIDTIER_LOADOUT_CATEGORIES,
     CS2_MIN_CHARGES,
     CS2_MIN_KEYCHAIN_SEED,
+    CS2_MIN_PET_SEED,
+    CS2_MIN_PET_STYLE,
     CS2_MIN_SEED,
     CS2_MIN_STATTRAK,
     CS2_MIN_WEAR,
@@ -37,6 +42,7 @@ import {
     CS2_NAMETAG_TOOL_DEFINITION_INDEX,
     CS2_PAINTABLE_ITEMS,
     CS2_PATCHABLE_ITEMS,
+    CS2_PET_EGG_VARIANT_INDEX,
     CS2_RIFLE_LOADOUT_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODEL_KEYS,
@@ -189,6 +195,20 @@ export class CS2EconomyInstance {
 
     safeValidateSeed(seed?: number, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateSeed(seed, item));
+    }
+
+    validateStyle(style?: number, item?: CS2EconomyItem): boolean {
+        if (style === undefined) {
+            return true;
+        }
+        assert(Number.isInteger(style));
+        assert(style >= CS2_MIN_PET_STYLE);
+        assert(item === undefined || (item.hasStyle() && style <= item.getStyleCount()));
+        return true;
+    }
+
+    safeValidateStyle(style?: number, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateStyle(style, item));
     }
 
     trimNameTag(nameTag?: string): string | undefined {
@@ -370,6 +390,7 @@ export class CS2EconomyItem implements Interface<
     stickerOffsetYMax: number | undefined;
     stickerOffsetYMin: number | undefined;
     stickerSchemaCount: number | undefined;
+    styleCount: number | undefined;
     team: CS2ItemTeam | undefined;
     tintIndex: number | undefined;
     tournamentDescription: string | undefined;
@@ -530,6 +551,10 @@ export class CS2EconomyItem implements Interface<
         return this.type === CS2ItemType.Patch;
     }
 
+    isPet(): boolean {
+        return this.type === CS2ItemType.Pet;
+    }
+
     isSticker(): boolean {
         return this.type === CS2ItemType.Sticker;
     }
@@ -556,6 +581,22 @@ export class CS2EconomyItem implements Interface<
 
     isStatTrakSwapTool(): boolean {
         return this.isTool() && this.definitionIndex === CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX;
+    }
+
+    isChickenEgg(): boolean {
+        return this.isTool() && this.definitionIndex === CS2_CHICKEN_EGG_TOOL_DEFINITION_INDEX;
+    }
+
+    isChickenFeed(): boolean {
+        return this.isTool() && this.definitionIndex === CS2_CHICKEN_FEED_TOOL_DEFINITION_INDEX;
+    }
+
+    isPetEgg(): boolean {
+        return this.isPet() && this.variantIndex === CS2_PET_EGG_VARIANT_INDEX;
+    }
+
+    isNameablePet(): boolean {
+        return this.isPet() && !this.isPetEgg();
     }
 
     isContract(): boolean {
@@ -619,6 +660,11 @@ export class CS2EconomyItem implements Interface<
         return this;
     }
 
+    expectPet(): this {
+        assert(this.isPet());
+        return this;
+    }
+
     expectSticker(): this {
         assert(this.isSticker());
         return this;
@@ -675,7 +721,11 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasNameTag(): boolean {
-        return CS2_NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit();
+        return CS2_NAMETAGGABLE_ITEMS.includes(this.type) || this.isStorageUnit() || this.isNameablePet();
+    }
+
+    hasStyle(): boolean {
+        return this.isPet() && this.getStyleCount() > 0;
     }
 
     hasStatTrak(): boolean {
@@ -752,11 +802,15 @@ export class CS2EconomyItem implements Interface<
     }
 
     getMinimumSeed(): number {
-        return this.isKeychain() ? CS2_MIN_KEYCHAIN_SEED : CS2_MIN_SEED;
+        return this.isKeychain() ? CS2_MIN_KEYCHAIN_SEED : this.isPet() ? CS2_MIN_PET_SEED : CS2_MIN_SEED;
     }
 
     getMaximumSeed(): number {
-        return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : CS2_MAX_SEED;
+        return this.isKeychain() ? CS2_MAX_KEYCHAIN_SEED : this.isPet() ? CS2_MAX_PET_SEED : CS2_MAX_SEED;
+    }
+
+    getStyleCount(): number {
+        return this.styleCount ?? 0;
     }
 
     getPreviewSeed(): number {

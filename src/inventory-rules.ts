@@ -104,6 +104,7 @@ export type CS2InventoryRuleName =
     | "itemCharges"
     | "itemSeed"
     | "itemStatTrak"
+    | "itemStyle"
     | "itemWear"
     | "keychainPositionX"
     | "keychainPositionY"
@@ -139,6 +140,10 @@ export const CS2_INVENTORY_RULES: Record<CS2InventoryRuleName, CS2InventoryRule<
                 ? clamp(Math.trunc(statTrak), CS2_MIN_STATTRAK, CS2_MAX_STATTRAK)
                 : undefined;
         }
+    },
+    itemStyle: {
+        check: (style, item) => item.economy.safeValidateStyle(style, item),
+        repair: (style, item) => (item.economy.safeValidateStyle(style, item) ? style : undefined)
     },
     itemWear: {
         check: (wear, item) => item.economy.safeValidateWear(wear, item),
@@ -357,13 +362,16 @@ export function isStorableInStorageUnit(
         !item.isStorageUnit() &&
         !item.isCharmDetachment() &&
         !item.isCharmDetachmentPack() &&
+        !item.isPet() &&
+        !item.isChickenEgg() &&
+        !item.isChickenFeed() &&
         (!item.hasCharges() || charges === undefined)
     );
 }
 
 export function checkInventoryItem(
     economy: CS2EconomyInstance,
-    { charges, id, keychains, nameTag, patches, seed, statTrak, stickers, storage, wear }: CS2BaseInventoryItem
+    { charges, id, keychains, nameTag, patches, seed, statTrak, stickers, storage, style, wear }: CS2BaseInventoryItem
 ): boolean {
     if (!economy.items.has(id)) {
         return false;
@@ -374,6 +382,7 @@ export function checkInventoryItem(
         CS2_INVENTORY_RULES.itemCharges.check(charges, item) &&
         CS2_INVENTORY_RULES.itemSeed.check(seed, item) &&
         CS2_INVENTORY_RULES.itemStatTrak.check(statTrak, item) &&
+        CS2_INVENTORY_RULES.itemStyle.check(style, item) &&
         economy.safeRequireNameTag(nameTag, item) &&
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&
@@ -534,6 +543,7 @@ export function repairInventoryItem(
     }
     item.seed = CS2_INVENTORY_RULES.itemSeed.repair(item.seed, economyItem);
     item.statTrak = CS2_INVENTORY_RULES.itemStatTrak.repair(item.statTrak, economyItem);
+    item.style = CS2_INVENTORY_RULES.itemStyle.repair(item.style, economyItem);
     item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
     if (
         item.charges === undefined &&

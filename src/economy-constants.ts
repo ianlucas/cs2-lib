@@ -31,6 +31,9 @@ export const CS2_MIN_STICKER_ROTATION = -180;
 export const CS2_MAX_STICKER_ROTATION = 180;
 export const CS2_MIN_KEYCHAIN_SEED = 1;
 export const CS2_MAX_KEYCHAIN_SEED = 100000;
+export const CS2_MIN_PET_SEED = 1;
+export const CS2_MAX_PET_SEED = 100000;
+export const CS2_MIN_PET_STYLE = 1;
 export const CS2_FALLBACK_PREVIEW_SEED = 50000;
 export const CS2_MAX_STICKERS = 5;
 export const CS2_MAX_PATCHES = 3;
@@ -51,20 +54,24 @@ export const CS2_NAMETAG_RE: RegExp = /^(?! )[\u{20}-\u{7e}\u{a0}-\u{10ffff}]{0,
 
 export const CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX = 4950;
 export const CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX = 65;
+export const CS2_CHICKEN_EGG_TOOL_DEFINITION_INDEX = 4948;
+export const CS2_CHICKEN_FEED_TOOL_DEFINITION_INDEX = 4949;
 export const CS2_CONTRACT_TOOL_DEFINITION_INDEX = 62;
 export const CS2_NAMETAG_TOOL_DEFINITION_INDEX = 1200;
 export const CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX = 1324;
 export const CS2_STICKER_SLAB_TOOL_DEFINITION_INDEX = 1355;
 export const CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX = 1201;
 
+export const CS2_PET_EGG_VARIANT_INDEX = 1;
+
 export const CS2_CONTAINER_ITEMS: CS2ItemType[] = [CS2ItemType.Container, CS2ItemType.Tool];
 export const CS2_DISPLAY_ITEMS: CS2ItemType[] = [CS2ItemType.Collectible, CS2ItemType.MusicKit];
-export const CS2_EQUIPMENT_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon, CS2ItemType.Agent, CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.MusicKit];
+export const CS2_EQUIPMENT_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon, CS2ItemType.Agent, CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Pet];
 export const CS2_GRAPHIC_ART_ITEMS: CS2ItemType[] = [CS2ItemType.Patch, CS2ItemType.Sticker, CS2ItemType.Graffiti, CS2ItemType.Keychain];
 export const CS2_NAMETAGGABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Melee, CS2ItemType.Weapon];
 export const CS2_PAINTABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
 export const CS2_PATCHABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent];
-export const CS2_SEEDABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon, CS2ItemType.Melee, CS2ItemType.Gloves, CS2ItemType.Keychain];
+export const CS2_SEEDABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon, CS2ItemType.Melee, CS2ItemType.Gloves, CS2ItemType.Keychain, CS2ItemType.Pet];
 export const CS2_STATTRAKABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit];
 export const CS2_STICKERABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];
 export const CS2_KEYCHAINABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];
