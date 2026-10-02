@@ -6,6 +6,7 @@
 using System.Text.RegularExpressions;
 using SteamKit2;
 using SteamKit2.CDN;
+using static ItemGenerator.Logging;
 
 namespace ItemGenerator.Depot;
 
@@ -19,30 +20,62 @@ public static class DepotDownloaderService
 {
     private const string DefaultBranch = "public";
 
+    private const int MaxAttempts = 5;
+
+    // Each attempt opens a fresh session, so a retry lands on another Steam server. Downloads
+    // skip files already on disk, so a retried download resumes where the last one stopped.
+    private static async Task WithSession(Func<SteamSession, Task> action)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var session = new SteamSession();
+                await session.ConnectAnonymous();
+                await action(session);
+                return;
+            }
+            catch (Exception ex) when (attempt < MaxAttempts)
+            {
+                var delay = TimeSpan.FromSeconds(5 * Math.Pow(2, attempt - 1));
+                Log(
+                    $"Steam attempt {attempt}/{MaxAttempts} failed ({ex.Message}); retrying in {delay.TotalSeconds:F0}s..."
+                );
+                await Task.Delay(delay);
+            }
+        }
+    }
+
     public static async Task<string> FetchLatestManifestId()
     {
-        using var session = new SteamSession();
-        await session.ConnectAnonymous();
-        var manifestId = await session.GetDepotManifestId(
-            Config.AppId,
-            Config.AssetsDepotId,
-            DefaultBranch
-        );
+        var manifestId = 0UL;
+        await WithSession(async session =>
+        {
+            manifestId = await session.GetDepotManifestId(
+                Config.AppId,
+                Config.AssetsDepotId,
+                DefaultBranch
+            );
+        });
         return manifestId.ToString();
     }
 
     public static async Task DownloadFiles(List<string> files, string outputDir)
     {
+        // Full mode bulk-fetches the pak set up front, so most later requests name archives
+        // that are already on disk; those need no Steam session at all. Prefix filters never
+        // match a file here and always go to the depot manifest.
+        files = [.. files.Where(file => !File.Exists(Path.Combine(outputDir, file)))];
         if (files.Count == 0)
             return;
-        using var session = new SteamSession();
-        await session.ConnectAnonymous();
-        await session.DownloadDepotFiles(
-            Config.AppId,
-            Config.AssetsDepotId,
-            DefaultBranch,
-            files,
-            outputDir
+        await WithSession(session =>
+            session.DownloadDepotFiles(
+                Config.AppId,
+                Config.AssetsDepotId,
+                DefaultBranch,
+                files,
+                outputDir
+            )
         );
     }
 

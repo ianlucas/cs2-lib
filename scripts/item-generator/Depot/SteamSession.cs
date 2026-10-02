@@ -18,6 +18,8 @@ public sealed class SteamSession : IDisposable
     private readonly SteamContent _content;
     private bool _isConnected;
     private bool _isLoggedOn;
+    private bool _isDisconnected;
+    private EResult? _logOnResult;
     private readonly CancellationTokenSource _cts = new();
 
     public SteamSession()
@@ -33,10 +35,12 @@ public sealed class SteamSession : IDisposable
         {
             _isConnected = false;
             _isLoggedOn = false;
+            _isDisconnected = true;
         });
         _callbacks.Subscribe<SteamUser.LoggedOnCallback>(cb =>
         {
             _isLoggedOn = cb.Result == EResult.OK;
+            _logOnResult = cb.Result;
         });
     }
 
@@ -136,6 +140,11 @@ public sealed class SteamSession : IDisposable
             )
             .ToList();
 
+        string OutputPath(DepotManifest.FileData file) =>
+            Path.Combine(outputDir, file.FileName!.Replace('\\', '/'));
+
+        filesToDownload.RemoveAll(file => File.Exists(OutputPath(file)));
+
         var totalFiles = filesToDownload.Count;
         if (totalFiles > 0)
             Log($"Downloading {FormatCount(totalFiles, "file")}...");
@@ -148,32 +157,35 @@ public sealed class SteamSession : IDisposable
             await semaphore.WaitAsync();
             try
             {
-                var filePath = Path.Combine(outputDir, file.FileName!.Replace('\\', '/'));
-                if (File.Exists(filePath))
-                    return;
+                var filePath = OutputPath(file);
+                // A file that exists is treated as complete, so an interrupted download must
+                // not leave one behind under its final name.
+                var partialPath = $"{filePath}.partial";
 
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-                using var fs = File.Create(filePath);
-
-                foreach (var chunk in file.Chunks)
+                using (var fs = File.Create(partialPath))
                 {
-                    var chunkBuffer = new byte[chunk.UncompressedLength];
-                    await TryEachServer(
-                        orderedServers,
-                        server =>
-                            cdnClient.DownloadDepotChunkAsync(
-                                depotId,
-                                chunk,
-                                server,
-                                chunkBuffer,
-                                depotKey.DepotKey
-                            )
-                    );
-                    // Chunks are not enumerated in file-offset order, so seek to each
-                    // chunk's offset before writing or the output gets scrambled.
-                    fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
-                    fs.Write(chunkBuffer, 0, (int)chunk.UncompressedLength);
+                    foreach (var chunk in file.Chunks)
+                    {
+                        var chunkBuffer = new byte[chunk.UncompressedLength];
+                        await TryEachServer(
+                            orderedServers,
+                            server =>
+                                cdnClient.DownloadDepotChunkAsync(
+                                    depotId,
+                                    chunk,
+                                    server,
+                                    chunkBuffer,
+                                    depotKey.DepotKey
+                                )
+                        );
+                        // Chunks are not enumerated in file-offset order, so seek to each
+                        // chunk's offset before writing or the output gets scrambled.
+                        fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
+                        fs.Write(chunkBuffer, 0, (int)chunk.UncompressedLength);
+                    }
                 }
+                File.Move(partialPath, filePath, true);
             }
             finally
             {
@@ -215,6 +227,11 @@ public sealed class SteamSession : IDisposable
         while (!condition() && sw.ElapsedMilliseconds < timeoutMs)
         {
             _callbacks.RunWaitCallbacks(TimeSpan.FromMilliseconds(100));
+            // SteamKit never reconnects on its own, so waiting out the timeout is pointless.
+            if (_logOnResult is { } result && result != EResult.OK)
+                throw new IOException($"Steam logon failed: {result}.");
+            if (_isDisconnected)
+                throw new IOException("Steam disconnected.");
             await Task.Delay(50);
         }
         if (!condition())
