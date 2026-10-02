@@ -43,7 +43,7 @@ import { type Interface, type MapValue, type RecordValue, assert, ensure, roundT
 
 export const CS2_INVENTORY_TIMESTAMP = 1707696138408;
 // prettier-ignore
-export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Weapon];
+export const CS2_INVENTORY_EQUIPPABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent, CS2ItemType.Collectible, CS2ItemType.Gloves, CS2ItemType.Graffiti, CS2ItemType.Melee, CS2ItemType.MusicKit, CS2ItemType.Pet, CS2ItemType.Weapon];
 
 export function getTimestamp(): number {
     return Math.ceil((Date.now() - CS2_INVENTORY_TIMESTAMP) / 1000);
@@ -264,6 +264,7 @@ export class CS2Inventory {
         this.get(nameTagUid).expectNameTag();
         const renameable = this.economy.getById(id);
         assert(!renameable.isStorageUnit());
+        assert(!renameable.isPet());
         const trimmed = this.economy.trimNameTag(nameTag);
         assert(trimmed !== undefined);
         this.economy.requireNameTag(trimmed, renameable);
@@ -408,6 +409,7 @@ export class CS2Inventory {
         this.get(nameTagUid).expectNameTag();
         const renameable = this.get(renameableUid);
         assert(!renameable.isStorageUnit());
+        assert(!renameable.isPet());
         assert(nameTag === undefined || trimmed !== undefined);
         this.economy.requireNameTag(trimmed, renameable);
         renameable.nameTag = trimmed;
@@ -420,6 +422,7 @@ export class CS2Inventory {
     clearNameTag(renameableUid: number): this {
         const renameable = this.get(renameableUid);
         assert(!renameable.isStorageUnit());
+        assert(!renameable.isPet());
         assert(renameable.nameTag !== undefined);
         renameable.nameTag = undefined;
         renameable.updatedAt = getTimestamp();
@@ -435,6 +438,17 @@ export class CS2Inventory {
         this.economy.requireNameTag(trimmed);
         storageUnit.nameTag = trimmed;
         storageUnit.updatedAt = getTimestamp();
+        return this;
+    }
+
+    renamePet(petUid: number, nameTag: string): this {
+        const trimmed = this.economy.trimNameTag(nameTag);
+        const pet = this.get(petUid);
+        pet.expectPet();
+        assert(trimmed !== undefined);
+        this.economy.requireNameTag(trimmed, pet);
+        pet.nameTag = trimmed;
+        pet.updatedAt = getTimestamp();
         return this;
     }
 
@@ -750,7 +764,9 @@ export class CS2InventoryItem
     statTrak: number | undefined;
     stickers: Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined;
     storage: Map<number, CS2InventoryItem> | undefined;
+    style: number | undefined;
     updatedAt: number | undefined;
+    upgradeLevel: number | undefined;
     wear: number | undefined;
 
     static stickersToArray(
@@ -870,6 +886,10 @@ export class CS2InventoryItem
         return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
     }
 
+    getUpgradeLevel(): number | undefined {
+        return this.upgradeLevel ?? this.getDefaultUpgradeLevel();
+    }
+
     override getImageUrl(wear?: number): string {
         return super.getImageUrl(wear ?? this.getWear());
     }
@@ -940,7 +960,9 @@ export class CS2InventoryItem
                 this.storage !== undefined
                     ? Object.fromEntries(Array.from(this.storage).map(([key, value]) => [key, value.asBase()]))
                     : undefined,
+            style: this.style,
             updatedAt: this.updatedAt,
+            upgradeLevel: this.upgradeLevel,
             wear: this.wear
         } satisfies Interface<CS2BaseInventoryItem>;
     }

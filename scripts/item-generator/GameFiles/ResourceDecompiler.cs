@@ -8,6 +8,7 @@ using SteamDatabase.ValvePak;
 using ValveResourceFormat;
 using ValveResourceFormat.CompiledShader;
 using ValveResourceFormat.IO;
+using ValveResourceFormat.ResourceTypes;
 using ValveResourceFormat.TextureDecoders;
 using static ItemGenerator.Logging;
 
@@ -207,7 +208,8 @@ public static class ResourceDecompiler
     }
 
     /// <summary>
-    /// The animation name an AGENT export filters to, chosen so that it matches nothing.
+    /// The animation name an AGENT export filters to, chosen so that it matches nothing. A pet whose
+    /// own filter comes out empty falls back to it, since an empty filter means "everything".
     /// </summary>
     /// <remarks>
     /// An agent's .glb needs a SKELETON and no animations, and VRF only creates one when
@@ -322,6 +324,15 @@ public static class ResourceDecompiler
                 };
                 if (models.TryGetValue(vpkPath, out var task) && task.Agent != null)
                     exporter.AnimationFilter.Add(AgentAnimationSentinel);
+                // A pet's graph references far more than a viewer plays -- 87 clips on the chicken
+                // skeleton -- so it keeps only its idles and the pose sequences its proportions
+                // blend between.
+                if (task?.Pet != null && resource.DataBlock is Model petModel)
+                {
+                    exporter.AnimationFilter.UnionWith(PetModelData.GetAnimationFilter(petModel));
+                    if (exporter.AnimationFilter.Count == 0)
+                        exporter.AnimationFilter.Add(AgentAnimationSentinel);
+                }
                 lock (exportDirLocks.GetOrAdd(outDir, static _ => new object()))
                     exporter.Export(resource, glbPath);
             }

@@ -71,6 +71,42 @@ public static partial class Config
         "weapon_xm1014",
     ];
     public static readonly string[] PaintImageSuffixes = ["light", "medium", "heavy"];
+
+    // The loadout slot every pet item sits in: the owned `pet` itself plus the egg and the feed it
+    // is offered and kept alive with.
+    public const string PetLoadoutSlot = "pet";
+
+    // Pets have no authored inventory icon -- the client renders them live -- so a pet is given a
+    // render in scripts/images, and one without it takes this image. It is one of 30
+    // `pet_hen_1_hen_catalan_*` icons the game ships that nothing references, all of the same
+    // brown hen.
+    public const string PetPlaceholderImage =
+        "econ/default_generated/pet_hen_1_hen_catalan_tan_light";
+
+    // The clips kept on a pet model, by the animation graph it uses. Everything else the graph
+    // references (locomotion, tricks, the main-menu and photo-booth sets) is left out. They are
+    // named by full path because a leaf name is not unique: the chicken graph also references
+    // viewmodel/chicken/chick_idle01, which is a different clip.
+    public static readonly Dictionary<string, string[]> PetClipsByGraph = new()
+    {
+        ["animation/graphs/chicken/chicken.vnmgraph"] =
+        [
+            "animation/anims/chicken/world/chick_idle01",
+            "animation/anims/chicken/world/chick_idle02",
+            "animation/anims/chicken/world/chick_idle03",
+        ],
+        ["animation/graphs/chicken/egg_pristine_world.vnmgraph"] =
+        [
+            "animation/anims/egg/chick_egg_idle_phase02",
+            "animation/anims/egg/chick_egg_idle_phase03",
+            "animation/anims/egg/chick_egg_idle_phase04",
+        ],
+    };
+
+    // The client scales a pet model by its life stage: 1.0 egg, 0.25 chick, 0.6 pullet, 1.0 hen.
+    // The chick is the only catalog item it changes, because a breed is always exported as a hen
+    // and the chick model is authored at hen size. Keyed by pet_definitions index.
+    public static readonly Dictionary<string, double> PetScaleByDefinition = new() { ["2"] = 0.25 };
     public static readonly string[] UncategorizedStickers =
     [
         "community_mix01",

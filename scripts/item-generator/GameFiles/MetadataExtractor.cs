@@ -18,7 +18,8 @@ public record ModelMetadataResult(
     object? ClothCollider,
     string Filename,
     List<string> Materials,
-    AgentModelExport? Agent = null
+    AgentModelExport? Agent = null,
+    List<string>? KeepMeshes = null
 );
 
 /// <summary>
@@ -62,14 +63,19 @@ public static partial class MetadataExtractor
 
     public static List<ModelMetadataResult> ExtractModelMetadata(
         ItemGeneratorContext ctx,
-        List<(string VpkPath, string TargetFilename, AgentModelInfo? Agent)> entries
+        List<(
+            string VpkPath,
+            string TargetFilename,
+            AgentModelInfo? Agent,
+            bool DefaultMeshGroupOnly
+        )> entries
     )
     {
         var results = new List<ModelMetadataResult>();
         if (ctx.VpkPackage == null)
             return results;
 
-        foreach (var (vpkPath, targetFilename, agent) in entries)
+        foreach (var (vpkPath, targetFilename, agent, defaultMeshGroupOnly) in entries)
         {
             var entry = ctx.VpkPackage.FindEntry(vpkPath);
             if (entry == null)
@@ -96,6 +102,7 @@ public static partial class MetadataExtractor
 
             object? parsedData = null;
             AgentModelExport? agentExport = null;
+            List<string>? keepMeshes = null;
             if (resource.DataBlock is Model model)
             {
                 parsedData = ConvertKV3ToObject(model.Data);
@@ -182,6 +189,9 @@ public static partial class MetadataExtractor
 
                 if (agent != null && parsedData is Dictionary<string, object?> agentRoot)
                     agentExport = ApplyAgentModelData(ctx, model, agentRoot, agent);
+
+                if (defaultMeshGroupOnly && parsedData is Dictionary<string, object?> meshRoot)
+                    keepMeshes = ResolveDefaultMeshes(model, meshRoot);
             }
 
             var filename =
@@ -192,12 +202,47 @@ public static partial class MetadataExtractor
                     ExtractClothCollider(resource),
                     filename,
                     materials,
-                    agentExport
+                    agentExport,
+                    keepMeshes
                 )
             );
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// The meshes in the model's default mesh group, or null when that is all of them.
+    /// </summary>
+    /// <remarks>
+    /// m_refMeshGroupMasks is parallel to the model's mesh list, and a mesh is in the default group
+    /// when its mask shares a bit with m_nDefaultMeshGroupMask (see ResolveMeshGroups, which reads
+    /// the same pair for agents).
+    /// </remarks>
+    private static List<string>? ResolveDefaultMeshes(Model model, Dictionary<string, object?> root)
+    {
+        var masks = ParseMaskArray(root.GetValueOrDefault("m_refMeshGroupMasks"));
+        var defaultMask = ParseMask(root.GetValueOrDefault("m_nDefaultMeshGroupMask"));
+        var meshNames = model
+            .GetEmbeddedMeshesAndLoD()
+            .Select(m => (m.MeshIndex, m.Name))
+            .Concat(
+                model.GetReferenceMeshNamesAndLoD().Select(m => (m.MeshIndex, Name: m.MeshName))
+            )
+            .OrderBy(m => m.MeshIndex)
+            .ToList();
+
+        var keep = meshNames
+            .Where(m => m.MeshIndex < masks.Count && (masks[m.MeshIndex] & defaultMask) != 0)
+            .Select(m => m.Name)
+            .ToList();
+        if (keep.Count == meshNames.Count)
+            return null;
+        if (keep.Count == 0)
+            throw new InvalidOperationException(
+                $"No mesh of {model.Name} is in its default mesh group."
+            );
+        return keep;
     }
 
     public static List<CompositeMaterialMetadataResult> ExtractCompositeMaterialMetadata(

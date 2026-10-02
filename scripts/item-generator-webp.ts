@@ -28,9 +28,10 @@
  *   a charm rides the weapon shader, so its tiers are weapon (and two sticker) tiers ported to the
  *   keychain property with the same channel meaning. It needs no mechanism of its own -- it uses the
  *   weapon guards plus the glove flatPlaneGuard.
- * - kinds `character` and `patch`: the guarded tiers owned by CharacterTextureOptimization (an
- *   agent's embedded textures) and PatchTextureOptimization (patch artwork). Both are glove tier
- *   records and need no mechanism of their own.
+ * - kinds `character`, `patch` and `pet`: the guarded tiers owned by CharacterTextureOptimization
+ *   (an agent's embedded textures), PatchTextureOptimization (patch artwork) and
+ *   PetTextureOptimization (pet textures). All three are glove tier records and need no mechanism
+ *   of their own.
  *
  * A job with no descriptor takes the default lossless path below, so its bytes -- and filename hash
  * -- stay stable.
@@ -119,7 +120,7 @@ import sharp from "sharp";
  * floors do.
  */
 interface EncodeSpec {
-    kind?: "sticker" | "weapon" | "glove" | "keychain" | "character" | "patch";
+    kind?: "sticker" | "weapon" | "glove" | "keychain" | "character" | "patch" | "pet";
     mode: "lossless" | "lossy" | "nearLossless";
     quality?: number;
     stripAlpha?: boolean;
@@ -202,7 +203,8 @@ async function encode({ src, dest, encode: spec }: EncodeJob) {
             spec.kind === "glove" ||
             spec.kind === "keychain" ||
             spec.kind === "character" ||
-            spec.kind === "patch"
+            spec.kind === "patch" ||
+            spec.kind === "pet"
         ) {
             const { data, label } = await encodeGuarded(src, spec);
             await writeFile(dest, data);
@@ -894,7 +896,8 @@ const isGuarded = (job: EncodeJob): boolean =>
     job.encode?.kind === "glove" ||
     job.encode?.kind === "keychain" ||
     job.encode?.kind === "character" ||
-    job.encode?.kind === "patch";
+    job.encode?.kind === "patch" ||
+    job.encode?.kind === "pet";
 
 /**
  * Two pools rather than one, because a guarded job holds several full-resolution raw planes at once

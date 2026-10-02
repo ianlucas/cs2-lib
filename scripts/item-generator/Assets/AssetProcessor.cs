@@ -261,12 +261,19 @@ public static partial class AssetProcessor
                 PatchGlbAssets(ctx, glbPath);
                 StubModelTextures(glbPath);
             }
+            if (model.Pet != null)
+            {
+                RenamePetAnimations(glbPath);
+                WritePetModelData(ctx, vpkPath, model);
+            }
             stubbed.Add((vpkPath, model, glbPath));
         }
 
         // Compress geometry with EXT_meshopt_compression before hashing, so the version hash
         // reflects the compressed bytes.
-        await OptimizeGlbsMeshopt(stubbed.Select(s => s.GlbPath).ToList());
+        await OptimizeGlbsMeshopt(
+            stubbed.Select(s => (s.GlbPath, Flags: GetGlbFlags(ctx, s.VpkPath))).ToList()
+        );
 
         // Pass 2: hash, version, and move each compressed GLB into the output tree. The .glb, the
         // .json and the .collider.json share one token over every file's bytes so the set stays in
@@ -301,6 +308,95 @@ public static partial class AssetProcessor
         Log($"Processed {FormatCount(ctx.ModelsToProcess.Count, "model")}.");
     }
 
+    // VRF names an animation graph clip by its resource path ("animation/anims/chicken/world/
+    // chick_idle01"), which is how the export filter tells it from a same-named clip elsewhere in
+    // the graph. Once filtered the path has done its job, so a clip is published under its leaf
+    // name, the way the model's own sequences already are.
+    private static void RenamePetAnimations(string glbPath)
+    {
+        var model = ModelRoot.Load(glbPath);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        var renamed = false;
+        foreach (var animation in model.LogicalAnimations)
+        {
+            var name = animation.Name ?? "";
+            var leaf = name[(name.LastIndexOf('/') + 1)..];
+            if (!names.Add(leaf))
+                throw new InvalidOperationException(
+                    $"Pet model '{glbPath}' has two animations named '{leaf}'."
+                );
+            if (leaf == name)
+                continue;
+            animation.Name = leaf;
+            renamed = true;
+        }
+        if (renamed)
+            model.SaveGLB(glbPath);
+    }
+
+    // Adds a `pet` block to a pet's model data: `styles`, the published material files of each
+    // material group indexed by style (0 is the default group, and every entry lines up with the
+    // .glb's material slots in the default group's order), and `scale` when the client draws the
+    // model at other than 1. It runs here rather than when the model data is first written because
+    // a material's published name is its content hash, which does not exist until
+    // WriteMaterialMetadata has run -- and before the model is hashed, so the block is part of the
+    // version token.
+    private static void WritePetModelData(
+        ItemGeneratorContext ctx,
+        string vpkPath,
+        PendingModelTask model
+    )
+    {
+        ctx.PetPoseSequences[vpkPath] = [];
+        var modelDataPath = Path.Combine(Config.OutputDir, model.ModelData.TrimStart('/'));
+        if (!File.Exists(modelDataPath))
+            return;
+
+        Dictionary<string, object?> data;
+        using (var document = JsonDocument.Parse(File.ReadAllText(modelDataPath)))
+        {
+            if (ConvertJsonElement(document.RootElement) is not Dictionary<string, object?> parsed)
+                return;
+            data = parsed;
+        }
+
+        ctx.PetPoseSequences[vpkPath] = PetModelData.ReadPoseSequences(
+            (
+                data.GetValueOrDefault("m_modelInfo") as Dictionary<string, object?>
+            )?.GetValueOrDefault("m_keyValueText") as Dictionary<string, object?>
+        );
+
+        var pet = new Dictionary<string, object?>();
+        if (model.Pet?.Scale is { } scale)
+            pet["scale"] = scale;
+        if (PetModelData.ReadStyles(data) is { } styles)
+        {
+            pet["styles"] = styles
+                .Select(materials =>
+                    materials
+                        .Select(material =>
+                        {
+                            var resolved = MaterialPaths.ResolveMaterialResourcePath(ctx, material);
+                            return ctx.MaterialFilenameByPath.TryGetValue(
+                                resolved,
+                                out var filename
+                            )
+                                ? $"/materials/{filename}"
+                                : throw new InvalidOperationException(
+                                    $"Pet material '{material}' was not published."
+                                );
+                        })
+                        .ToList()
+                )
+                .ToList();
+        }
+        if (pet.Count == 0)
+            return;
+
+        data["pet"] = pet;
+        File.WriteAllText(modelDataPath, JsonSerializer.Serialize(data));
+    }
+
     // A model's cloth collider sits beside its model data under the same stem, so a consumer
     // derives the URL the same way it derives the model data's (economy.ts getColliderDataUrl).
     private static string ClothColliderPathOf(string modelDataPath) =>
@@ -310,7 +406,12 @@ public static partial class AssetProcessor
     {
         var entries = ctx
             .ModelsToProcess.Select(kv =>
-                (VpkPath: kv.Key, TargetFilename: kv.Value.PlayerModel, Agent: kv.Value.Agent)
+                (
+                    VpkPath: kv.Key,
+                    TargetFilename: kv.Value.PlayerModel,
+                    Agent: kv.Value.Agent,
+                    DefaultMeshGroupOnly: kv.Value.DefaultMeshGroupOnly
+                )
             )
             .ToList();
         var results = MetadataExtractor.ExtractModelMetadata(ctx, entries);
@@ -324,6 +425,8 @@ public static partial class AssetProcessor
 
             if (result.Agent != null)
                 ctx.AgentModelExports[vpkPath] = result.Agent;
+            if (result.KeepMeshes != null)
+                ctx.ModelKeepMeshes[vpkPath] = result.KeepMeshes;
 
             foreach (var material in result.Materials)
             {
@@ -410,6 +513,20 @@ public static partial class AssetProcessor
         Dictionary<string, object?> dataDict
     )
     {
+        // A pet's colour variants are the model's material groups. Only the count reaches the
+        // catalog, where it bounds an inventory item's style; the table is the model data's own
+        // `pet.styles` (WritePetModelData).
+        var pets = ctx
+            .Items.Values.Where(item =>
+                item.ModelPath == playerModelPath && item.Type == CS2ItemType.Pet
+            )
+            .ToList();
+        if (pets.Count > 0 && PetModelData.ReadStyles(dataDict) is { } styles)
+        {
+            foreach (var pet in pets)
+                pet.StyleCount = styles.Count - 1;
+        }
+
         if (
             dataDict.TryGetValue("m_modelInfo", out var modelInfoObj)
             && modelInfoObj is Dictionary<string, object?> modelInfo
@@ -829,7 +946,8 @@ public static partial class AssetProcessor
 
         // Per-property encode tiers, owned by StickerTextureOptimization (sticker textures),
         // WeaponTextureOptimization (weapon/knife textures), GloveTextureOptimization (glove textures),
-        // PatchTextureOptimization (patch artwork) and KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
+        // PatchTextureOptimization (patch artwork), PetTextureOptimization (pet textures) and
+        // KeychainTextureOptimization (charm textures). Each classifier drops any texture that is
         // also bound outside its own family, so a texture shared between two families is dropped by
         // both and stays lossless. The one place two scopes can still agree is a charm-only texture on
         // a property the weapon file targets too -- a charm material is a csgo_weapon.vfx material, and
@@ -879,6 +997,11 @@ public static partial class AssetProcessor
         Dictionary<string, GloveTextureTier> patchTiers = optimize
             ? PatchTextureOptimization.ResolveTextureTiers(ctx.MaterialDataByPath, ResolveTexture)
             : [];
+        // Keyed by resource path once more: the pet scope admits the shared character and prop
+        // shaders only under a pet model's material tree.
+        Dictionary<string, GloveTextureTier> petTiers = optimize
+            ? PetTextureOptimization.ResolveTextureTiers(ctx.MaterialDataByPath, ResolveTexture)
+            : [];
         // Composites are passed as never-keychain: the only one a charm reaches is the display case's
         // weapon paint composite, whose bindings must count as foreign (see KeychainTextureOptimization).
         Dictionary<string, KeychainTextureTier> keychainTiers = optimize
@@ -926,6 +1049,7 @@ public static partial class AssetProcessor
                     weaponTiers.TryGetValue(resolvedVtexPath, out var weaponTier) ? weaponTier
                     : gloveTiers.TryGetValue(resolvedVtexPath, out var gloveTier) ? gloveTier
                     : patchTiers.TryGetValue(resolvedVtexPath, out var patchTier) ? patchTier
+                    : petTiers.TryGetValue(resolvedVtexPath, out var petTier) ? petTier
                     : keychainTiers.TryGetValue(resolvedVtexPath, out var keychainTier)
                         ? keychainTier
                     : stickerTiers.TryGetValue(resolvedVtexPath, out var stickerTier)
@@ -1410,7 +1534,20 @@ public static partial class AssetProcessor
         }
     });
 
-    private static async Task OptimizeGlbsMeshopt(IReadOnlyList<string> glbPaths)
+    // The flags item-generator-glb.ts takes for this model; see that file. Most models take none.
+    private static List<string> GetGlbFlags(ItemGeneratorContext ctx, string vpkPath)
+    {
+        var flags = new List<string>();
+        if (ctx.ModelKeepMeshes.TryGetValue(vpkPath, out var keepMeshes))
+            flags.Add($"--keep-meshes={string.Join(",", keepMeshes)}");
+        if (ctx.PetPoseSequences.TryGetValue(vpkPath, out var poseSequences))
+            flags.Add($"--pose-sequences={string.Join(",", poseSequences)}");
+        return flags;
+    }
+
+    private static async Task OptimizeGlbsMeshopt(
+        IReadOnlyList<(string GlbPath, List<string> Flags)> glbPaths
+    )
     {
         if (glbPaths.Count == 0)
             return;
@@ -1427,12 +1564,12 @@ public static partial class AssetProcessor
         var compressed = 0;
         var lastMilestone = 0;
         await Task.WhenAll(
-            glbPaths.Select(async glbPath =>
+            glbPaths.Select(async glb =>
             {
                 await semaphore.WaitAsync();
                 try
                 {
-                    await OptimizeGlbMeshopt(script, glbPath);
+                    await OptimizeGlbMeshopt(script, glb.GlbPath, glb.Flags);
                 }
                 finally
                 {
@@ -1443,17 +1580,18 @@ public static partial class AssetProcessor
         );
     }
 
-    private static async Task OptimizeGlbMeshopt(string script, string glbPath)
+    private static async Task OptimizeGlbMeshopt(string script, string glbPath, List<string> flags)
     {
-        using var p = Process.Start(
-            new ProcessStartInfo("node")
-            {
-                ArgumentList = { "--import", "tsx", script, glbPath },
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-            }
-        );
+        var startInfo = new ProcessStartInfo("node")
+        {
+            ArgumentList = { "--import", "tsx", script, glbPath },
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (var flag in flags)
+            startInfo.ArgumentList.Add(flag);
+        using var p = Process.Start(startInfo);
         var err = await p!.StandardError.ReadToEndAsync();
         await p.WaitForExitAsync();
         if (p.ExitCode != 0)

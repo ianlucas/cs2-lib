@@ -25,6 +25,7 @@ export const CS2ItemType = {
     Melee: "melee",
     MusicKit: "musickit",
     Patch: "patch",
+    Pet: "pet",
     Sticker: "sticker",
     Stub: "stub",
     Tool: "tool",
@@ -112,6 +113,7 @@ export interface CS2Item {
     stickerOffsetYMax?: number | undefined;
     stickerOffsetYMin?: number | undefined;
     stickerSchemaCount?: number | undefined;
+    styleCount?: number | undefined;
     team?: CS2ItemTeam | undefined;
     tintIndex?: number | undefined;
     type: CS2ItemType;

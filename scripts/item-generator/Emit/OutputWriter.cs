@@ -70,6 +70,7 @@ public static class OutputWriter
                 StickerOffsetYMax = i.StickerOffsetYMax,
                 StickerOffsetYMin = i.StickerOffsetYMin,
                 StickerSchemaCount = i.StickerSchemaCount,
+                StyleCount = i.StyleCount,
                 Team = i.Team,
                 TintIndex = i.TintIndex,
                 Type = i.Type,

@@ -27,6 +27,7 @@ public static class CS2ItemType
     public const string Melee = "melee";
     public const string MusicKit = "musickit";
     public const string Patch = "patch";
+    public const string Pet = "pet";
     public const string Sticker = "sticker";
     public const string Stub = "stub";
     public const string Tool = "tool";
@@ -299,6 +300,11 @@ public class CS2Item
     ]
     public int? StickerSchemaCount { get; set; }
 
+    // How many alternate material groups a pet's model has. The table itself is the model data's
+    // `pet.styles`.
+    [JsonPropertyName("styleCount"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? StyleCount { get; set; }
+
     // The one CS2ItemTeam that may use this item; Both covers the pair.
     [JsonPropertyName("team"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Team { get; set; }
@@ -310,8 +316,8 @@ public class CS2Item
     [JsonPropertyName("type")]
     public string Type { get; set; } = CS2ItemType.Stub;
 
-    // The kit's key into whichever table defines it: paint_kits, sticker_kits, music_definitions
-    // or keychain_definitions.
+    // The kit's key into whichever table defines it: paint_kits, sticker_kits, music_definitions,
+    // keychain_definitions or pet_definitions.
     [
         JsonPropertyName("variantIndex"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
@@ -423,6 +429,15 @@ public record SvgImageTask(string LocalPath, string Provisional, string FinalBas
 /// </param>
 public record AgentModelInfo(string Team, string? PoseSequence);
 
+/// <summary>
+/// What a PET model needs beyond any other model, and the marker that it is one.
+/// </summary>
+/// <param name="Scale">
+/// The scale the client draws this model at, when it is not 1. Not in the game files: it is a
+/// table in the client keyed by life stage.
+/// </param>
+public record PetModelInfo(double? Scale);
+
 public record PendingModelTask
 {
     public string Base { get; init; } = "";
@@ -435,6 +450,16 @@ public record PendingModelTask
     // textures are embedded rather than stubbed, their first-person meshes are dropped, and their
     // inventory pose is baked into the skeleton. See AssetProcessor.FinalizeModels.
     public AgentModelInfo? Agent { get; init; }
+
+    // Non-null only for pets. A pet goes down the ordinary finalize path; this only narrows which
+    // animations are exported and adds a `pet` block to its model data.
+    public PetModelInfo? Pet { get; init; }
+
+    // Ship only the meshes of the model's default mesh group. A model normally ships every mesh
+    // and leaves the choice to the consumer -- a weapon's body_hd and body_legacy, a glove's first-
+    // and third-person arms. This is for a static prop whose mesh groups are alternatives drawn in
+    // the same place, where shipping all of them means drawing all of them.
+    public bool DefaultMeshGroupOnly { get; init; }
 }
 
 public class ItemGeneratorContext
@@ -465,6 +490,14 @@ public class ItemGeneratorContext
     // Agent-only export data (mesh keep list + inventory pose), keyed by the model's VPK path.
     // Produced by the model metadata pass, consumed by FinalizeModels.
     public Dictionary<string, GameFiles.AgentModelExport> AgentModelExports { get; set; } = [];
+
+    // Leaf mesh names a DefaultMeshGroupOnly model keeps, keyed by the model's VPK path. Absent
+    // when the model has nothing outside its default mesh group to drop.
+    public Dictionary<string, List<string>> ModelKeepMeshes { get; set; } = [];
+
+    // A pet model's pose sequence names, keyed by the model's VPK path. Present for every pet,
+    // empty for one with no body proportions (the egg). See WritePetModelData.
+    public Dictionary<string, List<string>> PetPoseSequences { get; set; } = [];
     public HashSet<string> CompositeMaterialsToProcess { get; set; } = [];
     public HashSet<string> MaterialsToProcess { get; set; } = [];
     public HashSet<string> TexturesToProcess { get; set; } = [];

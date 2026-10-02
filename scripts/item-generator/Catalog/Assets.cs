@@ -178,7 +178,9 @@ public static class CatalogAssets
         ItemGeneratorContext ctx,
         string? path,
         int? existingId = null,
-        AgentModelInfo? agent = null
+        AgentModelInfo? agent = null,
+        PetModelInfo? pet = null,
+        bool defaultMeshGroupOnly = false
     )
     {
         if (path == null)
@@ -213,6 +215,9 @@ public static class CatalogAssets
 
         var playerModel = $"/models/{baseName}_{entry.Crc}.glb";
         var modelData = $"/models/{baseName}_{entry.Crc}.json";
+        // A model can be asked for twice -- the egg is both a pet and the tool it is offered as --
+        // and the second caller need not know it is a pet's.
+        ctx.ModelsToProcess.TryGetValue(vpkPath, out var pending);
         ctx.ModelsToProcess[vpkPath] = new PendingModelTask
         {
             Base = baseName,
@@ -221,6 +226,8 @@ public static class CatalogAssets
             PlayerModel = playerModel,
             DirectMaterials = [],
             Agent = agent,
+            Pet = pet ?? pending?.Pet,
+            DefaultMeshGroupOnly = defaultMeshGroupOnly || pending?.DefaultMeshGroupOnly == true,
         };
         return playerModel;
     }
