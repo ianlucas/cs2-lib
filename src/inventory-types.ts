@@ -38,7 +38,9 @@ export interface CS2BaseInventoryItem {
         }
     >;
     storage?: Record<number, CS2BaseInventoryItem>;
+    style?: number;
     updatedAt?: number;
+    upgradeLevel?: number;
     wear?: number;
 }
 
