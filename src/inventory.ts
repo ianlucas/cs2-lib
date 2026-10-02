@@ -766,6 +766,7 @@ export class CS2InventoryItem
     storage: Map<number, CS2InventoryItem> | undefined;
     style: number | undefined;
     updatedAt: number | undefined;
+    upgradeLevel: number | undefined;
     wear: number | undefined;
 
     static stickersToArray(
@@ -885,6 +886,10 @@ export class CS2InventoryItem
         return this.wear ?? this.wearMin ?? CS2_MIN_WEAR;
     }
 
+    getUpgradeLevel(): number | undefined {
+        return this.upgradeLevel ?? this.getDefaultUpgradeLevel();
+    }
+
     override getImageUrl(wear?: number): string {
         return super.getImageUrl(wear ?? this.getWear());
     }
@@ -957,6 +962,7 @@ export class CS2InventoryItem
                     : undefined,
             style: this.style,
             updatedAt: this.updatedAt,
+            upgradeLevel: this.upgradeLevel,
             wear: this.wear
         } satisfies Interface<CS2BaseInventoryItem>;
     }

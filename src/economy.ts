@@ -42,7 +42,12 @@ import {
     CS2_NAMETAG_TOOL_DEFINITION_INDEX,
     CS2_PAINTABLE_ITEMS,
     CS2_PATCHABLE_ITEMS,
+    CS2_PET_BREED_UPGRADE_LEVELS,
+    CS2_PET_CHICK_UPGRADE_LEVELS,
+    CS2_PET_CHICK_VARIANT_INDEX,
+    CS2_PET_EGG_UPGRADE_LEVELS,
     CS2_PET_EGG_VARIANT_INDEX,
+    CS2_PET_UPGRADE_LEVELS,
     CS2_RIFLE_LOADOUT_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODEL_KEYS,
@@ -209,6 +214,18 @@ export class CS2EconomyInstance {
 
     safeValidateStyle(style?: number, item?: CS2EconomyItem): boolean {
         return safe(() => this.validateStyle(style, item));
+    }
+
+    validateUpgradeLevel(upgradeLevel?: number, item?: CS2EconomyItem): boolean {
+        if (upgradeLevel === undefined) {
+            return true;
+        }
+        assert((item?.getUpgradeLevels() ?? CS2_PET_UPGRADE_LEVELS).includes(upgradeLevel));
+        return true;
+    }
+
+    safeValidateUpgradeLevel(upgradeLevel?: number, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateUpgradeLevel(upgradeLevel, item));
     }
 
     trimNameTag(nameTag?: string): string | undefined {
@@ -595,6 +612,10 @@ export class CS2EconomyItem implements Interface<
         return this.isPet() && this.variantIndex === CS2_PET_EGG_VARIANT_INDEX;
     }
 
+    isPetChick(): boolean {
+        return this.isPet() && this.variantIndex === CS2_PET_CHICK_VARIANT_INDEX;
+    }
+
     isNameablePet(): boolean {
         return this.isPet() && !this.isPetEgg();
     }
@@ -728,6 +749,10 @@ export class CS2EconomyItem implements Interface<
         return this.isPet() && this.getStyleCount() > 0;
     }
 
+    hasUpgradeLevel(): boolean {
+        return this.isPet();
+    }
+
     hasStatTrak(): boolean {
         return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
@@ -811,6 +836,20 @@ export class CS2EconomyItem implements Interface<
 
     getStyleCount(): number {
         return this.styleCount ?? 0;
+    }
+
+    getUpgradeLevels(): number[] {
+        if (!this.isPet()) {
+            return [];
+        }
+        if (this.isPetEgg()) {
+            return CS2_PET_EGG_UPGRADE_LEVELS;
+        }
+        return this.isPetChick() ? CS2_PET_CHICK_UPGRADE_LEVELS : CS2_PET_BREED_UPGRADE_LEVELS;
+    }
+
+    getDefaultUpgradeLevel(): number | undefined {
+        return this.getUpgradeLevels().at(-1);
     }
 
     getPreviewSeed(): number {

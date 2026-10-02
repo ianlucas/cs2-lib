@@ -514,6 +514,7 @@ public static class CatalogBuilder
                     DefinitionIndex = int.Parse(petIndex),
                     Id = id,
                     ImagePath = GetPetImage(ctx, name, pedestalDisplayModel),
+                    ModelKey = pedestalDisplayModel?.Replace(".vmdl", ""),
                     ModelPath = CatalogAssets.GetModel(
                         ctx,
                         pedestalDisplayModel,

@@ -11,7 +11,12 @@ import {
     CS2_MAX_SEED,
     CS2_MIN_PET_SEED,
     CS2_NAMETAG_TOOL_DEFINITION_INDEX,
+    CS2_PET_CHICK_UPGRADE_LEVEL,
+    CS2_PET_CHICK_VARIANT_INDEX,
+    CS2_PET_EGG_UPGRADE_LEVEL,
     CS2_PET_EGG_VARIANT_INDEX,
+    CS2_PET_HEN_UPGRADE_LEVEL,
+    CS2_PET_PULLET_UPGRADE_LEVEL,
     CS2_STORAGE_UNIT_TOOL_DEFINITION_INDEX
 } from "./economy-constants.ts";
 import { CS2RarityColor } from "./economy-container.ts";
@@ -64,7 +69,7 @@ const economy = new CS2EconomyInstance();
 economy.load({
     items: [
         pet(EGG_ID, CS2_PET_EGG_VARIANT_INDEX),
-        pet(CHICK_ID, 2),
+        pet(CHICK_ID, CS2_PET_CHICK_VARIANT_INDEX),
         pet(CATALANA_ID, 3, CATALANA_STYLE_COUNT),
         pet(SILKIE_ID, 4, SILKIE_STYLE_COUNT),
         tool(CHICKEN_EGG_ID, CS2_CHICKEN_EGG_TOOL_DEFINITION_INDEX),
@@ -129,6 +134,31 @@ describe("pet economy items", () => {
         for (const id of [EGG_ID, CHICK_ID, CHICKEN_EGG_ID, WEAPON_ID]) {
             expect(economy.getById(id).hasStyle()).toBe(false);
             expect(economy.getById(id).getStyleCount()).toBe(0);
+        }
+    });
+
+    test("an upgrade level is the stage of what the pet is", () => {
+        expect(economy.getById(CHICK_ID).isPetChick()).toBe(true);
+        expect(economy.getById(EGG_ID).isPetChick()).toBe(false);
+        expect(economy.getById(CATALANA_ID).isPetChick()).toBe(false);
+        expect(economy.getById(EGG_ID).getUpgradeLevels()).toEqual([CS2_PET_EGG_UPGRADE_LEVEL]);
+        expect(economy.getById(CHICK_ID).getUpgradeLevels()).toEqual([CS2_PET_CHICK_UPGRADE_LEVEL]);
+        for (const id of [CATALANA_ID, SILKIE_ID]) {
+            expect(economy.getById(id).getUpgradeLevels()).toEqual([
+                CS2_PET_PULLET_UPGRADE_LEVEL,
+                CS2_PET_HEN_UPGRADE_LEVEL
+            ]);
+        }
+        expect(economy.getById(EGG_ID).getDefaultUpgradeLevel()).toBe(CS2_PET_EGG_UPGRADE_LEVEL);
+        expect(economy.getById(CHICK_ID).getDefaultUpgradeLevel()).toBe(CS2_PET_CHICK_UPGRADE_LEVEL);
+        expect(economy.getById(CATALANA_ID).getDefaultUpgradeLevel()).toBe(CS2_PET_HEN_UPGRADE_LEVEL);
+        for (const id of PETS) {
+            expect(economy.getById(id).hasUpgradeLevel()).toBe(true);
+        }
+        for (const id of [CHICKEN_EGG_ID, CHICKEN_FEED_ID, WEAPON_ID]) {
+            expect(economy.getById(id).hasUpgradeLevel()).toBe(false);
+            expect(economy.getById(id).getUpgradeLevels()).toEqual([]);
+            expect(economy.getById(id).getDefaultUpgradeLevel()).toBeUndefined();
         }
     });
 
@@ -208,6 +238,52 @@ describe("pet inventory rules", () => {
         }
     });
 
+    test("an upgrade level is one the pet allows", () => {
+        expect(checkInventoryItem(economy, { id: EGG_ID, upgradeLevel: 0 })).toBe(true);
+        expect(checkInventoryItem(economy, { id: CHICK_ID, upgradeLevel: 1 })).toBe(true);
+        expect(checkInventoryItem(economy, { id: CATALANA_ID, upgradeLevel: 2 })).toBe(true);
+        expect(checkInventoryItem(economy, { id: CATALANA_ID, upgradeLevel: 3 })).toBe(true);
+        expect(checkInventoryItem(economy, { id: EGG_ID, upgradeLevel: 1 })).toBe(false);
+        expect(checkInventoryItem(economy, { id: CHICK_ID, upgradeLevel: 3 })).toBe(false);
+        for (const upgradeLevel of [-1, 0, 1, 2.5, 4, Number.NaN]) {
+            expect(checkInventoryItem(economy, { id: CATALANA_ID, upgradeLevel })).toBe(false);
+        }
+    });
+
+    test("only a pet takes an upgrade level", () => {
+        for (const id of [CHICKEN_EGG_ID, CHICKEN_FEED_ID, WEAPON_ID]) {
+            for (const upgradeLevel of [0, 1, 2, 3]) {
+                expect(checkInventoryItem(economy, { id, upgradeLevel })).toBe(false);
+            }
+        }
+        expect(economy.validateUpgradeLevel(3)).toBe(true);
+        expect(economy.safeValidateUpgradeLevel(4)).toBe(false);
+    });
+
+    test("an upgrade level that is not valid is removed by repair, not clamped", () => {
+        for (const upgradeLevel of [-1, 1, 4, 2.5, Number.NaN]) {
+            const item: CS2BaseInventoryItem = { id: CATALANA_ID, upgradeLevel };
+            expect(repairInventoryItem(economy, item)).toBe(true);
+            expect(item.upgradeLevel).toBeUndefined();
+        }
+        const stray: CS2BaseInventoryItem = { id: WEAPON_ID, upgradeLevel: 3 };
+        expect(repairInventoryItem(economy, stray)).toBe(true);
+        expect(stray.upgradeLevel).toBeUndefined();
+        const valid: CS2BaseInventoryItem = { id: CATALANA_ID, upgradeLevel: 2 };
+        expect(repairInventoryItem(economy, valid)).toBe(true);
+        expect(valid.upgradeLevel).toBe(2);
+    });
+
+    test("the upgrade level rule repairs into what it checks", () => {
+        for (const id of [EGG_ID, CHICK_ID, CATALANA_ID, WEAPON_ID]) {
+            const item = economy.getById(id);
+            for (const upgradeLevel of [undefined, -1, 0, 1, 2, 3, 4, 2.5, Number.POSITIVE_INFINITY]) {
+                const repaired = CS2_INVENTORY_RULES.itemUpgradeLevel.repair(upgradeLevel, item);
+                expect(CS2_INVENTORY_RULES.itemUpgradeLevel.check(repaired, item)).toBe(true);
+            }
+        }
+    });
+
     test("a name is accepted on every pet but the egg", () => {
         expect(checkInventoryItem(economy, { id: CHICK_ID, nameTag: "Peep" })).toBe(true);
         expect(checkInventoryItem(economy, { id: CATALANA_ID, nameTag: "Henrietta" })).toBe(true);
@@ -254,6 +330,22 @@ describe("pet inventory operations", () => {
         expect(item.style).toBe(6);
         expect(() => inventory.add({ id: CATALANA_ID, style: CATALANA_STYLE_COUNT + 1 })).toThrow();
         expect(() => inventory.add({ id: CHICK_ID, style: 1 })).toThrow();
+    });
+
+    test("a pet without an upgrade level is at its default one", () => {
+        inventory.add({ id: EGG_ID });
+        inventory.add({ id: CHICK_ID });
+        inventory.add({ id: CATALANA_ID });
+        inventory.add({ id: SILKIE_ID, upgradeLevel: CS2_PET_PULLET_UPGRADE_LEVEL });
+        inventory.add({ id: WEAPON_ID });
+        expect(inventory.get(uidOf(inventory, EGG_ID)).getUpgradeLevel()).toBe(CS2_PET_EGG_UPGRADE_LEVEL);
+        expect(inventory.get(uidOf(inventory, CHICK_ID)).getUpgradeLevel()).toBe(CS2_PET_CHICK_UPGRADE_LEVEL);
+        expect(inventory.get(uidOf(inventory, CATALANA_ID)).upgradeLevel).toBeUndefined();
+        expect(inventory.get(uidOf(inventory, CATALANA_ID)).getUpgradeLevel()).toBe(CS2_PET_HEN_UPGRADE_LEVEL);
+        expect(inventory.get(uidOf(inventory, SILKIE_ID)).getUpgradeLevel()).toBe(CS2_PET_PULLET_UPGRADE_LEVEL);
+        expect(inventory.get(uidOf(inventory, WEAPON_ID)).getUpgradeLevel()).toBeUndefined();
+        expect(() => inventory.add({ id: CATALANA_ID, upgradeLevel: 1 })).toThrow();
+        expect(() => inventory.add({ id: WEAPON_ID, upgradeLevel: 3 })).toThrow();
     });
 
     test("any number of pets can be owned", () => {
@@ -352,6 +444,17 @@ describe("pet inventory operations", () => {
         expect(inventory.get(uid).style).toBe(9);
     });
 
+    test("edit writes a pet's upgrade level directly", () => {
+        inventory.add({ id: CATALANA_ID });
+        const uid = uidOf(inventory, CATALANA_ID);
+        inventory.edit(uid, { upgradeLevel: CS2_PET_PULLET_UPGRADE_LEVEL });
+        expect(inventory.get(uid).upgradeLevel).toBe(CS2_PET_PULLET_UPGRADE_LEVEL);
+        expect(() => inventory.edit(uid, { upgradeLevel: CS2_PET_CHICK_UPGRADE_LEVEL })).toThrow();
+        expect(inventory.get(uid).upgradeLevel).toBe(CS2_PET_PULLET_UPGRADE_LEVEL);
+        inventory.edit(uid, { upgradeLevel: undefined });
+        expect(inventory.get(uid).getUpgradeLevel()).toBe(CS2_PET_HEN_UPGRADE_LEVEL);
+    });
+
     test("nothing from the pet slot is deposited into a storage unit", () => {
         inventory.add({ id: STORAGE_UNIT_ID });
         const storage = uidOf(inventory, STORAGE_UNIT_ID);
@@ -364,12 +467,13 @@ describe("pet inventory operations", () => {
     });
 
     test("a pet survives a round trip through the serialized form", () => {
-        inventory.add({ id: CATALANA_ID, seed: 77777, style: 13, nameTag: "Henrietta" });
+        inventory.add({ id: CATALANA_ID, seed: 77777, style: 13, nameTag: "Henrietta", upgradeLevel: 2 });
         inventory.equip(uidOf(inventory, CATALANA_ID));
         const loaded = CS2Inventory.load(inventory.stringify(), { economy, ...noPolicy });
         const item = loaded.get(uidOf(loaded, CATALANA_ID));
         expect(item.seed).toBe(77777);
         expect(item.style).toBe(13);
+        expect(item.upgradeLevel).toBe(2);
         expect(item.nameTag).toBe("Henrietta");
         expect(item.equipped).toBe(true);
         expect(loaded.loadChanges?.dropped).toEqual([]);
