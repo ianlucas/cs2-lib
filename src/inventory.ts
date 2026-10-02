@@ -761,6 +761,7 @@ export class CS2InventoryItem
     nameTag: string | undefined;
     patches: Map<number, number> | undefined;
     seed: number | undefined;
+    souvenir: boolean | undefined;
     statTrak: number | undefined;
     stickers: Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined;
     storage: Map<number, CS2InventoryItem> | undefined;
@@ -954,6 +955,7 @@ export class CS2InventoryItem
             nameTag: this.nameTag,
             patches: this.patches !== undefined ? Object.fromEntries(this.patches) : undefined,
             seed: this.seed,
+            souvenir: this.souvenir,
             statTrak: this.statTrak,
             stickers: this.stickers !== undefined ? Object.fromEntries(this.stickers) : undefined,
             storage:

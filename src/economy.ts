@@ -51,6 +51,7 @@ import {
     CS2_RIFLE_LOADOUT_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODEL_KEYS,
+    CS2_SOUVENIRABLE_ITEMS,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX,
     CS2_STICKERABLE_ITEMS,
@@ -69,6 +70,7 @@ import {
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
     CS2_RARITY_ORDER,
+    CS2_SOUVENIR_HIGHLIGHT_ODD,
     CS2_STATTRAK_ODD,
     randomFloat,
     randomInt
@@ -82,6 +84,7 @@ import {
     type CS2ItemTranslationMap,
     CS2ItemType,
     CS2ItemWear,
+    type CS2SouvenirAttachments,
     CS2StatTrakMode,
     type CS2UnlockedItem
 } from "./economy-types.ts";
@@ -103,6 +106,19 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
                 item.teams.includes(predicate.usableByTeam))
         );
     };
+}
+
+function pick<T>(values: T[]): T {
+    return ensure(values[randomInt(0, values.length - 1)]);
+}
+
+function pickPair<T>(values: T[]): T[] {
+    if (values.length < 2) {
+        return [];
+    }
+    const first = randomInt(0, values.length - 1);
+    const second = (first + randomInt(1, values.length - 1)) % values.length;
+    return [ensure(values[first]), ensure(values[second])];
 }
 
 export class CS2EconomyInstance {
@@ -282,6 +298,19 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
+    validateSouvenir(souvenir?: boolean, item?: CS2EconomyItem): boolean {
+        if (souvenir === undefined) {
+            return true;
+        }
+        assert(souvenir === true);
+        assert(item === undefined || item.hasSouvenir());
+        return true;
+    }
+
+    safeValidateSouvenir(souvenir?: boolean, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateSouvenir(souvenir, item));
+    }
+
     validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
         containerItem = this.get(containerItem);
         containerItem.expectContainer();
@@ -399,6 +428,11 @@ export class CS2EconomyItem implements Interface<
     parentId: number | undefined;
     previewSeed: number | undefined;
     rarityColor: CS2RarityColor = null!;
+    souvenirEventStickerIds: number[] | undefined;
+    souvenirHighlightKeychainId: number | undefined;
+    souvenirHighlightTeamStickerIds: number[][] | undefined;
+    souvenirMapStickerId: number | undefined;
+    souvenirTeamStickerIds: number[][] | undefined;
     specialIds: number[] | undefined;
     specialsImagePath: string | undefined;
     statTrakMode: CS2StatTrakMode | undefined;
@@ -757,6 +791,10 @@ export class CS2EconomyItem implements Interface<
         return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
 
+    hasSouvenir(): boolean {
+        return CS2_SOUVENIRABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
+    }
+
     hasCharges(): boolean {
         return this.isGraffiti() || this.isCharmDetachment();
     }
@@ -937,9 +975,45 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
+    // The stickers run team, team, event, then the MVP's autograph or the map. A highlight is a
+    // playoff match, whose item also carries the event's charm.
+    rollSouvenirAttachments(options?: { highlight?: boolean }): CS2SouvenirAttachments {
+        assert(this.isSouvenirCase());
+        const teams = this.souvenirTeamStickerIds ?? [];
+        const matches = this.souvenirHighlightTeamStickerIds ?? [];
+        const highlight = matches.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD);
+        const match = highlight
+            ? pick(matches).map((stickerId) => ensure(teams.find((team) => team[0] === stickerId)))
+            : pickPair(teams);
+        const stickerIds = match.map((team) => ensure(team[0]));
+        const autographIds = match.flatMap((team) => team.slice(1));
+        if (this.souvenirEventStickerIds !== undefined) {
+            stickerIds.push(pick(this.souvenirEventStickerIds));
+        }
+        if (autographIds.length > 0) {
+            stickerIds.push(pick(autographIds));
+        }
+        if (this.souvenirMapStickerId !== undefined) {
+            stickerIds.push(this.souvenirMapStickerId);
+        }
+        const keychain =
+            highlight && this.souvenirHighlightKeychainId !== undefined
+                ? this.economy.getById(this.souvenirHighlightKeychainId)
+                : undefined;
+        return {
+            keychains:
+                keychain !== undefined
+                    ? { 0: { id: keychain.id, seed: randomInt(keychain.getMinimumSeed(), keychain.getMaximumSeed()) } }
+                    : undefined,
+            stickers:
+                stickerIds.length > 0 ? Object.fromEntries(stickerIds.map((id, slot) => [slot, { id }])) : undefined
+        };
+    }
+
     /** @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml */
     unlockContainer(options?: {
         computeOdds?: (rarities: (typeof CS2_RARITY_ORDER)[number][]) => number[] | undefined;
+        highlight?: boolean;
     }): CS2UnlockedItem {
         const contents = this.groupContents();
         const keys = Object.keys(contents);
@@ -959,12 +1033,15 @@ export class CS2EconomyItem implements Interface<
         }
         const stack = ensure(contents[rollRarity]);
         const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
+        const souvenir = this.isSouvenirCase() && unlocked.hasSouvenir();
         return {
             attributes: {
+                ...(souvenir ? this.rollSouvenirAttachments(options) : { keychains: undefined, stickers: undefined }),
                 containerId: this.id,
                 seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
+                souvenir: souvenir ? true : undefined,
                 statTrak:
-                    unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
+                    !souvenir && unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
                         ? this.statTrakMode === CS2StatTrakMode.Guaranteed || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
                             : undefined

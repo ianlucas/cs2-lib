@@ -257,6 +257,43 @@ public class CS2Item
     [JsonPropertyName("rarityColor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RarityColor { get; set; }
 
+    // The souvenir* fields below sit on a souvenir package and list what its item comes with. See
+    // Souvenirs.
+
+    // The event's stickers; the item takes one of them.
+    [
+        JsonPropertyName("souvenirEventStickerIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<int>? SouvenirEventStickerIds { get; set; }
+
+    // The charm an item from a playoff match carries.
+    [
+        JsonPropertyName("souvenirHighlightKeychainId"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public int? SouvenirHighlightKeychainId { get; set; }
+
+    // The playoff matches played on the package's map, each as its two team stickers.
+    [
+        JsonPropertyName("souvenirHighlightTeamStickerIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<List<int>>? SouvenirHighlightTeamStickerIds { get; set; }
+
+    [
+        JsonPropertyName("souvenirMapStickerId"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public int? SouvenirMapStickerId { get; set; }
+
+    // One entry per team at the event: its sticker, then the autographs of its players.
+    [
+        JsonPropertyName("souvenirTeamStickerIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<List<int>>? SouvenirTeamStickerIds { get; set; }
+
     [JsonPropertyName("specialIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? SpecialIds { get; set; }
 
@@ -387,6 +424,9 @@ public record PaintKitRecord(
 
 public record GraffitiTintRecord(string HexColor, int Id, string Name, string NameToken);
 
+// A sticker kit as the souvenir rules see it. TeamId is 0 on the organizer's own sticker.
+public record StickerKitRecord(int Id, string Name, int? EventId, int? TeamId, bool IsAutograph);
+
 // Image tasks carry a Provisional name (the CRC-derived name items reference at catalog time,
 // before any bytes exist) and a FinalBase; the final CDN name is computed after encoding as
 // `{FinalBase}_{contentHash8}{_FinalSuffix?}.webp` and recorded in ctx.AssetRenames.
@@ -514,6 +554,7 @@ public class ItemGeneratorContext
     public Dictionary<int, CS2Item> Items { get; set; } = [];
     public List<PaintKitRecord> PaintKits { get; set; } = [];
     public List<GraffitiTintRecord> GraffitiTints { get; set; } = [];
+    public List<StickerKitRecord> StickerKits { get; set; } = [];
     public int? KeychainParentId { get; set; }
 
     // The "keychain_37" (sticker display case slab) item id: the parent the per-sticker

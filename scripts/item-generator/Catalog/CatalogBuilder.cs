@@ -649,6 +649,15 @@ public static class CatalogBuilder
                 }
             );
             ctx.ItemNames[id] = $"sticker-{index}";
+            ctx.StickerKits.Add(
+                new StickerKitRecord(
+                    Id: id,
+                    Name: name,
+                    EventId: KvHelper.GetInt(sticker, "tournament_event_id"),
+                    TeamId: KvHelper.GetInt(sticker, "tournament_team_id"),
+                    IsAutograph: KvHelper.HasKey(sticker, "tournament_player_id")
+                )
+            );
 
             var keychainInventoryImage = $"econ/stickers/{stickerMaterial}_1355_37";
             var keychainId = GetItemId(ctx, $"keychain_37_{index}");
@@ -1225,32 +1234,50 @@ public static class CatalogBuilder
             var tagValue = KvHelper.GetString(itemSetTag, "tag_value");
             var (collection, collectionImage) = Collections.GetCollection(ctx, id, tagValue);
 
-            AddItem(
-                ctx,
-                new CS2Item
-                {
-                    CollectionImagePath = collectionImage,
-                    CollectionKey = collection,
-                    ContainerType = Collections.GetContainerType(containerName, contentsType),
-                    ContentIds = contentIds,
-                    DefinitionIndex = int.Parse(containerIndex),
-                    Id = id,
-                    ImagePath = containerImage,
-                    KeyIds = keyIds.Count > 0 ? keyIds : null,
-                    RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
-                    SpecialIds =
-                        specialIds.Count > 0 ? specialIds
-                        : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.SpecialIds
-                        : null,
-                    SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
-                    StatTrakMode = containsMusicKit
-                        ? containsStatTrak
-                            ? CS2StatTrakMode.Guaranteed
-                            : CS2StatTrakMode.Excluded
-                        : null,
-                    Type = CS2ItemType.Container,
-                }
-            );
+            var container = new CS2Item
+            {
+                CollectionImagePath = collectionImage,
+                CollectionKey = collection,
+                ContainerType = Collections.GetContainerType(containerName, contentsType),
+                ContentIds = contentIds,
+                DefinitionIndex = int.Parse(containerIndex),
+                Id = id,
+                ImagePath = containerImage,
+                KeyIds = keyIds.Count > 0 ? keyIds : null,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
+                SpecialIds =
+                    specialIds.Count > 0 ? specialIds
+                    : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.SpecialIds
+                    : null,
+                SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
+                StatTrakMode = containsMusicKit
+                    ? containsStatTrak
+                        ? CS2StatTrakMode.Guaranteed
+                        : CS2StatTrakMode.Excluded
+                    : null,
+                Type = CS2ItemType.Container,
+            };
+
+            var tournamentEventId = Souvenirs.GetEventId(ctx, item);
+            if (tournamentEventId != null && Souvenirs.IsPackage(ctx, item))
+            {
+                Souvenirs.Populate(
+                    ctx,
+                    container,
+                    item,
+                    tournamentEventId.Value,
+                    clientLootListKey
+                );
+                Translations.AddFormattedTranslation(
+                    ctx,
+                    id,
+                    "tournamentDescription",
+                    "#CSGO_Event_Desc",
+                    $"#CSGO_Tournament_Event_Name_{tournamentEventId}"
+                );
+            }
+
+            AddItem(ctx, container);
         }
     }
 

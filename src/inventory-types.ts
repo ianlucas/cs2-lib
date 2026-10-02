@@ -25,6 +25,7 @@ export interface CS2BaseInventoryItem {
     nameTag?: string;
     patches?: Record<string, number>;
     seed?: number;
+    souvenir?: boolean;
     statTrak?: number;
     stickers?: Record<
         string,

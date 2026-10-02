@@ -105,6 +105,11 @@ export interface CS2Item {
     parentId?: number | undefined;
     previewSeed?: number | undefined;
     rarityColor?: CS2RarityColor | undefined;
+    souvenirEventStickerIds?: number[] | undefined;
+    souvenirHighlightKeychainId?: number | undefined;
+    souvenirHighlightTeamStickerIds?: number[][] | undefined;
+    souvenirMapStickerId?: number | undefined;
+    souvenirTeamStickerIds?: number[][] | undefined;
     specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
     statTrakMode?: CS2StatTrakMode | undefined;
@@ -134,10 +139,16 @@ export interface CS2ItemTranslation {
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
 export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
+export interface CS2SouvenirAttachments {
+    keychains: Record<string, { id: number; seed: number }> | undefined;
+    stickers: Record<string, { id: number }> | undefined;
+}
+
 export interface CS2UnlockedItem {
-    attributes: {
+    attributes: CS2SouvenirAttachments & {
         containerId: number;
         seed: number | undefined;
+        souvenir: true | undefined;
         statTrak: number | undefined;
         wear: number | undefined;
     };

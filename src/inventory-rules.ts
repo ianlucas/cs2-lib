@@ -200,6 +200,13 @@ export function assertAddable(item: CS2EconomyItem): void {
     assert(checkAddable(item));
 }
 
+export function checkSouvenir(
+    { souvenir, statTrak }: Pick<CS2BaseInventoryItem, "souvenir" | "statTrak">,
+    item: CS2EconomyItem
+): boolean {
+    return item.economy.safeValidateSouvenir(souvenir, item) && (souvenir === undefined || statTrak === undefined);
+}
+
 export function checkAttachable(item: CS2EconomyItem): boolean {
     return item.isDefault !== true;
 }
@@ -384,6 +391,7 @@ export function checkInventoryItem(
         nameTag,
         patches,
         seed,
+        souvenir,
         statTrak,
         stickers,
         storage,
@@ -404,6 +412,7 @@ export function checkInventoryItem(
         CS2_INVENTORY_RULES.itemStyle.check(style, item) &&
         CS2_INVENTORY_RULES.itemUpgradeLevel.check(upgradeLevel, item) &&
         economy.safeRequireNameTag(nameTag, item) &&
+        checkSouvenir({ souvenir, statTrak }, item) &&
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&
         checkStickers(economy, stickers, item) &&
@@ -563,6 +572,9 @@ export function repairInventoryItem(
     }
     item.seed = CS2_INVENTORY_RULES.itemSeed.repair(item.seed, economyItem);
     item.statTrak = CS2_INVENTORY_RULES.itemStatTrak.repair(item.statTrak, economyItem);
+    if (!checkSouvenir(item, economyItem)) {
+        item.souvenir = undefined;
+    }
     item.style = CS2_INVENTORY_RULES.itemStyle.repair(item.style, economyItem);
     item.upgradeLevel = CS2_INVENTORY_RULES.itemUpgradeLevel.repair(item.upgradeLevel, economyItem);
     item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
