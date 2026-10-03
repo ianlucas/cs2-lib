@@ -471,7 +471,8 @@ describe("CS2Inventory methods", () => {
         expect(result1.equippedT).toBe(undefined);
         expect(result1.id).toBe(unlocked1.id);
         expect(result1.seed).toBe(unlocked1.attributes.seed);
-        expect(result1.statTrak).toBe(unlocked1.attributes.statTrak);
+        expect(result1.souvenir).toBe(true);
+        expect(result1.statTrak).toBe(undefined);
         expect(result1.uid).toBe(0);
         expect(result1.updatedAt).not.toBe(undefined);
         expect(result1.wear).toEqual(unlocked1.attributes.wear);

@@ -86,6 +86,7 @@ export const CS2_NAMETAGGABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Melee, CS2Item
 export const CS2_PAINTABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Gloves, CS2ItemType.Melee, CS2ItemType.Weapon];
 export const CS2_PATCHABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Agent];
 export const CS2_SEEDABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon, CS2ItemType.Melee, CS2ItemType.Gloves, CS2ItemType.Keychain, CS2ItemType.Pet];
+export const CS2_SOUVENIRABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];
 export const CS2_STATTRAKABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Melee, CS2ItemType.Weapon, CS2ItemType.MusicKit];
 export const CS2_STICKERABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];
 export const CS2_KEYCHAINABLE_ITEMS: CS2ItemType[] = [CS2ItemType.Weapon];

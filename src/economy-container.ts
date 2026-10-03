@@ -103,6 +103,7 @@ export const CS2RarityColorOrder: {
 export const CS2_RARITY_COLOR_DEFAULT = 0;
 export const CS2_BASE_ODD = 0.8;
 export const CS2_STATTRAK_ODD = 0.1;
+export const CS2_SOUVENIR_HIGHLIGHT_ODD = 0.1;
 
 export function randomFloat(min: number, max: number): number {
     return Math.random() * (max - min) + min;

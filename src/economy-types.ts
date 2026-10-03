@@ -20,6 +20,7 @@ export const CS2ItemType = {
     Container: "case",
     Gloves: "glove",
     Graffiti: "graffiti",
+    Highlight: "highlight",
     Key: "key",
     Keychain: "keychain",
     Melee: "melee",
@@ -105,6 +106,10 @@ export interface CS2Item {
     parentId?: number | undefined;
     previewSeed?: number | undefined;
     rarityColor?: CS2RarityColor | undefined;
+    souvenirEventStickerIds?: number[] | undefined;
+    souvenirHighlightIds?: number[] | undefined;
+    souvenirMapStickerId?: number | undefined;
+    souvenirTeamStickerIds?: number[][] | undefined;
     specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
     statTrakMode?: CS2StatTrakMode | undefined;
@@ -115,9 +120,11 @@ export interface CS2Item {
     stickerSchemaCount?: number | undefined;
     styleCount?: number | undefined;
     team?: CS2ItemTeam | undefined;
+    teamStickerIds?: number[] | undefined;
     tintIndex?: number | undefined;
     type: CS2ItemType;
     variantIndex?: number | undefined;
+    videoUrl?: string | undefined;
     wearMax?: number | undefined;
     wearMin?: number | undefined;
 }
@@ -134,10 +141,18 @@ export interface CS2ItemTranslation {
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
 export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
+export type CS2HighlightVideoResolution = "1080p" | "480p";
+
+export interface CS2SouvenirAttachments {
+    keychains: Record<string, { highlight: number; id: number }> | undefined;
+    stickers: Record<string, { id: number }> | undefined;
+}
+
 export interface CS2UnlockedItem {
-    attributes: {
+    attributes: CS2SouvenirAttachments & {
         containerId: number;
         seed: number | undefined;
+        souvenir: true | undefined;
         statTrak: number | undefined;
         wear: number | undefined;
     };

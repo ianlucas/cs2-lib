@@ -51,6 +51,7 @@ import {
     CS2_RIFLE_LOADOUT_CATEGORIES,
     CS2_SEEDABLE_ITEMS,
     CS2_SNIPER_RIFLE_MODEL_KEYS,
+    CS2_SOUVENIRABLE_ITEMS,
     CS2_STATTRAKABLE_ITEMS,
     CS2_STATTRAK_SWAP_TOOL_DEFINITION_INDEX,
     CS2_STICKERABLE_ITEMS,
@@ -69,6 +70,7 @@ import {
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
     CS2_RARITY_ORDER,
+    CS2_SOUVENIR_HIGHLIGHT_ODD,
     CS2_STATTRAK_ODD,
     randomFloat,
     randomInt
@@ -76,12 +78,14 @@ import {
 import {
     type CS2Bounds,
     CS2ContainerType,
+    type CS2HighlightVideoResolution,
     type CS2Item,
     CS2ItemTeam,
     type CS2ItemTranslation,
     type CS2ItemTranslationMap,
     CS2ItemType,
     CS2ItemWear,
+    type CS2SouvenirAttachments,
     CS2StatTrakMode,
     type CS2UnlockedItem
 } from "./economy-types.ts";
@@ -105,6 +109,19 @@ function filterItems(predicate: CS2EconomyItemPredicate): (item: CS2EconomyItem)
     };
 }
 
+function pick<T>(values: T[]): T {
+    return ensure(values[randomInt(0, values.length - 1)]);
+}
+
+function pickPair<T>(values: T[]): T[] {
+    if (values.length < 2) {
+        return [];
+    }
+    const first = randomInt(0, values.length - 1);
+    const second = (first + randomInt(1, values.length - 1)) % values.length;
+    return [ensure(values[first]), ensure(values[second])];
+}
+
 export class CS2EconomyInstance {
     baseUrl = "https://cdn.cstrike.app";
     categories: Set<string> = new Set<string>();
@@ -113,6 +130,7 @@ export class CS2EconomyInstance {
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
     private charmDetachment: CS2EconomyItem | undefined;
+    private highlights: Map<number, CS2EconomyItem[]> = new Map<number, CS2EconomyItem[]>();
     private stickerDisplayCases: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
 
     load({
@@ -130,6 +148,7 @@ export class CS2EconomyInstance {
         this.stickers.clear();
         this.itemsAsArray = [];
         this.charmDetachment = undefined;
+        this.highlights.clear();
         this.stickerDisplayCases.clear();
         for (const item of items) {
             const economyItem = new CS2EconomyItem(
@@ -146,6 +165,12 @@ export class CS2EconomyInstance {
             }
             if (economyItem.isStickerDisplayCase()) {
                 this.stickerDisplayCases.set(ensure(economyItem.displayedStickerId), economyItem);
+            }
+            if (economyItem.isHighlight()) {
+                const keychainId = ensure(economyItem.parentId);
+                const highlights = this.highlights.get(keychainId) ?? [];
+                highlights.push(economyItem);
+                this.highlights.set(keychainId, highlights);
             }
             this.itemsAsArray.push(economyItem);
         }
@@ -282,6 +307,33 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
+    validateSouvenir(souvenir?: boolean, item?: CS2EconomyItem): boolean {
+        if (souvenir === undefined) {
+            return true;
+        }
+        assert(souvenir === true);
+        assert(item === undefined || item.hasSouvenir());
+        return true;
+    }
+
+    safeValidateSouvenir(souvenir?: boolean, item?: CS2EconomyItem): boolean {
+        return safe(() => this.validateSouvenir(souvenir, item));
+    }
+
+    validateHighlight(highlight?: number, keychain?: CS2EconomyItem): boolean {
+        if (highlight === undefined) {
+            assert(keychain === undefined || !keychain.hasHighlights());
+            return true;
+        }
+        const item = this.getById(highlight).expectHighlight();
+        assert(keychain === undefined || item.parentId === keychain.id);
+        return true;
+    }
+
+    safeValidateHighlight(highlight?: number, keychain?: CS2EconomyItem): boolean {
+        return safe(() => this.validateHighlight(highlight, keychain));
+    }
+
     validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
         containerItem = this.get(containerItem);
         containerItem.expectContainer();
@@ -334,6 +386,10 @@ export class CS2EconomyInstance {
 
     hasStickerDisplayCase(sticker: number | CS2EconomyItem): boolean {
         return this.stickerDisplayCases.has(this.get(sticker).expectSticker().id);
+    }
+
+    getHighlights(keychain: number | CS2EconomyItem): CS2EconomyItem[] {
+        return this.highlights.get(this.get(keychain).expectKeychain().id) ?? [];
     }
 
     expectUnlockedItem(
@@ -399,6 +455,10 @@ export class CS2EconomyItem implements Interface<
     parentId: number | undefined;
     previewSeed: number | undefined;
     rarityColor: CS2RarityColor = null!;
+    souvenirEventStickerIds: number[] | undefined;
+    souvenirHighlightIds: number[] | undefined;
+    souvenirMapStickerId: number | undefined;
+    souvenirTeamStickerIds: number[][] | undefined;
     specialIds: number[] | undefined;
     specialsImagePath: string | undefined;
     statTrakMode: CS2StatTrakMode | undefined;
@@ -409,10 +469,12 @@ export class CS2EconomyItem implements Interface<
     stickerSchemaCount: number | undefined;
     styleCount: number | undefined;
     team: CS2ItemTeam | undefined;
+    teamStickerIds: number[] | undefined;
     tintIndex: number | undefined;
     tournamentDescription: string | undefined;
     type: CS2ItemType = null!;
     variantIndex: number | undefined;
+    videoUrl: string | undefined;
     wearMax: number | undefined;
     wearMin: number | undefined;
 
@@ -426,7 +488,11 @@ export class CS2EconomyItem implements Interface<
         assert(typeof this.id === "number");
         assert(this.name);
         assert(this.type);
-        assert(item.type === CS2ItemType.Stub || typeof this.rarityColor === "string");
+        assert(
+            item.type === CS2ItemType.Stub ||
+                item.type === CS2ItemType.Highlight ||
+                typeof this.rarityColor === "string"
+        );
     }
 
     get contents(): CS2EconomyItem[] {
@@ -548,6 +614,10 @@ export class CS2EconomyItem implements Interface<
         return this.type === CS2ItemType.Graffiti;
     }
 
+    isHighlight(): boolean {
+        return this.type === CS2ItemType.Highlight;
+    }
+
     isKey(): boolean {
         return this.type === CS2ItemType.Key;
     }
@@ -666,6 +736,11 @@ export class CS2EconomyItem implements Interface<
         return this;
     }
 
+    expectHighlight(): this {
+        assert(this.isHighlight());
+        return this;
+    }
+
     expectKey(): this {
         assert(this.isKey());
         return this;
@@ -726,7 +801,12 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasSeed(): boolean {
-        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
+        return (
+            CS2_SEEDABLE_ITEMS.includes(this.type) &&
+            !this.isDefault &&
+            this.variantIndex !== 0 &&
+            !this.hasHighlights()
+        );
     }
 
     hasStickers(): boolean {
@@ -757,6 +837,10 @@ export class CS2EconomyItem implements Interface<
         return CS2_STATTRAKABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
 
+    hasSouvenir(): boolean {
+        return CS2_SOUVENIRABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
+    }
+
     hasCharges(): boolean {
         return this.isGraffiti() || this.isCharmDetachment();
     }
@@ -767,6 +851,19 @@ export class CS2EconomyItem implements Interface<
 
     getDisplayCase(): CS2EconomyItem {
         return this.economy.getStickerDisplayCase(this);
+    }
+
+    hasHighlights(): boolean {
+        return this.isKeychain() && this.getHighlights().length > 0;
+    }
+
+    getHighlights(): CS2EconomyItem[] {
+        return this.economy.getHighlights(this);
+    }
+
+    getVideoUrl(resolution: CS2HighlightVideoResolution = "1080p"): string {
+        assert(this.videoUrl);
+        return this.videoUrl.replace("_1080p.webm", `_${resolution}.webm`);
     }
 
     getImageUrl(wear?: number): string {
@@ -937,9 +1034,46 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
+    rollSouvenirAttachments(options?: { highlight?: boolean }): CS2SouvenirAttachments {
+        assert(this.isSouvenirCase());
+        const teams = this.souvenirTeamStickerIds ?? [];
+        const highlightIds = this.souvenirHighlightIds ?? [];
+        const highlight =
+            highlightIds.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD)
+                ? this.economy.getById(pick(highlightIds))
+                : undefined;
+        const match =
+            highlight !== undefined
+                ? ensure(highlight.teamStickerIds).map((stickerId) =>
+                      ensure(teams.find((team) => team[0] === stickerId))
+                  )
+                : pickPair(teams);
+        const stickerIds = match.map((team) => ensure(team[0]));
+        const autographIds = match.flatMap((team) => team.slice(1));
+        if (this.souvenirEventStickerIds !== undefined) {
+            stickerIds.push(pick(this.souvenirEventStickerIds));
+        }
+        if (autographIds.length > 0) {
+            stickerIds.push(pick(autographIds));
+        }
+        if (this.souvenirMapStickerId !== undefined) {
+            stickerIds.push(this.souvenirMapStickerId);
+        }
+        const keychain = highlight?.parent;
+        return {
+            keychains:
+                highlight !== undefined && keychain !== undefined
+                    ? { 0: { highlight: highlight.id, id: keychain.id } }
+                    : undefined,
+            stickers:
+                stickerIds.length > 0 ? Object.fromEntries(stickerIds.map((id, slot) => [slot, { id }])) : undefined
+        };
+    }
+
     /** @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml */
     unlockContainer(options?: {
         computeOdds?: (rarities: (typeof CS2_RARITY_ORDER)[number][]) => number[] | undefined;
+        highlight?: boolean;
     }): CS2UnlockedItem {
         const contents = this.groupContents();
         const keys = Object.keys(contents);
@@ -959,12 +1093,15 @@ export class CS2EconomyItem implements Interface<
         }
         const stack = ensure(contents[rollRarity]);
         const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
+        const souvenir = this.isSouvenirCase() && unlocked.hasSouvenir();
         return {
             attributes: {
+                ...(souvenir ? this.rollSouvenirAttachments(options) : { keychains: undefined, stickers: undefined }),
                 containerId: this.id,
                 seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
+                souvenir: souvenir ? true : undefined,
                 statTrak:
-                    unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
+                    !souvenir && unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
                         ? this.statTrakMode === CS2StatTrakMode.Guaranteed || Math.random() <= CS2_STATTRAK_ODD
                             ? 0
                             : undefined

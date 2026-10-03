@@ -193,11 +193,22 @@ export function getNextStickerSchema(
 }
 
 export function checkAddable(item: CS2EconomyItem): boolean {
-    return !item.isGloves() || item.isDefault === true || item.isBase !== true;
+    return !item.isHighlight() && (!item.isGloves() || item.isDefault === true || item.isBase !== true);
 }
 
 export function assertAddable(item: CS2EconomyItem): void {
     assert(checkAddable(item));
+}
+
+export function checkSouvenir(
+    { souvenir, statTrak }: Pick<CS2BaseInventoryItem, "souvenir" | "statTrak">,
+    item: CS2EconomyItem
+): boolean {
+    return item.economy.safeValidateSouvenir(souvenir, item) && (souvenir === undefined || statTrak === undefined);
+}
+
+export function checkHighlight({ highlight }: Pick<CS2BaseInventoryItem, "highlight">, item: CS2EconomyItem): boolean {
+    return item.economy.safeValidateHighlight(highlight, item);
 }
 
 export function checkAttachable(item: CS2EconomyItem): boolean {
@@ -269,7 +280,7 @@ export function checkKeychains(
     if (entries.length > CS2_MAX_KEYCHAINS || !item.hasKeychains()) {
         return false;
     }
-    for (const [key, { id: keychainId, seed, x, y, z }] of entries) {
+    for (const [key, { highlight, id: keychainId, seed, x, y, z }] of entries) {
         const slot = parseInt(key, 10);
         if (slot < 0 || slot > CS2_MAX_KEYCHAINS - 1) {
             return false;
@@ -278,7 +289,12 @@ export function checkKeychains(
             return false;
         }
         const keychain = economy.getById(keychainId);
-        if (!keychain.isKeychain() || !checkAttachable(keychain)) {
+        if (
+            !keychain.isKeychain() ||
+            !checkAttachable(keychain) ||
+            !checkHighlight({ highlight }, keychain) ||
+            (seed !== undefined && !keychain.hasSeed())
+        ) {
             return false;
         }
         if (
@@ -379,11 +395,13 @@ export function checkInventoryItem(
     economy: CS2EconomyInstance,
     {
         charges,
+        highlight,
         id,
         keychains,
         nameTag,
         patches,
         seed,
+        souvenir,
         statTrak,
         stickers,
         storage,
@@ -404,6 +422,8 @@ export function checkInventoryItem(
         CS2_INVENTORY_RULES.itemStyle.check(style, item) &&
         CS2_INVENTORY_RULES.itemUpgradeLevel.check(upgradeLevel, item) &&
         economy.safeRequireNameTag(nameTag, item) &&
+        checkSouvenir({ souvenir, statTrak }, item) &&
+        checkHighlight({ highlight }, item) &&
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&
         checkStickers(economy, stickers, item) &&
@@ -518,7 +538,17 @@ export function repairInventoryItem(
                     delete item.keychains[slot];
                     continue;
                 }
-                keychain.seed = CS2_INVENTORY_RULES.keychainSeed.repair(keychain.seed, economyItem);
+                const attachment = economy.getById(keychain.id);
+                if (!checkHighlight(keychain, attachment)) {
+                    if (attachment.hasHighlights()) {
+                        delete item.keychains[slot];
+                        continue;
+                    }
+                    keychain.highlight = undefined;
+                }
+                keychain.seed = attachment.hasSeed()
+                    ? CS2_INVENTORY_RULES.keychainSeed.repair(keychain.seed, economyItem)
+                    : undefined;
                 keychain.x = CS2_INVENTORY_RULES.keychainPositionX.repair(keychain.x, economyItem);
                 keychain.y = CS2_INVENTORY_RULES.keychainPositionY.repair(keychain.y, economyItem);
                 keychain.z = CS2_INVENTORY_RULES.keychainPositionZ.repair(keychain.z, economyItem);
@@ -563,6 +593,12 @@ export function repairInventoryItem(
     }
     item.seed = CS2_INVENTORY_RULES.itemSeed.repair(item.seed, economyItem);
     item.statTrak = CS2_INVENTORY_RULES.itemStatTrak.repair(item.statTrak, economyItem);
+    if (!checkSouvenir(item, economyItem)) {
+        item.souvenir = undefined;
+    }
+    if (!checkHighlight(item, economyItem)) {
+        item.highlight = undefined;
+    }
     item.style = CS2_INVENTORY_RULES.itemStyle.repair(item.style, economyItem);
     item.upgradeLevel = CS2_INVENTORY_RULES.itemUpgradeLevel.repair(item.upgradeLevel, economyItem);
     item.charges = CS2_INVENTORY_RULES.itemCharges.repair(item.charges, economyItem);
