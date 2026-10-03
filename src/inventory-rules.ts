@@ -539,7 +539,6 @@ export function repairInventoryItem(
                     continue;
                 }
                 const attachment = economy.getById(keychain.id);
-                // An event's charm without a highlight of its own cannot be repaired into one.
                 if (!checkHighlight(keychain, attachment)) {
                     if (attachment.hasHighlights()) {
                         delete item.keychains[slot];

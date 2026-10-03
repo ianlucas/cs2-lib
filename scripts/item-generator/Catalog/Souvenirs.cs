@@ -11,7 +11,7 @@ namespace ItemGenerator.Catalog;
 // What a souvenir package puts on the item it drops. The item server applies these and the schema
 // does not say how, so the rules here are the publicly documented ones: the two teams of the match
 // and the event each give a sticker, joined by the round MVP's autograph from Cologne 2015 and by
-// the map's sticker, in the autograph's place, from Stockholm 2021. See docs/souvenirs.md.
+// the map's sticker, in the autograph's place, from Stockholm 2021.
 public static partial class Souvenirs
 {
     private const string PackagePrefab = "weapon_case_souvenirpkg";

@@ -55,8 +55,6 @@ function container(id: number, containerType: CS2ContainerType, souvenir: Partia
     };
 }
 
-// The catalog is published by the Update workflow, so the packages carry no souvenir data in
-// CS2_ITEMS until it runs. These mirror what the item generator emits for each era.
 const economy = new CS2EconomyInstance();
 economy.load({
     items: [

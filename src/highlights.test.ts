@@ -33,8 +33,6 @@ function highlight(id: number, parentId: number, variantIndex: number): CS2Item 
     return { id, type: CS2ItemType.Highlight, parentId, variantIndex, videoUrl: VIDEO_URL };
 }
 
-// The catalog is published by the Update workflow, so CS2_ITEMS has no highlights until it runs.
-// These mirror what the item generator emits: one item per reel, parented to the event's charm.
 const economy = new CS2EconomyInstance();
 economy.load({
     items: [

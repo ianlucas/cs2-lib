@@ -320,8 +320,6 @@ export class CS2EconomyInstance {
         return safe(() => this.validateSouvenir(souvenir, item));
     }
 
-    // An event's charm always plays one of its highlights, and a highlight plays on that charm and no
-    // other, loose or attached.
     validateHighlight(highlight?: number, keychain?: CS2EconomyItem): boolean {
         if (highlight === undefined) {
             assert(keychain === undefined || !keychain.hasHighlights());
@@ -802,7 +800,6 @@ export class CS2EconomyItem implements Interface<
         return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
 
-    // An event's charm looks the same at any seed, so it carries none.
     hasSeed(): boolean {
         return (
             CS2_SEEDABLE_ITEMS.includes(this.type) &&
@@ -1037,8 +1034,6 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
-    // The stickers run team, team, event, then the MVP's autograph or the map. A highlight is cut
-    // from a playoff match, whose teams the stickers then follow, and plays on the event's charm.
     rollSouvenirAttachments(options?: { highlight?: boolean }): CS2SouvenirAttachments {
         assert(this.isSouvenirCase());
         const teams = this.souvenirTeamStickerIds ?? [];
