@@ -53,22 +53,16 @@ public static partial class Souvenirs
         return null;
     }
 
-    public static void Populate(
+    // Each team's sticker at the event, by team id. Katowice 2014 and Cologne 2014 have no gold team
+    // stickers; their souvenirs take the foil.
+    public static SortedDictionary<int, int> GetTeamStickerIds(
         ItemGeneratorContext ctx,
-        CS2Item container,
-        KVObject item,
-        int eventId,
-        string lootListKey
+        int eventId
     )
     {
-        var kits = ctx.StickerKits.Where(kit => kit.EventId == eventId).ToList();
-        var eventKits = kits.Where(kit => !kit.IsAutograph && (kit.TeamId ?? 0) == 0).ToList();
-        container.SouvenirEventStickerIds = NullIfEmpty(
-            GetEventKits(eventId, eventKits).Select(kit => kit.Id).ToList()
-        );
-
-        // Katowice 2014 and Cologne 2014 have no gold team stickers; their souvenirs take the foil.
-        var teamKits = kits.Where(kit => !kit.IsAutograph && kit.TeamId > 0).ToList();
+        var teamKits = ctx
+            .StickerKits.Where(kit => kit.EventId == eventId && !kit.IsAutograph && kit.TeamId > 0)
+            .ToList();
         var teamStickerIds = new SortedDictionary<int, int>();
         foreach (var suffix in new[] { "_gold", "_foil" })
         {
@@ -77,7 +71,23 @@ public static partial class Souvenirs
             if (teamStickerIds.Count > 0)
                 break;
         }
+        return teamStickerIds;
+    }
 
+    public static void Populate(
+        ItemGeneratorContext ctx,
+        CS2Item container,
+        KVObject item,
+        int eventId
+    )
+    {
+        var kits = ctx.StickerKits.Where(kit => kit.EventId == eventId).ToList();
+        var eventKits = kits.Where(kit => !kit.IsAutograph && (kit.TeamId ?? 0) == 0).ToList();
+        container.SouvenirEventStickerIds = NullIfEmpty(
+            GetEventKits(eventId, eventKits).Select(kit => kit.Id).ToList()
+        );
+
+        var teamStickerIds = GetTeamStickerIds(ctx, eventId);
         var hasMapSticker = eventId >= FirstMapStickerEventId;
         container.SouvenirTeamStickerIds = NullIfEmpty(
             teamStickerIds
@@ -105,42 +115,18 @@ public static partial class Souvenirs
                 ?? FindKit(ctx, $"{mapName}_gold")
             )?.Id;
 
-        var lootList = KvHelper.FindInMergedSection(
-            ctx.GameItems!,
-            "client_loot_lists",
-            lootListKey
+        // A highlight names the playoff match it was cut from; the matches themselves are not in the
+        // schema. Its team stickers come from GetTeamStickerIds too, so both are the package's.
+        container.SouvenirHighlightIds = NullIfEmpty(
+            ctx.HighlightReels.Where(entry =>
+                    entry.Value.EventId == eventId
+                    && entry.Value.Map == mapName
+                    && ctx.Items[entry.Key].TeamStickerIds != null
+                )
+                .OrderBy(entry => entry.Value.Index)
+                .Select(entry => entry.Key)
+                .ToList()
         );
-        var keychainName = KvHelper.GetString(lootList, "match_highlight_reel_keychain");
-        if (
-            keychainName != null
-            && ctx.ContainerItems.TryGetValue($"[{keychainName}]keychain", out var keychainId)
-        )
-            container.SouvenirHighlightKeychainId = keychainId;
-
-        // A highlight reel names the playoff match it was cut from; the matches themselves are not
-        // in the schema.
-        var matches = new List<List<int>>();
-        foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "highlight_reels"))
-        {
-            var reel = entry.Value;
-            if (
-                KvHelper.GetInt(reel, "tournament event id") != eventId
-                || KvHelper.GetString(reel, "map") != mapName
-            )
-                continue;
-            var team0 = KvHelper.GetInt(reel, "tournament event team0 id");
-            var team1 = KvHelper.GetInt(reel, "tournament event team1 id");
-            if (
-                team0 == null
-                || team1 == null
-                || !teamStickerIds.TryGetValue(team0.Value, out var sticker0)
-                || !teamStickerIds.TryGetValue(team1.Value, out var sticker1)
-                || matches.Any(match => match[0] == sticker0 && match[1] == sticker1)
-            )
-                continue;
-            matches.Add([sticker0, sticker1]);
-        }
-        container.SouvenirHighlightTeamStickerIds = NullIfEmpty(matches);
     }
 
     // DreamHack 2013 souvenirs carry any one of the event's stickers and nothing else.

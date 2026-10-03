@@ -78,6 +78,7 @@ import {
 import {
     type CS2Bounds,
     CS2ContainerType,
+    type CS2HighlightVideoResolution,
     type CS2Item,
     CS2ItemTeam,
     type CS2ItemTranslation,
@@ -129,6 +130,7 @@ export class CS2EconomyInstance {
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
     private charmDetachment: CS2EconomyItem | undefined;
+    private highlights: Map<number, CS2EconomyItem[]> = new Map<number, CS2EconomyItem[]>();
     private stickerDisplayCases: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
 
     load({
@@ -146,6 +148,7 @@ export class CS2EconomyInstance {
         this.stickers.clear();
         this.itemsAsArray = [];
         this.charmDetachment = undefined;
+        this.highlights.clear();
         this.stickerDisplayCases.clear();
         for (const item of items) {
             const economyItem = new CS2EconomyItem(
@@ -162,6 +165,12 @@ export class CS2EconomyInstance {
             }
             if (economyItem.isStickerDisplayCase()) {
                 this.stickerDisplayCases.set(ensure(economyItem.displayedStickerId), economyItem);
+            }
+            if (economyItem.isHighlight()) {
+                const keychainId = ensure(economyItem.parentId);
+                const highlights = this.highlights.get(keychainId) ?? [];
+                highlights.push(economyItem);
+                this.highlights.set(keychainId, highlights);
             }
             this.itemsAsArray.push(economyItem);
         }
@@ -311,6 +320,22 @@ export class CS2EconomyInstance {
         return safe(() => this.validateSouvenir(souvenir, item));
     }
 
+    // An event's charm always plays one of its highlights, and a highlight plays on that charm and no
+    // other, loose or attached.
+    validateHighlight(highlight?: number, keychain?: CS2EconomyItem): boolean {
+        if (highlight === undefined) {
+            assert(keychain === undefined || !keychain.hasHighlights());
+            return true;
+        }
+        const item = this.getById(highlight).expectHighlight();
+        assert(keychain === undefined || item.parentId === keychain.id);
+        return true;
+    }
+
+    safeValidateHighlight(highlight?: number, keychain?: CS2EconomyItem): boolean {
+        return safe(() => this.validateHighlight(highlight, keychain));
+    }
+
     validateContainerAndKey(containerItem: number | CS2EconomyItem, keyItem?: number | CS2EconomyItem): boolean {
         containerItem = this.get(containerItem);
         containerItem.expectContainer();
@@ -363,6 +388,10 @@ export class CS2EconomyInstance {
 
     hasStickerDisplayCase(sticker: number | CS2EconomyItem): boolean {
         return this.stickerDisplayCases.has(this.get(sticker).expectSticker().id);
+    }
+
+    getHighlights(keychain: number | CS2EconomyItem): CS2EconomyItem[] {
+        return this.highlights.get(this.get(keychain).expectKeychain().id) ?? [];
     }
 
     expectUnlockedItem(
@@ -429,8 +458,7 @@ export class CS2EconomyItem implements Interface<
     previewSeed: number | undefined;
     rarityColor: CS2RarityColor = null!;
     souvenirEventStickerIds: number[] | undefined;
-    souvenirHighlightKeychainId: number | undefined;
-    souvenirHighlightTeamStickerIds: number[][] | undefined;
+    souvenirHighlightIds: number[] | undefined;
     souvenirMapStickerId: number | undefined;
     souvenirTeamStickerIds: number[][] | undefined;
     specialIds: number[] | undefined;
@@ -443,10 +471,12 @@ export class CS2EconomyItem implements Interface<
     stickerSchemaCount: number | undefined;
     styleCount: number | undefined;
     team: CS2ItemTeam | undefined;
+    teamStickerIds: number[] | undefined;
     tintIndex: number | undefined;
     tournamentDescription: string | undefined;
     type: CS2ItemType = null!;
     variantIndex: number | undefined;
+    videoUrl: string | undefined;
     wearMax: number | undefined;
     wearMin: number | undefined;
 
@@ -460,7 +490,11 @@ export class CS2EconomyItem implements Interface<
         assert(typeof this.id === "number");
         assert(this.name);
         assert(this.type);
-        assert(item.type === CS2ItemType.Stub || typeof this.rarityColor === "string");
+        assert(
+            item.type === CS2ItemType.Stub ||
+                item.type === CS2ItemType.Highlight ||
+                typeof this.rarityColor === "string"
+        );
     }
 
     get contents(): CS2EconomyItem[] {
@@ -582,6 +616,10 @@ export class CS2EconomyItem implements Interface<
         return this.type === CS2ItemType.Graffiti;
     }
 
+    isHighlight(): boolean {
+        return this.type === CS2ItemType.Highlight;
+    }
+
     isKey(): boolean {
         return this.type === CS2ItemType.Key;
     }
@@ -700,6 +738,11 @@ export class CS2EconomyItem implements Interface<
         return this;
     }
 
+    expectHighlight(): this {
+        assert(this.isHighlight());
+        return this;
+    }
+
     expectKey(): this {
         assert(this.isKey());
         return this;
@@ -759,8 +802,14 @@ export class CS2EconomyItem implements Interface<
         return CS2_PAINTABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
     }
 
+    // An event's charm looks the same at any seed, so it carries none.
     hasSeed(): boolean {
-        return CS2_SEEDABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
+        return (
+            CS2_SEEDABLE_ITEMS.includes(this.type) &&
+            !this.isDefault &&
+            this.variantIndex !== 0 &&
+            !this.hasHighlights()
+        );
     }
 
     hasStickers(): boolean {
@@ -805,6 +854,19 @@ export class CS2EconomyItem implements Interface<
 
     getDisplayCase(): CS2EconomyItem {
         return this.economy.getStickerDisplayCase(this);
+    }
+
+    hasHighlights(): boolean {
+        return this.isKeychain() && this.getHighlights().length > 0;
+    }
+
+    getHighlights(): CS2EconomyItem[] {
+        return this.economy.getHighlights(this);
+    }
+
+    getVideoUrl(resolution: CS2HighlightVideoResolution = "1080p"): string {
+        assert(this.videoUrl);
+        return this.videoUrl.replace("_1080p.webm", `_${resolution}.webm`);
     }
 
     getImageUrl(wear?: number): string {
@@ -975,16 +1037,22 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
-    // The stickers run team, team, event, then the MVP's autograph or the map. A highlight is a
-    // playoff match, whose item also carries the event's charm.
+    // The stickers run team, team, event, then the MVP's autograph or the map. A highlight is cut
+    // from a playoff match, whose teams the stickers then follow, and plays on the event's charm.
     rollSouvenirAttachments(options?: { highlight?: boolean }): CS2SouvenirAttachments {
         assert(this.isSouvenirCase());
         const teams = this.souvenirTeamStickerIds ?? [];
-        const matches = this.souvenirHighlightTeamStickerIds ?? [];
-        const highlight = matches.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD);
-        const match = highlight
-            ? pick(matches).map((stickerId) => ensure(teams.find((team) => team[0] === stickerId)))
-            : pickPair(teams);
+        const highlightIds = this.souvenirHighlightIds ?? [];
+        const highlight =
+            highlightIds.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD)
+                ? this.economy.getById(pick(highlightIds))
+                : undefined;
+        const match =
+            highlight !== undefined
+                ? ensure(highlight.teamStickerIds).map((stickerId) =>
+                      ensure(teams.find((team) => team[0] === stickerId))
+                  )
+                : pickPair(teams);
         const stickerIds = match.map((team) => ensure(team[0]));
         const autographIds = match.flatMap((team) => team.slice(1));
         if (this.souvenirEventStickerIds !== undefined) {
@@ -996,14 +1064,11 @@ export class CS2EconomyItem implements Interface<
         if (this.souvenirMapStickerId !== undefined) {
             stickerIds.push(this.souvenirMapStickerId);
         }
-        const keychain =
-            highlight && this.souvenirHighlightKeychainId !== undefined
-                ? this.economy.getById(this.souvenirHighlightKeychainId)
-                : undefined;
+        const keychain = highlight?.parent;
         return {
             keychains:
-                keychain !== undefined
-                    ? { 0: { id: keychain.id, seed: randomInt(keychain.getMinimumSeed(), keychain.getMaximumSeed()) } }
+                highlight !== undefined && keychain !== undefined
+                    ? { 0: { highlight: highlight.id, id: keychain.id } }
                     : undefined,
             stickers:
                 stickerIds.length > 0 ? Object.fromEntries(stickerIds.map((id, slot) => [slot, { id }])) : undefined

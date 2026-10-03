@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { CS2_MAX_KEYCHAIN_SEED, CS2_MIN_KEYCHAIN_SEED } from "./economy-constants.ts";
 import { CS2RarityColor, CS2_SOUVENIR_HIGHLIGHT_ODD } from "./economy-container.ts";
 import { CS2ContainerType, type CS2Item, CS2ItemType } from "./economy-types.ts";
 import { CS2EconomyInstance } from "./economy.ts";
@@ -25,6 +24,7 @@ const TEAM_A_AUTOGRAPH_IDS = [30, 31];
 const TEAM_B_AUTOGRAPH_IDS = [32, 33];
 const TEAM_C_AUTOGRAPH_IDS = [34, 35];
 const HIGHLIGHT_KEYCHAIN_ID = 40;
+const HIGHLIGHT_ID = 41;
 const LONE_PACKAGE_ID = 50;
 const AUTOGRAPH_PACKAGE_ID = 51;
 const MAP_PACKAGE_ID = 52;
@@ -66,6 +66,13 @@ economy.load({
         ...[EVENT_STICKER_ID, OTHER_EVENT_STICKER_ID, MAP_STICKER_ID, ...TEAM_STICKER_IDS].map(sticker),
         ...Object.values(AUTOGRAPH_IDS_BY_TEAM).flat().map(sticker),
         { id: HIGHLIGHT_KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Rare },
+        {
+            id: HIGHLIGHT_ID,
+            type: CS2ItemType.Highlight,
+            parentId: HIGHLIGHT_KEYCHAIN_ID,
+            teamStickerIds: [TEAM_C_STICKER_ID, TEAM_A_STICKER_ID],
+            variantIndex: 1
+        },
         container(LONE_PACKAGE_ID, CS2ContainerType.SouvenirCase, {
             souvenirEventStickerIds: [EVENT_STICKER_ID, OTHER_EVENT_STICKER_ID]
         }),
@@ -80,8 +87,7 @@ economy.load({
         }),
         container(HIGHLIGHT_PACKAGE_ID, CS2ContainerType.SouvenirCase, {
             souvenirEventStickerIds: [EVENT_STICKER_ID],
-            souvenirHighlightKeychainId: HIGHLIGHT_KEYCHAIN_ID,
-            souvenirHighlightTeamStickerIds: [[TEAM_C_STICKER_ID, TEAM_A_STICKER_ID]],
+            souvenirHighlightIds: [HIGHLIGHT_ID],
             souvenirMapStickerId: MAP_STICKER_ID,
             souvenirTeamStickerIds: TEAM_STICKER_IDS.map((id) => [id])
         }),
@@ -185,7 +191,7 @@ describe("unlocking a souvenir package", () => {
         }
     });
 
-    test("a highlight is a playoff match and carries the charm", () => {
+    test("a highlight sets the match and plays on the charm", () => {
         const attributes = unlock(HIGHLIGHT_PACKAGE_ID, { highlight: true });
         expect(stickerIdsOf(attributes.stickers)).toEqual([
             TEAM_C_STICKER_ID,
@@ -193,11 +199,7 @@ describe("unlocking a souvenir package", () => {
             EVENT_STICKER_ID,
             MAP_STICKER_ID
         ]);
-        const keychain = attributes.keychains?.[0];
-        expect(Object.keys(attributes.keychains ?? {})).toEqual(["0"]);
-        expect(keychain?.id).toBe(HIGHLIGHT_KEYCHAIN_ID);
-        expect(keychain?.seed).toBeGreaterThanOrEqual(CS2_MIN_KEYCHAIN_SEED);
-        expect(keychain?.seed).toBeLessThanOrEqual(CS2_MAX_KEYCHAIN_SEED);
+        expect(attributes.keychains).toStrictEqual({ 0: { highlight: HIGHLIGHT_ID, id: HIGHLIGHT_KEYCHAIN_ID } });
         for (let roll = 0; roll < ROLLS; roll++) {
             expect(unlock(HIGHLIGHT_PACKAGE_ID, { highlight: false }).keychains).toBe(undefined);
         }
