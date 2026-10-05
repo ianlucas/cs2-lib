@@ -3,7 +3,7 @@ import { dts } from "rolldown-plugin-dts";
 import del from "rollup-plugin-delete";
 
 const options: RolldownOptions = {
-    input: ["src/index.ts", "src/translations/index.ts"],
+    input: ["src/index.ts", "src/model-materials.ts", "src/translations/index.ts"],
     plugins: [del({ targets: ["dist"] }), dts()],
     treeshake: true,
     output: {

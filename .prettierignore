@@ -4,5 +4,6 @@
 /scripts/data
 /src/economy-constants.ts
 /src/items.ts
+/src/model-materials.ts
 /src/sticker-markup.ts
 /src/translations

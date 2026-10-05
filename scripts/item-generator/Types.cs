@@ -523,9 +523,23 @@ public class ItemGeneratorContext
     public List<string> UniqueIdentifiers { get; set; } = [];
     public Dictionary<int, CS2Item> ExistingItemsById { get; set; } = [];
 
+    // The previous run's model materials (see ReadModelMaterials), keyed by final model URL. A
+    // Limited run inherits every model from items.json, so it inherits their entries from here too.
+    public Dictionary<
+        string,
+        OrderedDictionary<string, List<string>>
+    > ExistingModelMaterials { get; set; } = [];
+
     // Final model URLs reused from OutputDir. Their sibling JSON still needs to hydrate placement
     // metadata onto the newly-built catalog even though the GLBs skip extraction/finalization.
     public HashSet<string> ReusedModelPaths { get; set; } = [];
+
+    // Each finalized or reused model's mesh materials (see ReadModelMaterials), keyed by final
+    // model URL.
+    public Dictionary<
+        string,
+        OrderedDictionary<string, List<string>>
+    > ModelMaterialsByPath { get; set; } = [];
 
     // Parsed game items (KV1)
     public ValveKeyValue.KVObject? GameItems { get; set; }

@@ -134,6 +134,12 @@ export interface CS2ItemTranslation {
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
 export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
+/**
+ * Model path -> mesh leaf name -> the mesh's material names, each in the .glb's own order. A mesh
+ * leaf is the glTF mesh name after its last `.` (`body_hd`, `body_legacy`, `viewmodel`).
+ */
+export type CS2ModelMaterials = Record<string, Record<string, string[]>>;
+
 export interface CS2UnlockedItem {
     attributes: {
         containerId: number;

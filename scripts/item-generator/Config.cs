@@ -50,6 +50,8 @@ public static partial class Config
     public const string ItemIdsJsonPath = "scripts/data/items-ids.json";
     public const string ItemsJsonPath = "scripts/data/items.json";
     public const string ItemsTsPath = "src/items.ts";
+    public const string ModelMaterialsJsonPath = "scripts/data/model-materials.json";
+    public const string ModelMaterialsTsPath = "src/model-materials.ts";
     public const string TranslationsTsPath = "src/translations/{0}.ts";
     public const string EnglishJsonPath = "scripts/data/english.json";
 
