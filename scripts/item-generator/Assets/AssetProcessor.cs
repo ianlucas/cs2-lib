@@ -302,6 +302,7 @@ public static partial class AssetProcessor
             if (File.Exists(colliderPath))
                 File.Move(colliderPath, ClothColliderPathOf(destData), true);
 
+            ctx.ModelMaterialsByPath[versionedPlayerModel] = ReadModelMaterials(destGlb);
             UpdateModelAssetReferences(ctx, model, versionedPlayerModel, versionedModelData);
         }
 
@@ -486,6 +487,10 @@ public static partial class AssetProcessor
             var colliderPath = ClothColliderPathOf(dataPath);
             if (File.Exists(colliderPath))
                 ApplyColliderMetadata(ctx, playerModelPath);
+
+            ctx.ModelMaterialsByPath[playerModelPath] = ReadModelMaterials(
+                Path.Combine(Config.OutputDir, playerModelPath.TrimStart('/'))
+            );
         }
     }
 

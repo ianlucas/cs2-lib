@@ -800,22 +800,23 @@ export class CS2EconomyItem implements Interface<
         return this.economy.resolveUrl(this.materialPath ?? this.parent?.materialPath);
     }
 
+    getModelPath(): string | undefined {
+        return this.modelPath ?? this.parent?.modelPath;
+    }
+
     getModelUrl(): string {
-        const modelPath = this.modelPath ?? this.parent?.modelPath;
-        return this.economy.resolveUrl(modelPath);
+        return this.economy.resolveUrl(this.getModelPath());
     }
 
     getModelDataUrl(): string {
-        const modelPath = this.modelPath ?? this.parent?.modelPath;
-        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".json"));
+        return this.economy.resolveUrl(this.getModelPath()?.replace(/\.glb$/, ".json"));
     }
 
     getColliderDataUrl(): string | undefined {
         if (!(this.hasColliderData ?? this.parent?.hasColliderData)) {
             return undefined;
         }
-        const modelPath = this.modelPath ?? this.parent?.modelPath;
-        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".collider.json"));
+        return this.economy.resolveUrl(this.getModelPath()?.replace(/\.glb$/, ".collider.json"));
     }
 
     getMinimumWear(): number {

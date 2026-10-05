@@ -141,9 +141,11 @@ test("modelPath and materialPath resolve own-first, then through the parent", ()
         }
     });
     // Own model/material win over the (empty) stub parent.
+    expect(CS2Economy.get(2).getModelPath()).toBe(ownModel);
     expect(CS2Economy.get(2).getModelUrl()).toBe(CS2Economy.resolveUrl(ownModel));
     expect(CS2Economy.get(2).getMaterialUrl()).toBe(CS2Economy.resolveUrl(ownMaterial));
     // The per-sticker display case falls back to the slab parent's model/material.
+    expect(CS2Economy.get(4).getModelPath()).toBe(slabModel);
     expect(CS2Economy.get(4).getModelUrl()).toBe(CS2Economy.resolveUrl(slabModel));
     expect(CS2Economy.get(4).getModelDataUrl()).toBe(CS2Economy.resolveUrl(slabModel.replace(/\.glb$/, ".json")));
     expect(CS2Economy.get(4).getMaterialUrl()).toBe(CS2Economy.resolveUrl(slabMaterial));
