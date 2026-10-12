@@ -738,7 +738,7 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasPatches(): boolean {
-        return CS2_PATCHABLE_ITEMS.includes(this.type);
+        return CS2_PATCHABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
 
     hasNameTag(): boolean {

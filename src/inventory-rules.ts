@@ -309,7 +309,7 @@ export function checkPatches(
     if (patches === undefined) {
         return true;
     }
-    if (!item.isAgent()) {
+    if (!item.hasPatches()) {
         return false;
     }
     for (const [key, patchId] of Object.entries(patches)) {
