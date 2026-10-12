@@ -79,6 +79,7 @@ const DEFAULT_STICKER_ID = 6;
 const DEFAULT_PATCH_ID = 7;
 const PATCH_ID = 8;
 const DEFAULT_KEYCHAIN_ID = 9;
+const DEFAULT_AGENT_ID = 10;
 const defaultAttachmentEconomy = new CS2EconomyInstance();
 defaultAttachmentEconomy.load({
     items: [
@@ -88,7 +89,14 @@ defaultAttachmentEconomy.load({
         { id: DEFAULT_STICKER_ID, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Common, isDefault: true },
         { id: DEFAULT_PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common, isDefault: true },
         { id: PATCH_ID, type: CS2ItemType.Patch, rarityColor: CS2RarityColor.Common },
-        { id: DEFAULT_KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Common, isDefault: true }
+        { id: DEFAULT_KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Common, isDefault: true },
+        {
+            id: DEFAULT_AGENT_ID,
+            type: CS2ItemType.Agent,
+            rarityColor: CS2RarityColor.Default,
+            isBase: true,
+            isDefault: true
+        }
     ]
 });
 
@@ -616,6 +624,22 @@ describe("a default attachment is stripped rather than costing the item", () => 
         const patched: CS2BaseInventoryItem = { id: AGENT_ID, patches: { 0: DEFAULT_PATCH_ID, 1: PATCH_ID } };
         expect(repairInventoryItem(defaultAttachmentEconomy, patched)).toBe(true);
         expect(patched.patches).toEqual({ 1: PATCH_ID });
+    });
+});
+
+describe("a default agent takes no patches", () => {
+    test("assert accepts it bare and rejects it patched", () => {
+        expect(defaultAttachmentEconomy.getById(DEFAULT_AGENT_ID).hasPatches()).toBe(false);
+        expect(() => assertInventoryItem(defaultAttachmentEconomy, { id: DEFAULT_AGENT_ID })).not.toThrow();
+        expect(() =>
+            assertInventoryItem(defaultAttachmentEconomy, { id: DEFAULT_AGENT_ID, patches: { 0: PATCH_ID } })
+        ).toThrow();
+    });
+
+    test("repair strips its patches and keeps the agent", () => {
+        const patched: CS2BaseInventoryItem = { id: DEFAULT_AGENT_ID, patches: { 0: PATCH_ID } };
+        expect(repairInventoryItem(defaultAttachmentEconomy, patched)).toBe(true);
+        expect(patched.patches).toBeUndefined();
     });
 });
 

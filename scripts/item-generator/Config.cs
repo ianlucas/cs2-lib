@@ -74,6 +74,15 @@ public static partial class Config
     ];
     public static readonly string[] PaintImageSuffixes = ["light", "medium", "heavy"];
 
+    // The pose the client's preview model falls back to for an agent with no
+    // `inventory_image_data.pose_sequence` -- only the default CT and T agents. The client picks CT
+    // when the model path contains `ctm_`. Keyed by the ui_anims/inventory_pose/{team} folder.
+    public static readonly Dictionary<string, string> AgentFallbackPoseSequences = new()
+    {
+        ["ct"] = "cu_ct_pose01",
+        ["t"] = "cu_t_pose01",
+    };
+
     // The loadout slot every pet item sits in: the owned `pet` itself plus the egg and the feed it
     // is offered and kept alive with.
     public const string PetLoadoutSlot = "pet";

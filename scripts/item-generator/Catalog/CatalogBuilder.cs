@@ -867,28 +867,34 @@ public static class CatalogBuilder
             var itemRarity = KvHelper.GetString(item, "item_rarity") ?? "";
             var prefab = KvHelper.GetString(item, "prefab");
             var itemDescription = KvHelper.GetString(item, "item_description");
+            // The default CT and T agents. Their `customplayer` prefab lacks the tradable one's
+            // can_patch, so like a default weapon they are handed out and take no patches.
+            var isDefault = prefab == "customplayer" && KvHelper.GetString(item, "baseitem") == "1";
 
             if (
                 itemName == null
                 || usedByClasses == null
                 || imageInventory == null
                 || playerModel == null
-                || prefab != "customplayertradable"
+                || (prefab != "customplayertradable" && !isDefault)
             )
                 continue;
 
             var team = GetTeam(usedByClasses);
+            var poseTeam = team == CS2ItemTeam.CT ? "ct" : "t";
             var id = GetItemId(ctx, $"agent_{GetTeamsString(usedByClasses)}_{index}");
             var modelKey = playerModel.Replace("characters/models/", "").Replace(".vmdl", "");
             // The pose the game renders this agent's inventory icon in. The clip is a standalone
             // .vnmclip_c under animation/anims/ui_anims/inventory_pose/{ct,t}/, not an animation of
             // the model, and it is baked into the published .glb's joints (InventoryPose).
-            var poseSequence = KvHelper.GetString(
-                KvHelper.GetChild(item, "inventory_image_data"),
-                "pose_sequence"
-            );
+            var poseSequence =
+                KvHelper.GetString(KvHelper.GetChild(item, "inventory_image_data"), "pose_sequence")
+                ?? Config.AgentFallbackPoseSequences[poseTeam];
 
-            Translations.AddTranslation(ctx, id, "name", "#Type_CustomPlayer", " | ", itemName);
+            if (isDefault)
+                Translations.AddTranslation(ctx, id, "name", itemName);
+            else
+                Translations.AddTranslation(ctx, id, "name", "#Type_CustomPlayer", " | ", itemName);
             Translations.AddTranslation(ctx, id, "description", itemDescription);
 
             var (collection, collectionImage) = Collections.GetItemCollection(ctx, id, name);
@@ -901,14 +907,19 @@ public static class CatalogBuilder
                     DefinitionIndex = int.Parse(index),
                     Id = id,
                     ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
+                    IsBase = isDefault ? true : null,
+                    IsDefault = isDefault ? true : null,
                     ModelKey = modelKey,
                     ModelPath = CatalogAssets.GetModel(
                         ctx,
                         playerModel,
                         id,
-                        new AgentModelInfo(team == CS2ItemTeam.CT ? "ct" : "t", poseSequence)
+                        new AgentModelInfo(poseTeam, poseSequence)
                     ),
-                    RarityColor = SourceDataLoader.GetRarityColorHex(ctx, [name, itemRarity]),
+                    RarityColor = SourceDataLoader.GetRarityColorHex(
+                        ctx,
+                        isDefault ? ["default"] : [name, itemRarity]
+                    ),
                     Team = (int)team,
                     Type = CS2ItemType.Agent,
                     VariantIndex = null,
