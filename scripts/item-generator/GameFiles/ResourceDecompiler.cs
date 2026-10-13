@@ -324,9 +324,10 @@ public static class ResourceDecompiler
                 };
                 if (models.TryGetValue(vpkPath, out var task) && task.Agent != null)
                     exporter.AnimationFilter.Add(AgentAnimationSentinel);
-                // A pet's graph references far more than a viewer plays -- 87 clips on the chicken
-                // skeleton -- so it keeps only its idles and the pose sequences its proportions
-                // blend between.
+                // A pet's graph references 87 clips on the chicken skeleton, and the .glb keeps
+                // none of them: only the pose sequences its proportions blend between. It is posed
+                // in an idle's first frame instead (PetModelData.GetPoseClip), and a viewer that
+                // plays the idle fetches it on its own (Config.AnimationClipsPrefix).
                 if (task?.Pet != null && resource.DataBlock is Model petModel)
                 {
                     exporter.AnimationFilter.UnionWith(PetModelData.GetAnimationFilter(petModel));

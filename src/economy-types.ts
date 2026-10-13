@@ -140,6 +140,32 @@ export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>
  */
 export type CS2ModelMaterials = Record<string, Record<string, string[]>>;
 
+/**
+ * A skeleton animation clips are authored against, shared by every model rigged to it: `character`
+ * by every agent, `viewmodel` by the first-person arms and weapon rig (a glove's arms, a weapon's
+ * moving parts), `chicken` by the chick and every grown pet, and `egg` by the egg.
+ */
+export type CS2ModelAnimationSkeleton = "character" | "chicken" | "egg" | "viewmodel";
+
+/**
+ * A published animation clip: three.js `AnimationClip` JSON whose tracks are matched to a model's
+ * joints by bone name, in raw model space.
+ */
+export interface CS2ModelAnimation {
+    /** The clip's path on the CDN; see `CS2EconomyInstance.getAnimationUrl`. */
+    path: string;
+    /** The skeleton the clip is authored against, which a model has to be rigged to to play it. */
+    skeleton: CS2ModelAnimationSkeleton;
+}
+
+/**
+ * Clip name -> the published clip. A name is the clip's path in the game's `animation/anims/`
+ * folder, without the extension: `chicken/world/chick_idle01`,
+ * `ui_anims/additive_anims/t/t_idle_layer01`, and `ui_anims/additive_anims/t/t_idle_layer01+non_additive`
+ * for the absolute copy of an additive clip.
+ */
+export type CS2ModelAnimations = Record<string, CS2ModelAnimation>;
+
 export interface CS2UnlockedItem {
     attributes: {
         containerId: number;

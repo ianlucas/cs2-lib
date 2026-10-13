@@ -22,7 +22,7 @@ public static class AssetWorkspace
         if (!Config.IsAssetReuseEnabled())
             Workdir.RemoveGeneratedDir(Config.OutputDir);
 
-        foreach (var folder in new[] { "images", "materials", "models", "textures" })
+        foreach (var folder in new[] { "animations", "images", "materials", "models", "textures" })
             Directory.CreateDirectory(Path.Combine(Config.OutputDir, folder));
 
         ctx.StaticAssets = [];
@@ -46,6 +46,7 @@ public static class AssetWorkspace
         foreach (var item in existingItems)
             ctx.ExistingItemsById[item.Id] = item;
         ctx.ExistingModelMaterials = LoadExistingModelMaterials();
+        ctx.ExistingModelAnimations = LoadExistingModelAnimations();
 
         return Task.CompletedTask;
     }
@@ -71,5 +72,14 @@ public static class AssetWorkspace
         return JsonSerializer.Deserialize<
                 Dictionary<string, OrderedDictionary<string, List<string>>>
             >(json) ?? [];
+    }
+
+    private static Dictionary<string, ModelAnimation> LoadExistingModelAnimations()
+    {
+        var path = Path.Combine(Config.CwdPath, Config.ModelAnimationsJsonPath);
+        if (!File.Exists(path))
+            return [];
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<Dictionary<string, ModelAnimation>>(json) ?? [];
     }
 }

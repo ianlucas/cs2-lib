@@ -81,6 +81,7 @@ import {
     type CS2ItemTranslation,
     type CS2ItemTranslationMap,
     CS2ItemType,
+    type CS2ModelAnimations,
     CS2ItemWear,
     CS2StatTrakMode,
     type CS2UnlockedItem
@@ -112,18 +113,22 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
+    private animations: CS2ModelAnimations = {};
     private charmDetachment: CS2EconomyItem | undefined;
     private stickerDisplayCases: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
 
     load({
+        animations,
         assetsBaseUrl,
         items,
         language
     }: {
+        animations?: CS2ModelAnimations;
         assetsBaseUrl?: string;
         items: CS2Item[];
         language?: CS2ItemTranslationMap;
     }): void {
+        this.animations = animations ?? {};
         this.baseUrl = assetsBaseUrl ?? this.baseUrl;
         this.categories.clear();
         this.items.clear();
@@ -346,6 +351,16 @@ export class CS2EconomyInstance {
 
     resolveUrl(path?: string): string {
         return `${this.baseUrl}${path}`;
+    }
+
+    /**
+     * The URL of a published animation clip, by name (`chicken/world/chick_idle01`), or undefined
+     * when no clip has that name. The clips are the `animations` given to `load`, which is
+     * `CS2_MODEL_ANIMATIONS` from `@ianlucas/cs2-lib/model-animations`; none are known until then.
+     * A clip is three.js `AnimationClip` JSON, and its entry names the skeleton it fits.
+     */
+    getAnimationUrl(name: string): string | undefined {
+        return Object.hasOwn(this.animations, name) ? this.resolveUrl(this.animations[name]!.path) : undefined;
     }
 }
 
