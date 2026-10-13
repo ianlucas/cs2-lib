@@ -12,14 +12,17 @@
  * An agent has already been through item-generator-agent-glb.ts by this point, so its conversion is
  * on the root node and the unbake below is the no-op it documents itself to be.
  *
- * Two optional flags narrow what a model ships, and both run before anything else:
+ * Three optional flags narrow what a model ships:
  *
  * - `--keep-meshes=a,b` names the meshes a DefaultMeshGroupOnly model keeps, by leaf name; every
  *   other mesh is dropped. That is a static prop whose mesh groups are alternatives drawn in the
  *   same place (the chicken feed bag's three bag variants): each mesh is its own scene root, and
- *   the unbake needs exactly one.
- * - `--pose-sequences=a,b` marks a pet model and names its pose sequences (it may name none). A
- *   pet's animations are pruned of the channels that say nothing -- see pruneAnimations.
+ *   the unbake needs exactly one. It runs before anything else.
+ * - `--pose=<file>` names a JSON pose to write into the joints after the unbake (see
+ *   item-generator-pose.ts): a pet's idle's first frame, the stance it ships in.
+ * - `--pose-sequences=a,b` marks a pet model and names its pose sequences (it may name none), the
+ *   only animations a pet ships. They are pruned of the channels that say nothing -- see
+ *   prunePoseSequences.
  *
  * The meshopt pass is purely a file-size optimization: the codec is fully reversible, so geometry
  * decodes bit-identically and every mesh/node/skin/accessor, float precision, and the embedded
@@ -35,23 +38,33 @@
 
 import { type Animation, type Document, NodeIO, type Property } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
+import { readFile } from "node:fs/promises";
+import { applyPose, type Pose } from "./item-generator-pose.js";
 import { unbakeSourceConversion } from "./item-generator-unbake.js";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 
 const glbPath = process.argv[2];
 if (glbPath === undefined) {
-    console.error("usage: tsx item-generator-glb.ts <glb> [--keep-meshes=a,b] [--pose-sequences=a,b]");
+    console.error("usage: tsx item-generator-glb.ts <glb> [--keep-meshes=a,b] [--pose=<file>] [--pose-sequences=a,b]");
     process.exit(1);
+}
+
+/** A flag's value, or undefined when the flag is absent. */
+function flag(name: string): string | undefined {
+    const prefix = `--${name}=`;
+    return process.argv
+        .slice(3)
+        .find((argument) => argument.startsWith(prefix))
+        ?.slice(prefix.length);
 }
 
 /** A flag's comma-separated values, or undefined when the flag is absent. `--flag=` is an empty list. */
 function listFlag(name: string): string[] | undefined {
-    const prefix = `--${name}=`;
-    const value = process.argv.slice(3).find((argument) => argument.startsWith(prefix));
-    return value?.slice(prefix.length).split(",").filter(Boolean);
+    return flag(name)?.split(",").filter(Boolean);
 }
 
 const keepMeshes = listFlag("keep-meshes");
+const posePath = flag("pose");
 const poseSequences = listFlag("pose-sequences");
 
 /** Whether nothing but the document root still refers to this property. */
@@ -107,12 +120,11 @@ const IDENTITY: Record<string, number[]> = {
 };
 
 /**
- * How close to the reference a channel has to stay to count as saying nothing. It is not float
- * noise alone: a clip's keys come out of a quantized stream, and a pose sequence's translations go
- * through the unbake's divide, so a bone that does not move still lands within about 1e-5 of where
- * it started. 1e-4 is a hundredth of the tolerance the game itself uses to decide a pose delta is
- * the identity (0.01 on position and scale, 0.02 on rotation), and in the model's own units it is
- * 2.5 micrometres.
+ * How close to the identity a channel has to stay to count as saying nothing. It is not float noise
+ * alone: a pose sequence's translations go through the unbake's divide, so a bone that does not
+ * move still lands within about 1e-5 of the identity. 1e-4 is a hundredth of the tolerance the game
+ * itself uses to decide a pose delta is the identity (0.01 on position and scale, 0.02 on
+ * rotation), and in the model's own units it is 2.5 micrometres.
  */
 const EPSILON = 1e-4;
 
@@ -132,41 +144,37 @@ function isConstant(output: Float32Array, value: number[], isRotation: boolean):
 }
 
 /**
- * Drops the channels of a pet's animations that say nothing. VRF writes translation, rotation and
- * scale for every bone of every animation -- 351 channels each on the chicken skeleton -- and most
- * of them only restate what a consumer already assumes.
+ * Drops the channels of a pet's pose sequences that say nothing. VRF writes translation, rotation
+ * and scale for every bone of every animation -- 351 channels each on the chicken skeleton -- and
+ * most of them only restate what a consumer already assumes.
  *
- * Which value "says nothing" depends on the kind of animation:
+ * A POSE SEQUENCE is a single frame of deltas, so a channel that is the identity transform is a
+ * bone the sequence leaves alone, and a consumer reads a missing channel as identity. Dropping it
+ * changes nothing a consumer can observe (see EPSILON). It runs after the unbake because that is
+ * when a delta's root rotation, which VRF bakes the axis conversion into, is the identity again.
  *
- * - A POSE SEQUENCE is a single frame of deltas, so a channel that is the identity transform is a
- *   bone the sequence leaves alone. A consumer reads a missing channel as identity.
- * - A CLIP is an ordinary animation, and glTF leaves an untargeted node at its rest transform, so a
- *   channel that holds the node's rest value on every key plays back the same when it is gone.
- *
- * Neither changes anything a consumer can observe (see EPSILON). It runs after the unbake because
- * that is when a delta's root rotation, which VRF bakes the axis conversion into, is the identity
- * again.
+ * The sequences are all a pet ships: its idle is in its joints (`--pose`), and a viewer that plays
+ * one fetches it on its own. Any other animation means the export filter let it through, and fails.
  */
-function pruneAnimations(document: Document, sequences: string[]): void {
-    const deltas = new Set(sequences);
+function prunePoseSequences(document: Document, sequences: string[]): void {
+    const names = new Set(sequences);
     const root = document.getRoot();
     const prune = (animation: Animation): void => {
-        const isDelta = deltas.has(animation.getName());
+        if (!names.has(animation.getName())) {
+            throw new Error(`pose-sequences: ${animation.getName()} is not a pose sequence`);
+        }
         for (const channel of animation.listChannels()) {
-            const node = channel.getTargetNode();
             const path = channel.getTargetPath();
-            const sampler = channel.getSampler();
-            const output = sampler?.getOutput()?.getArray();
-            if (node === null || path === null || path === "weights" || !(output instanceof Float32Array)) {
+            const output = channel.getSampler()?.getOutput()?.getArray();
+            if (
+                channel.getTargetNode() === null ||
+                path === null ||
+                path === "weights" ||
+                !(output instanceof Float32Array)
+            ) {
                 continue;
             }
-            const rest =
-                path === "translation"
-                    ? node.getTranslation()
-                    : path === "rotation"
-                      ? node.getRotation()
-                      : node.getScale();
-            if (isConstant(output, isDelta ? IDENTITY[path]! : rest, path === "rotation")) {
+            if (isConstant(output, IDENTITY[path]!, path === "rotation")) {
                 channel.dispose();
             }
         }
@@ -185,7 +193,12 @@ const io = new NodeIO()
 const document = await io.read(glbPath);
 if (keepMeshes !== undefined) keepOnlyMeshes(document, keepMeshes);
 unbakeSourceConversion(document);
-if (poseSequences !== undefined) pruneAnimations(document, poseSequences);
+if (posePath !== undefined) {
+    const pose: Pose = JSON.parse(await readFile(posePath, "utf8"));
+    // A pose that names none of the model's joints is one authored against another skeleton.
+    if (applyPose(document, pose) === 0) throw new Error(`pose: ${posePath} names none of the joints`);
+}
+if (poseSequences !== undefined) prunePoseSequences(document, poseSequences);
 document
     .createExtension(EXTMeshoptCompression)
     .setRequired(true)

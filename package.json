@@ -26,6 +26,10 @@
             "types": "./dist/index.d.mts",
             "import": "./dist/index.mjs"
         },
+        "./model-animations": {
+            "types": "./dist/model-animations.d.mts",
+            "import": "./dist/model-animations.mjs"
+        },
         "./model-materials": {
             "types": "./dist/model-materials.d.mts",
             "import": "./dist/model-materials.mjs"

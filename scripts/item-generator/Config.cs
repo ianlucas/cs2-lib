@@ -52,6 +52,8 @@ public static partial class Config
     public const string ItemsTsPath = "src/items.ts";
     public const string ModelMaterialsJsonPath = "scripts/data/model-materials.json";
     public const string ModelMaterialsTsPath = "src/model-materials.ts";
+    public const string ModelAnimationsJsonPath = "scripts/data/model-animations.json";
+    public const string ModelAnimationsTsPath = "src/model-animations.ts";
     public const string TranslationsTsPath = "src/translations/{0}.ts";
     public const string EnglishJsonPath = "scripts/data/english.json";
 
@@ -94,24 +96,33 @@ public static partial class Config
     public const string PetPlaceholderImage =
         "econ/default_generated/pet_hen_1_hen_catalan_tan_light";
 
-    // The clips kept on a pet model, by the animation graph it uses. Everything else the graph
-    // references (locomotion, tricks, the main-menu and photo-booth sets) is left out. They are
-    // named by full path because a leaf name is not unique: the chicken graph also references
-    // viewmodel/chicken/chick_idle01, which is a different clip.
-    public static readonly Dictionary<string, string[]> PetClipsByGraph = new()
+    // The clip whose first frame a pet model is posed in, by the animation graph it uses. A pet
+    // model ships no clips (a viewer that plays one fetches it on its own, see
+    // AnimationClipsPrefix), so this pose is what it stands in. A pet whose graph is missing here
+    // fails the build rather than ship in its bind pose.
+    public static readonly Dictionary<string, string> PetPoseClipByGraph = new()
     {
         ["animation/graphs/chicken/chicken.vnmgraph"] =
-        [
-            "animation/anims/chicken/world/chick_idle01",
-            "animation/anims/chicken/world/chick_idle02",
-            "animation/anims/chicken/world/chick_idle03",
-        ],
+            "animation/anims/chicken/world/chick_idle01.vnmclip",
         ["animation/graphs/chicken/egg_pristine_world.vnmgraph"] =
-        [
-            "animation/anims/egg/chick_egg_idle_phase02",
-            "animation/anims/egg/chick_egg_idle_phase03",
-            "animation/anims/egg/chick_egg_idle_phase04",
-        ],
+            "animation/anims/egg/chick_egg_idle_phase02.vnmclip",
+    };
+
+    // Where the game's animation clips live. Every clip under it is published as standalone
+    // three.js AnimationClip JSON (see AnimationClips), named by its path below this folder.
+    public const string AnimationClipsPrefix = "animation/anims/";
+
+    // The name a published clip gives the skeleton it is authored against, by skeleton resource
+    // path. A clip drives every model rigged to its skeleton, matched by bone name: `character` is
+    // every agent's, `viewmodel` the first-person arms and weapon rig (a glove's arms, a weapon's
+    // moving parts), `chicken` the chick's and every breed's, and `egg` the egg's. A clip on a
+    // skeleton missing here fails the build until it is named.
+    public static readonly Dictionary<string, string> AnimationSkeletonNames = new()
+    {
+        ["animation/skeletons/characters/worldmodel.vnmskel"] = "character",
+        ["animation/skeletons/characters/viewmodel.vnmskel"] = "viewmodel",
+        ["animation/skeletons/characters/chicken/chicken.vnmskel"] = "chicken",
+        ["animation/skeletons/egg/pristine_egg_world.vnmskel"] = "egg",
     };
 
     // The client scales a pet model by its life stage: 1.0 egg, 0.25 chick, 0.6 pullet, 1.0 hen.

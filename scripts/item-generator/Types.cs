@@ -438,6 +438,16 @@ public record AgentModelInfo(string Team, string? PoseSequence);
 /// </param>
 public record PetModelInfo(double? Scale);
 
+/// <summary>
+/// A published animation clip, as src/model-animations.ts lists it.
+/// </summary>
+/// <param name="Path">The clip's content-addressed CDN path, e.g. "/animations/chick_idle01_&lt;hash&gt;.json".</param>
+/// <param name="Skeleton">The name of the skeleton it is authored against (see Config.AnimationSkeletonNames).</param>
+public record ModelAnimation(
+    [property: JsonPropertyName("path")] string Path,
+    [property: JsonPropertyName("skeleton")] string Skeleton
+);
+
 public record PendingModelTask
 {
     public string Base { get; init; } = "";
@@ -452,7 +462,7 @@ public record PendingModelTask
     public AgentModelInfo? Agent { get; init; }
 
     // Non-null only for pets. A pet goes down the ordinary finalize path; this only narrows which
-    // animations are exported and adds a `pet` block to its model data.
+    // animations are exported, poses its joints, and adds a `pet` block to its model data.
     public PetModelInfo? Pet { get; init; }
 
     // Ship only the meshes of the model's default mesh group. A model normally ships every mesh
@@ -498,6 +508,10 @@ public class ItemGeneratorContext
     // A pet model's pose sequence names, keyed by the model's VPK path. Present for every pet,
     // empty for one with no body proportions (the egg). See WritePetModelData.
     public Dictionary<string, List<string>> PetPoseSequences { get; set; } = [];
+
+    // The file holding the pose a pet model's joints are written in (see AnimationClips.ReadPose),
+    // keyed by the model's VPK path. Produced by the model metadata pass for every pet.
+    public Dictionary<string, string> PetPosePaths { get; set; } = [];
     public HashSet<string> CompositeMaterialsToProcess { get; set; } = [];
     public HashSet<string> MaterialsToProcess { get; set; } = [];
     public HashSet<string> TexturesToProcess { get; set; } = [];
@@ -529,6 +543,13 @@ public class ItemGeneratorContext
         string,
         OrderedDictionary<string, List<string>>
     > ExistingModelMaterials { get; set; } = [];
+
+    // The previous run's published clips (see ExportModelAnimations), by clip name. A Limited run
+    // exports no clip, so it inherits these.
+    public Dictionary<string, ModelAnimation> ExistingModelAnimations { get; set; } = [];
+
+    // This run's published clips, by clip name. Filled by a Full run only.
+    public Dictionary<string, ModelAnimation> ModelAnimations { get; set; } = [];
 
     // Final model URLs reused from OutputDir. Their sibling JSON still needs to hydrate placement
     // metadata onto the newly-built catalog even though the GLBs skip extraction/finalization.

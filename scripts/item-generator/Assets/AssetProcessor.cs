@@ -46,6 +46,7 @@ public static partial class AssetProcessor
             WriteMaterialMetadata(ctx);
             ResolveAgentPatchSlots(ctx);
             await FinalizeModels(ctx);
+            ExportModelAnimations(ctx);
         }
 
         ApplyAssetRenames(ctx);
@@ -262,10 +263,7 @@ public static partial class AssetProcessor
                 StubModelTextures(glbPath);
             }
             if (model.Pet != null)
-            {
-                RenamePetAnimations(glbPath);
                 WritePetModelData(ctx, vpkPath, model);
-            }
             stubbed.Add((vpkPath, model, glbPath));
         }
 
@@ -307,32 +305,6 @@ public static partial class AssetProcessor
         }
 
         Log($"Processed {FormatCount(ctx.ModelsToProcess.Count, "model")}.");
-    }
-
-    // VRF names an animation graph clip by its resource path ("animation/anims/chicken/world/
-    // chick_idle01"), which is how the export filter tells it from a same-named clip elsewhere in
-    // the graph. Once filtered the path has done its job, so a clip is published under its leaf
-    // name, the way the model's own sequences already are.
-    private static void RenamePetAnimations(string glbPath)
-    {
-        var model = ModelRoot.Load(glbPath);
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        var renamed = false;
-        foreach (var animation in model.LogicalAnimations)
-        {
-            var name = animation.Name ?? "";
-            var leaf = name[(name.LastIndexOf('/') + 1)..];
-            if (!names.Add(leaf))
-                throw new InvalidOperationException(
-                    $"Pet model '{glbPath}' has two animations named '{leaf}'."
-                );
-            if (leaf == name)
-                continue;
-            animation.Name = leaf;
-            renamed = true;
-        }
-        if (renamed)
-            model.SaveGLB(glbPath);
     }
 
     // Adds a `pet` block to a pet's model data: `styles`, the published material files of each
@@ -411,6 +383,7 @@ public static partial class AssetProcessor
                     VpkPath: kv.Key,
                     TargetFilename: kv.Value.PlayerModel,
                     Agent: kv.Value.Agent,
+                    Pet: kv.Value.Pet,
                     DefaultMeshGroupOnly: kv.Value.DefaultMeshGroupOnly
                 )
             )
@@ -428,6 +401,18 @@ public static partial class AssetProcessor
                 ctx.AgentModelExports[vpkPath] = result.Agent;
             if (result.KeepMeshes != null)
                 ctx.ModelKeepMeshes[vpkPath] = result.KeepMeshes;
+            if (result.PetPose != null)
+            {
+                // Handed to item-generator-glb.ts as a file, as an agent's pose is in its spec.
+                var posePath = Path.Combine(
+                    Config.ItemGeneratorBuildDir,
+                    "pet-poses",
+                    $"{model.Base}_{model.Crc}.json"
+                );
+                Directory.CreateDirectory(Path.GetDirectoryName(posePath)!);
+                File.WriteAllText(posePath, JsonSerializer.Serialize(result.PetPose));
+                ctx.PetPosePaths[vpkPath] = posePath;
+            }
 
             foreach (var material in result.Materials)
             {
@@ -1547,6 +1532,8 @@ public static partial class AssetProcessor
             flags.Add($"--keep-meshes={string.Join(",", keepMeshes)}");
         if (ctx.PetPoseSequences.TryGetValue(vpkPath, out var poseSequences))
             flags.Add($"--pose-sequences={string.Join(",", poseSequences)}");
+        if (ctx.PetPosePaths.TryGetValue(vpkPath, out var posePath))
+            flags.Add($"--pose={posePath}");
         return flags;
     }
 
