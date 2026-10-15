@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 using System.Collections.Concurrent;
+using SkiaSharp;
 using SteamDatabase.ValvePak;
 using ValveResourceFormat;
 using ValveResourceFormat.CompiledShader;
@@ -418,6 +419,14 @@ public static class ResourceDecompiler
         var outPath = Path.Combine(dir, $"{baseName}{ext}");
 
         using var content = textureExtract.ToContentFile();
+        // CS2 v2000922 recompiled its I8 textures (the glove g_tTintId maps) to R8_UNORM with the
+        // same texel bytes. VRF decodes R8_UNORM into red alone, so spread red to grey to keep
+        // exporting the PNG I8 decoded to.
+        if (
+            resource.DataBlock is Texture { Format: VTexFormat.R8_UNORM }
+            && content is TextureContentFile textureContent
+        )
+            SpreadRedToGrey(textureContent.Bitmap);
         if (content.Data != null)
         {
             File.WriteAllBytes(outPath, content.Data);
@@ -436,6 +445,17 @@ public static class ResourceDecompiler
                 $"SubFile Extract returned null for texture: {vpkPath}"
             );
         File.WriteAllBytes(outPath, imageBytes);
+    }
+
+    private static void SpreadRedToGrey(SKBitmap bitmap)
+    {
+        using var pixmap = bitmap.PeekPixels();
+        var pixels = pixmap.GetPixelSpan<SKColor>();
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var red = pixels[i].Red;
+            pixels[i] = new SKColor(red, red, red, pixels[i].Alpha);
+        }
     }
 
     private static void DecompileSvg(byte[] data, string vpkPath, string outDir)
