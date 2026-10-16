@@ -24,6 +24,7 @@ import {
     assertInventoryItem,
     checkAddable,
     checkInventoryItem,
+    getItemAppearance,
     getNextStickerSchema,
     reconcileInventoryItems,
     repairInventoryItem,
@@ -31,6 +32,7 @@ import {
     validateStickerRotation
 } from "./inventory-rules.ts";
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
+import { CS2Inventory } from "./inventory.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { english } from "./translations/english.ts";
 import { ensure } from "./utils.ts";
@@ -815,5 +817,134 @@ describe("sticker schema", () => {
                 4
             )
         ).toBe(0);
+    });
+});
+
+describe("getItemAppearance", () => {
+    test("collapses empty records into the bare item", () => {
+        expect(getItemAppearance({ id: AK47_ID, stickers: {}, keychains: {}, patches: {} })).toStrictEqual({
+            id: AK47_ID
+        });
+    });
+
+    test("drops undefined fields at every level", () => {
+        expect(
+            getItemAppearance({
+                id: AK47_ID,
+                seed: undefined,
+                stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, wear: undefined, x: 0.1 } },
+                keychains: { 0: { id: LIL_AVA_ID, seed: undefined } }
+            })
+        ).toStrictEqual({
+            id: AK47_ID,
+            keychains: { 0: { id: LIL_AVA_ID } },
+            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, x: 0.1 } }
+        });
+    });
+
+    test("keeps only the fields that change how the item renders", () => {
+        expect(
+            getItemAppearance({
+                id: STORAGE_UNIT_ID,
+                charges: 1,
+                containerId: 1,
+                equipped: true,
+                equippedCT: true,
+                equippedT: true,
+                nameTag: "box",
+                storage: { 0: { id: AK47_ID } },
+                updatedAt: 1
+            })
+        ).toStrictEqual({ id: STORAGE_UNIT_ID, nameTag: "box" });
+    });
+
+    test("writes fields in alphabetical order regardless of how the item was built", () => {
+        const expected =
+            `{"id":${AWP_DRAGON_LORE_ID},"keychains":{"0":{"id":${LIL_AVA_ID},"seed":2,"x":1}},"nameTag":"x",` +
+            `"seed":1,"statTrak":0,"stickers":{"0":{"id":${FALLEN_COLOGNE_2015_ID},"rotation":3,"schema":0,` +
+            `"wear":0.5,"x":0.1,"y":0.2},"2":{"id":${FALLEN_COLOGNE_2015_ID}}},"wear":0.1}`;
+        expect(
+            JSON.stringify(
+                getItemAppearance({
+                    id: AWP_DRAGON_LORE_ID,
+                    keychains: { 0: { id: LIL_AVA_ID, seed: 2, x: 1 } },
+                    nameTag: "x",
+                    seed: 1,
+                    statTrak: 0,
+                    stickers: {
+                        0: { id: FALLEN_COLOGNE_2015_ID, rotation: 3, schema: 0, wear: 0.5, x: 0.1, y: 0.2 },
+                        2: { id: FALLEN_COLOGNE_2015_ID }
+                    },
+                    wear: 0.1
+                })
+            )
+        ).toBe(expected);
+        expect(
+            JSON.stringify(
+                getItemAppearance({
+                    wear: 0.1,
+                    stickers: {
+                        2: { id: FALLEN_COLOGNE_2015_ID },
+                        0: { y: 0.2, x: 0.1, wear: 0.5, schema: 0, rotation: 3, id: FALLEN_COLOGNE_2015_ID }
+                    },
+                    statTrak: 0,
+                    seed: 1,
+                    nameTag: "x",
+                    keychains: { 0: { x: 1, seed: 2, id: LIL_AVA_ID } },
+                    id: AWP_DRAGON_LORE_ID
+                })
+            )
+        ).toBe(expected);
+    });
+
+    test("rounds only the item's wear, and only when asked", () => {
+        const item: CS2BaseInventoryItem = {
+            id: AWP_DRAGON_LORE_ID,
+            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, wear: 0.12345 } },
+            wear: 0.12341
+        };
+        expect(getItemAppearance(item).wear).toBe(0.12341);
+        expect(getItemAppearance(item, { wearFractionDigits: 4 }).wear).toBe(0.1234);
+        expect(getItemAppearance({ ...item, wear: 0.12344 }, { wearFractionDigits: 4 }).wear).toBe(0.1234);
+        expect(getItemAppearance({ ...item, wear: 0.06999999999 }, { wearFractionDigits: 4 }).wear).toBe(0.07);
+        expect(getItemAppearance(item, { wearFractionDigits: 4 }).stickers?.[0]?.wear).toBe(0.12345);
+    });
+
+    test("leaves the item it reads untouched", () => {
+        const item: CS2BaseInventoryItem = {
+            id: AWP_DRAGON_LORE_ID,
+            equipped: true,
+            patches: {},
+            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, wear: undefined } },
+            wear: 0.12341
+        };
+        const copy = structuredClone(item);
+        getItemAppearance(item, { wearFractionDigits: 4 });
+        expect(item).toStrictEqual(copy);
+    });
+
+    test("an economy item appears as its id alone", () => {
+        expect(CS2Economy.getById(AWP_DRAGON_LORE_ID).getAppearance({ wearFractionDigits: 4 })).toStrictEqual({
+            id: AWP_DRAGON_LORE_ID
+        });
+    });
+
+    test("an inventory item appears as its rendering attributes", () => {
+        const inventory = new CS2Inventory({ maxItems: 16, storageUnitMaxItems: 3 });
+        inventory.add({
+            id: AWP_DRAGON_LORE_ID,
+            seed: 1,
+            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, wear: 0.5 } },
+            wear: 0.123456
+        });
+        const item = ensure(inventory.getAll()[0]);
+        item.equipped = true;
+        expect(item.getAppearance({ wearFractionDigits: 4 })).toStrictEqual({
+            id: AWP_DRAGON_LORE_ID,
+            seed: 1,
+            stickers: { 0: { id: FALLEN_COLOGNE_2015_ID, schema: 0, wear: 0.5 } },
+            wear: 0.1235
+        });
+        expect(item.getAppearance()).toStrictEqual(getItemAppearance(item.asBase()));
     });
 });

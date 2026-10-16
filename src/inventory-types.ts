@@ -44,6 +44,15 @@ export interface CS2BaseInventoryItem {
     wear?: number;
 }
 
+export type CS2ItemAppearance = Pick<
+    CS2BaseInventoryItem,
+    "id" | "keychains" | "nameTag" | "patches" | "seed" | "statTrak" | "stickers" | "style" | "upgradeLevel" | "wear"
+>;
+
+export interface CS2ItemAppearanceOptions {
+    wearFractionDigits?: number;
+}
+
 export interface CS2InventoryData {
     items: Record<number, CS2BaseInventoryItem>;
     version: number;

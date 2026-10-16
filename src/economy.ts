@@ -88,6 +88,7 @@ import {
     CS2StatTrakMode,
     type CS2UnlockedItem
 } from "./economy-types.ts";
+import type { CS2ItemAppearance, CS2ItemAppearanceOptions } from "./inventory-types.ts";
 import { type CS2Team } from "./teams.ts";
 import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
 
@@ -793,6 +794,10 @@ export class CS2EconomyItem implements Interface<
 
     getDisplayCase(): CS2EconomyItem {
         return this.economy.getStickerDisplayCase(this);
+    }
+
+    getAppearance(_options?: CS2ItemAppearanceOptions): CS2ItemAppearance {
+        return { id: this.id };
     }
 
     getImageUrl(wear?: number): string {

@@ -27,6 +27,7 @@ import {
     assertStickers,
     checkStickerSchema,
     getDropReason,
+    getItemAppearance,
     isStorableInStorageUnit,
     getNextStickerSchema,
     reconcileInventoryItems,
@@ -36,7 +37,9 @@ import type {
     CS2BaseInventoryItem,
     CS2InventoryData,
     CS2InventoryOptions,
-    CS2InventorySpec
+    CS2InventorySpec,
+    CS2ItemAppearance,
+    CS2ItemAppearanceOptions
 } from "./inventory-types.ts";
 import { CS2Team } from "./teams.ts";
 import { type Interface, type MapValue, type RecordValue, assert, ensure, roundToFactor } from "./utils.ts";
@@ -965,5 +968,9 @@ export class CS2InventoryItem
             upgradeLevel: this.upgradeLevel,
             wear: this.wear
         } satisfies Interface<CS2BaseInventoryItem>;
+    }
+
+    override getAppearance(options?: CS2ItemAppearanceOptions): CS2ItemAppearance {
+        return getItemAppearance(this.asBase(), options);
     }
 }
