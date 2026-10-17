@@ -24,9 +24,25 @@ import {
 import type { CS2Bounds } from "./economy-types.ts";
 import type { CS2EconomyInstance, CS2EconomyItem } from "./economy.ts";
 import type { CS2InventoryDrop, CS2InventoryDropReason } from "./inventory-format.ts";
-import type { CS2BaseInventoryItem, CS2InventoryOptions } from "./inventory-types.ts";
+import type {
+    CS2BaseInventoryItem,
+    CS2InventoryOptions,
+    CS2ItemAppearance,
+    CS2ItemAppearanceOptions
+} from "./inventory-types.ts";
 import { CS2InventoryItem, getTimestamp } from "./inventory.ts";
-import { type RecordValue, assert, clamp, ensure, isFactorPrecise, truncateToFactor } from "./utils.ts";
+import {
+    type Interface,
+    type RecordValue,
+    assert,
+    clamp,
+    ensure,
+    float,
+    isFactorPrecise,
+    sortRecord,
+    truncateToFactor,
+    withoutUndefined
+} from "./utils.ts";
 
 export interface CS2InventoryRule<T> {
     check(value: T | undefined, item: CS2EconomyItem): boolean;
@@ -669,4 +685,27 @@ export function reconcileInventoryItems(
         trimToMaximum(items, options.maxItems, dropped);
     }
     return dropped;
+}
+
+export function getItemAppearance(
+    item: CS2BaseInventoryItem,
+    { wearFractionDigits }: CS2ItemAppearanceOptions = {}
+): CS2ItemAppearance {
+    return withoutUndefined({
+        id: item.id,
+        keychains: sortRecord(item.keychains, ({ id, seed, x, y, z }) => withoutUndefined({ id, seed, x, y, z })),
+        nameTag: item.nameTag,
+        patches: sortRecord(item.patches, (patch) => patch),
+        seed: item.seed,
+        statTrak: item.statTrak,
+        stickers: sortRecord(item.stickers, ({ id, rotation, schema, wear, x, y }) =>
+            withoutUndefined({ id, rotation, schema, wear, x, y })
+        ),
+        style: item.style,
+        upgradeLevel: item.upgradeLevel,
+        wear:
+            item.wear !== undefined && wearFractionDigits !== undefined
+                ? float(item.wear, wearFractionDigits)
+                : item.wear
+    } satisfies Interface<CS2ItemAppearance>);
 }

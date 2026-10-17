@@ -93,3 +93,18 @@ export function fail(message?: string): never {
 export function isNotUndefined<T>(value: T): value is NonNullable<T> {
     return value !== undefined;
 }
+
+export function withoutUndefined<T extends object>(value: T): T {
+    return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
+}
+
+export function sortRecord<T, U>(
+    record: Record<string, T> | undefined,
+    map: (value: T) => U
+): Record<string, U> | undefined {
+    const entries = Object.entries(record ?? {})
+        .filter(([, value]) => value !== undefined)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([key, value]) => [key, map(value)] as const);
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
