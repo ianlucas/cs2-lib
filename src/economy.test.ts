@@ -171,15 +171,41 @@ test("nametag validation", () => {
         "🎉",
         "\u00a0name",
         "name\u00a0",
-        "🎉".repeat(20)
+        "\u00a0",
+        '"quoted"',
+        "小".repeat(20),
+        "🎉".repeat(10),
+        "a".repeat(18) + "🎉"
     ]) {
         expect(CS2Economy.safeValidateNameTag(nameTag), `validating ${nameTag}`).toBeTruthy();
     }
-    for (const nameTag of [" fail", "fail ", "\tname", "name\n", "name\u007f", "name\u0085", "🎉".repeat(21)]) {
+    for (const nameTag of [
+        " fail",
+        "fail ",
+        "\tname",
+        "name\n",
+        "name\u007f",
+        "name\u0085",
+        "name\u009f",
+        "小".repeat(21),
+        "🎉".repeat(11),
+        "🎉".repeat(20),
+        "a".repeat(19) + "🎉"
+    ]) {
         expect(CS2Economy.safeValidateNameTag(nameTag), `validating ${nameTag}`).toBeFalsy();
     }
     expect(CS2Economy.safeValidateNameTag("")).toBeTruthy();
     expect(CS2Economy.safeRequireNameTag("")).toBeFalsy();
+});
+
+test("trimNameTag preserves Unicode whitespace", () => {
+    expect(CS2Economy.trimNameTag("  name  ")).toBe("name");
+    expect(CS2Economy.trimNameTag(" \u00a0name\u00a0 ")).toBe("\u00a0name\u00a0");
+    expect(CS2Economy.trimNameTag("\u00a0")).toBe("\u00a0");
+    expect(CS2Economy.trimNameTag("\tname\n")).toBe("name");
+    expect(CS2Economy.trimNameTag(" ")).toBeUndefined();
+    expect(CS2Economy.trimNameTag("")).toBeUndefined();
+    expect(CS2Economy.trimNameTag()).toBeUndefined();
 });
 
 test("wear validation", () => {
