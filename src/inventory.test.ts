@@ -200,8 +200,8 @@ describe("CS2Inventory methods", () => {
         expect(result.updatedAt).not.toBe(undefined);
     });
 
-    test.each(["\u00a0", "\u00a0name\u00a0"])(
-        "name tags preserve non-breaking spaces through save/load: %j",
+    test.each(["\u00a0", "\u00a0name\u00a0", "🎉".repeat(20)])(
+        "name tags valid in-game survive save/load: %j",
         (nameTag) => {
             inventory.add({ id: NAMETAG_ID });
             inventory.addWithNameTag(0, AK47_ID, nameTag);

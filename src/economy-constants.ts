@@ -50,8 +50,7 @@ export const CS2_STICKER_ROTATION_STEP = 0.5;
 export const CS2_KEYCHAIN_POSITION_FACTOR = 0.0001;
 export const CS2_WEAR_FACTOR = 0.000001;
 
-// CS2 counts UTF-16 code units, so this expression intentionally has no Unicode flag.
-export const CS2_NAMETAG_RE: RegExp = /^(?! )[\u0020-\u007e\u00a0-\uffff]{0,19}[\u0021-\u007e\u00a0-\uffff]$/;
+export const CS2_NAMETAG_RE: RegExp = /^(?! )[\u{20}-\u{7e}\u{a0}-\u{10ffff}]{0,19}[\u{21}-\u{7e}\u{a0}-\u{10ffff}]$/u;
 
 export const CS2_CHARM_DETACHMENT_PACK_TOOL_DEFINITION_INDEX = 4950;
 export const CS2_CHARM_DETACHMENT_TOOL_DEFINITION_INDEX = 65;

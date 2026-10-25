@@ -172,10 +172,12 @@ test("nametag validation", () => {
         "\u00a0name",
         "name\u00a0",
         "\u00a0",
+        "\u3000",
+        "\ufeff",
         '"quoted"',
         "小".repeat(20),
-        "🎉".repeat(10),
-        "a".repeat(18) + "🎉"
+        "🎉".repeat(20),
+        "a".repeat(19) + "🎉"
     ]) {
         expect(CS2Economy.safeValidateNameTag(nameTag), `validating ${nameTag}`).toBeTruthy();
     }
@@ -188,9 +190,8 @@ test("nametag validation", () => {
         "name\u0085",
         "name\u009f",
         "小".repeat(21),
-        "🎉".repeat(11),
-        "🎉".repeat(20),
-        "a".repeat(19) + "🎉"
+        "🎉".repeat(21),
+        "a".repeat(20) + "🎉"
     ]) {
         expect(CS2Economy.safeValidateNameTag(nameTag), `validating ${nameTag}`).toBeFalsy();
     }
@@ -202,6 +203,7 @@ test("trimNameTag preserves Unicode whitespace", () => {
     expect(CS2Economy.trimNameTag("  name  ")).toBe("name");
     expect(CS2Economy.trimNameTag(" \u00a0name\u00a0 ")).toBe("\u00a0name\u00a0");
     expect(CS2Economy.trimNameTag("\u00a0")).toBe("\u00a0");
+    expect(CS2Economy.trimNameTag(" \u3000name\ufeff ")).toBe("\u3000name\ufeff");
     expect(CS2Economy.trimNameTag("\tname\n")).toBe("name");
     expect(CS2Economy.trimNameTag(" ")).toBeUndefined();
     expect(CS2Economy.trimNameTag("")).toBeUndefined();

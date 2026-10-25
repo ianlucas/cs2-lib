@@ -239,7 +239,6 @@ export class CS2EconomyInstance {
     }
 
     trimNameTag(nameTag?: string): string | undefined {
-        // Unicode whitespace is valid in name tags; only trim ASCII whitespace.
         const trimmed = nameTag?.replace(/^[ \t\r\n\v\f]+|[ \t\r\n\v\f]+$/g, "");
         return trimmed === "" ? undefined : trimmed;
     }
