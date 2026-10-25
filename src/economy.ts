@@ -239,7 +239,7 @@ export class CS2EconomyInstance {
     }
 
     trimNameTag(nameTag?: string): string | undefined {
-        const trimmed = nameTag?.trim();
+        const trimmed = nameTag?.replace(/^[ \t\r\n\v\f]+|[ \t\r\n\v\f]+$/g, "");
         return trimmed === "" ? undefined : trimmed;
     }
 

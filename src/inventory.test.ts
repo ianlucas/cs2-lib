@@ -200,6 +200,24 @@ describe("CS2Inventory methods", () => {
         expect(result.updatedAt).not.toBe(undefined);
     });
 
+    test.each(["\u00a0", "\u00a0name\u00a0", "🎉".repeat(20)])(
+        "name tags valid in-game survive save/load: %j",
+        (nameTag) => {
+            inventory.add({ id: NAMETAG_ID });
+            inventory.addWithNameTag(0, AK47_ID, nameTag);
+            expect(inventory.get(0).nameTag).toBe(nameTag);
+            inventory = CS2Inventory.load(inventory.stringify());
+            expect(inventory.get(0).nameTag).toBe(nameTag);
+
+            inventory.add({ id: NAMETAG_ID });
+            inventory.renameItem(1, 0, "My Nametag");
+            inventory.add({ id: NAMETAG_ID });
+            inventory.renameItem(1, 0, nameTag);
+            expect(inventory.get(0).nameTag).toBe(nameTag);
+            expect(CS2Inventory.load(inventory.stringify()).get(0).nameTag).toBe(nameTag);
+        }
+    );
+
     test("addWithSticker should add items with stickers to the inventory", () => {
         inventory.add({ id: FALLEN_COLOGNE_2015_ID });
         inventory.addWithSticker(0, AK47_ID, { schema: 2 });
