@@ -86,7 +86,9 @@ import {
     type CS2ModelAnimationSkeleton,
     CS2ItemWear,
     CS2StatTrakMode,
-    type CS2UnlockedItem
+    type CS2UnlockableItem,
+    type CS2UnlockedItem,
+    type CS2UnlockOptions
 } from "./economy-types.ts";
 import type { CS2ItemAppearance, CS2ItemAppearanceOptions } from "./inventory-types.ts";
 import { type CS2Team } from "./teams.ts";
@@ -969,48 +971,57 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
-    /** @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml */
-    unlockContainer(options?: {
-        computeOdds?: (rarities: (typeof CS2_RARITY_ORDER)[number][]) => number[] | undefined;
-    }): CS2UnlockedItem {
+    listUnlockableItems(options?: CS2UnlockOptions): CS2UnlockableItem[] {
         const contents = this.groupContents();
         const keys = Object.keys(contents);
         const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
         const odds = options?.computeOdds?.(rarities) ?? rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
         const total = odds.reduce((acc, cur) => acc + cur, 0);
-        const entries = rarities.map((rarity, index) => [rarity, ensure(odds[index]) / total] as const);
+        return rarities.flatMap((rarity, index) => {
+            const stack = ensure(contents[rarity]);
+            const chance = ensure(odds[index]) / total / stack.length;
+            return stack.map((item) => ({
+                chance,
+                id: item.id,
+                rarity,
+                statTrakChance:
+                    item.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
+                        ? this.statTrakMode === CS2StatTrakMode.Guaranteed
+                            ? 1
+                            : CS2_STATTRAK_ODD
+                        : 0,
+                wearMax: item.hasWear() ? item.getMaximumWear() : undefined,
+                wearMin: item.hasWear() ? item.getMinimumWear() : undefined
+            }));
+        });
+    }
+
+    unlockContainer(options?: CS2UnlockOptions): CS2UnlockedItem {
+        const unlockables = this.listUnlockableItems(options);
         const roll = Math.random();
-        let [rollRarity] = ensure(entries[0]);
+        let unlocked = ensure(unlockables.at(-1));
         let acc = 0;
-        for (const [rarity, odd] of entries) {
-            acc += odd;
+        for (const unlockable of unlockables) {
+            acc += unlockable.chance;
             if (roll <= acc) {
-                rollRarity = rarity;
+                unlocked = unlockable;
                 break;
             }
         }
-        const stack = ensure(contents[rollRarity]);
-        const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
+        const item = this.economy.getById(unlocked.id);
         return {
             attributes: {
                 containerId: this.id,
-                seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
-                statTrak:
-                    unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
-                        ? this.statTrakMode === CS2StatTrakMode.Guaranteed || Math.random() <= CS2_STATTRAK_ODD
-                            ? 0
-                            : undefined
-                        : undefined,
-                wear: unlocked.hasWear()
-                    ? truncateToFactor(
-                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR),
-                          CS2_WEAR_FACTOR
-                      )
-                    : undefined
+                seed: item.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
+                statTrak: Math.random() < unlocked.statTrakChance ? 0 : undefined,
+                wear:
+                    unlocked.wearMin !== undefined && unlocked.wearMax !== undefined
+                        ? truncateToFactor(randomFloat(unlocked.wearMin, unlocked.wearMax), CS2_WEAR_FACTOR)
+                        : undefined
             },
             id: unlocked.id,
-            rarity: CS2RaritySoundName[unlocked.rarityColor],
-            special: rollRarity === "special"
+            rarity: CS2RaritySoundName[item.rarityColor],
+            special: unlocked.rarity === "special"
         };
     }
 }

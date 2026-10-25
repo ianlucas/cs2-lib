@@ -3,12 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { assert, describe, expect, test } from "vitest";
+import { assert, describe, expect, test, vi } from "vitest";
 import { english } from "../src/translations/english.ts";
-import { CS2RarityColor } from "./economy-container.ts";
-import { type CS2Item } from "./economy-types.ts";
+import { CS2RarityColor, CS2_RARITY_ORDER } from "./economy-container.ts";
+import { type CS2Item, type CS2UnlockableItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyItem } from "./economy.ts";
 import { CS2_ITEMS } from "./items.ts";
+import { ensure } from "./utils.ts";
+
+const KILOWATT_CASE_ID = 11422;
+const MASTERMINDS_MUSIC_KIT_BOX_ID = 9400;
+const STATTRAK_MASTERMINDS_MUSIC_KIT_BOX_ID = 9401;
+const KILOWATT_CASE_RARITIES = ["rare", "mythical", "legendary", "ancient", "special"] as const;
+
+function sumChance(unlockables: CS2UnlockableItem[]): number {
+    return unlockables.reduce((acc, { chance }) => acc + chance, 0);
+}
 
 describe("CS2Economy", () => {
     test("use should add items to the economy", () => {
@@ -331,4 +341,90 @@ test("getKeychainPositionBounds returns per-axis bounds; legacy models read only
         y: { min: undefined, max: undefined },
         z: { min: undefined, max: undefined }
     });
+});
+
+test("listUnlockableItems weighs each rarity by 0.8 / 5^n and splits it evenly between its items", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const container = CS2Economy.getById(KILOWATT_CASE_ID);
+    const unlockables = container.listUnlockableItems();
+    expect(unlockables.map(({ id }) => id).sort((a, b) => a - b)).toEqual(
+        container
+            .listContents()
+            .map(({ id }) => id)
+            .sort((a, b) => a - b)
+    );
+    expect(sumChance(unlockables)).toBeCloseTo(1, 12);
+    const weights = KILOWATT_CASE_RARITIES.map((_, index) => 0.8 / 5 ** index);
+    const total = weights.reduce((acc, weight) => acc + weight, 0);
+    for (const [index, rarity] of KILOWATT_CASE_RARITIES.entries()) {
+        const tier = unlockables.filter((unlockable) => unlockable.rarity === rarity);
+        expect(sumChance(tier)).toBeCloseTo(ensure(weights[index]) / total, 12);
+        expect(new Set(tier.map(({ chance }) => chance)).size).toBe(1);
+    }
+    for (const unlockable of unlockables) {
+        const item = CS2Economy.getById(unlockable.id);
+        expect(unlockable.statTrakChance).toBe(item.hasStatTrak() ? 0.1 : 0);
+        expect(unlockable.wearMin).toBe(item.hasWear() ? item.getMinimumWear() : undefined);
+        expect(unlockable.wearMax).toBe(item.hasWear() ? item.getMaximumWear() : undefined);
+    }
+});
+
+test("listUnlockableItems lists items from the most common rarity to the rarest", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const order = CS2Economy.getById(KILOWATT_CASE_ID)
+        .listUnlockableItems()
+        .map(({ rarity }) => CS2_RARITY_ORDER.indexOf(rarity));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+});
+
+test("listUnlockableItems follows the container's StatTrak mode", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const excluded = CS2Economy.getById(MASTERMINDS_MUSIC_KIT_BOX_ID).listUnlockableItems();
+    const guaranteed = CS2Economy.getById(STATTRAK_MASTERMINDS_MUSIC_KIT_BOX_ID).listUnlockableItems();
+    expect(excluded.length).toBeGreaterThan(0);
+    expect(excluded.every(({ statTrakChance }) => statTrakChance === 0)).toBe(true);
+    expect(guaranteed.length).toBeGreaterThan(0);
+    expect(guaranteed.every(({ statTrakChance }) => statTrakChance === 1)).toBe(true);
+});
+
+test("listUnlockableItems uses computeOdds when given", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const unlockables = CS2Economy.getById(KILOWATT_CASE_ID).listUnlockableItems({
+        computeOdds: (rarities) => rarities.map(() => 1)
+    });
+    for (const rarity of KILOWATT_CASE_RARITIES) {
+        const tier = unlockables.filter((unlockable) => unlockable.rarity === rarity);
+        expect(sumChance(tier)).toBeCloseTo(1 / KILOWATT_CASE_RARITIES.length, 12);
+    }
+});
+
+test("unlockContainer rolls from listUnlockableItems", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const container = CS2Economy.getById(KILOWATT_CASE_ID);
+    const unlockables = container.listUnlockableItems();
+    const first = ensure(unlockables[0]);
+    const last = ensure(unlockables.at(-1));
+    const random = vi.spyOn(Math, "random");
+    try {
+        random.mockReturnValue(0);
+        const common = container.unlockContainer();
+        expect(common.id).toBe(first.id);
+        expect(common.special).toBe(false);
+        expect(common.attributes.statTrak).toBe(0);
+        expect(common.attributes.wear).toBe(first.wearMin);
+
+        random.mockReturnValue(0.9999999);
+        const special = container.unlockContainer();
+        expect(special.id).toBe(last.id);
+        expect(special.special).toBe(true);
+        expect(special.attributes.statTrak).toBeUndefined();
+        if (last.wearMin === undefined || last.wearMax === undefined) {
+            expect(special.attributes.wear).toBeUndefined();
+        } else {
+            expect(special.attributes.wear).toBeGreaterThanOrEqual(last.wearMin);
+            expect(special.attributes.wear).toBeLessThanOrEqual(last.wearMax);
+        }
+    } finally {
+        random.mockRestore();
+    }
 });
