@@ -38,6 +38,8 @@ export const CS2_RARITY_ORDER: readonly [
     "special"
 ] = [...CS2_RARITIES, "special"] as const;
 
+export type CS2UnlockRarity = (typeof CS2_RARITY_ORDER)[number];
+
 export const CS2RarityColorName: {
     readonly "#ded6cc": "common";
     readonly "#b0c3d9": "common";
