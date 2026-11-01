@@ -5,8 +5,8 @@
 
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { CS2RarityColor, CS2_SOUVENIR_HIGHLIGHT_ODD } from "./economy-container.ts";
-import { CS2ContainerType, type CS2Item, CS2ItemType } from "./economy-types.ts";
-import { CS2EconomyInstance } from "./economy.ts";
+import { CS2ContainerType, type CS2Item, CS2ItemType, CS2SouvenirStickerType } from "./economy-types.ts";
+import { CS2EconomyInstance, type CS2SouvenirSource, composeSouvenirStickers } from "./economy.ts";
 import { checkInventoryItem, checkSouvenir, repairInventoryItem } from "./inventory-rules.ts";
 import type { CS2BaseInventoryItem } from "./inventory-types.ts";
 import { CS2Inventory } from "./inventory.ts";
@@ -14,92 +14,150 @@ import { CS2Inventory } from "./inventory.ts";
 const SKIN_ID = 1;
 const DEFAULT_WEAPON_ID = 2;
 const KNIFE_SKIN_ID = 3;
-const EVENT_STICKER_ID = 10;
-const OTHER_EVENT_STICKER_ID = 11;
-const MAP_STICKER_ID = 12;
-const TEAM_A_STICKER_ID = 20;
-const TEAM_B_STICKER_ID = 21;
-const TEAM_C_STICKER_ID = 22;
-const TEAM_A_AUTOGRAPH_IDS = [30, 31];
-const TEAM_B_AUTOGRAPH_IDS = [32, 33];
-const TEAM_C_AUTOGRAPH_IDS = [34, 35];
-const HIGHLIGHT_KEYCHAIN_ID = 40;
-const HIGHLIGHT_ID = 41;
-const LONE_PACKAGE_ID = 50;
-const AUTOGRAPH_PACKAGE_ID = 51;
-const MAP_PACKAGE_ID = 52;
-const HIGHLIGHT_PACKAGE_ID = 53;
-const BARE_PACKAGE_ID = 54;
-const WEAPON_CASE_ID = 55;
+const LOOSE_SKIN_ID = 4;
+const HIGHLIGHT_SKIN_ID = 5;
 
-const TEAM_STICKER_IDS = [TEAM_A_STICKER_ID, TEAM_B_STICKER_ID, TEAM_C_STICKER_ID];
-const AUTOGRAPH_IDS_BY_TEAM: Record<number, number[]> = {
-    [TEAM_A_STICKER_ID]: TEAM_A_AUTOGRAPH_IDS,
-    [TEAM_B_STICKER_ID]: TEAM_B_AUTOGRAPH_IDS,
-    [TEAM_C_STICKER_ID]: TEAM_C_AUTOGRAPH_IDS
-};
+const LONE_EVENT_ID = 1;
+const LONE_EVENT_STICKER_IDS = [10, 11];
+const AUTOGRAPH_EVENT_ID = 7;
+const AUTOGRAPH_EVENT_STICKER_ID = 12;
+const AUTOGRAPH_TEAMS: Record<number, number[]> = { 1: [20, 30, 31], 2: [21, 32, 33], 3: [22, 34, 35] };
+const MAP_EVENT_ID = 24;
+const MAP_EVENT_STICKER_ID = 13;
+const MAP_TEAMS: Record<number, number[]> = { 1: [23], 2: [24], 3: [25] };
+const CRAFTED_EVENT_ID = 26;
+const CRAFTED_TEAMS: Record<number, number[]> = { 1: [26, 40, 41], 2: [27, 42, 43], 3: [28, 44, 45] };
+const MAP_STICKER_ID = 14;
+const OTHER_MAP_STICKER_ID = 15;
+
+const HIGHLIGHT_KEYCHAIN_ID = 50;
+const HIGHLIGHT_ID = 51;
+const LONE_PACKAGE_ID = 60;
+const AUTOGRAPH_PACKAGE_ID = 61;
+const MAP_PACKAGE_ID = 62;
+const HIGHLIGHT_PACKAGE_ID = 63;
+const BARE_PACKAGE_ID = 64;
+const WEAPON_CASE_ID = 65;
+const UNRELATED_STICKER_ID = 70;
+
 const ROLLS = 200;
 
-function sticker(id: number): CS2Item {
-    return { id, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Ancient };
-}
+const logosOf = (teams: Record<number, number[]>) => Object.values(teams).map(([logo]) => logo!);
+const autographsOf = (teams: Record<number, number[]>) => Object.values(teams).flatMap(([, ...rest]) => rest);
 
-function container(id: number, containerType: CS2ContainerType, souvenir: Partial<CS2Item> = {}): CS2Item {
-    return {
-        id,
-        type: CS2ItemType.Container,
-        rarityColor: CS2RarityColor.Common,
-        containerType,
-        contentIds: [SKIN_ID],
-        ...souvenir
-    };
-}
+function buildItems({ crafted }: { crafted: boolean }): CS2Item[] {
+    const stickers = new Map<number, CS2Item>();
+    function sticker(id: number, type?: CS2SouvenirStickerType, eventId?: number, teamId?: number) {
+        const item = stickers.get(id) ?? { id, type: CS2ItemType.Sticker, rarityColor: CS2RarityColor.Ancient };
+        if (eventId !== undefined) {
+            item.souvenirEventIds = [...(item.souvenirEventIds ?? []), eventId];
+            item.souvenirStickerType = type;
+            item.souvenirTeamId = teamId;
+        }
+        stickers.set(id, item);
+    }
+    function teams(eventId: number, teams: Record<number, number[]>) {
+        for (const [teamId, [logo, ...autographs]] of Object.entries(teams)) {
+            sticker(logo!, CS2SouvenirStickerType.Team, eventId, Number(teamId));
+            for (const autograph of autographs) {
+                sticker(autograph, CS2SouvenirStickerType.Autograph, eventId, Number(teamId));
+            }
+        }
+    }
+    function container(id: number, containerType: CS2ContainerType, souvenir: Partial<CS2Item> = {}): CS2Item {
+        return {
+            id,
+            type: CS2ItemType.Container,
+            rarityColor: CS2RarityColor.Common,
+            containerType,
+            contentIds: [SKIN_ID],
+            ...souvenir
+        };
+    }
 
-const economy = new CS2EconomyInstance();
-economy.load({
-    items: [
+    for (const id of LONE_EVENT_STICKER_IDS) {
+        sticker(id, CS2SouvenirStickerType.Event, LONE_EVENT_ID);
+    }
+    sticker(AUTOGRAPH_EVENT_STICKER_ID, CS2SouvenirStickerType.Event, AUTOGRAPH_EVENT_ID);
+    teams(AUTOGRAPH_EVENT_ID, AUTOGRAPH_TEAMS);
+    sticker(MAP_EVENT_STICKER_ID, CS2SouvenirStickerType.Event, MAP_EVENT_ID);
+    teams(MAP_EVENT_ID, MAP_TEAMS);
+    for (const id of [MAP_STICKER_ID, OTHER_MAP_STICKER_ID]) {
+        sticker(id, CS2SouvenirStickerType.Map, MAP_EVENT_ID);
+    }
+    if (crafted) {
+        teams(CRAFTED_EVENT_ID, CRAFTED_TEAMS);
+        for (const id of [MAP_STICKER_ID, OTHER_MAP_STICKER_ID]) {
+            sticker(id, CS2SouvenirStickerType.Map, CRAFTED_EVENT_ID);
+        }
+    }
+    sticker(UNRELATED_STICKER_ID);
+
+    return [
         { id: SKIN_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Common, variantIndex: 1 },
         { id: DEFAULT_WEAPON_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Default, isDefault: true },
         { id: KNIFE_SKIN_ID, type: CS2ItemType.Melee, rarityColor: CS2RarityColor.Ancient, variantIndex: 1 },
-        ...[EVENT_STICKER_ID, OTHER_EVENT_STICKER_ID, MAP_STICKER_ID, ...TEAM_STICKER_IDS].map(sticker),
-        ...Object.values(AUTOGRAPH_IDS_BY_TEAM).flat().map(sticker),
+        { id: LOOSE_SKIN_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Common, variantIndex: 2 },
+        { id: HIGHLIGHT_SKIN_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Common, variantIndex: 3 },
+        ...stickers.values(),
         { id: HIGHLIGHT_KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Rare },
         {
             id: HIGHLIGHT_ID,
             type: CS2ItemType.Highlight,
             parentId: HIGHLIGHT_KEYCHAIN_ID,
-            teamStickerIds: [TEAM_C_STICKER_ID, TEAM_A_STICKER_ID],
+            teamStickerIds: [MAP_TEAMS[3]![0]!, MAP_TEAMS[1]![0]!],
             variantIndex: 1
         },
-        container(LONE_PACKAGE_ID, CS2ContainerType.SouvenirCase, {
-            souvenirEventStickerIds: [EVENT_STICKER_ID, OTHER_EVENT_STICKER_ID]
-        }),
-        container(AUTOGRAPH_PACKAGE_ID, CS2ContainerType.SouvenirCase, {
-            souvenirEventStickerIds: [EVENT_STICKER_ID],
-            souvenirTeamStickerIds: TEAM_STICKER_IDS.map((id) => [id, ...AUTOGRAPH_IDS_BY_TEAM[id]!])
-        }),
+        container(LONE_PACKAGE_ID, CS2ContainerType.SouvenirCase, { souvenirEventId: LONE_EVENT_ID }),
+        container(AUTOGRAPH_PACKAGE_ID, CS2ContainerType.SouvenirCase, { souvenirEventId: AUTOGRAPH_EVENT_ID }),
         container(MAP_PACKAGE_ID, CS2ContainerType.SouvenirCase, {
-            souvenirEventStickerIds: [EVENT_STICKER_ID],
-            souvenirMapStickerId: MAP_STICKER_ID,
-            souvenirTeamStickerIds: TEAM_STICKER_IDS.map((id) => [id])
+            souvenirEventId: MAP_EVENT_ID,
+            souvenirMapStickerId: MAP_STICKER_ID
         }),
         container(HIGHLIGHT_PACKAGE_ID, CS2ContainerType.SouvenirCase, {
-            souvenirEventStickerIds: [EVENT_STICKER_ID],
+            contentIds: [HIGHLIGHT_SKIN_ID],
+            souvenirEventId: MAP_EVENT_ID,
             souvenirHighlightIds: [HIGHLIGHT_ID],
-            souvenirMapStickerId: MAP_STICKER_ID,
-            souvenirTeamStickerIds: TEAM_STICKER_IDS.map((id) => [id])
+            souvenirMapStickerId: OTHER_MAP_STICKER_ID
         }),
         container(BARE_PACKAGE_ID, CS2ContainerType.SouvenirCase),
         container(WEAPON_CASE_ID, CS2ContainerType.WeaponCase)
-    ]
-});
+    ];
+}
+
+const economy = new CS2EconomyInstance();
+economy.load({ items: buildItems({ crafted: true }) });
+
+const packagedEconomy = new CS2EconomyInstance();
+packagedEconomy.load({ items: buildItems({ crafted: false }) });
 
 function stickerIdsOf(stickers: Record<string, { id: number }> | undefined): number[] {
     return Object.values(stickers ?? {}).map(({ id }) => id);
 }
 
+function stickersOf(...ids: number[]): CS2BaseInventoryItem["stickers"] {
+    return Object.fromEntries(ids.map((id, slot) => [slot, { id }]));
+}
+
+function contentOf(containerId: number) {
+    return economy.getById(economy.getById(containerId).contentIds![0]!);
+}
+
 function unlock(id: number, options?: { highlight?: boolean }) {
     return economy.getById(id).unlockContainer(options).attributes;
+}
+
+function describeSource({ container, eventId, eventStickers, highlights, mapStickers, teams }: CS2SouvenirSource) {
+    return {
+        container: container?.id,
+        eventId,
+        eventStickers: eventStickers.map(({ id }) => id),
+        highlights: highlights.map(({ id }) => id),
+        mapStickers: mapStickers.map(({ id }) => id),
+        teams: Object.fromEntries(
+            teams.map(({ autographs, id, sticker }) => [id, [sticker.id, ...autographs.map(({ id }) => id)]])
+        )
+    };
 }
 
 afterEach(() => {
@@ -109,9 +167,16 @@ afterEach(() => {
 describe("souvenir economy items", () => {
     test("only a weapon skin can be a souvenir", () => {
         expect(economy.getById(SKIN_ID).hasSouvenir()).toBe(true);
-        for (const id of [DEFAULT_WEAPON_ID, KNIFE_SKIN_ID, EVENT_STICKER_ID, AUTOGRAPH_PACKAGE_ID]) {
+        expect(economy.getById(LOOSE_SKIN_ID).hasSouvenir()).toBe(true);
+        for (const id of [DEFAULT_WEAPON_ID, KNIFE_SKIN_ID, AUTOGRAPH_EVENT_STICKER_ID, AUTOGRAPH_PACKAGE_ID]) {
             expect(economy.getById(id).hasSouvenir()).toBe(false);
         }
+    });
+
+    test("with no crafted event, only a skin a souvenir package drops can be a souvenir", () => {
+        expect(packagedEconomy.getById(SKIN_ID).hasSouvenir()).toBe(true);
+        expect(packagedEconomy.getById(LOOSE_SKIN_ID).hasSouvenir()).toBe(false);
+        expect(packagedEconomy.getById(LOOSE_SKIN_ID).getSouvenirSources()).toEqual([]);
     });
 
     test("validateSouvenir accepts only true on an item that can be a souvenir", () => {
@@ -123,6 +188,74 @@ describe("souvenir economy items", () => {
         expect(() => economy.validateSouvenir(false, skin)).toThrow();
         expect(() => economy.validateSouvenir(true, economy.getById(KNIFE_SKIN_ID))).toThrow();
         expect(economy.safeValidateSouvenir(true, economy.getById(DEFAULT_WEAPON_ID))).toBe(false);
+    });
+
+    test("a skin's souvenir sources are the packages that drop it and the crafted events", () => {
+        expect(economy.getSouvenirContainers(SKIN_ID).map(({ id }) => id)).toEqual([
+            LONE_PACKAGE_ID,
+            AUTOGRAPH_PACKAGE_ID,
+            MAP_PACKAGE_ID,
+            BARE_PACKAGE_ID
+        ]);
+        expect(economy.getById(SKIN_ID).getSouvenirSources().map(describeSource)).toEqual([
+            {
+                container: LONE_PACKAGE_ID,
+                eventId: LONE_EVENT_ID,
+                eventStickers: LONE_EVENT_STICKER_IDS,
+                highlights: [],
+                mapStickers: [],
+                teams: {}
+            },
+            {
+                container: AUTOGRAPH_PACKAGE_ID,
+                eventId: AUTOGRAPH_EVENT_ID,
+                eventStickers: [AUTOGRAPH_EVENT_STICKER_ID],
+                highlights: [],
+                mapStickers: [],
+                teams: AUTOGRAPH_TEAMS
+            },
+            {
+                container: MAP_PACKAGE_ID,
+                eventId: MAP_EVENT_ID,
+                eventStickers: [MAP_EVENT_STICKER_ID],
+                highlights: [],
+                mapStickers: [MAP_STICKER_ID],
+                teams: MAP_TEAMS
+            },
+            {
+                container: undefined,
+                eventId: CRAFTED_EVENT_ID,
+                eventStickers: [],
+                highlights: [],
+                mapStickers: [MAP_STICKER_ID, OTHER_MAP_STICKER_ID],
+                teams: CRAFTED_TEAMS
+            }
+        ]);
+        expect(economy.getById(HIGHLIGHT_SKIN_ID).getSouvenirSources().map(describeSource)[0]).toMatchObject({
+            container: HIGHLIGHT_PACKAGE_ID,
+            highlights: [HIGHLIGHT_ID],
+            mapStickers: [OTHER_MAP_STICKER_ID]
+        });
+        expect(
+            economy
+                .getById(LOOSE_SKIN_ID)
+                .getSouvenirSources()
+                .map(({ eventId }) => eventId)
+        ).toEqual([CRAFTED_EVENT_ID]);
+        expect(economy.getById(KNIFE_SKIN_ID).getSouvenirSources()).toEqual([]);
+        expect(economy.getSouvenirContainerSource(BARE_PACKAGE_ID)).toBe(undefined);
+        expect(() => economy.getSouvenirContainerSource(WEAPON_CASE_ID)).toThrow();
+    });
+
+    test("composeSouvenirStickers lays out the teams, the event, the autograph and the map", () => {
+        const [team0, team1, event, autograph, map] = [21, 20, 12, 33, 14].map((id) => economy.getById(id));
+        expect(
+            stickerIdsOf(
+                composeSouvenirStickers({ autograph, eventSticker: event, mapSticker: map, teams: [team0!, team1!] })
+            )
+        ).toEqual([21, 20, 12, 33, 14]);
+        expect(composeSouvenirStickers({ autograph, mapSticker: map })).toEqual({ 0: { id: 33 }, 1: { id: 14 } });
+        expect(composeSouvenirStickers({})).toBe(undefined);
     });
 });
 
@@ -156,7 +289,7 @@ describe("unlocking a souvenir package", () => {
             expect(stickerIds).toHaveLength(1);
             seen.add(stickerIds[0]!);
         }
-        expect(seen).toEqual(new Set([EVENT_STICKER_ID, OTHER_EVENT_STICKER_ID]));
+        expect(seen).toEqual(new Set(LONE_EVENT_STICKER_IDS));
     });
 
     test("an autograph package gives two teams, the event and one of their players", () => {
@@ -164,27 +297,33 @@ describe("unlocking a souvenir package", () => {
         for (let roll = 0; roll < ROLLS; roll++) {
             const attributes = unlock(AUTOGRAPH_PACKAGE_ID);
             const [team0, team1, event, autograph, ...rest] = stickerIdsOf(attributes.stickers);
+            const [teamId0, teamId1] = [team0, team1].map((logo) =>
+                Object.keys(AUTOGRAPH_TEAMS).find((id) => AUTOGRAPH_TEAMS[Number(id)]![0] === logo)
+            );
             expect(Object.keys(attributes.stickers ?? {})).toEqual(["0", "1", "2", "3"]);
             expect(rest).toEqual([]);
-            expect(TEAM_STICKER_IDS).toContain(team0);
-            expect(TEAM_STICKER_IDS).toContain(team1);
-            expect(team0).not.toBe(team1);
-            expect(event).toBe(EVENT_STICKER_ID);
-            expect([...AUTOGRAPH_IDS_BY_TEAM[team0!]!, ...AUTOGRAPH_IDS_BY_TEAM[team1!]!]).toContain(autograph);
+            expect(teamId0).not.toBe(undefined);
+            expect(teamId1).not.toBe(undefined);
+            expect(teamId0).not.toBe(teamId1);
+            expect(event).toBe(AUTOGRAPH_EVENT_STICKER_ID);
+            expect([
+                ...AUTOGRAPH_TEAMS[Number(teamId0)]!.slice(1),
+                ...AUTOGRAPH_TEAMS[Number(teamId1)]!.slice(1)
+            ]).toContain(autograph);
             expect(attributes.keychains).toBe(undefined);
             seen.add(team0!).add(team1!).add(autograph!);
         }
-        expect(seen).toEqual(new Set([...TEAM_STICKER_IDS, ...Object.values(AUTOGRAPH_IDS_BY_TEAM).flat()]));
+        expect(seen).toEqual(new Set([...logosOf(AUTOGRAPH_TEAMS), ...autographsOf(AUTOGRAPH_TEAMS)]));
     });
 
     test("a map package gives the map's sticker in the autograph's place", () => {
         for (let roll = 0; roll < ROLLS; roll++) {
             const attributes = unlock(MAP_PACKAGE_ID, { highlight: true });
             const [team0, team1, ...rest] = stickerIdsOf(attributes.stickers);
-            expect(TEAM_STICKER_IDS).toContain(team0);
-            expect(TEAM_STICKER_IDS).toContain(team1);
+            expect(logosOf(MAP_TEAMS)).toContain(team0);
+            expect(logosOf(MAP_TEAMS)).toContain(team1);
             expect(team0).not.toBe(team1);
-            expect(rest).toEqual([EVENT_STICKER_ID, MAP_STICKER_ID]);
+            expect(rest).toEqual([MAP_EVENT_STICKER_ID, MAP_STICKER_ID]);
             expect(attributes.keychains).toBe(undefined);
         }
     });
@@ -192,10 +331,10 @@ describe("unlocking a souvenir package", () => {
     test("a highlight sets the match and plays on the charm", () => {
         const attributes = unlock(HIGHLIGHT_PACKAGE_ID, { highlight: true });
         expect(stickerIdsOf(attributes.stickers)).toEqual([
-            TEAM_C_STICKER_ID,
-            TEAM_A_STICKER_ID,
-            EVENT_STICKER_ID,
-            MAP_STICKER_ID
+            MAP_TEAMS[3]![0],
+            MAP_TEAMS[1]![0],
+            MAP_EVENT_STICKER_ID,
+            OTHER_MAP_STICKER_ID
         ]);
         expect(attributes.keychains).toStrictEqual({ 0: { highlight: HIGHLIGHT_ID, id: HIGHLIGHT_KEYCHAIN_ID } });
         for (let roll = 0; roll < ROLLS; roll++) {
@@ -218,6 +357,69 @@ describe("unlocking a souvenir package", () => {
         expect(attributes.stickers).toBe(undefined);
         expect(attributes.keychains).toBe(undefined);
     });
+
+    test("every roll is a valid souvenir", () => {
+        for (const id of [LONE_PACKAGE_ID, AUTOGRAPH_PACKAGE_ID, MAP_PACKAGE_ID, HIGHLIGHT_PACKAGE_ID]) {
+            const container = economy.getById(id);
+            for (let roll = 0; roll < ROLLS; roll++) {
+                const { stickers } = container.rollSouvenirAttachments();
+                expect(checkSouvenir({ souvenir: true, stickers }, contentOf(id))).toBe(true);
+            }
+        }
+    });
+});
+
+describe("souvenir stickers", () => {
+    const fits = (id: number, ...stickerIds: number[]) =>
+        checkSouvenir({ souvenir: true, stickers: stickersOf(...stickerIds) }, economy.getById(id));
+
+    test("a souvenir's stickers are some of the ones one of its sources gives", () => {
+        expect(fits(SKIN_ID)).toBe(true);
+        expect(fits(SKIN_ID, 20, 21, AUTOGRAPH_EVENT_STICKER_ID, 31)).toBe(true);
+        expect(fits(SKIN_ID, 21, 31)).toBe(true);
+        expect(fits(SKIN_ID, 34)).toBe(true);
+        expect(fits(SKIN_ID, 23, 24, MAP_EVENT_STICKER_ID, MAP_STICKER_ID)).toBe(true);
+        expect(fits(SKIN_ID, LONE_EVENT_STICKER_IDS[1]!)).toBe(true);
+        expect(fits(HIGHLIGHT_SKIN_ID, 25, 23, MAP_EVENT_STICKER_ID, OTHER_MAP_STICKER_ID)).toBe(true);
+    });
+
+    test("a souvenir is from one match", () => {
+        expect(fits(SKIN_ID, 20, 20)).toBe(false);
+        expect(fits(SKIN_ID, 20, 21, 22)).toBe(false);
+        expect(fits(SKIN_ID, 20, 21, 30, 32)).toBe(false);
+        expect(fits(SKIN_ID, 20, 21, 34)).toBe(false);
+        expect(fits(SKIN_ID, AUTOGRAPH_EVENT_STICKER_ID, AUTOGRAPH_EVENT_STICKER_ID)).toBe(false);
+        expect(fits(SKIN_ID, ...LONE_EVENT_STICKER_IDS)).toBe(false);
+        expect(fits(SKIN_ID, 20, 23)).toBe(false);
+        expect(fits(SKIN_ID, MAP_STICKER_ID, OTHER_MAP_STICKER_ID)).toBe(false);
+        expect(fits(SKIN_ID, UNRELATED_STICKER_ID)).toBe(false);
+    });
+
+    test("a package's map sticker is its own", () => {
+        expect(fits(SKIN_ID, 23, 24, MAP_EVENT_STICKER_ID, OTHER_MAP_STICKER_ID)).toBe(false);
+        expect(fits(HIGHLIGHT_SKIN_ID, 23, 24, MAP_EVENT_STICKER_ID, MAP_STICKER_ID)).toBe(false);
+    });
+
+    test("an event's packages are the only way to its souvenirs", () => {
+        expect(fits(LOOSE_SKIN_ID, 20, 21, AUTOGRAPH_EVENT_STICKER_ID, 31)).toBe(false);
+        expect(fits(LOOSE_SKIN_ID, 23, 24, MAP_EVENT_STICKER_ID, MAP_STICKER_ID)).toBe(false);
+    });
+
+    test("any weapon skin can be crafted into a souvenir of a crafted event", () => {
+        for (const id of [SKIN_ID, LOOSE_SKIN_ID, HIGHLIGHT_SKIN_ID]) {
+            expect(fits(id, 26, 27, 43, OTHER_MAP_STICKER_ID)).toBe(true);
+            expect(fits(id, 28, 26, 45, MAP_STICKER_ID)).toBe(true);
+            expect(fits(id, 26, 27, 44, MAP_STICKER_ID)).toBe(false);
+            expect(fits(id, 26, 27, AUTOGRAPH_EVENT_STICKER_ID)).toBe(false);
+        }
+        expect(fits(KNIFE_SKIN_ID, 26, 27)).toBe(false);
+    });
+
+    test("checkInventoryItem holds a souvenir to its stickers", () => {
+        expect(checkInventoryItem(economy, { id: SKIN_ID, souvenir: true, stickers: stickersOf(20, 21) })).toBe(true);
+        expect(checkInventoryItem(economy, { id: SKIN_ID, souvenir: true, stickers: stickersOf(20, 23) })).toBe(false);
+        expect(checkInventoryItem(economy, { id: SKIN_ID, stickers: stickersOf(20, 23) })).toBe(true);
+    });
 });
 
 describe("souvenir inventory items", () => {
@@ -227,15 +429,15 @@ describe("souvenir inventory items", () => {
         const unlocked = economy.getById(HIGHLIGHT_PACKAGE_ID).unlockContainer({ highlight: true });
         inventory.unlockContainer(unlocked, 0);
         const item = inventory.get(0);
-        expect(item.id).toBe(SKIN_ID);
+        expect(item.id).toBe(HIGHLIGHT_SKIN_ID);
         expect(item.souvenir).toBe(true);
         expect(item.statTrak).toBe(undefined);
         expect(item.containerId).toBe(HIGHLIGHT_PACKAGE_ID);
         expect(item.allStickers().map(([, { id, schema }]) => [id, schema])).toEqual([
-            [TEAM_C_STICKER_ID, 0],
-            [TEAM_A_STICKER_ID, 1],
-            [EVENT_STICKER_ID, 2],
-            [MAP_STICKER_ID, 3]
+            [MAP_TEAMS[3]![0], 0],
+            [MAP_TEAMS[1]![0], 1],
+            [MAP_EVENT_STICKER_ID, 2],
+            [OTHER_MAP_STICKER_ID, 3]
         ]);
         expect(item.keychains?.get(0)).toEqual(unlocked.attributes.keychains?.[0]);
     });
@@ -250,6 +452,8 @@ describe("souvenir inventory items", () => {
         expect(inventory.get(0).souvenir).toBe(true);
         expect(inventory.get(0).getStickersCount()).toBe(4);
         expect(inventory.get(0).asBase().souvenir).toBe(true);
+        expect(() => inventory.add({ id: SKIN_ID, souvenir: true, stickers: stickersOf(20, 23) })).toThrow();
+        expect(inventory.size()).toBe(1);
     });
 
     test("a souvenir cannot be StatTrak, a knife or a default weapon", () => {
@@ -274,9 +478,52 @@ describe("souvenir inventory items", () => {
         expect(inventory.get(0).statTrak).toBe(0);
     });
 
+    test("an edit keeps a souvenir's stickers to its sources", () => {
+        const inventory = new CS2Inventory({ economy });
+        inventory.add({ id: SKIN_ID, souvenir: true, stickers: stickersOf(20) });
+        inventory.edit(0, { stickers: stickersOf(20, 21, AUTOGRAPH_EVENT_STICKER_ID, 30) });
+        expect(inventory.get(0).getStickersCount()).toBe(4);
+        expect(() => inventory.edit(0, { stickers: stickersOf(20, 23) })).toThrow();
+        expect(inventory.get(0).getStickersCount()).toBe(4);
+    });
+
+    test("no sticker can be applied to a souvenir", () => {
+        const inventory = new CS2Inventory({ economy });
+        inventory.add({ id: SKIN_ID, souvenir: true, stickers: stickersOf(20) });
+        inventory.add({ id: 21 });
+        expect(() => inventory.applyItemSticker(0, 1)).toThrow();
+        expect(inventory.get(0).getStickersCount()).toBe(1);
+        inventory.add({ id: SKIN_ID });
+        inventory.applyItemSticker(2, 1);
+        expect(inventory.get(2).getStickersCount()).toBe(1);
+    });
+
+    test("a souvenir's stickers can be moved and adjusted, but not swapped", () => {
+        const inventory = new CS2Inventory({ economy });
+        inventory.add({ id: SKIN_ID, souvenir: true, stickers: stickersOf(20, 21) });
+        inventory.moveItemSticker(0, 0, 1);
+        inventory.editItemSticker(0, 0, { id: 21, wear: 0.5 });
+        expect(
+            inventory
+                .get(0)
+                .allStickers()
+                .map(([, { id, wear }]) => [id, wear])
+        ).toEqual([
+            [21, 0.5],
+            [20, undefined]
+        ]);
+        expect(() => inventory.editItemSticker(0, 0, { id: 22 })).toThrow();
+        expect(
+            inventory
+                .get(0)
+                .allStickers()
+                .map(([, { id }]) => id)
+        ).toEqual([21, 20]);
+    });
+
     test("a souvenir keeps its quality when its stickers are scraped off", () => {
         const inventory = new CS2Inventory({ economy });
-        inventory.add({ id: SKIN_ID, souvenir: true, stickers: { 0: { id: EVENT_STICKER_ID } } });
+        inventory.add({ id: SKIN_ID, souvenir: true, stickers: stickersOf(AUTOGRAPH_EVENT_STICKER_ID) });
         inventory.removeItemSticker(0, 0);
         expect(inventory.get(0).getStickersCount()).toBe(0);
         expect(inventory.get(0).souvenir).toBe(true);
@@ -284,9 +531,10 @@ describe("souvenir inventory items", () => {
 
     test("a souvenir survives a round trip", () => {
         const inventory = new CS2Inventory({ economy });
-        inventory.add({ id: SKIN_ID, souvenir: true, wear: 0.1 });
+        inventory.add({ id: SKIN_ID, souvenir: true, wear: 0.1, stickers: stickersOf(26, 27, 40, MAP_STICKER_ID) });
         const loaded = CS2Inventory.load(inventory.stringify(), { economy });
         expect(loaded.get(0).souvenir).toBe(true);
+        expect(loaded.get(0).getStickersCount()).toBe(4);
         expect(loaded.loadChanges?.repairedUids).toEqual([]);
     });
 });
@@ -318,6 +566,13 @@ describe("souvenir rules", () => {
             souvenir: undefined,
             statTrak: 12
         });
+    });
+
+    test("repair drops a souvenir quality no source gives its stickers", () => {
+        const item: CS2BaseInventoryItem = { id: SKIN_ID, souvenir: true, stickers: stickersOf(20, 23) };
+        expect(repairInventoryItem(economy, item)).toBe(true);
+        expect(item.souvenir).toBe(undefined);
+        expect(stickerIdsOf(item.stickers)).toEqual([20, 23]);
     });
 
     test("loading reports an item whose souvenir quality was dropped", () => {

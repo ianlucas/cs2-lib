@@ -27,6 +27,7 @@ public static class CatalogBuilder
         ParseTools(ctx);
         ParseHighlights(ctx);
         await ParseContainers(ctx);
+        Souvenirs.AnnotateStickers(ctx);
     }
 
     private static void ParseBaseWeapons(ItemGeneratorContext ctx)

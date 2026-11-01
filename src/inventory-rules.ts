@@ -217,10 +217,17 @@ export function assertAddable(item: CS2EconomyItem): void {
 }
 
 export function checkSouvenir(
-    { souvenir, statTrak }: Pick<CS2BaseInventoryItem, "souvenir" | "statTrak">,
+    { souvenir, statTrak, stickers }: Pick<CS2BaseInventoryItem, "souvenir" | "statTrak" | "stickers">,
     item: CS2EconomyItem
 ): boolean {
-    return item.economy.safeValidateSouvenir(souvenir, item) && (souvenir === undefined || statTrak === undefined);
+    return (
+        item.economy.safeValidateSouvenir(
+            souvenir,
+            item,
+            Object.values(stickers ?? {}).map(({ id }) => id)
+        ) &&
+        (souvenir === undefined || statTrak === undefined)
+    );
 }
 
 export function checkHighlight({ highlight }: Pick<CS2BaseInventoryItem, "highlight">, item: CS2EconomyItem): boolean {
@@ -438,7 +445,7 @@ export function checkInventoryItem(
         CS2_INVENTORY_RULES.itemStyle.check(style, item) &&
         CS2_INVENTORY_RULES.itemUpgradeLevel.check(upgradeLevel, item) &&
         economy.safeRequireNameTag(nameTag, item) &&
-        checkSouvenir({ souvenir, statTrak }, item) &&
+        checkSouvenir({ souvenir, statTrak, stickers }, item) &&
         checkHighlight({ highlight }, item) &&
         checkAddable(item) &&
         checkPatches(economy, patches, item) &&

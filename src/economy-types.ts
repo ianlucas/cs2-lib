@@ -62,6 +62,15 @@ export const CS2StatTrakMode = {
 
 export type CS2StatTrakMode = EnumValues<typeof CS2StatTrakMode>;
 
+export const CS2SouvenirStickerType = {
+    Autograph: "autograph",
+    Event: "event",
+    Map: "map",
+    Team: "team"
+} as const;
+
+export type CS2SouvenirStickerType = EnumValues<typeof CS2SouvenirStickerType>;
+
 export interface CS2Bounds {
     min: number | undefined;
     max: number | undefined;
@@ -106,10 +115,12 @@ export interface CS2Item {
     parentId?: number | undefined;
     previewSeed?: number | undefined;
     rarityColor?: CS2RarityColor | undefined;
-    souvenirEventStickerIds?: number[] | undefined;
+    souvenirEventId?: number | undefined;
+    souvenirEventIds?: number[] | undefined;
     souvenirHighlightIds?: number[] | undefined;
     souvenirMapStickerId?: number | undefined;
-    souvenirTeamStickerIds?: number[][] | undefined;
+    souvenirStickerType?: CS2SouvenirStickerType | undefined;
+    souvenirTeamId?: number | undefined;
     specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
     statTrakMode?: CS2StatTrakMode | undefined;

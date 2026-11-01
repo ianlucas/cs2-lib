@@ -44,6 +44,14 @@ public static class CS2ContainerType
     public const int SouvenirCase = 3;
 }
 
+public static class CS2SouvenirStickerType
+{
+    public const string Autograph = "autograph";
+    public const string Event = "event";
+    public const string Map = "map";
+    public const string Team = "team";
+}
+
 // Null means the normal roll — see CS2_STATTRAK_ODD.
 public static class CS2StatTrakMode
 {
@@ -258,15 +266,17 @@ public class CS2Item
     [JsonPropertyName("rarityColor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RarityColor { get; set; }
 
-    // The souvenir* fields below sit on a souvenir package and list what its item comes with. See
-    // Souvenirs.
-
-    // The event's stickers; the item takes one of them.
     [
-        JsonPropertyName("souvenirEventStickerIds"),
+        JsonPropertyName("souvenirEventId"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
     ]
-    public List<int>? SouvenirEventStickerIds { get; set; }
+    public int? SouvenirEventId { get; set; }
+
+    [
+        JsonPropertyName("souvenirEventIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<int>? SouvenirEventIds { get; set; }
 
     // The highlights of the playoff matches played on the package's map. An item from one of those
     // matches carries one of them on the event's charm.
@@ -282,12 +292,17 @@ public class CS2Item
     ]
     public int? SouvenirMapStickerId { get; set; }
 
-    // One entry per team at the event: its sticker, then the autographs of its players.
     [
-        JsonPropertyName("souvenirTeamStickerIds"),
+        JsonPropertyName("souvenirStickerType"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
     ]
-    public List<List<int>>? SouvenirTeamStickerIds { get; set; }
+    public string? SouvenirStickerType { get; set; }
+
+    [
+        JsonPropertyName("souvenirTeamId"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public int? SouvenirTeamId { get; set; }
 
     [JsonPropertyName("specialIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? SpecialIds { get; set; }

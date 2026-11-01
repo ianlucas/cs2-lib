@@ -8,10 +8,6 @@ using ValveKeyValue;
 
 namespace ItemGenerator.Catalog;
 
-// What a souvenir package puts on the item it drops. The item server applies these and the schema
-// does not say how, so the rules here are the publicly documented ones: the two teams of the match
-// and the event each give a sticker, joined by the round MVP's autograph from Cologne 2015 and by
-// the map's sticker, in the autograph's place, from Stockholm 2021.
 public static partial class Souvenirs
 {
     private const string PackagePrefab = "weapon_case_souvenirpkg";
@@ -21,6 +17,8 @@ public static partial class Souvenirs
 
     // Copenhagen 2024, the first Major played in CS2. Maps redrawn for CS2 have a second sticker.
     private const int FirstCs2EventId = 22;
+
+    private const int FirstCraftedEventId = 26;
 
     // The events whose sticker cannot be told from the kit names: Cologne 2014's three are named
     // a, b and c, and DreamHack 2014 has no gold one.
@@ -81,39 +79,14 @@ public static partial class Souvenirs
         int eventId
     )
     {
-        var kits = ctx.StickerKits.Where(kit => kit.EventId == eventId).ToList();
-        var eventKits = kits.Where(kit => !kit.IsAutograph && (kit.TeamId ?? 0) == 0).ToList();
-        container.SouvenirEventStickerIds = NullIfEmpty(
-            GetEventKits(eventId, eventKits).Select(kit => kit.Id).ToList()
-        );
-
-        var teamStickerIds = GetTeamStickerIds(ctx, eventId);
-        var hasMapSticker = eventId >= FirstMapStickerEventId;
-        container.SouvenirTeamStickerIds = NullIfEmpty(
-            teamStickerIds
-                .Select(team =>
-                    kits.Where(kit =>
-                            !hasMapSticker
-                            && kit.IsAutograph
-                            && kit.TeamId == team.Key
-                            && kit.Name.EndsWith("_gold")
-                        )
-                        .Select(kit => kit.Id)
-                        .Prepend(team.Value)
-                        .ToList()
-                )
-                .ToList()
-        );
+        container.SouvenirEventId = eventId;
 
         var map = MapRegex().Match(KvHelper.GetString(item, "name") ?? "");
         if (!map.Success)
             return;
         var mapName = map.Groups[1].Value;
-        if (hasMapSticker)
-            container.SouvenirMapStickerId = (
-                (eventId >= FirstCs2EventId ? FindKit(ctx, $"{mapName}_cs2_gold") : null)
-                ?? FindKit(ctx, $"{mapName}_gold")
-            )?.Id;
+        if (eventId >= FirstMapStickerEventId)
+            container.SouvenirMapStickerId = FindMapSticker(ctx, mapName, eventId)?.Id;
 
         // A highlight names the playoff match it was cut from; the matches themselves are not in the
         // schema. Its team stickers come from GetTeamStickerIds too, so both are the package's.
@@ -129,6 +102,85 @@ public static partial class Souvenirs
         );
     }
 
+    public static void AnnotateStickers(ItemGeneratorContext ctx)
+    {
+        var mapStickerIdsByEvent = ctx
+            .Items.Values.Where(item => item.SouvenirEventId != null)
+            .GroupBy(package => package.SouvenirEventId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(package => package.SouvenirMapStickerId).OfType<int>()
+            );
+        var craftedEventIds = ctx
+            .StickerKits.Select(kit => kit.EventId)
+            .OfType<int>()
+            .Where(eventId =>
+                eventId >= FirstCraftedEventId && !mapStickerIdsByEvent.ContainsKey(eventId)
+            )
+            .Distinct()
+            .ToList();
+        foreach (var eventId in craftedEventIds)
+            mapStickerIdsByEvent[eventId] = ctx
+                .HighlightReels.Values.Where(reel => reel.EventId == eventId)
+                .Select(reel => reel.Map)
+                .Distinct()
+                .Select(mapName => FindMapSticker(ctx, mapName, eventId)?.Id)
+                .OfType<int>();
+
+        foreach (var (eventId, mapStickerIds) in mapStickerIdsByEvent)
+        {
+            var crafted = craftedEventIds.Contains(eventId);
+            var kits = ctx.StickerKits.Where(kit => kit.EventId == eventId).ToList();
+            if (!crafted)
+                foreach (
+                    var kit in GetEventKits(
+                        eventId,
+                        kits.Where(kit => !kit.IsAutograph && (kit.TeamId ?? 0) == 0).ToList()
+                    )
+                )
+                    Annotate(ctx, kit.Id, eventId, CS2SouvenirStickerType.Event, null);
+
+            var teamStickerIds = GetTeamStickerIds(ctx, eventId);
+            foreach (var (teamId, stickerId) in teamStickerIds)
+                Annotate(ctx, stickerId, eventId, CS2SouvenirStickerType.Team, teamId);
+
+            if (crafted || eventId < FirstMapStickerEventId)
+                foreach (
+                    var kit in kits.Where(kit =>
+                        kit.IsAutograph
+                        && kit.TeamId != null
+                        && teamStickerIds.ContainsKey(kit.TeamId.Value)
+                        && kit.Name.EndsWith("_gold")
+                    )
+                )
+                    Annotate(ctx, kit.Id, eventId, CS2SouvenirStickerType.Autograph, kit.TeamId);
+
+            foreach (var stickerId in mapStickerIds)
+                Annotate(ctx, stickerId, eventId, CS2SouvenirStickerType.Map, null);
+        }
+    }
+
+    private static void Annotate(
+        ItemGeneratorContext ctx,
+        int stickerId,
+        int eventId,
+        string type,
+        int? teamId
+    )
+    {
+        var sticker = ctx.Items[stickerId];
+        if (sticker.SouvenirStickerType != null && sticker.SouvenirStickerType != type)
+            throw new InvalidOperationException(
+                $"Sticker {stickerId} is both a {sticker.SouvenirStickerType} and a {type} souvenir sticker."
+            );
+        sticker.SouvenirStickerType = type;
+        sticker.SouvenirTeamId = teamId;
+        sticker.SouvenirEventIds =
+        [
+            .. (sticker.SouvenirEventIds ?? []).Append(eventId).Distinct().Order(),
+        ];
+    }
+
     // DreamHack 2013 souvenirs carry any one of the event's stickers and nothing else.
     private static List<StickerKitRecord> GetEventKits(int eventId, List<StickerKitRecord> kits)
     {
@@ -136,6 +188,16 @@ public static partial class Souvenirs
             return kits.Where(kit => names.Contains(kit.Name)).ToList();
         var gold = kits.Where(kit => kit.Name.Contains("_gold")).ToList();
         return gold.Count > 0 ? gold : kits;
+    }
+
+    private static StickerKitRecord? FindMapSticker(
+        ItemGeneratorContext ctx,
+        string mapName,
+        int eventId
+    )
+    {
+        return (eventId >= FirstCs2EventId ? FindKit(ctx, $"{mapName}_cs2_gold") : null)
+            ?? FindKit(ctx, $"{mapName}_gold");
     }
 
     private static StickerKitRecord? FindKit(ItemGeneratorContext ctx, string name)

@@ -28,8 +28,8 @@ import {
     checkStickerSchema,
     getDropReason,
     getItemAppearance,
-    isStorableInStorageUnit,
     getNextStickerSchema,
+    isStorableInStorageUnit,
     reconcileInventoryItems,
     repairInventoryItem
 } from "./inventory-rules.ts";
@@ -511,6 +511,7 @@ export class CS2Inventory {
         const target = this.get(targetUid);
         const sticker = this.get(stickerUid).expectSticker();
         assert(target.hasStickers());
+        assert(target.souvenir !== true);
         const stickers = stickerMapToArray(target.stickers);
         assert(stickers.length < CS2_MAX_STICKERS);
         const { schema, x, y, rotation, wear } = attributes;
@@ -560,8 +561,9 @@ export class CS2Inventory {
     ): this {
         const target = this.get(targetUid);
         const stickers = stickerMapToArray(target.stickers);
-        assert(stickers[index] !== undefined);
-        stickers[index] = { ...stickers[index], ...patch };
+        const sticker = ensure(stickers[index]);
+        assert(target.souvenir !== true || patch.id === undefined || patch.id === sticker.id);
+        stickers[index] = { ...sticker, ...patch };
         const record = CS2InventoryItem.stickersFromArray(stickers);
         assertStickers(this.economy, record, target);
         target.stickers = toStickerMap(record);

@@ -89,6 +89,7 @@ import {
     type CS2ModelAnimationSkeleton,
     CS2ItemWear,
     type CS2SouvenirAttachments,
+    CS2SouvenirStickerType,
     CS2StatTrakMode,
     type CS2UnlockableItem,
     type CS2UnlockedItem,
@@ -128,6 +129,72 @@ function pickPair<T>(values: T[]): T[] {
     return [ensure(values[first]), ensure(values[second])];
 }
 
+function isSouvenirable(item: CS2EconomyItem): boolean {
+    return CS2_SOUVENIRABLE_ITEMS.includes(item.type) && !item.isDefault && item.variantIndex !== 0;
+}
+
+export interface CS2SouvenirTeam {
+    autographs: CS2EconomyItem[];
+    id: number;
+    sticker: CS2EconomyItem;
+}
+
+export interface CS2SouvenirSource {
+    container: CS2EconomyItem | undefined;
+    eventId: number;
+    eventStickers: CS2EconomyItem[];
+    highlights: CS2EconomyItem[];
+    mapStickers: CS2EconomyItem[];
+    teams: CS2SouvenirTeam[];
+}
+
+interface CS2SouvenirEvent {
+    eventStickers: CS2EconomyItem[];
+    mapStickers: CS2EconomyItem[];
+    teams: CS2SouvenirTeam[];
+}
+
+export function composeSouvenirStickers({
+    autograph,
+    eventSticker,
+    mapSticker,
+    teams = []
+}: {
+    autograph?: CS2EconomyItem | undefined;
+    eventSticker?: CS2EconomyItem | undefined;
+    mapSticker?: CS2EconomyItem | undefined;
+    teams?: CS2EconomyItem[];
+}): CS2SouvenirAttachments["stickers"] {
+    const stickers = [...teams, eventSticker, autograph, mapSticker].filter((sticker) => sticker !== undefined);
+    return stickers.length > 0 ? Object.fromEntries(stickers.map(({ id }, slot) => [slot, { id }])) : undefined;
+}
+
+function fitsSouvenirSource({ eventStickers, mapStickers, teams }: CS2SouvenirSource, stickerIds: number[]): boolean {
+    const logoTeamIds = new Set<number>();
+    const teamIds = new Set<number>();
+    let autographs = 0;
+    let events = 0;
+    let maps = 0;
+    for (const id of stickerIds) {
+        const logo = teams.find(({ sticker }) => sticker.id === id);
+        const signer = teams.find((team) => team.autographs.some((autograph) => autograph.id === id));
+        if (eventStickers.some((sticker) => sticker.id === id)) {
+            events++;
+        } else if (mapStickers.some((sticker) => sticker.id === id)) {
+            maps++;
+        } else if (logo !== undefined && !logoTeamIds.has(logo.id)) {
+            logoTeamIds.add(logo.id);
+            teamIds.add(logo.id);
+        } else if (signer !== undefined) {
+            autographs++;
+            teamIds.add(signer.id);
+        } else {
+            return false;
+        }
+    }
+    return events <= 1 && maps <= 1 && autographs <= 1 && teamIds.size <= 2;
+}
+
 export class CS2EconomyInstance {
     baseUrl = "https://cdn.cstrike.app";
     categories: Set<string> = new Set<string>();
@@ -137,7 +204,10 @@ export class CS2EconomyInstance {
 
     private animations: CS2ModelAnimations = {};
     private charmDetachment: CS2EconomyItem | undefined;
+    private craftedSouvenirEventIds: number[] = [];
     private highlights: Map<number, CS2EconomyItem[]> = new Map<number, CS2EconomyItem[]>();
+    private souvenirContainers: Map<number, CS2EconomyItem[]> = new Map<number, CS2EconomyItem[]>();
+    private souvenirEvents: Map<number, CS2SouvenirEvent> = new Map<number, CS2SouvenirEvent>();
     private stickerDisplayCases: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
 
     load({
@@ -184,6 +254,56 @@ export class CS2EconomyInstance {
             }
             this.itemsAsArray.push(economyItem);
         }
+        this.loadSouvenirs();
+    }
+
+    private loadSouvenirs(): void {
+        this.souvenirContainers.clear();
+        this.souvenirEvents.clear();
+        const autographs: [CS2EconomyItem, CS2SouvenirEvent][] = [];
+        for (const sticker of this.stickers) {
+            for (const eventId of sticker.souvenirEventIds ?? []) {
+                let event = this.souvenirEvents.get(eventId);
+                if (event === undefined) {
+                    event = { eventStickers: [], mapStickers: [], teams: [] };
+                    this.souvenirEvents.set(eventId, event);
+                }
+                switch (sticker.souvenirStickerType) {
+                    case CS2SouvenirStickerType.Autograph:
+                        autographs.push([sticker, event]);
+                        break;
+                    case CS2SouvenirStickerType.Event:
+                        event.eventStickers.push(sticker);
+                        break;
+                    case CS2SouvenirStickerType.Map:
+                        event.mapStickers.push(sticker);
+                        break;
+                    case CS2SouvenirStickerType.Team:
+                        event.teams.push({ autographs: [], id: ensure(sticker.souvenirTeamId), sticker });
+                        break;
+                }
+            }
+        }
+        for (const [autograph, event] of autographs) {
+            event.teams.find(({ id }) => id === autograph.souvenirTeamId)?.autographs.push(autograph);
+        }
+        const containerEventIds = new Set<number>();
+        for (const container of this.itemsAsArray) {
+            if (!container.isSouvenirCase()) {
+                continue;
+            }
+            if (container.souvenirEventId !== undefined) {
+                containerEventIds.add(container.souvenirEventId);
+            }
+            for (const id of container.contentIds ?? []) {
+                const containers = this.souvenirContainers.get(id) ?? [];
+                containers.push(container);
+                this.souvenirContainers.set(id, containers);
+            }
+        }
+        this.craftedSouvenirEventIds = Array.from(this.souvenirEvents.keys()).filter(
+            (eventId) => !containerEventIds.has(eventId)
+        );
     }
 
     getById(id: number): CS2EconomyItem {
@@ -317,17 +437,23 @@ export class CS2EconomyInstance {
         return safe(() => this.validateStatTrak(statTrak, item));
     }
 
-    validateSouvenir(souvenir?: boolean, item?: CS2EconomyItem): boolean {
+    validateSouvenir(souvenir?: boolean, item?: CS2EconomyItem, stickerIds: number[] = []): boolean {
         if (souvenir === undefined) {
             return true;
         }
         assert(souvenir === true);
-        assert(item === undefined || item.hasSouvenir());
+        if (item !== undefined) {
+            assert(item.hasSouvenir());
+            assert(
+                stickerIds.length === 0 ||
+                    this.getSouvenirSources(item).some((source) => fitsSouvenirSource(source, stickerIds))
+            );
+        }
         return true;
     }
 
-    safeValidateSouvenir(souvenir?: boolean, item?: CS2EconomyItem): boolean {
-        return safe(() => this.validateSouvenir(souvenir, item));
+    safeValidateSouvenir(souvenir?: boolean, item?: CS2EconomyItem, stickerIds?: number[]): boolean {
+        return safe(() => this.validateSouvenir(souvenir, item, stickerIds));
     }
 
     validateHighlight(highlight?: number, keychain?: CS2EconomyItem): boolean {
@@ -400,6 +526,47 @@ export class CS2EconomyInstance {
 
     getHighlights(keychain: number | CS2EconomyItem): CS2EconomyItem[] {
         return this.highlights.get(this.get(keychain).expectKeychain().id) ?? [];
+    }
+
+    getSouvenirContainers(item: number | CS2EconomyItem): CS2EconomyItem[] {
+        return this.souvenirContainers.get(this.get(item).id) ?? [];
+    }
+
+    getSouvenirSources(item: number | CS2EconomyItem): CS2SouvenirSource[] {
+        item = this.get(item);
+        if (!isSouvenirable(item)) {
+            return [];
+        }
+        const sources: CS2SouvenirSource[] = [];
+        for (const container of this.getSouvenirContainers(item)) {
+            const source = this.getSouvenirContainerSource(container);
+            if (source !== undefined) {
+                sources.push(source);
+            }
+        }
+        for (const eventId of this.craftedSouvenirEventIds) {
+            const { eventStickers, mapStickers, teams } = ensure(this.souvenirEvents.get(eventId));
+            sources.push({ container: undefined, eventId, eventStickers, highlights: [], mapStickers, teams });
+        }
+        return sources;
+    }
+
+    getSouvenirContainerSource(container: number | CS2EconomyItem): CS2SouvenirSource | undefined {
+        container = this.get(container);
+        assert(container.isSouvenirCase());
+        const { souvenirEventId: eventId, souvenirHighlightIds, souvenirMapStickerId } = container;
+        if (eventId === undefined) {
+            return undefined;
+        }
+        const event = this.souvenirEvents.get(eventId);
+        return {
+            container,
+            eventId,
+            eventStickers: event?.eventStickers ?? [],
+            highlights: (souvenirHighlightIds ?? []).map((id) => this.getById(id)),
+            mapStickers: souvenirMapStickerId !== undefined ? [this.getById(souvenirMapStickerId)] : [],
+            teams: event?.teams ?? []
+        };
     }
 
     expectUnlockedItem(
@@ -484,10 +651,12 @@ export class CS2EconomyItem implements Interface<
     parentId: number | undefined;
     previewSeed: number | undefined;
     rarityColor: CS2RarityColor = null!;
-    souvenirEventStickerIds: number[] | undefined;
+    souvenirEventId: number | undefined;
+    souvenirEventIds: number[] | undefined;
     souvenirHighlightIds: number[] | undefined;
     souvenirMapStickerId: number | undefined;
-    souvenirTeamStickerIds: number[][] | undefined;
+    souvenirStickerType: CS2SouvenirStickerType | undefined;
+    souvenirTeamId: number | undefined;
     specialIds: number[] | undefined;
     specialsImagePath: string | undefined;
     statTrakMode: CS2StatTrakMode | undefined;
@@ -867,7 +1036,14 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasSouvenir(): boolean {
-        return CS2_SOUVENIRABLE_ITEMS.includes(this.type) && !this.isDefault && this.variantIndex !== 0;
+        return (
+            isSouvenirable(this) &&
+            (this.economy.getSouvenirContainers(this).length > 0 || this.economy.getSouvenirSources(this).length > 0)
+        );
+    }
+
+    getSouvenirSources(): CS2SouvenirSource[] {
+        return this.economy.getSouvenirSources(this);
     }
 
     hasCharges(): boolean {
@@ -1070,37 +1246,34 @@ export class CS2EconomyItem implements Interface<
 
     rollSouvenirAttachments(options?: { highlight?: boolean }): CS2SouvenirAttachments {
         assert(this.isSouvenirCase());
-        const teams = this.souvenirTeamStickerIds ?? [];
-        const highlightIds = this.souvenirHighlightIds ?? [];
+        const source = this.economy.getSouvenirContainerSource(this);
+        if (source === undefined) {
+            return { keychains: undefined, stickers: undefined };
+        }
+        const { eventStickers, highlights, mapStickers, teams } = source;
         const highlight =
-            highlightIds.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD)
-                ? this.economy.getById(pick(highlightIds))
+            highlights.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD)
+                ? pick(highlights)
                 : undefined;
         const match =
             highlight !== undefined
                 ? ensure(highlight.teamStickerIds).map((stickerId) =>
-                      ensure(teams.find((team) => team[0] === stickerId))
+                      ensure(teams.find(({ sticker }) => sticker.id === stickerId))
                   )
                 : pickPair(teams);
-        const stickerIds = match.map((team) => ensure(team[0]));
-        const autographIds = match.flatMap((team) => team.slice(1));
-        if (this.souvenirEventStickerIds !== undefined) {
-            stickerIds.push(pick(this.souvenirEventStickerIds));
-        }
-        if (autographIds.length > 0) {
-            stickerIds.push(pick(autographIds));
-        }
-        if (this.souvenirMapStickerId !== undefined) {
-            stickerIds.push(this.souvenirMapStickerId);
-        }
+        const autographs = match.flatMap((team) => team.autographs);
         const keychain = highlight?.parent;
         return {
             keychains:
                 highlight !== undefined && keychain !== undefined
                     ? { 0: { highlight: highlight.id, id: keychain.id } }
                     : undefined,
-            stickers:
-                stickerIds.length > 0 ? Object.fromEntries(stickerIds.map((id, slot) => [slot, { id }])) : undefined
+            stickers: composeSouvenirStickers({
+                autograph: autographs.length > 0 ? pick(autographs) : undefined,
+                eventSticker: eventStickers.length > 0 ? pick(eventStickers) : undefined,
+                mapSticker: mapStickers[0],
+                teams: match.map(({ sticker }) => sticker)
+            })
         };
     }
 
