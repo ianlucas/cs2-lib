@@ -88,10 +88,22 @@ public static class OutputWriter
 
         var itemsJson = JsonSerializer.Serialize(items, JsonOptions);
         var idsJson = JsonSerializer.Serialize(ctx.AllIdentifiers);
+        var modelMaterialsJson = JsonSerializer.Serialize(CollectModelMaterials(ctx, items));
+        var modelAnimationsJson = JsonSerializer.Serialize(CollectModelAnimations(ctx));
 
         await WriteFileAsync(Config.ItemsJsonPath, itemsJson);
         await WriteFileAsync(Config.ItemIdsJsonPath, idsJson);
         await WriteFileAsync(Config.ItemsTsPath, CreateItemsModule(itemsJson));
+        await WriteFileAsync(Config.ModelMaterialsJsonPath, modelMaterialsJson);
+        await WriteFileAsync(
+            Config.ModelMaterialsTsPath,
+            CreateModelMaterialsModule(modelMaterialsJson)
+        );
+        await WriteFileAsync(Config.ModelAnimationsJsonPath, modelAnimationsJson);
+        await WriteFileAsync(
+            Config.ModelAnimationsTsPath,
+            CreateModelAnimationsModule(modelAnimationsJson)
+        );
 
         foreach (var (language, translations) in ctx.ItemTranslationByLanguage)
         {
@@ -107,6 +119,47 @@ public static class OutputWriter
         Console.Error.WriteLine($"Successfully generated '{Config.ItemsJsonPath}'.");
         Console.Error.WriteLine($"Successfully generated '{Config.ItemIdsJsonPath}'.");
         Console.Error.WriteLine($"Successfully generated '{Config.ItemsTsPath}'.");
+        Console.Error.WriteLine($"Successfully generated '{Config.ModelMaterialsJsonPath}'.");
+        Console.Error.WriteLine($"Successfully generated '{Config.ModelMaterialsTsPath}'.");
+        Console.Error.WriteLine($"Successfully generated '{Config.ModelAnimationsJsonPath}'.");
+        Console.Error.WriteLine($"Successfully generated '{Config.ModelAnimationsTsPath}'.");
+    }
+
+    // The published clips, sorted by name so a run's diff shows only the clips that changed. A
+    // Limited run exports none, so it inherits the previous run's.
+    private static SortedDictionary<string, ModelAnimation> CollectModelAnimations(
+        ItemGeneratorContext ctx
+    ) =>
+        new(
+            ctx.Mode == ItemGeneratorMode.Full ? ctx.ModelAnimations : ctx.ExistingModelAnimations,
+            StringComparer.Ordinal
+        );
+
+    // The mesh materials of exactly the models the items use, sorted by model URL so a run's diff
+    // shows only the models that changed. A Limited run finalizes no model, so it inherits every
+    // entry from the previous run. A model without an entry stops the run before anything is written.
+    private static SortedDictionary<
+        string,
+        OrderedDictionary<string, List<string>>
+    > CollectModelMaterials(ItemGeneratorContext ctx, List<CS2Item> items)
+    {
+        var result = new SortedDictionary<string, OrderedDictionary<string, List<string>>>(
+            StringComparer.Ordinal
+        );
+        foreach (var modelPath in items.Select(item => item.ModelPath).OfType<string>().Distinct())
+        {
+            if (
+                ctx.ModelMaterialsByPath.TryGetValue(modelPath, out var meshes)
+                || (
+                    ctx.Mode == ItemGeneratorMode.Limited
+                    && ctx.ExistingModelMaterials.TryGetValue(modelPath, out meshes)
+                )
+            )
+                result[modelPath] = meshes;
+            else
+                throw new InvalidOperationException($"Model '{modelPath}' has no mesh materials.");
+        }
+        return result;
     }
 
     private static string SerializeTranslationMap(Dictionary<int, CS2ItemTranslation> map)
@@ -122,6 +175,22 @@ public static class OutputWriter
         return Banner
             + "\n\nimport type { CS2Item } from \"./economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const CS2_ITEMS: CS2Item[] = "
             + itemsJson
+            + ";";
+    }
+
+    private static string CreateModelMaterialsModule(string modelMaterialsJson)
+    {
+        return Banner
+            + "\n\nimport type { CS2ModelMaterials } from \"./economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const CS2_MODEL_MATERIALS: CS2ModelMaterials = "
+            + modelMaterialsJson
+            + ";";
+    }
+
+    private static string CreateModelAnimationsModule(string modelAnimationsJson)
+    {
+        return Banner
+            + "\n\nimport type { CS2ModelAnimations } from \"./economy-types.ts\";\n\n// @generated\n// @ts-ignore\nexport const CS2_MODEL_ANIMATIONS: CS2ModelAnimations = "
+            + modelAnimationsJson
             + ";";
     }
 

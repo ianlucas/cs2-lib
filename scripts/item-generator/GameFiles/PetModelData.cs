@@ -18,25 +18,33 @@ namespace ItemGenerator.GameFiles;
 /// (<c>procedural_geometry_poses</c>).
 /// </para>
 /// <para>
-/// Two things are left for this class. The proportions blend between pose SEQUENCES embedded in the
-/// model, so those have to survive the animation filter. And a pet's colour variant is a material
-/// GROUP picked by the instance's style, which the model data names only by game resource path.
+/// Three things are left for this class. The proportions blend between pose SEQUENCES embedded in
+/// the model, so those have to survive the animation filter. The model is published standing in
+/// the first frame of an idle, which its animation graph names. And a pet's colour variant is a
+/// material GROUP picked by the instance's style, which the model data names only by game resource
+/// path.
 /// </para>
 /// </remarks>
 public static class PetModelData
 {
     /// <summary>
-    /// The animations a pet's .glb keeps: its procedural pose sequences and its graph's idle clips.
+    /// The animations a pet's .glb keeps: its procedural pose sequences, and no clip.
     /// </summary>
-    public static HashSet<string> GetAnimationFilter(Model model)
-    {
-        var filter = new HashSet<string>(StringComparer.Ordinal);
-        filter.UnionWith(
+    public static HashSet<string> GetAnimationFilter(Model model) =>
+        new(
             ReadPoseSequences(
                 MetadataExtractor.ConvertKV3ToObject(model.KeyValues) as Dictionary<string, object?>
-            )
+            ),
+            StringComparer.Ordinal
         );
 
+    /// <summary>
+    /// The clip whose first frame the model is posed in, by the animation graph it uses (see
+    /// <c>Config.PetPoseClipByGraph</c>).
+    /// </summary>
+    public static string GetPoseClip(Model model)
+    {
+        var graphs = new List<string>();
         if (
             MetadataExtractor.ConvertKV3ToObject(model.Data) is Dictionary<string, object?> data
             && data.GetValueOrDefault("m_animGraph2Refs") is List<object?> graphRefs
@@ -44,18 +52,23 @@ public static class PetModelData
         {
             foreach (var graphRef in graphRefs.OfType<Dictionary<string, object?>>())
             {
-                if (
-                    graphRef.GetValueOrDefault("m_hGraph") is string graph
-                    && Config.PetClipsByGraph.TryGetValue(
-                        NormalizeResourcePath(graph).ToLowerInvariant(),
-                        out var clips
-                    )
-                )
-                    filter.UnionWith(clips);
+                if (graphRef.GetValueOrDefault("m_hGraph") is string graph)
+                    graphs.Add(NormalizeResourcePath(graph).ToLowerInvariant());
             }
         }
 
-        return filter;
+        var clips = graphs
+            .Select(graph => Config.PetPoseClipByGraph.GetValueOrDefault(graph))
+            .OfType<string>()
+            .Distinct()
+            .ToList();
+        if (clips.Count != 1)
+            throw new InvalidOperationException(
+                $"Pet model '{model.Name}' uses "
+                    + (graphs.Count == 0 ? "no animation graph" : string.Join(", ", graphs))
+                    + ", which does not name exactly one clip in Config.PetPoseClipByGraph."
+            );
+        return clips[0];
     }
 
     /// <summary>

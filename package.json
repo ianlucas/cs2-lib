@@ -26,6 +26,14 @@
             "types": "./dist/index.d.mts",
             "import": "./dist/index.mjs"
         },
+        "./model-animations": {
+            "types": "./dist/model-animations.d.mts",
+            "import": "./dist/model-animations.mjs"
+        },
+        "./model-materials": {
+            "types": "./dist/model-materials.d.mts",
+            "import": "./dist/model-materials.mjs"
+        },
         "./translations": {
             "types": "./dist/translations/index.d.mts",
             "import": "./dist/translations/index.mjs"
@@ -55,18 +63,18 @@
         "@gltf-transform/core": "4.5.0",
         "@gltf-transform/extensions": "4.5.0",
         "@total-typescript/tsconfig": "^1.0.4",
-        "@types/node": "^22.20.4",
+        "@types/node": "^22.20.5",
         "javascript-stringify": "^2.1.0",
         "meshoptimizer": "1.2.0",
-        "prettier": "3.9.9",
+        "prettier": "3.9.10",
         "rolldown": "^1.1.4",
-        "rolldown-plugin-dts": "^0.28.6",
+        "rolldown-plugin-dts": "^0.28.8",
         "rollup-plugin-delete": "^3.0.2",
         "sharp": "0.35.4",
         "tsx": "^4.23.15",
         "typedoc": "^0.28.20",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.11"
+        "vitest": "^4.1.12"
     },
     "engines": {
         "node": ">=20"

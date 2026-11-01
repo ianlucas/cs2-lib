@@ -21,11 +21,10 @@
  *      guessed from names here.
  *   2. UNBAKE. Hands the Source-to-glTF conversion back to the root node, the same contract every
  *      other published model follows.
- *   3. POSE. Writes the agent's inventory pose into the joint nodes. It runs AFTER the unbake
- *      because the pose clip is authored in raw model space (inches, Z-up) -- with the unbake done
- *      first, its values drop in verbatim and there is exactly one place where inches meet metres,
- *      the root node. The inverse bind matrices are deliberately untouched: rebinding would freeze
- *      the pose into the skin, whereas moving only the joints leaves the model re-posable.
+ *   3. POSE. Writes the agent's inventory pose into the joint nodes (item-generator-pose.ts). It
+ *      runs AFTER the unbake because the pose clip is authored in raw model space (inches, Z-up) --
+ *      with the unbake done first, its values drop in verbatim and there is exactly one place where
+ *      inches meet metres, the root node.
  *   4. TEXTURES. Replaces each image with the WebP the shared encoder produced
  *      (item-generator-webp.ts, tiers from CharacterTextureOptimization), and stubs the patch
  *      placeholder artwork to 4x4 -- the game always replaces `g_tPatchN` with the applied patch, so
@@ -40,6 +39,7 @@ import { Document, NodeIO, type Material, type Property, type Texture } from "@g
 import { ALL_EXTENSIONS, EXTTextureWebP } from "@gltf-transform/extensions";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
+import { applyPose, type Pose } from "./item-generator-pose.js";
 import { unbakeSourceConversion } from "./item-generator-unbake.js";
 
 interface AgentGlbSpec {
@@ -47,8 +47,8 @@ interface AgentGlbSpec {
     glb: string;
     /** Leaf mesh names to keep, e.g. "thirdperson_body". */
     keepMeshes: string[];
-    /** Bone name -> local transform, in raw model space. */
-    pose: Record<string, { translation: [number, number, number]; rotation: [number, number, number, number] }>;
+    /** The inventory pose; empty for an agent that names none. */
+    pose: Pose;
     /**
      * glTF image name (the `.vtex` stem) -> path of the encoded WebP to embed. A name the document
      * has no image for (a patch backing, an eye texture) is added as a new, unreferenced image.
@@ -136,19 +136,6 @@ function keepOnlyMeshes(document: Document, keep: string[]): void {
 function dropAnimations(document: Document): void {
     for (const animation of document.getRoot().listAnimations()) animation.dispose();
     pruneOrphans(document);
-}
-
-function applyPose(document: Document, pose: AgentGlbSpec["pose"]): void {
-    const root = document.getRoot();
-    // Only joints are posed. A mesh node can legitimately share a bone's name, and moving one would
-    // translate the whole mesh rather than the bone it is skinned to.
-    const joints = new Set(root.listSkins().flatMap((skin) => skin.listJoints()));
-    for (const node of joints) {
-        const bone = pose[node.getName()];
-        if (bone === undefined) continue;
-        node.setTranslation(bone.translation);
-        node.setRotation(bone.rotation);
-    }
 }
 
 async function embedTextures(document: Document, spec: AgentGlbSpec): Promise<void> {

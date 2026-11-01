@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { CS2RarityColor, CS2RaritySoundName } from "./economy-container.ts";
+import type { CS2RarityColor, CS2RaritySoundName, CS2UnlockRarity } from "./economy-container.ts";
 import type { EnumValues } from "./utils.ts";
 
 export const CS2ItemTeam = {
@@ -148,6 +148,17 @@ export interface CS2SouvenirAttachments {
     stickers: Record<string, { id: number }> | undefined;
 }
 
+export type CS2ModelMaterials = Record<string, Record<string, string[]>>;
+
+export type CS2ModelAnimationSkeleton = "character" | "chicken" | "egg" | "viewmodel";
+
+export interface CS2ModelAnimation {
+    path: string;
+    skeleton: CS2ModelAnimationSkeleton;
+}
+
+export type CS2ModelAnimations = Record<string, CS2ModelAnimation>;
+
 export interface CS2UnlockedItem {
     attributes: CS2SouvenirAttachments & {
         containerId: number;
@@ -159,4 +170,17 @@ export interface CS2UnlockedItem {
     id: number;
     rarity: CS2RaritySoundName;
     special: boolean;
+}
+
+export interface CS2UnlockOptions {
+    computeOdds?: (rarities: CS2UnlockRarity[]) => number[] | undefined;
+}
+
+export interface CS2UnlockableItem {
+    chance: number;
+    id: number;
+    rarity: CS2UnlockRarity;
+    statTrakChance: number;
+    wearMax: number | undefined;
+    wearMin: number | undefined;
 }

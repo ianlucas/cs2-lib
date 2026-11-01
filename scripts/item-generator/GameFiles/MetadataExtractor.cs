@@ -19,7 +19,8 @@ public record ModelMetadataResult(
     string Filename,
     List<string> Materials,
     AgentModelExport? Agent = null,
-    List<string>? KeepMeshes = null
+    List<string>? KeepMeshes = null,
+    Dictionary<string, object?>? PetPose = null
 );
 
 /// <summary>
@@ -67,6 +68,7 @@ public static partial class MetadataExtractor
             string VpkPath,
             string TargetFilename,
             AgentModelInfo? Agent,
+            PetModelInfo? Pet,
             bool DefaultMeshGroupOnly
         )> entries
     )
@@ -75,7 +77,7 @@ public static partial class MetadataExtractor
         if (ctx.VpkPackage == null)
             return results;
 
-        foreach (var (vpkPath, targetFilename, agent, defaultMeshGroupOnly) in entries)
+        foreach (var (vpkPath, targetFilename, agent, pet, defaultMeshGroupOnly) in entries)
         {
             var entry = ctx.VpkPackage.FindEntry(vpkPath);
             if (entry == null)
@@ -103,6 +105,7 @@ public static partial class MetadataExtractor
             object? parsedData = null;
             AgentModelExport? agentExport = null;
             List<string>? keepMeshes = null;
+            Dictionary<string, object?>? petPose = null;
             if (resource.DataBlock is Model model)
             {
                 parsedData = ConvertKV3ToObject(model.Data);
@@ -192,6 +195,11 @@ public static partial class MetadataExtractor
 
                 if (defaultMeshGroupOnly && parsedData is Dictionary<string, object?> meshRoot)
                     keepMeshes = ResolveDefaultMeshes(model, meshRoot);
+
+                // A pet ships no clips, so it is posed the way an agent is: the first frame of the
+                // idle its graph plays, which FinalizeModels writes into the .glb's joints.
+                if (pet != null)
+                    petPose = AnimationClips.ReadPose(ctx, PetModelData.GetPoseClip(model));
             }
 
             var filename =
@@ -203,7 +211,8 @@ public static partial class MetadataExtractor
                     filename,
                     materials,
                     agentExport,
-                    keepMeshes
+                    keepMeshes,
+                    petPose
                 )
             );
         }

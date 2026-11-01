@@ -84,11 +84,17 @@ import {
     type CS2ItemTranslation,
     type CS2ItemTranslationMap,
     CS2ItemType,
+    type CS2ModelAnimation,
+    type CS2ModelAnimations,
+    type CS2ModelAnimationSkeleton,
     CS2ItemWear,
     type CS2SouvenirAttachments,
     CS2StatTrakMode,
-    type CS2UnlockedItem
+    type CS2UnlockableItem,
+    type CS2UnlockedItem,
+    type CS2UnlockOptions
 } from "./economy-types.ts";
+import type { CS2ItemAppearance, CS2ItemAppearanceOptions } from "./inventory-types.ts";
 import { type CS2Team } from "./teams.ts";
 import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
 
@@ -129,19 +135,23 @@ export class CS2EconomyInstance {
     itemsAsArray: CS2EconomyItem[] = [];
     stickers: Set<CS2EconomyItem> = new Set<CS2EconomyItem>();
 
+    private animations: CS2ModelAnimations = {};
     private charmDetachment: CS2EconomyItem | undefined;
     private highlights: Map<number, CS2EconomyItem[]> = new Map<number, CS2EconomyItem[]>();
     private stickerDisplayCases: Map<number, CS2EconomyItem> = new Map<number, CS2EconomyItem>();
 
     load({
+        animations,
         assetsBaseUrl,
         items,
         language
     }: {
+        animations?: CS2ModelAnimations;
         assetsBaseUrl?: string;
         items: CS2Item[];
         language?: CS2ItemTranslationMap;
     }): void {
+        this.animations = animations ?? {};
         this.baseUrl = assetsBaseUrl ?? this.baseUrl;
         this.categories.clear();
         this.items.clear();
@@ -254,7 +264,7 @@ export class CS2EconomyInstance {
     }
 
     trimNameTag(nameTag?: string): string | undefined {
-        const trimmed = nameTag?.trim();
+        const trimmed = nameTag?.replace(/^[ \t\r\n\v\f]+|[ \t\r\n\v\f]+$/g, "");
         return trimmed === "" ? undefined : trimmed;
     }
 
@@ -402,6 +412,25 @@ export class CS2EconomyInstance {
 
     resolveUrl(path?: string): string {
         return `${this.baseUrl}${path}`;
+    }
+
+    getAnimationUrl(name: string): string | undefined {
+        const animation = this.getAnimation(name);
+        return animation && this.resolveUrl(animation.path);
+    }
+
+    getAnimationSkeleton(name: string): CS2ModelAnimationSkeleton | undefined {
+        return this.getAnimation(name)?.skeleton;
+    }
+
+    getAnimationNames(skeleton?: CS2ModelAnimationSkeleton): string[] {
+        return Object.entries(this.animations)
+            .filter(([, animation]) => skeleton === undefined || animation.skeleton === skeleton)
+            .map(([name]) => name);
+    }
+
+    private getAnimation(name: string): CS2ModelAnimation | undefined {
+        return Object.hasOwn(this.animations, name) ? this.animations[name] : undefined;
     }
 }
 
@@ -818,7 +847,7 @@ export class CS2EconomyItem implements Interface<
     }
 
     hasPatches(): boolean {
-        return CS2_PATCHABLE_ITEMS.includes(this.type);
+        return CS2_PATCHABLE_ITEMS.includes(this.type) && !this.isDefault;
     }
 
     hasNameTag(): boolean {
@@ -866,6 +895,10 @@ export class CS2EconomyItem implements Interface<
         return this.videoUrl.replace("_1080p.webm", `_${resolution}.webm`);
     }
 
+    getAppearance(_options?: CS2ItemAppearanceOptions): CS2ItemAppearance {
+        return { id: this.id };
+    }
+
     getImageUrl(wear?: number): string {
         assert(this.imagePath);
         const url = this.economy.resolveUrl(this.imagePath);
@@ -897,22 +930,23 @@ export class CS2EconomyItem implements Interface<
         return this.economy.resolveUrl(this.materialPath ?? this.parent?.materialPath);
     }
 
+    getModelPath(): string | undefined {
+        return this.modelPath ?? this.parent?.modelPath;
+    }
+
     getModelUrl(): string {
-        const modelPath = this.modelPath ?? this.parent?.modelPath;
-        return this.economy.resolveUrl(modelPath);
+        return this.economy.resolveUrl(this.getModelPath());
     }
 
     getModelDataUrl(): string {
-        const modelPath = this.modelPath ?? this.parent?.modelPath;
-        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".json"));
+        return this.economy.resolveUrl(this.getModelPath()?.replace(/\.glb$/, ".json"));
     }
 
     getColliderDataUrl(): string | undefined {
         if (!(this.hasColliderData ?? this.parent?.hasColliderData)) {
             return undefined;
         }
-        const modelPath = this.modelPath ?? this.parent?.modelPath;
-        return this.economy.resolveUrl(modelPath?.replace(/\.glb$/, ".collider.json"));
+        return this.economy.resolveUrl(this.getModelPath()?.replace(/\.glb$/, ".collider.json"));
     }
 
     getMinimumWear(): number {
@@ -1070,52 +1104,64 @@ export class CS2EconomyItem implements Interface<
         };
     }
 
-    /** @see https://www.csgo.com.cn/news/gamebroad/20170911/206155.shtml */
-    unlockContainer(options?: {
-        computeOdds?: (rarities: (typeof CS2_RARITY_ORDER)[number][]) => number[] | undefined;
-        highlight?: boolean;
-    }): CS2UnlockedItem {
+    listUnlockableItems(options?: CS2UnlockOptions): CS2UnlockableItem[] {
         const contents = this.groupContents();
         const keys = Object.keys(contents);
         const rarities = CS2_RARITY_ORDER.filter((rarity) => keys.includes(rarity));
         const odds = options?.computeOdds?.(rarities) ?? rarities.map((_, index) => CS2_BASE_ODD / Math.pow(5, index));
         const total = odds.reduce((acc, cur) => acc + cur, 0);
-        const entries = rarities.map((rarity, index) => [rarity, ensure(odds[index]) / total] as const);
+        return rarities.flatMap((rarity, index) => {
+            const stack = ensure(contents[rarity]);
+            const chance = ensure(odds[index]) / total / stack.length;
+            return stack.map((item) => ({
+                chance,
+                id: item.id,
+                rarity,
+                statTrakChance:
+                    !this.isSouvenirUnlock(item) && item.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
+                        ? this.statTrakMode === CS2StatTrakMode.Guaranteed
+                            ? 1
+                            : CS2_STATTRAK_ODD
+                        : 0,
+                wearMax: item.hasWear() ? item.getMaximumWear() : undefined,
+                wearMin: item.hasWear() ? item.getMinimumWear() : undefined
+            }));
+        });
+    }
+
+    private isSouvenirUnlock(item: CS2EconomyItem): boolean {
+        return this.isSouvenirCase() && item.hasSouvenir();
+    }
+
+    unlockContainer(options?: CS2UnlockOptions & { highlight?: boolean }): CS2UnlockedItem {
+        const unlockables = this.listUnlockableItems(options);
         const roll = Math.random();
-        let [rollRarity] = ensure(entries[0]);
+        let unlocked = ensure(unlockables.at(-1));
         let acc = 0;
-        for (const [rarity, odd] of entries) {
-            acc += odd;
+        for (const unlockable of unlockables) {
+            acc += unlockable.chance;
             if (roll <= acc) {
-                rollRarity = rarity;
+                unlocked = unlockable;
                 break;
             }
         }
-        const stack = ensure(contents[rollRarity]);
-        const unlocked = ensure(stack[Math.floor(Math.random() * stack.length)]);
-        const souvenir = this.isSouvenirCase() && unlocked.hasSouvenir();
+        const item = this.economy.getById(unlocked.id);
+        const souvenir = this.isSouvenirUnlock(item);
         return {
             attributes: {
                 ...(souvenir ? this.rollSouvenirAttachments(options) : { keychains: undefined, stickers: undefined }),
                 containerId: this.id,
-                seed: unlocked.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
+                seed: item.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
                 souvenir: souvenir ? true : undefined,
-                statTrak:
-                    !souvenir && unlocked.hasStatTrak() && this.statTrakMode !== CS2StatTrakMode.Excluded
-                        ? this.statTrakMode === CS2StatTrakMode.Guaranteed || Math.random() <= CS2_STATTRAK_ODD
-                            ? 0
-                            : undefined
-                        : undefined,
-                wear: unlocked.hasWear()
-                    ? truncateToFactor(
-                          randomFloat(unlocked.wearMin ?? CS2_MIN_WEAR, unlocked.wearMax ?? CS2_MAX_WEAR),
-                          CS2_WEAR_FACTOR
-                      )
-                    : undefined
+                statTrak: Math.random() < unlocked.statTrakChance ? 0 : undefined,
+                wear:
+                    unlocked.wearMin !== undefined && unlocked.wearMax !== undefined
+                        ? truncateToFactor(randomFloat(unlocked.wearMin, unlocked.wearMax), CS2_WEAR_FACTOR)
+                        : undefined
             },
             id: unlocked.id,
-            rarity: CS2RaritySoundName[unlocked.rarityColor],
-            special: rollRarity === "special"
+            rarity: CS2RaritySoundName[item.rarityColor],
+            special: unlocked.rarity === "special"
         };
     }
 }

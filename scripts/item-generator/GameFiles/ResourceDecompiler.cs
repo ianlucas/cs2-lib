@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 using System.Collections.Concurrent;
+using SkiaSharp;
 using SteamDatabase.ValvePak;
 using ValveResourceFormat;
 using ValveResourceFormat.CompiledShader;
@@ -324,9 +325,10 @@ public static class ResourceDecompiler
                 };
                 if (models.TryGetValue(vpkPath, out var task) && task.Agent != null)
                     exporter.AnimationFilter.Add(AgentAnimationSentinel);
-                // A pet's graph references far more than a viewer plays -- 87 clips on the chicken
-                // skeleton -- so it keeps only its idles and the pose sequences its proportions
-                // blend between.
+                // A pet's graph references 87 clips on the chicken skeleton, and the .glb keeps
+                // none of them: only the pose sequences its proportions blend between. It is posed
+                // in an idle's first frame instead (PetModelData.GetPoseClip), and a viewer that
+                // plays the idle fetches it on its own (Config.AnimationClipsPrefix).
                 if (task?.Pet != null && resource.DataBlock is Model petModel)
                 {
                     exporter.AnimationFilter.UnionWith(PetModelData.GetAnimationFilter(petModel));
@@ -417,6 +419,14 @@ public static class ResourceDecompiler
         var outPath = Path.Combine(dir, $"{baseName}{ext}");
 
         using var content = textureExtract.ToContentFile();
+        // CS2 v2000922 recompiled its I8 textures (the glove g_tTintId maps) to R8_UNORM with the
+        // same texel bytes. VRF decodes R8_UNORM into red alone, so spread red to grey to keep
+        // exporting the PNG I8 decoded to.
+        if (
+            resource.DataBlock is Texture { Format: VTexFormat.R8_UNORM }
+            && content is TextureContentFile textureContent
+        )
+            SpreadRedToGrey(textureContent.Bitmap);
         if (content.Data != null)
         {
             File.WriteAllBytes(outPath, content.Data);
@@ -435,6 +445,17 @@ public static class ResourceDecompiler
                 $"SubFile Extract returned null for texture: {vpkPath}"
             );
         File.WriteAllBytes(outPath, imageBytes);
+    }
+
+    private static void SpreadRedToGrey(SKBitmap bitmap)
+    {
+        using var pixmap = bitmap.PeekPixels();
+        var pixels = pixmap.GetPixelSpan<SKColor>();
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var red = pixels[i].Red;
+            pixels[i] = new SKColor(red, red, red, pixels[i].Alpha);
+        }
     }
 
     private static void DecompileSvg(byte[] data, string vpkPath, string outDir)

@@ -34,7 +34,7 @@ public static class CdnUploader
         var tasks = new List<Task>();
         var uploadCount = 0;
 
-        foreach (var folder in new[] { "images", "materials", "textures", "models" })
+        foreach (var folder in new[] { "animations", "images", "materials", "textures", "models" })
         {
             var existingFiles = new HashSet<string>();
             try

@@ -676,13 +676,6 @@ public static partial class AssetProcessor
     // one of them into memory to answer a question about names and shader parameters.
     // ---------------------------------------------------------------------------------------------
 
-    private static JsonDocument ReadGlbJson(string glbPath)
-    {
-        var bytes = File.ReadAllBytes(glbPath);
-        var jsonLength = (int)BitConverter.ToUInt32(bytes, 12);
-        return JsonDocument.Parse(System.Text.Encoding.UTF8.GetString(bytes, 20, jsonLength));
-    }
-
     /// Each image's name paired with the satellite file VRF wrote for it; embedded images are skipped.
     private static List<(string Name, string Uri)> ReadGlbImages(string glbPath)
     {
