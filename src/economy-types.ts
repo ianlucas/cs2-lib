@@ -90,6 +90,7 @@ export interface CS2Item {
     isBase?: boolean | undefined;
     isDefault?: boolean | undefined;
     isLegacyModel?: boolean | undefined;
+    keychainDefaultLocation?: number[] | undefined;
     keychainPositionXMax?: number | undefined;
     keychainPositionXMin?: number | undefined;
     keychainPositionYMax?: number | undefined;
@@ -97,6 +98,7 @@ export interface CS2Item {
     keychainPositionZMax?: number | undefined;
     keychainPositionZMin?: number | undefined;
     keyIds?: number[] | undefined;
+    legacyKeychainDefaultLocation?: number[] | undefined;
     legacyKeychainPositionXMax?: number | undefined;
     legacyKeychainPositionXMin?: number | undefined;
     legacyKeychainPositionYMax?: number | undefined;
@@ -155,8 +157,8 @@ export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>
 export type CS2HighlightVideoResolution = "1080p" | "480p";
 
 export interface CS2SouvenirAttachments {
-    keychains: Record<string, { highlight: number; id: number }> | undefined;
-    stickers: Record<string, { id: number }> | undefined;
+    keychains: Record<string, { highlight: number; id: number; x?: number; y?: number; z?: number }> | undefined;
+    stickers: Record<string, { id: number; schema?: number }> | undefined;
 }
 
 export type CS2ModelMaterials = Record<string, Record<string, string[]>>;

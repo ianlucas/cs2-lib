@@ -102,6 +102,31 @@ public static partial class Souvenirs
         );
     }
 
+    public static CS2Item SplitHighlightPackage(CS2Item package, int id)
+    {
+        var highlightPackage = new CS2Item
+        {
+            CollectionImagePath = package.CollectionImagePath,
+            CollectionKey = package.CollectionKey,
+            ContainerType = package.ContainerType,
+            ContentIds = package.ContentIds,
+            DefinitionIndex = package.DefinitionIndex,
+            Id = id,
+            ImagePath = package.ImagePath,
+            KeyIds = package.KeyIds,
+            RarityColor = package.RarityColor,
+            SouvenirEventId = package.SouvenirEventId,
+            SouvenirHighlightIds = package.SouvenirHighlightIds,
+            SouvenirMapStickerId = package.SouvenirMapStickerId,
+            SpecialIds = package.SpecialIds,
+            SpecialsImagePath = package.SpecialsImagePath,
+            StatTrakMode = package.StatTrakMode,
+            Type = package.Type,
+        };
+        package.SouvenirHighlightIds = null;
+        return highlightPackage;
+    }
+
     public static void AnnotateStickers(ItemGeneratorContext ctx)
     {
         var mapStickerIdsByEvent = ctx

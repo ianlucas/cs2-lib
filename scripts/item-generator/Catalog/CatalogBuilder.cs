@@ -1135,6 +1135,7 @@ public static class CatalogBuilder
             var id = GetItemId(ctx, $"highlight_{reel.Index}");
             Translations.AddTranslation(ctx, id, "name", $"#HighlightReel_{reel.Key}");
             Translations.TryAddTranslation(ctx, id, "description", $"#HighlightDesc_{reel.Key}");
+            Translations.AddTranslation(ctx, id, "categoryName", $"#CSGO_Watch_Cat_Tournament_{reel.EventId}");
             Translations.AddFormattedTranslation(
                 ctx,
                 id,
@@ -1338,17 +1339,47 @@ public static class CatalogBuilder
             if (tournamentEventId != null && Souvenirs.IsPackage(ctx, item))
             {
                 Souvenirs.Populate(ctx, container, item, tournamentEventId.Value);
-                Translations.AddFormattedTranslation(
-                    ctx,
-                    id,
-                    "tournamentDescription",
-                    "#CSGO_Event_Desc",
-                    $"#CSGO_Tournament_Event_Name_{tournamentEventId}"
-                );
+                AddTournamentDescription(ctx, id, tournamentEventId.Value);
+                var highlightItemName = $"{itemName}^highlight";
+                if (
+                    container.SouvenirHighlightIds != null
+                    && Translations.HasTranslation(ctx, highlightItemName)
+                )
+                {
+                    var highlightPackageId = GetItemId(ctx, $"case_{containerIndex}_highlight");
+                    Translations.AddTranslation(
+                        ctx,
+                        highlightPackageId,
+                        "name",
+                        "#CSGO_Type_WeaponCase",
+                        " | ",
+                        highlightItemName
+                    );
+                    Translations.TryAddTranslation(
+                        ctx,
+                        highlightPackageId,
+                        "description",
+                        itemDescription
+                    );
+                    Collections.GetCollection(ctx, highlightPackageId, tagValue);
+                    AddTournamentDescription(ctx, highlightPackageId, tournamentEventId.Value);
+                    AddItem(ctx, Souvenirs.SplitHighlightPackage(container, highlightPackageId));
+                }
             }
 
             AddItem(ctx, container);
         }
+    }
+
+    private static void AddTournamentDescription(ItemGeneratorContext ctx, int id, int eventId)
+    {
+        Translations.AddFormattedTranslation(
+            ctx,
+            id,
+            "tournamentDescription",
+            "#CSGO_Event_Desc",
+            $"#CSGO_Tournament_Event_Name_{eventId}"
+        );
     }
 
     // --- Helper methods ---
@@ -1384,12 +1415,14 @@ public static class CatalogBuilder
             return;
 
         item.HasColliderData ??= previous.HasColliderData;
+        item.KeychainDefaultLocation ??= previous.KeychainDefaultLocation;
         item.KeychainPositionXMax ??= previous.KeychainPositionXMax;
         item.KeychainPositionXMin ??= previous.KeychainPositionXMin;
         item.KeychainPositionYMax ??= previous.KeychainPositionYMax;
         item.KeychainPositionYMin ??= previous.KeychainPositionYMin;
         item.KeychainPositionZMax ??= previous.KeychainPositionZMax;
         item.KeychainPositionZMin ??= previous.KeychainPositionZMin;
+        item.LegacyKeychainDefaultLocation ??= previous.LegacyKeychainDefaultLocation;
         item.LegacyKeychainPositionXMax ??= previous.LegacyKeychainPositionXMax;
         item.LegacyKeychainPositionXMin ??= previous.LegacyKeychainPositionXMin;
         item.LegacyKeychainPositionYMax ??= previous.LegacyKeychainPositionYMax;

@@ -269,6 +269,15 @@ test("display-case keychain resolves model and material through the slab parent"
     expect(displayCase.getMaterialUrl()).toBe(slab.getMaterialUrl());
 });
 
+test("a highlight's category is its tournament, as the game titles its clip", () => {
+    CS2Economy.load({ items: CS2_ITEMS, language: english });
+    const highlights = CS2Economy.itemsAsArray.filter((item) => item.isHighlight());
+    expect(highlights.length).toBeGreaterThan(0);
+    expect(highlights.every((highlight) => highlight.categoryName !== undefined)).toBe(true);
+    const highlight = CS2Economy.getById(28171);
+    expect(`${highlight.categoryName} | ${highlight.name}`).toBe("Austin 2025 | chopper Double Kill");
+});
+
 test("sticker slab predicates and display-case lookup", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });
     const slab = CS2Economy.getById(15200);

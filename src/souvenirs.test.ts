@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { CS2RarityColor, CS2_SOUVENIR_HIGHLIGHT_ODD } from "./economy-container.ts";
+import { CS2RarityColor } from "./economy-container.ts";
 import { CS2ContainerType, type CS2Item, CS2ItemType, CS2SouvenirStickerType } from "./economy-types.ts";
 import { CS2EconomyInstance, type CS2SouvenirSource, composeSouvenirStickers } from "./economy.ts";
 import { checkInventoryItem, checkSouvenir, repairInventoryItem } from "./inventory-rules.ts";
@@ -16,6 +16,10 @@ const DEFAULT_WEAPON_ID = 2;
 const KNIFE_SKIN_ID = 3;
 const LOOSE_SKIN_ID = 4;
 const HIGHLIGHT_SKIN_ID = 5;
+const LEGACY_HIGHLIGHT_SKIN_ID = 6;
+
+const KEYCHAIN_DEFAULT_LOCATION = [1, 0.5, 2, 1.2, 0.5, 2, 1, 0.6, 2.4, 1.2, 0.6, 2.4];
+const LEGACY_KEYCHAIN_DEFAULT_LOCATION = [5, 0.1, 6, 5.1, 0.1, 6, 5, 0.1, 6.1, 5.1, 0.1, 6.1];
 
 const LONE_EVENT_ID = 1;
 const LONE_EVENT_STICKER_IDS = [10, 11];
@@ -98,7 +102,24 @@ function buildItems({ crafted }: { crafted: boolean }): CS2Item[] {
         { id: DEFAULT_WEAPON_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Default, isDefault: true },
         { id: KNIFE_SKIN_ID, type: CS2ItemType.Melee, rarityColor: CS2RarityColor.Ancient, variantIndex: 1 },
         { id: LOOSE_SKIN_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Common, variantIndex: 2 },
-        { id: HIGHLIGHT_SKIN_ID, type: CS2ItemType.Weapon, rarityColor: CS2RarityColor.Common, variantIndex: 3 },
+        {
+            id: HIGHLIGHT_SKIN_ID,
+            type: CS2ItemType.Weapon,
+            rarityColor: CS2RarityColor.Common,
+            variantIndex: 3,
+            stickerSchemaCount: 4,
+            keychainDefaultLocation: KEYCHAIN_DEFAULT_LOCATION,
+            legacyKeychainDefaultLocation: LEGACY_KEYCHAIN_DEFAULT_LOCATION
+        },
+        {
+            id: LEGACY_HIGHLIGHT_SKIN_ID,
+            type: CS2ItemType.Weapon,
+            rarityColor: CS2RarityColor.Common,
+            variantIndex: 4,
+            isLegacyModel: true,
+            keychainDefaultLocation: KEYCHAIN_DEFAULT_LOCATION,
+            legacyKeychainDefaultLocation: LEGACY_KEYCHAIN_DEFAULT_LOCATION
+        },
         ...stickers.values(),
         { id: HIGHLIGHT_KEYCHAIN_ID, type: CS2ItemType.Keychain, rarityColor: CS2RarityColor.Rare },
         {
@@ -143,8 +164,8 @@ function contentOf(containerId: number) {
     return economy.getById(economy.getById(containerId).contentIds![0]!);
 }
 
-function unlock(id: number, options?: { highlight?: boolean }) {
-    return economy.getById(id).unlockContainer(options).attributes;
+function unlock(id: number) {
+    return economy.getById(id).unlockContainer().attributes;
 }
 
 function describeSource({ container, eventId, eventStickers, highlights, mapStickers, teams }: CS2SouvenirSource) {
@@ -257,6 +278,22 @@ describe("souvenir economy items", () => {
         expect(composeSouvenirStickers({ autograph, mapSticker: map })).toEqual({ 0: { id: 33 }, 1: { id: 14 } });
         expect(composeSouvenirStickers({})).toBe(undefined);
     });
+
+    test("rollKeychainDefaultPosition picks a point inside the model's default charm location", () => {
+        const random = vi.spyOn(Math, "random");
+        random.mockReturnValue(0);
+        expect(economy.getById(HIGHLIGHT_SKIN_ID).rollKeychainDefaultPosition()).toEqual({ x: 1, y: 0.5, z: 2 });
+        expect(economy.getById(LEGACY_HIGHLIGHT_SKIN_ID).rollKeychainDefaultPosition()).toEqual({ x: 5, y: 0.1, z: 6 });
+        random.mockReturnValue(0.5);
+        expect(economy.getById(HIGHLIGHT_SKIN_ID).rollKeychainDefaultPosition()).toEqual({ x: 1.1, y: 0.55, z: 2.2 });
+        random.mockReturnValueOnce(1 / 3).mockReturnValueOnce(1 / 7);
+        expect(economy.getById(HIGHLIGHT_SKIN_ID).rollKeychainDefaultPosition()).toEqual({
+            x: 1.0667,
+            y: 0.5143,
+            z: 2.0571
+        });
+        expect(economy.getById(SKIN_ID).rollKeychainDefaultPosition()).toBe(undefined);
+    });
 });
 
 describe("unlocking a souvenir package", () => {
@@ -279,7 +316,7 @@ describe("unlocking a souvenir package", () => {
             statTraks.add(attributes.statTrak);
         }
         expect(statTraks).toEqual(new Set([0, undefined]));
-        expect(() => economy.getById(WEAPON_CASE_ID).rollSouvenirAttachments()).toThrow();
+        expect(() => economy.getById(WEAPON_CASE_ID).rollSouvenirAttachments(contentOf(WEAPON_CASE_ID))).toThrow();
     });
 
     test("a package without teams gives one of the event's stickers", () => {
@@ -318,7 +355,7 @@ describe("unlocking a souvenir package", () => {
 
     test("a map package gives the map's sticker in the autograph's place", () => {
         for (let roll = 0; roll < ROLLS; roll++) {
-            const attributes = unlock(MAP_PACKAGE_ID, { highlight: true });
+            const attributes = unlock(MAP_PACKAGE_ID);
             const [team0, team1, ...rest] = stickerIdsOf(attributes.stickers);
             expect(logosOf(MAP_TEAMS)).toContain(team0);
             expect(logosOf(MAP_TEAMS)).toContain(team1);
@@ -328,41 +365,61 @@ describe("unlocking a souvenir package", () => {
         }
     });
 
-    test("a highlight sets the match and plays on the charm", () => {
-        const attributes = unlock(HIGHLIGHT_PACKAGE_ID, { highlight: true });
-        expect(stickerIdsOf(attributes.stickers)).toEqual([
-            MAP_TEAMS[3]![0],
-            MAP_TEAMS[1]![0],
-            MAP_EVENT_STICKER_ID,
-            OTHER_MAP_STICKER_ID
-        ]);
-        expect(attributes.keychains).toStrictEqual({ 0: { highlight: HIGHLIGHT_ID, id: HIGHLIGHT_KEYCHAIN_ID } });
+    test("a highlight package always attaches one of its highlights, which sets the match", () => {
         for (let roll = 0; roll < ROLLS; roll++) {
-            expect(unlock(HIGHLIGHT_PACKAGE_ID, { highlight: false }).keychains).toBe(undefined);
+            const attributes = unlock(HIGHLIGHT_PACKAGE_ID);
+            expect(stickerIdsOf(attributes.stickers)).toEqual([
+                MAP_TEAMS[3]![0],
+                MAP_TEAMS[1]![0],
+                MAP_EVENT_STICKER_ID,
+                OTHER_MAP_STICKER_ID
+            ]);
+            expect(attributes.keychains?.[0]).toMatchObject({ highlight: HIGHLIGHT_ID, id: HIGHLIGHT_KEYCHAIN_ID });
         }
     });
 
-    test("a highlight is rolled at CS2_SOUVENIR_HIGHLIGHT_ODD when not chosen", () => {
-        const random = vi.spyOn(Math, "random");
-        random.mockReturnValue(CS2_SOUVENIR_HIGHLIGHT_ODD);
-        expect(economy.getById(HIGHLIGHT_PACKAGE_ID).rollSouvenirAttachments().keychains).not.toBe(undefined);
-        random.mockReturnValue(CS2_SOUVENIR_HIGHLIGHT_ODD + 0.01);
-        expect(economy.getById(HIGHLIGHT_PACKAGE_ID).rollSouvenirAttachments().keychains).toBe(undefined);
+    test("a highlight package's charm sits inside the weapon's default charm location", () => {
+        for (let roll = 0; roll < ROLLS; roll++) {
+            const { x, y, z } = unlock(HIGHLIGHT_PACKAGE_ID).keychains?.[0] ?? {};
+            expect(x).toBeGreaterThanOrEqual(1);
+            expect(x).toBeLessThanOrEqual(1.2);
+            expect(y).toBeGreaterThanOrEqual(0.5);
+            expect(y).toBeLessThanOrEqual(0.6);
+            expect(z).toBeGreaterThanOrEqual(2);
+            expect(z).toBeLessThanOrEqual(2.4);
+        }
     });
 
     test("a package the catalog has no souvenir data for still drops a souvenir", () => {
-        const attributes = unlock(BARE_PACKAGE_ID, { highlight: true });
+        const attributes = unlock(BARE_PACKAGE_ID);
         expect(attributes.souvenir).toBe(true);
         expect(attributes.statTrak).toBe(undefined);
         expect(attributes.stickers).toBe(undefined);
         expect(attributes.keychains).toBe(undefined);
     });
 
+    test("a package places its stickers in distinct random slots of the weapon", () => {
+        const eventSlots = new Set<number | undefined>();
+        for (let roll = 0; roll < ROLLS; roll++) {
+            const stickers = Object.values(unlock(HIGHLIGHT_PACKAGE_ID).stickers ?? {});
+            const schemas = stickers.map(({ schema }) => schema);
+            expect(new Set(schemas).size).toBe(stickers.length);
+            expect(schemas.every((schema) => schema !== undefined && schema >= 0 && schema < 4)).toBe(true);
+            eventSlots.add(stickers.find(({ id }) => id === MAP_EVENT_STICKER_ID)?.schema);
+        }
+        expect(eventSlots).toEqual(new Set([0, 1, 2, 3]));
+        const lone = new Set<number | undefined>();
+        for (let roll = 0; roll < ROLLS; roll++) {
+            lone.add(unlock(LONE_PACKAGE_ID).stickers?.[0]?.schema);
+        }
+        expect(lone).toEqual(new Set([0, 1, 2, 3, 4]));
+    });
+
     test("every roll is a valid souvenir", () => {
         for (const id of [LONE_PACKAGE_ID, AUTOGRAPH_PACKAGE_ID, MAP_PACKAGE_ID, HIGHLIGHT_PACKAGE_ID]) {
             const container = economy.getById(id);
             for (let roll = 0; roll < ROLLS; roll++) {
-                const { stickers } = container.rollSouvenirAttachments();
+                const { stickers } = container.rollSouvenirAttachments(contentOf(id));
                 expect(checkSouvenir({ souvenir: true, stickers }, contentOf(id))).toBe(true);
             }
         }
@@ -426,19 +483,17 @@ describe("souvenir inventory items", () => {
     test("unlocking a package adds the souvenir with its stickers and charm", () => {
         const inventory = new CS2Inventory({ economy });
         inventory.add({ id: HIGHLIGHT_PACKAGE_ID });
-        const unlocked = economy.getById(HIGHLIGHT_PACKAGE_ID).unlockContainer({ highlight: true });
+        const unlocked = economy.getById(HIGHLIGHT_PACKAGE_ID).unlockContainer();
         inventory.unlockContainer(unlocked, 0);
         const item = inventory.get(0);
         expect(item.id).toBe(HIGHLIGHT_SKIN_ID);
         expect(item.souvenir).toBe(true);
         expect(item.statTrak).toBe(undefined);
         expect(item.containerId).toBe(HIGHLIGHT_PACKAGE_ID);
-        expect(item.allStickers().map(([, { id, schema }]) => [id, schema])).toEqual([
-            [MAP_TEAMS[3]![0], 0],
-            [MAP_TEAMS[1]![0], 1],
-            [MAP_EVENT_STICKER_ID, 2],
-            [OTHER_MAP_STICKER_ID, 3]
-        ]);
+        expect(item.allStickers().map(([, { id, schema }]) => [id, schema])).toEqual(
+            Object.values(unlocked.attributes.stickers ?? {}).map(({ id, schema }) => [id, schema])
+        );
+        expect(item.getStickersCount()).toBe(4);
         expect(item.keychains?.get(0)).toEqual(unlocked.attributes.keychains?.[0]);
     });
 
@@ -447,7 +502,7 @@ describe("souvenir inventory items", () => {
         inventory.add({
             id: SKIN_ID,
             souvenir: true,
-            ...economy.getById(AUTOGRAPH_PACKAGE_ID).rollSouvenirAttachments()
+            ...economy.getById(AUTOGRAPH_PACKAGE_ID).rollSouvenirAttachments(economy.getById(SKIN_ID))
         });
         expect(inventory.get(0).souvenir).toBe(true);
         expect(inventory.get(0).getStickersCount()).toBe(4);

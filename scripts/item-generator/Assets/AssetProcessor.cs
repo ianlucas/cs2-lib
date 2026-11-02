@@ -575,6 +575,14 @@ public static partial class AssetProcessor
                     keychainMarkup,
                     legacyModel: true
                 );
+                var hdKeychainDefaultLocation = FindKeychainDefaultLocation(
+                    keychainMarkup,
+                    legacyModel: false
+                );
+                var legacyKeychainDefaultLocation = FindKeychainDefaultLocation(
+                    keychainMarkup,
+                    legacyModel: true
+                );
 
                 if (hdKeychainBounds == null && legacyKeychainBounds == null)
                     return;
@@ -582,6 +590,8 @@ public static partial class AssetProcessor
                 {
                     if (item.ModelPath != playerModelPath)
                         continue;
+                    item.KeychainDefaultLocation = hdKeychainDefaultLocation;
+                    item.LegacyKeychainDefaultLocation = legacyKeychainDefaultLocation;
                     if (hdKeychainBounds is { } hd)
                     {
                         item.KeychainPositionXMin = hd.XMin;
@@ -737,14 +747,7 @@ public static partial class AssetProcessor
         {
             if (entry is not Dictionary<string, object?> markup)
                 continue;
-            var isLegacy =
-                markup.TryGetValue("LegacyModel", out var legacyObj)
-                && legacyObj?.ToString() is { } legacyText
-                && (
-                    legacyText.Equals("true", StringComparison.OrdinalIgnoreCase)
-                    || legacyText == "1"
-                );
-            if (isLegacy != legacyModel)
+            if (IsMarkupFlagSet(markup, "LegacyModel") != legacyModel)
                 continue;
 
             if (
@@ -780,6 +783,40 @@ public static partial class AssetProcessor
             QuantizeOutward(zMin, up: false, KeychainPositionFactor),
             QuantizeOutward(zMax, up: true, KeychainPositionFactor)
         );
+    }
+
+    private static List<double>? FindKeychainDefaultLocation(
+        List<object?> keychainMarkup,
+        bool legacyModel
+    )
+    {
+        foreach (var entry in keychainMarkup)
+        {
+            if (
+                entry is not Dictionary<string, object?> markup
+                || IsMarkupFlagSet(markup, "LegacyModel") != legacyModel
+                || !IsMarkupFlagSet(markup, "DefaultLocation")
+                || !markup.TryGetValue("Corners", out var cornersObj)
+                || cornersObj is not List<object?> { Count: 12 } corners
+            )
+                continue;
+            var location = new List<double>();
+            foreach (var corner in corners)
+            {
+                if (!TryParseDouble(corner, out var value))
+                    return null;
+                location.Add(Math.Round(value, 4));
+            }
+            return location;
+        }
+        return null;
+    }
+
+    private static bool IsMarkupFlagSet(Dictionary<string, object?> markup, string key)
+    {
+        return markup.TryGetValue(key, out var value)
+            && value?.ToString() is { } text
+            && (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1");
     }
 
     private static bool TryParseDouble(object? value, out double result)

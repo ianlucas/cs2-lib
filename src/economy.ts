@@ -15,6 +15,7 @@ import {
     CS2_FALLBACK_PREVIEW_SEED,
     CS2_GRAPHIC_ART_ITEMS,
     CS2_KEYCHAINABLE_ITEMS,
+    CS2_KEYCHAIN_POSITION_FACTOR,
     CS2_MACHINEGUN_MODEL_KEYS,
     CS2_MAX_CHARM_DETACHMENT_CHARGES,
     CS2_MAX_FACTORY_NEW_WEAR,
@@ -70,7 +71,6 @@ import {
     CS2_BASE_ODD,
     CS2_RARITY_COLOR_DEFAULT,
     CS2_RARITY_ORDER,
-    CS2_SOUVENIR_HIGHLIGHT_ODD,
     CS2_STATTRAK_ODD,
     randomFloat,
     randomInt
@@ -97,7 +97,16 @@ import {
 } from "./economy-types.ts";
 import type { CS2ItemAppearance, CS2ItemAppearanceOptions } from "./inventory-types.ts";
 import { type CS2Team } from "./teams.ts";
-import { type Interface, assert, compare, ensure, isFactorPrecise, safe, truncateToFactor } from "./utils.ts";
+import {
+    type Interface,
+    assert,
+    compare,
+    ensure,
+    isFactorPrecise,
+    roundToFactor,
+    safe,
+    truncateToFactor
+} from "./utils.ts";
 
 type CS2EconomyItemPredicate = Partial<CS2EconomyItem> & { usableByTeam?: CS2Team };
 
@@ -127,6 +136,28 @@ function pickPair<T>(values: T[]): T[] {
     const first = randomInt(0, values.length - 1);
     const second = (first + randomInt(1, values.length - 1)) % values.length;
     return [ensure(values[first]), ensure(values[second])];
+}
+
+function shuffle<T>(values: T[]): T[] {
+    const shuffled = [...values];
+    for (let index = shuffled.length - 1; index > 0; index--) {
+        const other = randomInt(0, index);
+        [shuffled[index], shuffled[other]] = [ensure(shuffled[other]), ensure(shuffled[index])];
+    }
+    return shuffled;
+}
+
+function placeAtRandomSchemas(
+    stickers: CS2SouvenirAttachments["stickers"],
+    schemaCount: number
+): CS2SouvenirAttachments["stickers"] {
+    if (stickers === undefined) {
+        return undefined;
+    }
+    const schemas = shuffle(Array.from({ length: schemaCount }, (_, schema) => schema));
+    return Object.fromEntries(
+        Object.entries(stickers).map(([slot, sticker], index) => [slot, { ...sticker, schema: schemas[index] }])
+    );
 }
 
 function isSouvenirable(item: CS2EconomyItem): boolean {
@@ -625,6 +656,7 @@ export class CS2EconomyItem implements Interface<
     isBase: boolean | undefined;
     isDefault: boolean | undefined;
     isLegacyModel: boolean | undefined;
+    keychainDefaultLocation: number[] | undefined;
     keychainPositionXMax: number | undefined;
     keychainPositionXMin: number | undefined;
     keychainPositionYMax: number | undefined;
@@ -632,6 +664,7 @@ export class CS2EconomyItem implements Interface<
     keychainPositionZMax: number | undefined;
     keychainPositionZMin: number | undefined;
     keyIds: number[] | undefined;
+    legacyKeychainDefaultLocation: number[] | undefined;
     legacyKeychainPositionXMax: number | undefined;
     legacyKeychainPositionXMin: number | undefined;
     legacyKeychainPositionYMax: number | undefined;
@@ -1211,6 +1244,24 @@ export class CS2EconomyItem implements Interface<
         };
     }
 
+    rollKeychainDefaultPosition(): { x: number; y: number; z: number } | undefined {
+        const item = this.parent ?? this;
+        const location = this.isLegacyModel ? item.legacyKeychainDefaultLocation : item.keychainDefaultLocation;
+        if (location === undefined) {
+            return undefined;
+        }
+        const u = Math.random();
+        const v = Math.random();
+        const corner = (index: number, axis: number) => ensure(location[index * 3 + axis]);
+        const point = (axis: number) =>
+            roundToFactor(
+                (1 - v) * ((1 - u) * corner(0, axis) + u * corner(1, axis)) +
+                    v * ((1 - u) * corner(2, axis) + u * corner(3, axis)),
+                CS2_KEYCHAIN_POSITION_FACTOR
+            );
+        return { x: point(0), y: point(1), z: point(2) };
+    }
+
     groupContents(): Record<string, CS2EconomyItem[]> {
         const items: Record<string, CS2EconomyItem[]> = {};
         const specials = this.specials;
@@ -1244,17 +1295,14 @@ export class CS2EconomyItem implements Interface<
         });
     }
 
-    rollSouvenirAttachments(options?: { highlight?: boolean }): CS2SouvenirAttachments {
+    rollSouvenirAttachments(item: CS2EconomyItem): CS2SouvenirAttachments {
         assert(this.isSouvenirCase());
         const source = this.economy.getSouvenirContainerSource(this);
         if (source === undefined) {
             return { keychains: undefined, stickers: undefined };
         }
         const { eventStickers, highlights, mapStickers, teams } = source;
-        const highlight =
-            highlights.length > 0 && (options?.highlight ?? Math.random() <= CS2_SOUVENIR_HIGHLIGHT_ODD)
-                ? pick(highlights)
-                : undefined;
+        const highlight = highlights.length > 0 ? pick(highlights) : undefined;
         const match =
             highlight !== undefined
                 ? ensure(highlight.teamStickerIds).map((stickerId) =>
@@ -1266,14 +1314,17 @@ export class CS2EconomyItem implements Interface<
         return {
             keychains:
                 highlight !== undefined && keychain !== undefined
-                    ? { 0: { highlight: highlight.id, id: keychain.id } }
+                    ? { 0: { highlight: highlight.id, id: keychain.id, ...item.rollKeychainDefaultPosition() } }
                     : undefined,
-            stickers: composeSouvenirStickers({
-                autograph: autographs.length > 0 ? pick(autographs) : undefined,
-                eventSticker: eventStickers.length > 0 ? pick(eventStickers) : undefined,
-                mapSticker: mapStickers[0],
-                teams: match.map(({ sticker }) => sticker)
-            })
+            stickers: placeAtRandomSchemas(
+                composeSouvenirStickers({
+                    autograph: autographs.length > 0 ? pick(autographs) : undefined,
+                    eventSticker: eventStickers.length > 0 ? pick(eventStickers) : undefined,
+                    mapSticker: mapStickers[0],
+                    teams: match.map(({ sticker }) => sticker)
+                }),
+                item.getStickerSchemaCount()
+            )
         };
     }
 
@@ -1306,7 +1357,7 @@ export class CS2EconomyItem implements Interface<
         return this.isSouvenirCase() && item.hasSouvenir();
     }
 
-    unlockContainer(options?: CS2UnlockOptions & { highlight?: boolean }): CS2UnlockedItem {
+    unlockContainer(options?: CS2UnlockOptions): CS2UnlockedItem {
         const unlockables = this.listUnlockableItems(options);
         const roll = Math.random();
         let unlocked = ensure(unlockables.at(-1));
@@ -1322,7 +1373,7 @@ export class CS2EconomyItem implements Interface<
         const souvenir = this.isSouvenirUnlock(item);
         return {
             attributes: {
-                ...(souvenir ? this.rollSouvenirAttachments(options) : { keychains: undefined, stickers: undefined }),
+                ...(souvenir ? this.rollSouvenirAttachments(item) : { keychains: undefined, stickers: undefined }),
                 containerId: this.id,
                 seed: item.hasSeed() ? randomInt(CS2_MIN_SEED, CS2_MAX_SEED) : undefined,
                 souvenir: souvenir ? true : undefined,

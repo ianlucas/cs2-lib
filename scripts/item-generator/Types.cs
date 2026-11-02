@@ -132,6 +132,12 @@ public class CS2Item
     // they run to 41.29 on an AWP. The sticker bounds further down are deltas from a slot's authored
     // offset and stay inside ±0.5 — hence position for one and offset for the other.
     [
+        JsonPropertyName("keychainDefaultLocation"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<double>? KeychainDefaultLocation { get; set; }
+
+    [
         JsonPropertyName("keychainPositionXMax"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
     ]
@@ -169,6 +175,12 @@ public class CS2Item
 
     [JsonPropertyName("keyIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? KeyIds { get; set; }
+
+    [
+        JsonPropertyName("legacyKeychainDefaultLocation"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<double>? LegacyKeychainDefaultLocation { get; set; }
 
     [
         JsonPropertyName("legacyKeychainPositionXMax"),
@@ -278,8 +290,8 @@ public class CS2Item
     ]
     public List<int>? SouvenirEventIds { get; set; }
 
-    // The highlights of the playoff matches played on the package's map. An item from one of those
-    // matches carries one of them on the event's charm.
+    // The highlights of the playoff matches played on the package's map, set on its Souvenir
+    // Highlight Package only. Every item from it carries one of them on the event's charm.
     [
         JsonPropertyName("souvenirHighlightIds"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
