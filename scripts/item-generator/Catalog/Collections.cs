@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+using ValveKeyValue;
+
 namespace ItemGenerator.Catalog;
 
 public static class Collections
@@ -46,6 +48,22 @@ public static class Collections
     public static void AddContainerItem(ItemGeneratorContext ctx, string itemKey, int id)
     {
         ctx.ContainerItems.TryAdd(itemKey, id);
+    }
+
+    // The client loot list a container opens to: through its supply crate series when it has one,
+    // otherwise named on the item.
+    public static string? GetClientLootListKey(ItemGeneratorContext ctx, KVObject item)
+    {
+        var supplyCrate = KvHelper.GetChild(
+            KvHelper.GetChild(item, "attributes"),
+            "set supply crate series"
+        );
+        var revolvingKey = KvHelper.GetString(supplyCrate, "value");
+        return revolvingKey != null
+            ? KvHelper
+                .FindInMergedSection(ctx.GameItems!, "revolving_loot_lists", revolvingKey)
+                ?.ToString()
+            : KvHelper.GetString(item, "loot_list_name");
     }
 
     public static List<string> GetClientLootListItems(

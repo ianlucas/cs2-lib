@@ -40,6 +40,11 @@ public static class KvHelper
         }
     }
 
+    public static int? GetInt(KVObject? obj, string key)
+    {
+        return int.TryParse(GetString(obj, key), out var value) ? value : null;
+    }
+
     public static IEnumerable<KeyValuePair<string, KVObject>> GetChildren(KVObject? obj)
     {
         if (obj == null)

@@ -6,7 +6,7 @@
 import { assert, describe, expect, test, vi } from "vitest";
 import { english } from "../src/translations/english.ts";
 import { CS2RarityColor, CS2_RARITY_ORDER } from "./economy-container.ts";
-import { type CS2Item, type CS2UnlockableItem } from "./economy-types.ts";
+import { type CS2Item, CS2ItemType, type CS2UnlockableItem } from "./economy-types.ts";
 import { CS2Economy, CS2EconomyItem } from "./economy.ts";
 import { CS2_ITEMS } from "./items.ts";
 import { ensure } from "./utils.ts";
@@ -268,6 +268,17 @@ test("display-case keychain resolves model and material through the slab parent"
     expect(displayCase.getModelDataUrl()).toBe(slab.getModelDataUrl());
     expect(displayCase.getMaterialUrl()).toBe(slab.getMaterialUrl());
 });
+
+test.skipIf(!CS2_ITEMS.some(({ type }) => type === CS2ItemType.Highlight))(
+    "a highlight's category is its tournament, as the game titles its clip",
+    () => {
+        CS2Economy.load({ items: CS2_ITEMS, language: english });
+        const highlights = CS2Economy.itemsAsArray.filter((item) => item.isHighlight());
+        expect(highlights.every((highlight) => highlight.categoryName !== undefined)).toBe(true);
+        const highlight = CS2Economy.getById(28171);
+        expect(`${highlight.categoryName} | ${highlight.name}`).toBe("Austin 2025 | chopper Double Kill");
+    }
+);
 
 test("sticker slab predicates and display-case lookup", () => {
     CS2Economy.load({ items: CS2_ITEMS, language: english });

@@ -28,8 +28,8 @@ import {
     checkStickerSchema,
     getDropReason,
     getItemAppearance,
-    isStorableInStorageUnit,
     getNextStickerSchema,
+    isStorableInStorageUnit,
     reconcileInventoryItems,
     repairInventoryItem
 } from "./inventory-rules.ts";
@@ -293,11 +293,11 @@ export class CS2Inventory {
     addWithKeychain(
         keychainUid: number,
         id: number,
-        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed"> = {}
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "highlight" | "id" | "seed"> = {}
     ): this {
         const keychain = this.get(keychainUid).expectKeychain();
         const { x, y, z } = attributes;
-        const keychains = { 0: { id: keychain.id, seed: keychain.seed, x, y, z } };
+        const keychains = { 0: { highlight: keychain.highlight, id: keychain.id, seed: keychain.seed, x, y, z } };
         assertKeychains(this.economy, keychains, this.economy.getById(id));
         this.items.delete(keychainUid);
         this.add({ id, keychains });
@@ -511,6 +511,7 @@ export class CS2Inventory {
         const target = this.get(targetUid);
         const sticker = this.get(stickerUid).expectSticker();
         assert(target.hasStickers());
+        assert(target.souvenir !== true);
         const stickers = stickerMapToArray(target.stickers);
         assert(stickers.length < CS2_MAX_STICKERS);
         const { schema, x, y, rotation, wear } = attributes;
@@ -560,8 +561,9 @@ export class CS2Inventory {
     ): this {
         const target = this.get(targetUid);
         const stickers = stickerMapToArray(target.stickers);
-        assert(stickers[index] !== undefined);
-        stickers[index] = { ...stickers[index], ...patch };
+        const sticker = ensure(stickers[index]);
+        assert(target.souvenir !== true || patch.id === undefined || patch.id === sticker.id);
+        stickers[index] = { ...sticker, ...patch };
         const record = CS2InventoryItem.stickersFromArray(stickers);
         assertStickers(this.economy, record, target);
         target.stickers = toStickerMap(record);
@@ -597,7 +599,7 @@ export class CS2Inventory {
     applyItemKeychain(
         targetUid: number,
         keychainUid: number,
-        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed"> = {}
+        attributes: Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "highlight" | "id" | "seed"> = {}
     ): this {
         const target = this.get(targetUid);
         const keychain = this.get(keychainUid).expectKeychain();
@@ -608,7 +610,7 @@ export class CS2Inventory {
             slot++;
         }
         const { x, y, z } = attributes;
-        const value = { id: keychain.id, seed: keychain.seed, x, y, z };
+        const value = { highlight: keychain.highlight, id: keychain.id, seed: keychain.seed, x, y, z };
         const record = { ...Object.fromEntries(target.keychains ?? []), [slot]: value };
         assertKeychains(this.economy, record, target);
         (target.keychains ??= new Map()).set(slot, value);
@@ -629,7 +631,7 @@ export class CS2Inventory {
             target.keychains = undefined;
         }
         target.updatedAt = getTimestamp();
-        this.add({ id: keychain.id, seed: keychain.seed });
+        this.add({ highlight: keychain.highlight, id: keychain.id, seed: keychain.seed });
         this.dropIfEmptyDefaultItem(target);
         return this;
     }
@@ -637,7 +639,7 @@ export class CS2Inventory {
     editItemKeychain(
         targetUid: number,
         slot: number,
-        patch: Partial<Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "id" | "seed">>
+        patch: Partial<Omit<RecordValue<CS2BaseInventoryItem["keychains"]>, "highlight" | "id" | "seed">>
     ): this {
         const target = this.get(targetUid);
         const keychains = ensure(target.keychains);
@@ -760,10 +762,12 @@ export class CS2InventoryItem
     equipped: boolean | undefined;
     equippedCT: boolean | undefined;
     equippedT: boolean | undefined;
+    highlight: number | undefined;
     keychains: Map<number, RecordValue<CS2BaseInventoryItem["keychains"]>> | undefined;
     nameTag: string | undefined;
     patches: Map<number, number> | undefined;
     seed: number | undefined;
+    souvenir: boolean | undefined;
     statTrak: number | undefined;
     stickers: Map<number, RecordValue<CS2BaseInventoryItem["stickers"]>> | undefined;
     storage: Map<number, CS2InventoryItem> | undefined;
@@ -952,11 +956,13 @@ export class CS2InventoryItem
             equipped: this.equipped,
             equippedCT: this.equippedCT,
             equippedT: this.equippedT,
+            highlight: this.highlight,
             id: this.id,
             keychains: this.keychains !== undefined ? Object.fromEntries(this.keychains) : undefined,
             nameTag: this.nameTag,
             patches: this.patches !== undefined ? Object.fromEntries(this.patches) : undefined,
             seed: this.seed,
+            souvenir: this.souvenir,
             statTrak: this.statTrak,
             stickers: this.stickers !== undefined ? Object.fromEntries(this.stickers) : undefined,
             storage:

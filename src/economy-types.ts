@@ -20,6 +20,7 @@ export const CS2ItemType = {
     Container: "case",
     Gloves: "glove",
     Graffiti: "graffiti",
+    Highlight: "highlight",
     Key: "key",
     Keychain: "keychain",
     Melee: "melee",
@@ -61,6 +62,15 @@ export const CS2StatTrakMode = {
 
 export type CS2StatTrakMode = EnumValues<typeof CS2StatTrakMode>;
 
+export const CS2SouvenirStickerType = {
+    Autograph: "autograph",
+    Event: "event",
+    Map: "map",
+    Team: "team"
+} as const;
+
+export type CS2SouvenirStickerType = EnumValues<typeof CS2SouvenirStickerType>;
+
 export interface CS2Bounds {
     min: number | undefined;
     max: number | undefined;
@@ -80,6 +90,7 @@ export interface CS2Item {
     isBase?: boolean | undefined;
     isDefault?: boolean | undefined;
     isLegacyModel?: boolean | undefined;
+    keychainDefaultLocation?: number[] | undefined;
     keychainPositionXMax?: number | undefined;
     keychainPositionXMin?: number | undefined;
     keychainPositionYMax?: number | undefined;
@@ -87,6 +98,7 @@ export interface CS2Item {
     keychainPositionZMax?: number | undefined;
     keychainPositionZMin?: number | undefined;
     keyIds?: number[] | undefined;
+    legacyKeychainDefaultLocation?: number[] | undefined;
     legacyKeychainPositionXMax?: number | undefined;
     legacyKeychainPositionXMin?: number | undefined;
     legacyKeychainPositionYMax?: number | undefined;
@@ -105,6 +117,12 @@ export interface CS2Item {
     parentId?: number | undefined;
     previewSeed?: number | undefined;
     rarityColor?: CS2RarityColor | undefined;
+    souvenirEventId?: number | undefined;
+    souvenirEventIds?: number[] | undefined;
+    souvenirHighlightIds?: number[] | undefined;
+    souvenirMapStickerId?: number | undefined;
+    souvenirStickerType?: CS2SouvenirStickerType | undefined;
+    souvenirTeamId?: number | undefined;
     specialIds?: number[] | undefined;
     specialsImagePath?: string | undefined;
     statTrakMode?: CS2StatTrakMode | undefined;
@@ -115,9 +133,11 @@ export interface CS2Item {
     stickerSchemaCount?: number | undefined;
     styleCount?: number | undefined;
     team?: CS2ItemTeam | undefined;
+    teamStickerIds?: number[] | undefined;
     tintIndex?: number | undefined;
     type: CS2ItemType;
     variantIndex?: number | undefined;
+    videoUrl?: string | undefined;
     wearMax?: number | undefined;
     wearMin?: number | undefined;
 }
@@ -134,6 +154,13 @@ export interface CS2ItemTranslation {
 export type CS2ItemTranslationMap = Record<string, CS2ItemTranslation | undefined>;
 export type CS2ItemTranslationByLanguage = Record<string, CS2ItemTranslationMap>;
 
+export type CS2HighlightVideoResolution = "1080p" | "480p";
+
+export interface CS2SouvenirAttachments {
+    keychains: Record<string, { highlight: number; id: number; x?: number; y?: number; z?: number }> | undefined;
+    stickers: Record<string, { id: number; schema?: number }> | undefined;
+}
+
 export type CS2ModelMaterials = Record<string, Record<string, string[]>>;
 
 export type CS2ModelAnimationSkeleton = "character" | "chicken" | "egg" | "viewmodel";
@@ -146,9 +173,10 @@ export interface CS2ModelAnimation {
 export type CS2ModelAnimations = Record<string, CS2ModelAnimation>;
 
 export interface CS2UnlockedItem {
-    attributes: {
+    attributes: CS2SouvenirAttachments & {
         containerId: number;
         seed: number | undefined;
+        souvenir: true | undefined;
         statTrak: number | undefined;
         wear: number | undefined;
     };

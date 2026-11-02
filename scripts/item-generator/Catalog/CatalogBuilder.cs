@@ -17,7 +17,7 @@ public static class CatalogBuilder
         ParseUtilities(ctx);
         ParsePaintKits(ctx);
         ParseMusicKits(ctx);
-        ParseKeychains(ctx);
+        await ParseKeychains(ctx);
         ParsePets(ctx);
         await ParseStickers(ctx);
         ParseGraffiti(ctx);
@@ -25,7 +25,9 @@ public static class CatalogBuilder
         ParseAgents(ctx);
         await ParseCollectibles(ctx);
         ParseTools(ctx);
+        ParseHighlights(ctx);
         await ParseContainers(ctx);
+        Souvenirs.AnnotateStickers(ctx);
     }
 
     private static void ParseBaseWeapons(ItemGeneratorContext ctx)
@@ -398,7 +400,7 @@ public static class CatalogBuilder
         }
     }
 
-    private static void ParseKeychains(ItemGeneratorContext ctx)
+    private static async Task ParseKeychains(ItemGeneratorContext ctx)
     {
         ctx.KeychainParentId = CreateStub(ctx, "keychain", "#CSGO_Tool_Keychain_Desc");
         foreach (var entry in KvHelper.GetMergedSection(ctx.GameItems!, "keychain_definitions"))
@@ -425,7 +427,19 @@ public static class CatalogBuilder
 
             if (!Translations.HasTranslation(ctx, locName))
                 continue;
-            if (imageInventory == null || !CatalogAssets.IsImageValid(ctx, imageInventory))
+            if (imageInventory == null)
+                continue;
+            // Budapest 2025's charm ships its model but no icon; its image is in scripts/images.
+            string? keychainImage;
+            if (CatalogAssets.IsImageValid(ctx, imageInventory))
+                keychainImage = CatalogAssets.GetImage(ctx, imageInventory);
+            else
+                keychainImage = await CatalogAssets.TryGetFallbackImage(
+                    ctx,
+                    "keychain",
+                    imageInventory
+                );
+            if (keychainImage == null)
                 continue;
 
             var id = GetItemId(ctx, $"keychain_{index}");
@@ -445,7 +459,7 @@ public static class CatalogBuilder
                 {
                     DefinitionIndex = 1355,
                     Id = id,
-                    ImagePath = CatalogAssets.GetImage(ctx, imageInventory),
+                    ImagePath = keychainImage,
                     MaterialPath = GetKeychainMaterial(ctx, name, keychainMaterial),
                     ModelPath = CatalogAssets.GetModel(ctx, pedestalDisplayModel, id),
                     ParentId = ctx.KeychainParentId,
@@ -649,6 +663,15 @@ public static class CatalogBuilder
                 }
             );
             ctx.ItemNames[id] = $"sticker-{index}";
+            ctx.StickerKits.Add(
+                new StickerKitRecord(
+                    Id: id,
+                    Name: name,
+                    EventId: KvHelper.GetInt(sticker, "tournament_event_id"),
+                    TeamId: KvHelper.GetInt(sticker, "tournament_team_id"),
+                    IsAutograph: KvHelper.HasKey(sticker, "tournament_player_id")
+                )
+            );
 
             var keychainInventoryImage = $"econ/stickers/{stickerMaterial}_1355_37";
             var keychainId = GetItemId(ctx, $"keychain_37_{index}");
@@ -1087,6 +1110,64 @@ public static class CatalogBuilder
         }
     }
 
+    // A highlight is not an inventory item: it names, describes and plays the clip an event's charm
+    // carries, and is parented to that charm. See Highlights.
+    private static void ParseHighlights(ItemGeneratorContext ctx)
+    {
+        var reels = Highlights.GetReels(ctx).ToList();
+        var charmNames = Highlights.GetCharmNames(ctx, reels);
+        var teamStickerIdsByEvent = new Dictionary<int, SortedDictionary<int, int>>();
+        foreach (var reel in reels)
+        {
+            if (
+                !charmNames.TryGetValue(reel.EventId, out var charmName)
+                || !ctx.ContainerItems.TryGetValue($"[{charmName}]keychain", out var charmId)
+            )
+                continue;
+            if (!Translations.HasTranslation(ctx, $"#HighlightReel_{reel.Key}"))
+                continue;
+            if (!teamStickerIdsByEvent.TryGetValue(reel.EventId, out var teamStickerIds))
+            {
+                teamStickerIds = Souvenirs.GetTeamStickerIds(ctx, reel.EventId);
+                teamStickerIdsByEvent[reel.EventId] = teamStickerIds;
+            }
+
+            var id = GetItemId(ctx, $"highlight_{reel.Index}");
+            Translations.AddTranslation(ctx, id, "name", $"#HighlightReel_{reel.Key}");
+            Translations.TryAddTranslation(ctx, id, "description", $"#HighlightDesc_{reel.Key}");
+            Translations.AddTranslation(ctx, id, "categoryName", $"#CSGO_Watch_Cat_Tournament_{reel.EventId}");
+            Translations.AddFormattedTranslation(
+                ctx,
+                id,
+                "tournamentDescription",
+                "#CSGO_Event_HighlightReel_Desc",
+                $"#CSGO_Tournament_Event_Stage_{reel.StageId}",
+                $"#CSGO_TeamID_{reel.Team0Id}",
+                $"#CSGO_TeamID_{reel.Team1Id}",
+                $"#CSGO_Tournament_Event_Name_{reel.EventId}"
+            );
+            ctx.ItemNames[id] = $"highlight-{reel.Index}";
+
+            AddItem(
+                ctx,
+                new CS2Item
+                {
+                    Id = id,
+                    ParentId = charmId,
+                    TeamStickerIds =
+                        teamStickerIds.TryGetValue(reel.Team0Id, out var sticker0)
+                        && teamStickerIds.TryGetValue(reel.Team1Id, out var sticker1)
+                            ? [sticker0, sticker1]
+                            : null,
+                    Type = CS2ItemType.Highlight,
+                    VariantIndex = reel.Index,
+                    VideoUrl = Highlights.GetVideoUrl(reel),
+                }
+            );
+            ctx.HighlightReels[id] = reel;
+        }
+    }
+
     private static async Task ParseContainers(ItemGeneratorContext ctx)
     {
         var keyItems = new Dictionary<string, int>();
@@ -1120,13 +1201,7 @@ public static class CatalogBuilder
             if (prefab != "weapon_case" && !hasSupplyCrateSeries && lootListName == null)
                 continue;
 
-            var revolvingKey = KvHelper.GetString(supplyCrate, "value");
-            var clientLootListKey =
-                revolvingKey != null
-                    ? KvHelper
-                        .FindInMergedSection(ctx.GameItems!, "revolving_loot_lists", revolvingKey)
-                        ?.ToString()
-                    : lootListName;
+            var clientLootListKey = Collections.GetClientLootListKey(ctx, item);
             if (clientLootListKey == null)
                 continue;
 
@@ -1236,33 +1311,75 @@ public static class CatalogBuilder
             var tagValue = KvHelper.GetString(itemSetTag, "tag_value");
             var (collection, collectionImage) = Collections.GetCollection(ctx, id, tagValue);
 
-            AddItem(
-                ctx,
-                new CS2Item
+            var container = new CS2Item
+            {
+                CollectionImagePath = collectionImage,
+                CollectionKey = collection,
+                ContainerType = Collections.GetContainerType(containerName, contentsType),
+                ContentIds = contentIds,
+                DefinitionIndex = int.Parse(containerIndex),
+                Id = id,
+                ImagePath = containerImage,
+                KeyIds = keyIds.Count > 0 ? keyIds : null,
+                RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
+                SpecialIds =
+                    specialIds.Count > 0 ? specialIds
+                    : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.SpecialIds
+                    : null,
+                SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
+                StatTrakMode = containsMusicKit
+                    ? containsStatTrak
+                        ? CS2StatTrakMode.Guaranteed
+                        : CS2StatTrakMode.Excluded
+                    : null,
+                Type = CS2ItemType.Container,
+            };
+
+            var tournamentEventId = Souvenirs.GetEventId(ctx, item);
+            if (tournamentEventId != null && Souvenirs.IsPackage(ctx, item))
+            {
+                Souvenirs.Populate(ctx, container, item, tournamentEventId.Value);
+                AddTournamentDescription(ctx, id, tournamentEventId.Value);
+                var highlightItemName = $"{itemName}^highlight";
+                if (
+                    container.SouvenirHighlightIds != null
+                    && Translations.HasTranslation(ctx, highlightItemName)
+                )
                 {
-                    CollectionImagePath = collectionImage,
-                    CollectionKey = collection,
-                    ContainerType = Collections.GetContainerType(containerName, contentsType),
-                    ContentIds = contentIds,
-                    DefinitionIndex = int.Parse(containerIndex),
-                    Id = id,
-                    ImagePath = containerImage,
-                    KeyIds = keyIds.Count > 0 ? keyIds : null,
-                    RarityColor = SourceDataLoader.GetRarityColorHex(ctx, ["common"]),
-                    SpecialIds =
-                        specialIds.Count > 0 ? specialIds
-                        : ctx.ExistingItemsById.TryGetValue(id, out var prev) ? prev.SpecialIds
-                        : null,
-                    SpecialsImagePath = CatalogAssets.GetSpecialsImage(ctx, imageUnusualItem),
-                    StatTrakMode = containsMusicKit
-                        ? containsStatTrak
-                            ? CS2StatTrakMode.Guaranteed
-                            : CS2StatTrakMode.Excluded
-                        : null,
-                    Type = CS2ItemType.Container,
+                    var highlightPackageId = GetItemId(ctx, $"case_{containerIndex}_highlight");
+                    Translations.AddTranslation(
+                        ctx,
+                        highlightPackageId,
+                        "name",
+                        "#CSGO_Type_WeaponCase",
+                        " | ",
+                        highlightItemName
+                    );
+                    Translations.TryAddTranslation(
+                        ctx,
+                        highlightPackageId,
+                        "description",
+                        itemDescription
+                    );
+                    Collections.GetCollection(ctx, highlightPackageId, tagValue);
+                    AddTournamentDescription(ctx, highlightPackageId, tournamentEventId.Value);
+                    AddItem(ctx, Souvenirs.SplitHighlightPackage(container, highlightPackageId));
                 }
-            );
+            }
+
+            AddItem(ctx, container);
         }
+    }
+
+    private static void AddTournamentDescription(ItemGeneratorContext ctx, int id, int eventId)
+    {
+        Translations.AddFormattedTranslation(
+            ctx,
+            id,
+            "tournamentDescription",
+            "#CSGO_Event_Desc",
+            $"#CSGO_Tournament_Event_Name_{eventId}"
+        );
     }
 
     // --- Helper methods ---
@@ -1298,12 +1415,14 @@ public static class CatalogBuilder
             return;
 
         item.HasColliderData ??= previous.HasColliderData;
+        item.KeychainDefaultLocation ??= previous.KeychainDefaultLocation;
         item.KeychainPositionXMax ??= previous.KeychainPositionXMax;
         item.KeychainPositionXMin ??= previous.KeychainPositionXMin;
         item.KeychainPositionYMax ??= previous.KeychainPositionYMax;
         item.KeychainPositionYMin ??= previous.KeychainPositionYMin;
         item.KeychainPositionZMax ??= previous.KeychainPositionZMax;
         item.KeychainPositionZMin ??= previous.KeychainPositionZMin;
+        item.LegacyKeychainDefaultLocation ??= previous.LegacyKeychainDefaultLocation;
         item.LegacyKeychainPositionXMax ??= previous.LegacyKeychainPositionXMax;
         item.LegacyKeychainPositionXMin ??= previous.LegacyKeychainPositionXMin;
         item.LegacyKeychainPositionYMax ??= previous.LegacyKeychainPositionYMax;

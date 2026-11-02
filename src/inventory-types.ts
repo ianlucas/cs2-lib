@@ -11,10 +11,12 @@ export interface CS2BaseInventoryItem {
     equipped?: boolean;
     equippedCT?: boolean;
     equippedT?: boolean;
+    highlight?: number;
     id: number;
     keychains?: Record<
         string,
         {
+            highlight?: number;
             id: number;
             seed?: number;
             x?: number;
@@ -25,6 +27,7 @@ export interface CS2BaseInventoryItem {
     nameTag?: string;
     patches?: Record<string, number>;
     seed?: number;
+    souvenir?: boolean;
     statTrak?: number;
     stickers?: Record<
         string,

@@ -22,6 +22,7 @@ public static class CS2ItemType
     public const string Container = "case";
     public const string Gloves = "glove";
     public const string Graffiti = "graffiti";
+    public const string Highlight = "highlight";
     public const string Key = "key";
     public const string Keychain = "keychain";
     public const string Melee = "melee";
@@ -41,6 +42,14 @@ public static class CS2ContainerType
     public const int StickerCapsule = 1;
     public const int GraffitiBox = 2;
     public const int SouvenirCase = 3;
+}
+
+public static class CS2SouvenirStickerType
+{
+    public const string Autograph = "autograph";
+    public const string Event = "event";
+    public const string Map = "map";
+    public const string Team = "team";
 }
 
 // Null means the normal roll — see CS2_STATTRAK_ODD.
@@ -123,6 +132,12 @@ public class CS2Item
     // they run to 41.29 on an AWP. The sticker bounds further down are deltas from a slot's authored
     // offset and stay inside ±0.5 — hence position for one and offset for the other.
     [
+        JsonPropertyName("keychainDefaultLocation"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<double>? KeychainDefaultLocation { get; set; }
+
+    [
         JsonPropertyName("keychainPositionXMax"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
     ]
@@ -160,6 +175,12 @@ public class CS2Item
 
     [JsonPropertyName("keyIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? KeyIds { get; set; }
+
+    [
+        JsonPropertyName("legacyKeychainDefaultLocation"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<double>? LegacyKeychainDefaultLocation { get; set; }
 
     [
         JsonPropertyName("legacyKeychainPositionXMax"),
@@ -257,6 +278,44 @@ public class CS2Item
     [JsonPropertyName("rarityColor"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RarityColor { get; set; }
 
+    [
+        JsonPropertyName("souvenirEventId"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public int? SouvenirEventId { get; set; }
+
+    [
+        JsonPropertyName("souvenirEventIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<int>? SouvenirEventIds { get; set; }
+
+    // The highlights of the playoff matches played on the package's map, set on its Souvenir
+    // Highlight Package only. Every item from it carries one of them on the event's charm.
+    [
+        JsonPropertyName("souvenirHighlightIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<int>? SouvenirHighlightIds { get; set; }
+
+    [
+        JsonPropertyName("souvenirMapStickerId"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public int? SouvenirMapStickerId { get; set; }
+
+    [
+        JsonPropertyName("souvenirStickerType"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public string? SouvenirStickerType { get; set; }
+
+    [
+        JsonPropertyName("souvenirTeamId"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public int? SouvenirTeamId { get; set; }
+
     [JsonPropertyName("specialIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? SpecialIds { get; set; }
 
@@ -309,6 +368,13 @@ public class CS2Item
     [JsonPropertyName("team"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Team { get; set; }
 
+    // A highlight's match, as the two teams' stickers at the event.
+    [
+        JsonPropertyName("teamStickerIds"),
+        JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
+    ]
+    public List<int>? TeamStickerIds { get; set; }
+
     // The graffiti tint's key into the schema's tint table.
     [JsonPropertyName("tintIndex"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? TintIndex { get; set; }
@@ -317,12 +383,16 @@ public class CS2Item
     public string Type { get; set; } = CS2ItemType.Stub;
 
     // The kit's key into whichever table defines it: paint_kits, sticker_kits, music_definitions,
-    // keychain_definitions or pet_definitions.
+    // keychain_definitions, pet_definitions or highlight_reels.
     [
         JsonPropertyName("variantIndex"),
         JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)
     ]
     public int? VariantIndex { get; set; }
+
+    // A highlight's clip on Steam's CDN, at 1080p.
+    [JsonPropertyName("videoUrl"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? VideoUrl { get; set; }
 
     [JsonPropertyName("wearMax"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? WearMax { get; set; }
@@ -386,6 +456,21 @@ public record PaintKitRecord(
 );
 
 public record GraffitiTintRecord(string HexColor, int Id, string Name, string NameToken);
+
+// A sticker kit as the souvenir rules see it. TeamId is 0 on the organizer's own sticker.
+public record StickerKitRecord(int Id, string Name, int? EventId, int? TeamId, bool IsAutograph);
+
+// A highlight_reels entry. Index is its key there, the value a charm's highlight attribute holds;
+// Key names its clip and its translations.
+public record HighlightReelRecord(
+    int Index,
+    string Key,
+    int EventId,
+    int StageId,
+    string Map,
+    int Team0Id,
+    int Team1Id
+);
 
 // Image tasks carry a Provisional name (the CRC-derived name items reference at catalog time,
 // before any bytes exist) and a FinalBase; the final CDN name is computed after encoding as
@@ -528,6 +613,10 @@ public class ItemGeneratorContext
     public Dictionary<int, CS2Item> Items { get; set; } = [];
     public List<PaintKitRecord> PaintKits { get; set; } = [];
     public List<GraffitiTintRecord> GraffitiTints { get; set; } = [];
+    public List<StickerKitRecord> StickerKits { get; set; } = [];
+
+    // The reel behind each highlight item, keyed by the item's id.
+    public Dictionary<int, HighlightReelRecord> HighlightReels { get; set; } = [];
     public int? KeychainParentId { get; set; }
 
     // The "keychain_37" (sticker display case slab) item id: the parent the per-sticker
