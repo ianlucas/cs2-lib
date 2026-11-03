@@ -12,6 +12,9 @@ namespace ItemGenerator.Catalog;
 
 public static class SourceDataLoader
 {
+    private static readonly System.Text.Encoding Windows1252 =
+        System.Text.CodePagesEncodingProvider.Instance.GetEncoding(1252)!;
+
     public static async Task LoadSourceData(ItemGeneratorContext ctx)
     {
         Directory.CreateDirectory(Config.StaticImagesDir);
@@ -60,7 +63,7 @@ public static class SourceDataLoader
                 EnableValveNullByteBugBehavior = true,
             };
             using var reader = new StreamReader(file, detectEncodingFromByteOrderMarks: true);
-            var text = reader.ReadToEnd();
+            var text = FixWindows1252ControlChars(reader.ReadToEnd());
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
             KVObject doc = serializer.Deserialize(stream, options);
             var tokens = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -77,6 +80,11 @@ public static class SourceDataLoader
         if (!ctx.CsgoTranslationByLanguage.ContainsKey("english"))
             throw new InvalidOperationException("English language file not found.");
     }
+
+    // Valve's UTF-8 language files sometimes carry Windows-1252 punctuation as C1 control chars
+    // (e.g. U+0092 instead of ’), which render as �.
+    private static string FixWindows1252ControlChars(string text) =>
+        Config.C1ControlCharRe.Replace(text, m => Windows1252.GetString([(byte)m.Value[0]]));
 
     private static void ReadItemsGameFile(ItemGeneratorContext ctx)
     {
