@@ -57,6 +57,7 @@ public static partial class Config
     public const string TranslationsTsPath = "src/translations/{0}.ts";
     public const string EnglishJsonPath = "scripts/data/english.json";
 
+    public static readonly Regex C1ControlCharRe = C1ControlCharRegex();
     public static readonly Regex FormattedStringRe = FormattedStringRegex();
     public static readonly Regex LanguageFileRe = LanguageFileRegex();
     public static readonly Regex LootItemRe = LootItemRegex();
@@ -225,6 +226,9 @@ public static partial class Config
         // against.
         return Environment.GetEnvironmentVariable("INPUT_SKIP_TEXTURE_OPTIMIZATION") == "true";
     }
+
+    [GeneratedRegex(@"[\u0080-\u009F]")]
+    private static partial Regex C1ControlCharRegex();
 
     [GeneratedRegex(@"%s(\d+)")]
     private static partial Regex FormattedStringRegex();
