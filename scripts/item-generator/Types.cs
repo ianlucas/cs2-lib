@@ -451,6 +451,7 @@ public record PaintKitRecord(
     bool IsLegacy,
     string NameToken,
     string RarityColorHex,
+    int[] SameNameFamily,
     double WearMax,
     double WearMin
 );

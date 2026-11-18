@@ -168,6 +168,9 @@ public static class SourceDataLoader
                     IsLegacy: KvHelper.GetString(entry.Value, "use_legacy_model") == "1",
                     NameToken: PrependHash(descriptionTag)!,
                     RarityColorHex: GetRarityColorHex(ctx, [name]),
+                    SameNameFamily: ParseIndexRanges(
+                        KvHelper.GetString(entry.Value, "same_name_family_aggregate")
+                    ),
                     WearMax: wearMaxStr != null ? double.Parse(wearMaxStr) : 0.8,
                     WearMin: wearMinStr != null ? double.Parse(wearMinStr) : 0.06
                 )
@@ -255,6 +258,23 @@ public static class SourceDataLoader
         return colorHex
             ?? ctx.RaritiesColorHex.GetValueOrDefault("default")
             ?? throw new InvalidOperationException("Unable to resolve rarity color hex.");
+    }
+
+    // Parses lists like "415-421,617-619,852-855".
+    private static int[] ParseIndexRanges(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return [];
+        var indexes = new List<int>();
+        foreach (var part in value.Split(',', StringSplitOptions.TrimEntries))
+        {
+            var bounds = part.Split('-', StringSplitOptions.TrimEntries);
+            var start = int.Parse(bounds[0]);
+            var end = bounds.Length > 1 ? int.Parse(bounds[1]) : start;
+            for (var index = start; index <= end; index++)
+                indexes.Add(index);
+        }
+        return [.. indexes];
     }
 
     private static string? PrependHash(string? str)
