@@ -267,17 +267,17 @@ public static class CatalogBuilder
 
     private static void ParsePaintKits(ItemGeneratorContext ctx)
     {
+        var paintKitsByIndex = ctx.PaintKits.ToDictionary(paintKit => paintKit.Index);
         foreach (var paintKit in ctx.PaintKits)
         {
             foreach (var baseItem in ctx.BaseItems)
             {
-                if (!CatalogAssets.IsPaintImageValid(ctx, baseItem.ClassName, paintKit.ClassName))
+                if (!IsPaintKitApplicable(ctx, baseItem, paintKit))
+                    continue;
+                if (IsPaintKitDuplicate(ctx, baseItem, paintKit, paintKitsByIndex))
                     continue;
 
                 var itemKey = $"[{paintKit.ClassName}]{baseItem.ClassName}";
-                if (baseItem.Type == CS2ItemType.Weapon && !ctx.GameItemsAsText.Contains(itemKey))
-                    continue;
-
                 var id = GetItemId(ctx, $"paint_{baseItem.DefinitionIndex}_{paintKit.Index}");
                 Collections.AddContainerItem(ctx, itemKey, id);
                 Translations.AddTranslation(
@@ -354,6 +354,43 @@ public static class CatalogBuilder
                 );
             }
         }
+    }
+
+    private static bool IsPaintKitApplicable(
+        ItemGeneratorContext ctx,
+        CS2Item baseItem,
+        PaintKitRecord paintKit
+    )
+    {
+        if (!CatalogAssets.IsPaintImageValid(ctx, baseItem.ClassName, paintKit.ClassName))
+            return false;
+        return baseItem.Type != CS2ItemType.Weapon
+            || ctx.GameItemsAsText.Contains($"[{paintKit.ClassName}]{baseItem.ClassName}");
+    }
+
+    // A same-name family groups paint kits sharing a name (e.g. Doppler phases). Valve also
+    // uses it for re-issued copies of a finish, like `hy_ddpat_knife` (1478) for `hy_ddpat`
+    // (5); those would list the same item twice, so the lowest index wins.
+    private static bool IsPaintKitDuplicate(
+        ItemGeneratorContext ctx,
+        CS2Item baseItem,
+        PaintKitRecord paintKit,
+        Dictionary<int, PaintKitRecord> paintKitsByIndex
+    )
+    {
+        var alternateName = GetPaintAlternateName(paintKit.ClassName);
+        foreach (var index in paintKit.SameNameFamily)
+        {
+            if (
+                index < paintKit.Index
+                && paintKitsByIndex.TryGetValue(index, out var other)
+                && other.NameToken == paintKit.NameToken
+                && GetPaintAlternateName(other.ClassName) == alternateName
+                && IsPaintKitApplicable(ctx, baseItem, other)
+            )
+                return true;
+        }
+        return false;
     }
 
     private static void ParseMusicKits(ItemGeneratorContext ctx)
